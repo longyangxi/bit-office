@@ -288,13 +288,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   getAgent(agentId: string) {
     const s = this.agentManager.get(agentId);
     if (!s) return undefined;
-    return { agentId: s.agentId, name: s.name, role: s.role, status: s.status, palette: s.palette, backend: s.backend.id };
+    return { agentId: s.agentId, name: s.name, role: s.role, status: s.status, palette: s.palette, backend: s.backend.id, pid: s.pid };
   }
 
   getAllAgents() {
     return this.agentManager.getAll().map(s => ({
       agentId: s.agentId, name: s.name, role: s.role, status: s.status,
-      palette: s.palette, backend: s.backend.id,
+      palette: s.palette, backend: s.backend.id, pid: s.pid,
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
       teamId: s.teamId,
     }));
@@ -302,6 +302,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   getTeamRoster(): string {
     return this.agentManager.getTeamRoster();
+  }
+
+  /** Return PIDs of all managed (gateway-spawned) agent processes */
+  getManagedPids(): number[] {
+    const pids: number[] = [];
+    for (const session of this.agentManager.getAll()) {
+      const pid = session.pid;
+      if (pid !== null) pids.push(pid);
+    }
+    return pids;
   }
 
   isTeamLead(agentId: string): boolean {

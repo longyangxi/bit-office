@@ -77,6 +77,10 @@ export const AgentCreatedEvent = z.object({
   backend: z.string().optional(),
   isTeamLead: z.boolean().optional(),
   teamId: z.string().optional(),
+  isExternal: z.boolean().optional(),
+  pid: z.number().optional(),
+  cwd: z.string().optional(),
+  startedAt: z.number().optional(),
 });
 
 export const AgentFiredEvent = z.object({

@@ -492,6 +492,60 @@ export function renderSpeechBubbles(
   }
 }
 
+// ── Agent name badges ────────────────────────────────────────────
+
+export function renderNameBadges(
+  ctx: CanvasRenderingContext2D,
+  characters: Character[],
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  const px = Math.max(1, Math.round(zoom))
+
+  for (const ch of characters) {
+    if (!ch.label) continue
+    if (ch.matrixEffect === 'despawn') continue
+
+    const fontSize = Math.max(6, Math.round(3.5 * zoom))
+    ctx.save()
+    ctx.imageSmoothingEnabled = false
+    ctx.font = `bold ${fontSize}px monospace`
+    const metrics = ctx.measureText(ch.label)
+    const textW = Math.ceil(metrics.width)
+    const textH = fontSize
+
+    const padX = 2 * px
+    const padY = 1 * px
+    const boxW = textW + padX * 2
+    const boxH = textH + padY * 2
+
+    const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0
+    // Position above the character head — bubbles drawn later will naturally overlap
+    const BADGE_VERTICAL_OFFSET_PX = 26
+    const badgeX = Math.round(offsetX + ch.x * zoom - boxW / 2)
+    const badgeY = Math.round(offsetY + (ch.y + sittingOff - BADGE_VERTICAL_OFFSET_PX) * zoom - boxH)
+
+    const bgColor = ch.labelColor ?? '#8a7a6a'
+
+    // Pixel-art border (darker version of bg)
+    ctx.fillStyle = '#222'
+    ctx.fillRect(badgeX - px, badgeY, boxW + 2 * px, boxH + px)
+    ctx.fillRect(badgeX, badgeY - px, boxW, boxH + 2 * px)
+
+    // Colored fill
+    ctx.fillStyle = bgColor
+    ctx.fillRect(badgeX, badgeY, boxW, boxH)
+
+    // White text
+    ctx.fillStyle = '#fff'
+    ctx.textBaseline = 'top'
+    ctx.fillText(ch.label, badgeX + padX, badgeY + padY)
+
+    ctx.restore()
+  }
+}
+
 // ── Editor render state ─────────────────────────────────────────
 
 export interface EditorRenderState {
@@ -557,6 +611,9 @@ export function renderFrame(
 
   // Draw walls + furniture + characters (z-sorted)
   renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedAgentId, hoveredAgentId)
+
+  // Agent name badges (drawn before bubbles so bubbles cover them)
+  renderNameBadges(ctx, characters, offsetX, offsetY, zoom)
 
   // Speech bubbles (always on top)
   renderBubbles(ctx, characters, offsetX, offsetY, zoom)

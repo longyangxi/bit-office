@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOfficeStore } from "@/store/office-store";
 import type { ChatMessage, TeamChatMessage } from "@/store/office-store";
-import { connect, sendCommand, disconnect } from "@/lib/connection";
+import { connect, sendCommand } from "@/lib/connection";
 import { getConnection } from "@/lib/storage";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
@@ -1004,8 +1004,8 @@ export default function OfficePage() {
       return;
     }
     useOfficeStore.getState().hydrate();
-    connect(conn);
-    return () => { disconnect(); };
+    const scopedDisconnect = connect(conn);
+    return scopedDisconnect;
   }, [router]);
 
   const selectedAgentState = selectedAgent ? agents.get(selectedAgent) : null;
@@ -1056,8 +1056,14 @@ export default function OfficePage() {
   }, []);
 
   const handleFire = useCallback(async (agentId: string) => {
-    if (!await confirm(`Fire ${agents.get(agentId)?.name ?? agentId}?`)) return;
-    sendCommand({ type: "FIRE_AGENT", agentId });
+    const agent = agents.get(agentId);
+    if (agent?.isExternal) {
+      if (!await confirm(`Kill external process ${agent.name}? (PID ${agent.pid})`)) return;
+      sendCommand({ type: "KILL_EXTERNAL", agentId });
+    } else {
+      if (!await confirm(`Fire ${agent?.name ?? agentId}?`)) return;
+      sendCommand({ type: "FIRE_AGENT", agentId });
+    }
     if (selectedAgent === agentId) {
       setSelectedAgent(null);
       setChatOpen(false);
@@ -1096,6 +1102,7 @@ export default function OfficePage() {
   const handleRunTask = useCallback(() => {
     if (!selectedAgent || !prompt.trim()) return;
     const agent = agents.get(selectedAgent);
+    if (agent?.isExternal) return; // External agents are read-only
     const taskId = nanoid();
     addUserMessage(selectedAgent, taskId, prompt.trim());
     sendCommand({
@@ -1361,12 +1368,13 @@ export default function OfficePage() {
               const agentState = agents.get(agent.agentId);
               const busy = agentState?.status === "working" || agentState?.status === "waiting_approval";
               const isTeamMember = !!agentState?.teamId && !agentState?.isTeamLead;
+              const isExternal = !!agentState?.isExternal;
 
               return (
                 <div key={agent.agentId} style={{
                   display: "flex", flexDirection: "column",
                   borderBottom: "1px solid #272040",
-                  borderLeft: agentState?.teamId ? "3px solid #e8b040" : "3px solid transparent",
+                  borderLeft: isExternal ? "3px solid #5aacff" : agentState?.teamId ? "3px solid #e8b040" : "3px solid transparent",
                 }}>
                   {/* Collapsed row — always visible */}
                   <button
@@ -1410,9 +1418,18 @@ export default function OfficePage() {
                             border: "1px solid #e8b04050", fontFamily: "monospace", letterSpacing: "0.05em",
                           }}>TEAM</span>
                         )}
+                        {isExternal && (
+                          <span style={{
+                            fontSize: 8, padding: "1px 4px",
+                            backgroundColor: "#3b82f620", color: "#5aacff",
+                            border: "1px solid #3b82f650", fontFamily: "monospace", letterSpacing: "0.05em",
+                          }}>EXTERNAL</span>
+                        )}
                       </div>
-                      <div style={{ fontSize: 10, color: "#7a6858", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}>
-                        {agent.role}
+                      <div style={{ fontSize: 10, color: "#7a6858", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}
+                        title={isExternal && agentState?.cwd ? agentState.cwd : undefined}
+                      >
+                        {isExternal && agentState?.cwd ? agentState.cwd.split("/").pop() : agent.role}
                         {agent.backend && (
                           <span style={{
                             fontSize: 8, padding: "1px 4px",
@@ -1450,8 +1467,63 @@ export default function OfficePage() {
                     )}
                   </button>
 
-                  {/* Expanded chat area */}
-                  {isExpanded && agentState && (
+                  {/* Expanded: hybrid panel for external agents (info header + messages) */}
+                  {isExpanded && agentState && isExternal && (
+                    <div style={{
+                      flex: 1,
+                      display: "flex", flexDirection: "column",
+                      backgroundColor: "#1a1530",
+                      minHeight: 0,
+                      height: "calc(100vh - 200px)",
+                      maxHeight: "calc(100vh - 160px)",
+                      overflow: "hidden",
+                    }}>
+                      {/* Compact info header */}
+                      <div style={{
+                        padding: "10px 14px",
+                        borderBottom: "1px solid #272040",
+                        flexShrink: 0,
+                      }}>
+                        <div style={{ fontSize: 10, color: "#5aacff", marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>
+                          EXTERNAL PROCESS
+                        </div>
+                        <div style={{ display: "flex", gap: 12, fontSize: 10, color: "#7a6858", fontFamily: "monospace", flexWrap: "wrap" }}>
+                          <span>{agentState.backend ?? "unknown"}</span>
+                          <span>PID {agentState.pid ?? "—"}</span>
+                          <span title={agentState.cwd ?? undefined} style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>
+                            {agentState.cwd ?? "—"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Scrollable messages */}
+                      <div style={{
+                        flex: 1, overflowY: "auto", padding: "12px 14px",
+                        display: "flex", flexDirection: "column",
+                        minHeight: 0,
+                      }}>
+                        {agentState.messages.length === 0 && (
+                          <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 12 }}>
+                            Waiting for output...
+                          </div>
+                        )}
+                        {agentState.messages.map((msg) => (
+                          <MessageBubble key={msg.id} msg={msg} />
+                        ))}
+                      </div>
+
+                      {/* Read-only footer */}
+                      <div style={{
+                        padding: "8px 10px",
+                        backgroundColor: "#182844", border: "1px solid #3b82f640",
+                        fontSize: 11, color: "#7ab8f5", fontFamily: "monospace",
+                        textAlign: "center", flexShrink: 0,
+                      }}>
+                        Read-only — this process is running externally
+                      </div>
+                    </div>
+                  )}
+                  {isExpanded && agentState && !isExternal && (
                     <div style={{
                       flex: 1,
                       display: "flex",

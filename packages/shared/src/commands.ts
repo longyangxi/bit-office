@@ -69,6 +69,11 @@ export const FireTeamCommand = z.object({
   type: z.literal("FIRE_TEAM"),
 });
 
+export const KillExternalCommand = z.object({
+  type: z.literal("KILL_EXTERNAL"),
+  agentId: z.string(),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -81,6 +86,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
   ServePreviewCommand,
   StopTeamCommand,
   FireTeamCommand,
+  KillExternalCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -94,4 +100,5 @@ export type CreateTeamCommand = z.infer<typeof CreateTeamCommand>;
 export type ServePreviewCommand = z.infer<typeof ServePreviewCommand>;
 export type StopTeamCommand = z.infer<typeof StopTeamCommand>;
 export type FireTeamCommand = z.infer<typeof FireTeamCommand>;
+export type KillExternalCommand = z.infer<typeof KillExternalCommand>;
 export type Command = z.infer<typeof CommandSchema>;

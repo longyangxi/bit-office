@@ -91,7 +91,7 @@ export class OfficeState {
 
   // ── Public API (string agentId) ───────────────────────────────
 
-  addCharacter(agentId: string, _name: string, palette?: number): void {
+  addCharacter(agentId: string, _name: string, palette?: number, isExternal?: boolean, label?: string, labelColor?: string): void {
     if (this.agentIdToCharId.has(agentId)) return
 
     const charId = this.nextCharId++
@@ -119,6 +119,13 @@ export class OfficeState {
       ch.tileCol = spawn.col
       ch.tileRow = spawn.row
     }
+
+    // Mark as external if applicable
+    if (isExternal) {
+      ch.isExternal = true
+    }
+    if (label) ch.label = label
+    if (labelColor) ch.labelColor = labelColor
 
     // Matrix spawn effect
     ch.matrixEffect = 'spawn'

@@ -105,6 +105,9 @@ export class AgentSession {
   /** Current working directory of the running task (used by worktree logic) */
   get currentWorkingDir(): string | null { return this.currentCwd; }
 
+  /** PID of the running child process (null if not running) */
+  get pid(): number | null { return this.process?.pid ?? null; }
+
   /** Worktree path if task is running in one (set externally by orchestrator) */
   worktreePath: string | null = null;
   worktreeBranch: string | null = null;
@@ -629,7 +632,11 @@ export class AgentSession {
     if (this.taskTimeout) { clearTimeout(this.taskTimeout); this.taskTimeout = null; }
     if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
     if (this.process?.pid) {
-      try { process.kill(-this.process.pid, "SIGTERM"); } catch { this.process.kill("SIGTERM"); }
+      const pgid = this.process.pid;
+      // Use SIGKILL — CLI agents like codex/claude ignore SIGTERM
+      try { process.kill(-pgid, "SIGKILL"); } catch {
+        try { this.process.kill("SIGKILL"); } catch { /* already dead */ }
+      }
       this.process = null;
     }
     this.pendingApprovals.clear();

@@ -19,6 +19,10 @@ interface AgentState {
   backend?: string;
   isTeamLead?: boolean;
   teamId?: string;
+  isExternal?: boolean;
+  pid?: number;
+  cwd?: string;
+  startedAt?: number;
   status: AgentStatus;
   currentTaskId: string | null;
   currentPrompt: string | null;
@@ -82,6 +86,8 @@ function saveToStorage(agents: Map<string, AgentState>) {
   try {
     const data: PersistedAgent[] = [];
     for (const [, agent] of agents) {
+      // Skip external agents — they are transient
+      if (agent.isExternal) continue;
       if (agent.messages.length > 0 || agent.name !== agent.agentId) {
         data.push({
           agentId: agent.agentId,
@@ -253,22 +259,33 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               backend: event.backend ?? existing.backend,
               isTeamLead: event.isTeamLead ?? existing.isTeamLead,
               teamId: event.teamId ?? existing.teamId,
+              isExternal: event.isExternal ?? existing.isExternal,
+              pid: event.pid ?? existing.pid,
+              cwd: event.cwd ?? existing.cwd,
+              startedAt: event.startedAt ?? existing.startedAt,
             });
           } else {
-            // Restore saved messages from localStorage
-            const saved = loadFromStorage().get(event.agentId);
+            // Restore saved messages from localStorage (skip for external agents)
+            const saved = event.isExternal ? undefined : loadFromStorage().get(event.agentId);
             const agent = defaultAgent(event.agentId, event.name, event.role);
             agent.palette = event.palette ?? saved?.palette;
             agent.personality = event.personality ?? saved?.personality;
             agent.backend = event.backend ?? saved?.backend;
             agent.isTeamLead = event.isTeamLead ?? saved?.isTeamLead;
             agent.teamId = event.teamId ?? saved?.teamId;
+            agent.isExternal = event.isExternal;
+            agent.pid = event.pid;
+            agent.cwd = event.cwd;
+            agent.startedAt = event.startedAt;
             if (saved) {
               agent.messages = saved.messages;
             }
             agents.set(event.agentId, agent);
           }
-          saveToStorage(agents);
+          // Skip localStorage persistence for external agents
+          if (!event.isExternal) {
+            saveToStorage(agents);
+          }
           break;
         }
         case "AGENT_FIRED": {
@@ -414,6 +431,33 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const agent = agents.get(event.agentId);
           if (agent) {
             agents.set(event.agentId, { ...agent, lastLogLine: event.chunk });
+
+            // For external agents, also append as read-only chat messages
+            if (agent.isExternal && event.chunk) {
+              const now = Date.now();
+              const lastMsg = agent.messages.length > 0 ? agent.messages[agent.messages.length - 1] : null;
+              // Throttle: update last agent message if within 3 seconds
+              if (lastMsg && lastMsg.role === "agent" && (now - lastMsg.timestamp) < 3000) {
+                const updatedMessages = [...agent.messages];
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...lastMsg,
+                  text: event.chunk,
+                  timestamp: now,
+                };
+                agents.set(event.agentId, { ...agents.get(event.agentId)!, messages: updatedMessages });
+              } else {
+                const msgId = `ext-log-${now}`;
+                agents.set(event.agentId, {
+                  ...agents.get(event.agentId)!,
+                  messages: [...agents.get(event.agentId)!.messages, {
+                    id: msgId,
+                    role: "agent",
+                    text: event.chunk,
+                    timestamp: now,
+                  }],
+                });
+              }
+            }
           }
           break;
         }

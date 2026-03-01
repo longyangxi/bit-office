@@ -13,6 +13,22 @@ import { registerTilesetSprites, getCatalogEntry, isRotatable } from "./layout/f
 import { EditorState } from "./editor/editorState";
 import { getFurnitureAtTile } from "./editor/editorActions";
 
+/** Agent type colors for name badges */
+const AGENT_TYPE_COLORS = {
+  external: "#5aacff",
+  team: "#d4a017",
+  normal: "#8a7a6a",
+};
+
+function getAgentLabel(agent: { name: string; isExternal?: boolean; pid?: number; teamId?: string }): { label: string; color: string } {
+  if (agent.isExternal) {
+    return { label: `${agent.pid ?? "?"}`, color: AGENT_TYPE_COLORS.external };
+  }
+  const short = agent.name.split(/[\s(]/)[0];
+  const color = agent.teamId ? AGENT_TYPE_COLORS.team : AGENT_TYPE_COLORS.normal;
+  return { label: short, color };
+}
+
 interface OfficeCanvasProps {
   onAgentClick: (agentId: string) => void;
   selectedAgent: string | null;
@@ -141,7 +157,8 @@ export default function OfficeCanvas({
     // Sync existing agents from store
     const state = useOfficeStore.getState();
     for (const [agentId, agent] of state.agents) {
-      officeState.addCharacter(agentId, agent.name, agent.palette);
+      const { label, color: labelColor } = getAgentLabel(agent);
+      officeState.addCharacter(agentId, agent.name, agent.palette, agent.isExternal, label, labelColor);
       officeState.updateCharacterStatus(agentId, agent.status);
       knownAgentsRef.current.add(agentId);
       // Seed message counts so persisted messages don't trigger speech bubbles
@@ -263,7 +280,8 @@ export default function OfficeCanvas({
 
       for (const [agentId, agent] of state.agents) {
         if (!knownAgentsRef.current.has(agentId)) {
-          officeState.addCharacter(agentId, agent.name, agent.palette);
+          const { label, color: labelColor } = getAgentLabel(agent);
+          officeState.addCharacter(agentId, agent.name, agent.palette, agent.isExternal, label, labelColor);
           knownAgentsRef.current.add(agentId);
         }
 

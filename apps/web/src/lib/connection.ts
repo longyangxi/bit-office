@@ -3,9 +3,11 @@ import { connectToAbly, sendCommand as ablySend, disconnectAbly } from "./ably-c
 import { connectToWs, sendWsCommand, disconnectWs } from "./ws-client";
 
 let activeMode: "ws" | "ably" | null = null;
+let connectionId = 0;
 
 export function connect(info: ConnectionInfo) {
   disconnect();
+  const id = ++connectionId;
 
   if (info.mode === "ws" && info.wsUrl) {
     activeMode = "ws";
@@ -14,6 +16,13 @@ export function connect(info: ConnectionInfo) {
     activeMode = "ably";
     connectToAbly(info.machineId);
   }
+
+  // Return a scoped disconnect — only disconnects if this connection is still active
+  return () => {
+    if (connectionId === id) {
+      disconnect();
+    }
+  };
 }
 
 export function sendCommand(command: Record<string, unknown>) {
@@ -22,7 +31,9 @@ export function sendCommand(command: Record<string, unknown>) {
   } else if (activeMode === "ably") {
     ablySend(command);
   } else {
-    console.error("[Connection] No active transport");
+    // Fallback: try WS anyway (ws-client checks readyState internally)
+    console.warn("[Connection] No active transport, attempting WS fallback");
+    sendWsCommand(command);
   }
 }
 

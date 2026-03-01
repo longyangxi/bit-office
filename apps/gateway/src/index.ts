@@ -13,6 +13,8 @@ import { execFile } from "child_process";
 import { existsSync } from "fs";
 import path from "path";
 import os from "os";
+import { ProcessScanner } from "./process-scanner.js";
+import { ExternalOutputReader } from "./external-output-reader.js";
 
 // Register all channels — each one self-activates if configured
 registerChannel(wsChannel);
@@ -20,6 +22,11 @@ registerChannel(ablyChannel);
 registerChannel(telegramChannel);
 
 let orc: Orchestrator;
+let scanner: ProcessScanner | null = null;
+let outputReader: ExternalOutputReader | null = null;
+
+/** Track external agents so PING can broadcast them */
+const externalAgents = new Map<string, { agentId: string; name: string; backendId: string; pid: number; cwd: string | null; startedAt: number; status: "working" | "idle" }>();
 
 function generatePairCode(): string {
   return nanoid(6).toUpperCase();
@@ -105,6 +112,8 @@ function handleCommand(parsed: Command) {
     }
     case "FIRE_AGENT": {
       console.log(`[Gateway] Firing agent: ${parsed.agentId}`);
+      const agentToFire = orc.getAgent(parsed.agentId);
+      if (agentToFire?.pid) scanner?.addGracePid(agentToFire.pid);
       orc.removeAgent(parsed.agentId);
       break;
     }
@@ -218,7 +227,35 @@ function handleCommand(parsed: Command) {
     }
     case "FIRE_TEAM": {
       console.log("[Gateway] Firing entire team");
+      // Record managed PIDs before they're killed — prevents scanner from picking them up as external
+      for (const agent of orc.getAllAgents()) {
+        const pid = agent.pid;
+        if (pid) scanner?.addGracePid(pid);
+      }
       orc.fireTeam();
+      break;
+    }
+    case "KILL_EXTERNAL": {
+      const ext = externalAgents.get(parsed.agentId);
+      if (ext) {
+        console.log(`[Gateway] Killing external process: ${ext.name} (pid=${ext.pid})`);
+        scanner?.addGracePid(ext.pid);
+        try {
+          // Only kill the specific PID — do NOT use -pid (process group kill)
+          // because external processes are not spawned by us with detached: true,
+          // so their pgid may be the user's terminal — killing the group would
+          // kill the entire terminal session.
+          process.kill(ext.pid, "SIGKILL");
+        } catch (err) {
+          console.error(`[Gateway] Failed to kill pid ${ext.pid}:`, err);
+        }
+        // Clean up immediately — scanner will also detect removal next cycle
+        outputReader?.detach(ext.agentId);
+        externalAgents.delete(ext.agentId);
+        publishEvent({ type: "AGENT_FIRED", agentId: ext.agentId });
+      } else {
+        console.log(`[Gateway] KILL_EXTERNAL: agent ${parsed.agentId} not found`);
+      }
       break;
     }
     case "PING": {
@@ -239,6 +276,25 @@ function handleCommand(parsed: Command) {
           type: "AGENT_STATUS",
           agentId: agent.agentId,
           status: agent.status,
+        });
+      }
+      // Also broadcast external agents
+      for (const [, ext] of externalAgents) {
+        publishEvent({
+          type: "AGENT_CREATED",
+          agentId: ext.agentId,
+          name: ext.name,
+          role: ext.cwd ? ext.cwd.split("/").pop() ?? ext.backendId : ext.backendId,
+          isExternal: true,
+          pid: ext.pid,
+          cwd: ext.cwd ?? undefined,
+          startedAt: ext.startedAt,
+          backend: ext.backendId,
+        });
+        publishEvent({
+          type: "AGENT_STATUS",
+          agentId: ext.agentId,
+          status: ext.status,
         });
       }
       break;
@@ -305,6 +361,85 @@ async function main() {
   orc.on("agent:fired", forwardEvent);
   orc.on("task:result-returned", forwardEvent);
 
+  // Start external output reader
+  outputReader = new ExternalOutputReader();
+
+  // Start process scanner to detect external CLI agents
+  scanner = new ProcessScanner(
+    () => orc.getManagedPids(),
+    {
+      onAdded: (agents) => {
+        for (const agent of agents) {
+          const name = agent.command.charAt(0).toUpperCase() + agent.command.slice(1);
+          const displayName = `${name} (${agent.pid})`;
+          externalAgents.set(agent.agentId, {
+            agentId: agent.agentId,
+            name: displayName,
+            backendId: agent.backendId,
+            pid: agent.pid,
+            cwd: agent.cwd,
+            startedAt: agent.startedAt,
+            status: agent.status,
+          });
+          console.log(`[ProcessScanner] External agent found: ${displayName} (pid=${agent.pid}, cwd=${agent.cwd})`);
+          publishEvent({
+            type: "AGENT_CREATED",
+            agentId: agent.agentId,
+            name: displayName,
+            role: agent.cwd ? agent.cwd.split("/").pop() ?? agent.backendId : agent.backendId,
+            isExternal: true,
+            pid: agent.pid,
+            cwd: agent.cwd ?? undefined,
+            startedAt: agent.startedAt,
+            backend: agent.backendId,
+          });
+          publishEvent({
+            type: "AGENT_STATUS",
+            agentId: agent.agentId,
+            status: agent.status,
+          });
+
+          // Attach output reader for this external agent
+          outputReader?.attach(agent.agentId, agent.pid, agent.cwd, agent.backendId, (chunk) => {
+            publishEvent({
+              type: "LOG_APPEND",
+              agentId: agent.agentId,
+              taskId: "external",
+              stream: "stdout",
+              chunk,
+            });
+          });
+        }
+      },
+      onRemoved: (agentIds) => {
+        for (const agentId of agentIds) {
+          const ext = externalAgents.get(agentId);
+          console.log(`[ProcessScanner] External agent gone: ${ext?.name ?? agentId}`);
+          outputReader?.detach(agentId);
+          externalAgents.delete(agentId);
+          publishEvent({
+            type: "AGENT_FIRED",
+            agentId,
+          });
+        }
+      },
+      onChanged: (agents) => {
+        for (const agent of agents) {
+          const ext = externalAgents.get(agent.agentId);
+          if (ext) {
+            ext.status = agent.status;
+          }
+          publishEvent({
+            type: "AGENT_STATUS",
+            agentId: agent.agentId,
+            status: agent.status,
+          });
+        }
+      },
+    },
+  );
+  scanner.start();
+
   const backendNames = config.detectedBackends.map((id) => getBackend(id)?.name ?? id).join(", ");
   console.log(`[Gateway] AI backends: ${backendNames || "none detected"} (default: ${getBackend(config.defaultBackend)?.name ?? config.defaultBackend})`);
   console.log(`[Gateway] Permissions: ${config.sandboxMode === "full" ? "Full access" : "Sandbox"}`);
@@ -340,6 +475,8 @@ async function main() {
 
 function cleanup() {
   console.log("[Gateway] Shutting down...");
+  outputReader?.detachAll();
+  scanner?.stop();
   previewServer.stop();
   orc?.destroy();
   destroyTransports();

@@ -213,4 +213,10 @@ export interface Character {
   matrixEffectTimer: number
   /** Per-column random seeds (16 values) for staggered rain timing */
   matrixEffectSeeds: number[]
+  /** Whether this character represents an external (non-managed) process */
+  isExternal: boolean
+  /** Label shown above character (agent name or PID for external) */
+  label: string | null
+  /** Background color for the label badge */
+  labelColor: string | null
 }
