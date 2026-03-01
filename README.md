@@ -1,8 +1,8 @@
 # Bit Office
 
-Control AI coding agents from your phone — a pixel-art office where each agent is a character you can assign tasks to, watch work, and approve actions in real time.
+Your very own AI dev shop — a pixel-art office staffed with AI coders who actually write code.
 
-> Your Mac runs the agents. Your phone is the remote control.
+Assign tasks, sit back, sip your coffee, and watch your AI employees grind away like it's crunch week. Every. Single. Day.
 
 ## Features
 
