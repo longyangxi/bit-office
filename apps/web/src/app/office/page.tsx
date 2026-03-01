@@ -1012,7 +1012,14 @@ export default function OfficePage() {
   const isAgentBusy = selectedAgentState?.status === "working" || selectedAgentState?.status === "waiting_approval";
 
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      // Scroll only the chat messages container, not the entire sidebar
+      const el = chatEndRef.current;
+      if (!el) return;
+      const container = el.parentElement;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    
   }, [selectedAgentState?.messages?.length, selectedAgentState?.status]);
 
   // Auto-select team lead when a team is first created
