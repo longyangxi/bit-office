@@ -104,9 +104,11 @@ export class ExternalOutputReader {
     let pollTimer: ReturnType<typeof setInterval> | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let stopped = false;
+    let retryCount = 0;
 
     const THROTTLE_MS = 2000;
     const POLL_MS = 3000; // Fallback poll interval (fs.watch can be unreliable on macOS)
+    const MAX_RETRIES = 5;
 
     const emitThrottled = (text: string) => {
       const now = Date.now();
@@ -163,7 +165,12 @@ export class ExternalOutputReader {
     const findAndWatch = () => {
       if (stopped) return;
       if (!existsSync(projectDir)) {
-        console.log(`[OutputReader] Project dir not found, retrying: ${projectDir}`);
+        retryCount++;
+        if (retryCount > MAX_RETRIES) {
+          console.log(`[OutputReader] Project dir not found after ${MAX_RETRIES} retries, giving up: ${projectDir}`);
+          return;
+        }
+        console.log(`[OutputReader] Project dir not found (${retryCount}/${MAX_RETRIES}), retrying: ${projectDir}`);
         retryTimer = setTimeout(findAndWatch, 5000);
         return;
       }
@@ -178,7 +185,12 @@ export class ExternalOutputReader {
           .sort((a, b) => b.mtime - a.mtime);
 
         if (files.length === 0) {
-          console.log(`[OutputReader] No JSONL files yet in ${projectDir}, retrying`);
+          retryCount++;
+          if (retryCount > MAX_RETRIES) {
+            console.log(`[OutputReader] No JSONL files after ${MAX_RETRIES} retries, giving up: ${projectDir}`);
+            return;
+          }
+          console.log(`[OutputReader] No JSONL files yet in ${projectDir} (${retryCount}/${MAX_RETRIES}), retrying`);
           retryTimer = setTimeout(findAndWatch, 5000);
           return;
         }
