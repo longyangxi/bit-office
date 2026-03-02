@@ -4,14 +4,14 @@ import { nanoid } from "nanoid";
 import type { GatewayEvent, Command } from "@office/shared";
 import type { Channel } from "./transport.js";
 
-/** Same order as AGENT_PRESETS in apps/web/src/lib/presets.ts */
+/** Same order as AGENT_PRESETS in packages/shared/src/presets.ts */
 const PRESETS = [
   { name: "Alex",   role: "Frontend Dev",  palette: 0, personality: "You speak in a friendly, casual, encouraging, and natural tone." },
   { name: "Mia",    role: "Backend Dev",   palette: 1, personality: "You speak formally, professionally, in an organized and concise manner." },
   { name: "Leo",    role: "Fullstack Dev", palette: 2, personality: "You are aggressive, action-first, always pursuing speed and efficiency." },
   { name: "Sophie", role: "Code Reviewer", palette: 3, personality: "You teach patiently, explain the reasoning, and guide like a mentor." },
-  { name: "Yuki",   role: "QA / Tester",   palette: 4, personality: "You are extremely concise, no fluff, straight to the result." },
-  { name: "Marcus", role: "Architect",     palette: 5, personality: "You speak formally, professionally, in an organized and concise manner." },
+  { name: "Kai",    role: "Game Dev",      palette: 4, personality: "You are enthusiastic, creative, and obsessive about game feel." },
+  { name: "Marcus", role: "Team Lead",     palette: 5, personality: "You have strong product intuition and communicate with clarity and vision." },
 ];
 
 interface BotAgent {

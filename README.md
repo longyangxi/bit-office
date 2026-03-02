@@ -161,7 +161,8 @@ packages/
 | Mia | Backend Dev | Formal, professional |
 | Leo | Fullstack Dev | Aggressive, action-first |
 | Sophie | Code Reviewer | Patient, mentor-like |
-| Marcus | Architect / Lead | Formal, strategic |
+| Kai | Game Dev | Enthusiastic, creative |
+| Marcus | **Team Lead** | Visionary, decisive (always the leader, locked) |
 
 ## Inspiration
 

@@ -8,7 +8,7 @@ import { connect, sendCommand } from "@/lib/connection";
 import { getConnection } from "@/lib/storage";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
-import { AGENT_PRESETS } from "@/lib/presets";
+import { AGENT_PRESETS, LEADER_PRESET_INDEX } from "@/lib/presets";
 import { getCharacterThumbnail } from "@/components/office/sprites/spriteData";
 import { OfficeState } from "@/components/office/engine/officeState";
 import { EditorState } from "@/components/office/editor/editorState";
@@ -954,8 +954,8 @@ function HireTeamModal({ onCreateTeam, onClose, assetsReady }: {
   onClose: () => void;
   assetsReady?: boolean;
 }) {
-  const [leadIndex, setLeadIndex] = useState(5); // Marcus default
-  const [memberChecked, setMemberChecked] = useState<boolean[]>(AGENT_PRESETS.map((_, i) => i !== 5));
+  const leadIndex = LEADER_PRESET_INDEX; // Marcus is always the leader — not changeable
+  const [memberChecked, setMemberChecked] = useState<boolean[]>(AGENT_PRESETS.map((_, i) => i !== leadIndex));
   const [backends, setBackends] = useState<Record<string, string>>({});
 
   const toggleMember = (idx: number) => {
@@ -992,20 +992,17 @@ function HireTeamModal({ onCreateTeam, onClose, assetsReady }: {
       >
         <h2 className="px-font" style={{ fontSize: 10, margin: "0 0 12px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>Hire Team</h2>
 
-        <div style={{ fontSize: 9, color: "#7a6858", marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>SELECT TEAM LEAD</div>
+        <div style={{ fontSize: 9, color: "#7a6858", marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 3, marginBottom: 10 }}>
           {AGENT_PRESETS.map((preset, idx) => (
             <button
               key={preset.palette}
-              onClick={() => {
-                setLeadIndex(idx);
-                setMemberChecked((prev) => prev.map((c, i) => i === idx ? false : c));
-              }}
+              onClick={() => { if (idx !== leadIndex) toggleMember(idx); }}
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "5px 8px",
                 border: idx === leadIndex ? "1px solid #e8903070" : "1px solid #3d2e54",
                 backgroundColor: idx === leadIndex ? "#261a00" : "transparent",
-                cursor: "pointer", textAlign: "left",
+                cursor: idx === leadIndex ? "default" : "pointer", textAlign: "left",
               }}
             >
               <SpriteAvatar palette={preset.palette} zoom={2} ready={assetsReady} />
