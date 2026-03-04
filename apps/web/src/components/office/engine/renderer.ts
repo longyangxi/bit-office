@@ -1,10 +1,11 @@
 import { TileType, TILE_SIZE, CharacterState } from '../types'
-import type { TileType as TileTypeVal, FurnitureInstance, Character, SpriteData, FloorColor } from '../types'
+import type { FurnitureInstance, Character, SpriteData, FloorColor } from '../types'
 import { getCachedSprite, getOutlineSprite } from '../sprites/spriteCache'
 import { getCharacterSprites, BUBBLE_PERMISSION_SPRITE, BUBBLE_WORKING_SPRITE, BUBBLE_WAITING_SPRITE } from '../sprites/spriteData'
 import { getCharacterSprite } from './characters'
 import { renderMatrixEffect } from './matrixEffect'
-import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR } from '../floorTiles'
+import { getColorizedFloorSprite, hasFloorSprites, WALL_COLOR, getTiledSprite } from '../floorTiles'
+import { TILED_GID_OFFSET } from '../layout/tiledLoader'
 import { hasWallSprites, getWallInstances, wallColorToHex } from '../wallTiles'
 import {
   CHARACTER_SITTING_OFFSET_PX,
@@ -42,7 +43,7 @@ import {
 
 export function renderTileGrid(
   ctx: CanvasRenderingContext2D,
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
   offsetX: number,
   offsetY: number,
   zoom: number,
@@ -61,6 +62,17 @@ export function renderTileGrid(
 
       if (tile === TileType.VOID) continue
 
+      // Tiled GID (stored as gid + TILED_GID_OFFSET)
+      if (tile >= TILED_GID_OFFSET) {
+        const gid = tile - TILED_GID_OFFSET
+        const tiledSprite = getTiledSprite(gid)
+        if (tiledSprite) {
+          const cached = getCachedSprite(tiledSprite, zoom)
+          ctx.drawImage(cached, offsetX + c * s, offsetY + r * s)
+        }
+        continue
+      }
+
       if (tile === TileType.WALL || !useSpriteFloors) {
         if (tile === TileType.WALL) {
           const colorIdx = r * layoutCols + c
@@ -77,6 +89,32 @@ export function renderTileGrid(
       const color = tileColors?.[colorIdx] ?? { h: 0, s: 0, b: 0, c: 0 }
       const sprite = getColorizedFloorSprite(tile, color)
       const cached = getCachedSprite(sprite, zoom)
+      ctx.drawImage(cached, offsetX + c * s, offsetY + r * s)
+    }
+  }
+}
+
+/** Render Tiled overlay layers (above ground, below furniture/characters) */
+export function renderTiledOverlayLayers(
+  ctx: CanvasRenderingContext2D,
+  overlayLayers: number[][],
+  cols: number,
+  rows: number,
+  offsetX: number,
+  offsetY: number,
+  zoom: number,
+): void {
+  const s = TILE_SIZE * zoom
+  for (const layer of overlayLayers) {
+    for (let i = 0; i < layer.length; i++) {
+      const val = layer[i]
+      if (val < TILED_GID_OFFSET) continue
+      const gid = val - TILED_GID_OFFSET
+      const tiledSprite = getTiledSprite(gid)
+      if (!tiledSprite) continue
+      const c = i % cols
+      const r = Math.floor(i / cols)
+      const cached = getCachedSprite(tiledSprite, zoom)
       ctx.drawImage(cached, offsetX + c * s, offsetY + r * s)
     }
   }
@@ -183,7 +221,7 @@ export function renderGridOverlay(
   zoom: number,
   cols: number,
   rows: number,
-  tileMap?: TileTypeVal[][],
+  tileMap?: number[][],
 ): void {
   const s = TILE_SIZE * zoom
   ctx.strokeStyle = GRID_LINE_COLOR
@@ -573,7 +611,7 @@ export function renderFrame(
   ctx: CanvasRenderingContext2D,
   canvasWidth: number,
   canvasHeight: number,
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
   furniture: FurnitureInstance[],
   characters: Character[],
   zoom: number,
@@ -585,6 +623,7 @@ export function renderFrame(
   layoutCols?: number,
   layoutRows?: number,
   editor?: EditorRenderState,
+  tiledLayers?: number[][],
 ): { offsetX: number; offsetY: number } {
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
@@ -600,6 +639,11 @@ export function renderFrame(
 
   // Draw tiles
   renderTileGrid(ctx, tileMap, offsetX, offsetY, zoom, tileColors, layoutCols)
+
+  // Tiled overlay layers (above ground tiles, below furniture/characters)
+  if (tiledLayers && tiledLayers.length > 0) {
+    renderTiledOverlayLayers(ctx, tiledLayers, cols, rows, offsetX, offsetY, zoom)
+  }
 
   // Build wall instances for z-sorting
   const wallInstances = hasWallSprites()

@@ -2,6 +2,8 @@ import { useCallback, useRef } from 'react'
 import { EditTool, TileType } from '@/components/office/types'
 import type { OfficeLayout, FloorColor, PlacedFurniture } from '@/components/office/types'
 import { EditorState } from '@/components/office/editor/editorState'
+import { loadTiledMap } from '@/components/office/layout/tiledLoader'
+import { setTiledSprites } from '@/components/office/floorTiles'
 import {
   paintTile,
   placeFurniture,
@@ -333,6 +335,37 @@ export function useEditorActions(
     applyLayout({ ...layout, furniture: newFurniture })
   }, [editorRef, getLayout, applyLayout])
 
+  /** Import Tiled map (.tmj + .tsj + .png) */
+  const handleImportTiledMap = useCallback(async (files: FileList) => {
+    try {
+      const result = await loadTiledMap(files)
+      setTiledSprites(result.tileSprites)
+
+      const editor = editorRef.current
+      const layout = getLayout()
+      if (layout) {
+        editor.pushUndo(layout)
+        editor.clearRedo()
+      }
+
+      const newLayout: OfficeLayout = {
+        version: 1,
+        cols: result.cols,
+        rows: result.rows,
+        tiles: result.tiles,
+        furniture: [],
+        tileColors: new Array(result.tiles.length).fill(null),
+        tiledLayers: result.overlayLayers,
+        tiledTilesetDataUrl: result.tilesetDataUrl,
+        tiledTilesetMeta: result.tilesetMeta,
+      }
+      applyLayout(newLayout)
+    } catch (err) {
+      console.error('[handleImportTiledMap]', err)
+      alert(`Failed to import Tiled map: ${err instanceof Error ? err.message : err}`)
+    }
+  }, [editorRef, getLayout, applyLayout])
+
   return {
     handleTileClick,
     handleRightClick,
@@ -345,6 +378,7 @@ export function useEditorActions(
     handleUndo,
     handleRedo,
     handleImportLayout,
+    handleImportTiledMap,
     handleSelectedFurnitureColorChange,
   }
 }

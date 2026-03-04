@@ -91,7 +91,7 @@ export function updateCharacter(
   dt: number,
   walkableTiles: Array<{ col: number; row: number }>,
   seats: Map<string, Seat>,
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
   blockedTiles: Set<string>,
 ): void {
   ch.frameTimer += dt

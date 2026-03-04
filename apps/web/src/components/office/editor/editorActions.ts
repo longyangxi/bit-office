@@ -5,7 +5,7 @@ import { getCatalogEntry, getRotatedType, getToggledType } from '../layout/furni
 import { getPlacementBlockedTiles } from '../layout/layoutSerializer'
 
 /** Paint a single tile with pattern and color. Returns new layout (immutable). */
-export function paintTile(layout: OfficeLayout, col: number, row: number, tileType: TileTypeVal, color?: FloorColor): OfficeLayout {
+export function paintTile(layout: OfficeLayout, col: number, row: number, tileType: number, color?: FloorColor): OfficeLayout {
   const idx = row * layout.cols + col
   if (idx < 0 || idx >= layout.tiles.length) return layout
 
@@ -188,7 +188,7 @@ export function expandLayout(
 
   if (newCols > MAX_COLS || newRows > MAX_ROWS) return null
 
-  const newTiles: TileTypeVal[] = new Array(newCols * newRows).fill(TileType.VOID as TileTypeVal)
+  const newTiles: number[] = new Array(newCols * newRows).fill(TileType.VOID)
   const newColors: Array<FloorColor | null> = new Array(newCols * newRows).fill(null)
 
   for (let r = 0; r < rows; r++) {

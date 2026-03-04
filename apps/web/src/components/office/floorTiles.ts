@@ -62,3 +62,28 @@ export function getColorizedFloorSprite(patternIndex: number, color: FloorColor)
 
   return getColorizedSprite(key, base, { ...color, colorize: true })
 }
+
+// ── Tiled sprite storage ──────────────────────────────────────
+
+/** Module-level storage for Tiled GID → SpriteData mapping */
+let tiledSprites: Map<number, SpriteData> = new Map()
+
+/** Store sprites extracted from a Tiled tileset */
+export function setTiledSprites(sprites: Map<number, SpriteData>): void {
+  tiledSprites = sprites
+}
+
+/** Get a Tiled sprite by GID (raw GID, not +100 offset) */
+export function getTiledSprite(gid: number): SpriteData | null {
+  return tiledSprites.get(gid) ?? null
+}
+
+/** Check if any Tiled sprites are loaded */
+export function hasTiledSprites(): boolean {
+  return tiledSprites.size > 0
+}
+
+/** Clear all Tiled sprites */
+export function clearTiledSprites(): void {
+  tiledSprites = new Map()
+}

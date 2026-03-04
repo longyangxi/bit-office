@@ -9,6 +9,7 @@ interface SettingsModalProps {
   onClose: () => void
   layout: OfficeLayout
   onImportLayout: (layout: OfficeLayout) => void
+  onImportTiledMap?: (files: FileList) => void
   soundEnabled: boolean
   onSoundEnabledChange: (enabled: boolean) => void
 }
@@ -33,11 +34,13 @@ export default function SettingsModal({
   onClose,
   layout,
   onImportLayout,
+  onImportTiledMap,
   soundEnabled,
   onSoundEnabledChange,
 }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const tiledInputRef = useRef<HTMLInputElement>(null)
 
   if (!isOpen) return null
 
@@ -72,6 +75,18 @@ export default function SettingsModal({
       }
     }
     reader.readAsText(file)
+    e.target.value = ''
+  }
+
+  const handleImportTiled = () => {
+    tiledInputRef.current?.click()
+  }
+
+  const handleTiledFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+    onImportTiledMap?.(files)
+    onClose()
     e.target.value = ''
   }
 
@@ -164,6 +179,23 @@ export default function SettingsModal({
           type="file"
           accept=".json"
           onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        <button
+          onClick={handleImportTiled}
+          onMouseEnter={() => setHovered('tiled')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...menuItemBase,
+            background: hovered === 'tiled' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+          }}
+        >Import Tiled Map</button>
+        <input
+          ref={tiledInputRef}
+          type="file"
+          multiple
+          accept=".tmj,.tsj,.tsx,.png"
+          onChange={handleTiledFileChange}
           style={{ display: 'none' }}
         />
         <button

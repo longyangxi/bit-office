@@ -36,7 +36,7 @@ import type { AgentStatus } from '@office/shared'
  */
 export class OfficeState {
   layout: OfficeLayout
-  tileMap: TileTypeVal[][]
+  tileMap: number[][]
   seats: Map<string, Seat>
   blockedTiles: Set<string>
   furniture: FurnitureInstance[]

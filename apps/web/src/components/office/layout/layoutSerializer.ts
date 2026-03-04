@@ -2,6 +2,8 @@ import { TileType, FurnitureType, TILE_SIZE, Direction, DEFAULT_COLS, DEFAULT_RO
 import type { TileType as TileTypeVal, OfficeLayout, PlacedFurniture, Seat, FurnitureInstance, FloorColor } from '../types'
 import { getCatalogEntry } from './furnitureCatalog'
 import { getColorizedSprite } from '../colorize'
+import { rebuildTiledSprites, collectGidsFromTiles } from './tiledLoader'
+import { setTiledSprites } from '../floorTiles'
 
 // Migration color constants (used when old layouts lack tileColors)
 const CONF_ROOM_COLOR: FloorColor = { h: 210, s: 20, b: 22, c: 0 }
@@ -12,10 +14,10 @@ const LOBBY_COLOR: FloorColor = { h: 195, s: 10, b: 18, c: 0 }
 const PRIVATE_OFFICE_COLOR: FloorColor = { h: 270, s: 15, b: 20, c: 0 }
 
 /** Convert flat tile array from layout into 2D grid */
-export function layoutToTileMap(layout: OfficeLayout): TileTypeVal[][] {
-  const map: TileTypeVal[][] = []
+export function layoutToTileMap(layout: OfficeLayout): number[][] {
+  const map: number[][] = []
   for (let r = 0; r < layout.rows; r++) {
-    const row: TileTypeVal[] = []
+    const row: number[] = []
     for (let c = 0; c < layout.cols; c++) {
       row.push(layout.tiles[r * layout.cols + c])
     }
@@ -237,7 +239,15 @@ export function deserializeLayout(json: string): OfficeLayout | null {
   try {
     const obj = JSON.parse(json)
     if (obj && obj.version === 1 && Array.isArray(obj.tiles) && Array.isArray(obj.furniture)) {
-      return migrateLayout(obj as OfficeLayout)
+      const layout = migrateLayout(obj as OfficeLayout)
+      // Async rebuild of Tiled sprites (fire and forget — sprites will appear once loaded)
+      if (layout.tiledTilesetDataUrl && layout.tiledTilesetMeta) {
+        const gids = collectGidsFromTiles(layout.tiles, layout.tiledLayers)
+        rebuildTiledSprites(layout.tiledTilesetDataUrl, layout.tiledTilesetMeta, gids)
+          .then((sprites) => setTiledSprites(sprites))
+          .catch((err) => console.warn('[deserializeLayout] Failed to rebuild Tiled sprites:', err))
+      }
+      return layout
     }
   } catch { /* ignore parse errors */ }
   return null

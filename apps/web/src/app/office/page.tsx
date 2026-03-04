@@ -1831,6 +1831,7 @@ export default function OfficePage() {
     handleUndo,
     handleRedo,
     handleImportLayout,
+    handleImportTiledMap,
     handleSelectedFurnitureColorChange,
   } = useEditorActions(editorRef, officeStateRef, onLayoutChange);
 
@@ -3089,6 +3090,7 @@ export default function OfficePage() {
           onClose={() => setShowSettings(false)}
           layout={officeStateRef.current.layout}
           onImportLayout={handleImportLayout}
+          onImportTiledMap={handleImportTiledMap}
           soundEnabled={soundEnabled}
           onSoundEnabledChange={setSoundEnabled}
         />

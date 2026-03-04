@@ -5,7 +5,7 @@ import { UNDO_STACK_MAX_SIZE, DEFAULT_FLOOR_COLOR, DEFAULT_WALL_COLOR } from '..
 export class EditorState {
   isEditMode = false
   activeTool: EditToolType = EditTool.SELECT
-  selectedTileType: TileTypeVal = TileType.FLOOR_1
+  selectedTileType: number = TileType.FLOOR_1
   selectedFurnitureType = 'desk'
 
   // Floor color settings

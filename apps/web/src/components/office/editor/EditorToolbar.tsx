@@ -44,7 +44,7 @@ const activeTabStyle: React.CSSProperties = {
 
 interface EditorToolbarProps {
   activeTool: string
-  selectedTileType: TileTypeVal
+  selectedTileType: number
   selectedFurnitureType: string
   selectedFurnitureUid: string | null
   selectedFurnitureColor: FloorColor | null

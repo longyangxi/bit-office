@@ -25,7 +25,7 @@ export function hasWallSprites(): boolean {
 export function getWallSprite(
   col: number,
   row: number,
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
 ): { sprite: SpriteData; offsetY: number } | null {
   if (!wallSprites) return null
 
@@ -50,7 +50,7 @@ export function getWallSprite(
 export function getColorizedWallSprite(
   col: number,
   row: number,
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
   color: FloorColor,
 ): { sprite: SpriteData; offsetY: number } | null {
   if (!wallSprites) return null
@@ -78,7 +78,7 @@ export function getColorizedWallSprite(
  * in z-sorting with furniture and characters.
  */
 export function getWallInstances(
-  tileMap: TileTypeVal[][],
+  tileMap: number[][],
   tileColors?: Array<FloorColor | null>,
   cols?: number,
 ): FurnitureInstance[] {

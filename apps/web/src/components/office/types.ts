@@ -142,9 +142,15 @@ export interface OfficeLayout {
   version: 1
   cols: number
   rows: number
-  tiles: TileType[]
+  tiles: number[]
   furniture: PlacedFurniture[]
   tileColors?: Array<FloorColor | null>
+  /** Extra overlay layers from Tiled import (flat arrays, GID+100 encoded) */
+  tiledLayers?: number[][]
+  /** Tileset PNG as base64 data URL for persistence */
+  tiledTilesetDataUrl?: string
+  /** Tileset metadata for reconstructing sprites */
+  tiledTilesetMeta?: { tileW: number; tileH: number; columns: number }
 }
 
 export const EditTool = {

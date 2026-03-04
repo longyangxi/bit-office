@@ -4,7 +4,7 @@ import { TileType } from '../types'
 export function isWalkable(
   col: number,
   row: number,
-  tileMap: TileType[][],
+  tileMap: number[][],
   blockedTiles: Set<string>,
 ): boolean {
   const rows = tileMap.length
@@ -18,7 +18,7 @@ export function isWalkable(
 
 /** Get walkable tile positions (grid coords) for wandering */
 export function getWalkableTiles(
-  tileMap: TileType[][],
+  tileMap: number[][],
   blockedTiles: Set<string>,
 ): Array<{ col: number; row: number }> {
   const rows = tileMap.length
@@ -40,7 +40,7 @@ export function findPath(
   startRow: number,
   endCol: number,
   endRow: number,
-  tileMap: TileType[][],
+  tileMap: number[][],
   blockedTiles: Set<string>,
 ): Array<{ col: number; row: number }> {
   if (startCol === endCol && startRow === endRow) return []
