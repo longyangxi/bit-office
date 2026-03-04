@@ -203,7 +203,8 @@ export class AgentSession {
         teamRoster: teamContext ?? "",
         originalTask,
         prompt,
-        soloHint: this.teamId ? "" : "- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.",
+        soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
+- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game"). Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
@@ -467,7 +468,10 @@ export class AgentSession {
 
             // Preview detection: skip for team leads (they don't create files).
             // Leader preview is handled by the orchestrator when isFinalResult is set.
-            const { previewUrl, previewPath } = this._isTeamLead
+            // Also skip when no work was done (no changed files and no structured preview fields)
+            // to prevent false-positive previews on casual conversations like "hi".
+            const hasWorkOutput = changedFiles.length > 0 || entryFile || previewCmd || projectDir;
+            const { previewUrl, previewPath } = (this._isTeamLead || !hasWorkOutput)
               ? { previewUrl: undefined, previewPath: undefined }
               : this.detectPreview();
 
@@ -544,7 +548,11 @@ export class AgentSession {
    */
   detectPreview(): { previewUrl: string | undefined; previewPath: string | undefined } {
     const result = this.extractResult();
-    const cwd = this.currentCwd ?? this.workspace;
+    const baseCwd = this.currentCwd ?? this.workspace;
+    // Prefer the agent's reported PROJECT_DIR for preview scanning
+    const cwd = result.projectDir
+      ? (path.isAbsolute(result.projectDir) ? result.projectDir : path.join(baseCwd, result.projectDir))
+      : baseCwd;
     let previewUrl: string | undefined;
     let previewPath: string | undefined;
 
