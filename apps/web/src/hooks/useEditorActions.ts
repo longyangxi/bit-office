@@ -353,7 +353,7 @@ export function useEditorActions(
         cols: result.cols,
         rows: result.rows,
         tiles: result.tiles,
-        furniture: [],
+        furniture: result.furniture,
         tileColors: new Array(result.tiles.length).fill(null),
         tiledLayers: result.overlayLayers,
         tiledTilesetDataUrl: result.tilesetDataUrl,

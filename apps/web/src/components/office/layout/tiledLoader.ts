@@ -7,7 +7,7 @@
  */
 
 import { TileType, TILE_SIZE } from '../types'
-import type { SpriteData } from '../types'
+import type { SpriteData, PlacedFurniture } from '../types'
 
 /** Offset added to Tiled GIDs when stored in bit-office tile arrays */
 export const TILED_GID_OFFSET = 100
@@ -25,6 +25,8 @@ export interface TiledLoadResult {
   tilesetDataUrl: string
   /** Tileset metadata for rebuilding sprites from data URL */
   tilesetMeta: { tileW: number; tileH: number; columns: number }
+  /** Furniture parsed from object layers */
+  furniture: PlacedFurniture[]
 }
 
 // ── Tiled JSON types (minimal) ────────────────────────────────
@@ -44,6 +46,19 @@ interface TiledLayerJSON {
   width?: number
   height?: number
   name?: string
+  objects?: TiledObjectJSON[]
+}
+
+interface TiledObjectJSON {
+  id: number
+  name: string
+  type: string
+  x: number
+  y: number
+  width: number
+  height: number
+  rotation: number
+  visible: boolean
 }
 
 interface TiledTilesetJSON {
@@ -175,6 +190,27 @@ export async function loadTiledMap(files: FileList): Promise<TiledLoadResult> {
   const tiles = encodedLayers[0]
   const overlayLayers = encodedLayers.slice(1)
 
+  // 8. Parse object layers for furniture
+  const objectLayers = mapJson.layers.filter(l => l.type === 'objectgroup')
+  const furniture: PlacedFurniture[] = []
+  let objUid = 0
+
+  for (const layer of objectLayers) {
+    for (const obj of layer.objects ?? []) {
+      const col = Math.floor(obj.x / mapJson.tilewidth)
+      const row = Math.floor(obj.y / mapJson.tileheight)
+      const furnitureType = mapTiledTypeToFurniture(obj.type)
+      if (!furnitureType) continue
+
+      furniture.push({
+        uid: `tiled-${++objUid}`,
+        type: furnitureType,
+        col,
+        row,
+      })
+    }
+  }
+
   return {
     tiles,
     overlayLayers,
@@ -183,7 +219,22 @@ export async function loadTiledMap(files: FileList): Promise<TiledLoadResult> {
     tileSprites,
     tilesetDataUrl,
     tilesetMeta: { tileW, tileH, columns: tsCols },
+    furniture,
   }
+}
+
+function mapTiledTypeToFurniture(type: string): string | null {
+  const map: Record<string, string> = {
+    'desk': 'desk',
+    'chair': 'chair',
+    'plant': 'plant',
+    'bookshelf': 'bookshelf',
+    'cooler': 'cooler',
+    'whiteboard': 'whiteboard',
+    'pc': 'pc',
+    'lamp': 'lamp',
+  }
+  return map[type.toLowerCase()] ?? null
 }
 
 /**
