@@ -96,8 +96,10 @@ export function renderScene(
   zoom: number,
   selectedAgentId: number | null,
   hoveredAgentId: number | null,
+  characterScale = 1,
 ): void {
   const drawables: ZDrawable[] = []
+  const charZoom = zoom * characterScale
 
   // Furniture
   for (const f of furniture) {
@@ -116,7 +118,7 @@ export function renderScene(
   for (const ch of characters) {
     const sprites = getCharacterSprites(ch.palette, ch.hueShift)
     const spriteData = getCharacterSprite(ch, sprites)
-    const cached = getCachedSprite(spriteData, zoom)
+    const cached = getCachedSprite(spriteData, charZoom)
     const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
     const drawX = Math.round(offsetX + ch.x * zoom - cached.width / 2)
     const drawY = Math.round(offsetY + (ch.y + sittingOffset) * zoom - cached.height)
@@ -132,7 +134,7 @@ export function renderScene(
       drawables.push({
         zY: charZY,
         draw: (c) => {
-          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, zoom)
+          renderMatrixEffect(c, mCh, mSpriteData, mDrawX, mDrawY, charZoom)
         },
       })
       continue
@@ -144,9 +146,9 @@ export function renderScene(
     if (isSelected || isHovered) {
       const outlineAlpha = isSelected ? SELECTED_OUTLINE_ALPHA : HOVERED_OUTLINE_ALPHA
       const outlineData = getOutlineSprite(spriteData)
-      const outlineCached = getCachedSprite(outlineData, zoom)
-      const olDrawX = drawX - zoom
-      const olDrawY = drawY - zoom
+      const outlineCached = getCachedSprite(outlineData, charZoom)
+      const olDrawX = drawX - charZoom
+      const olDrawY = drawY - charZoom
       drawables.push({
         zY: charZY - OUTLINE_Z_SORT_OFFSET,
         draw: (c) => {
@@ -393,7 +395,9 @@ export function renderBubbles(
   offsetX: number,
   offsetY: number,
   zoom: number,
+  characterScale = 1,
 ): void {
+  const charZoom = zoom * characterScale
   for (const ch of characters) {
     if (!ch.bubbleType) continue
 
@@ -408,10 +412,10 @@ export function renderBubbles(
       alpha = ch.bubbleTimer / BUBBLE_FADE_DURATION_SEC
     }
 
-    const cached = getCachedSprite(sprite, zoom)
+    const cached = getCachedSprite(sprite, charZoom)
     const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0
     const bubbleX = Math.round(offsetX + ch.x * zoom - cached.width / 2)
-    const bubbleY = Math.round(offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - cached.height - 1 * zoom)
+    const bubbleY = Math.round(offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX * characterScale) * zoom - cached.height - 1 * zoom)
 
     ctx.save()
     if (alpha < 1.0) ctx.globalAlpha = alpha
@@ -428,8 +432,10 @@ export function renderSpeechBubbles(
   offsetX: number,
   offsetY: number,
   zoom: number,
+  characterScale = 1,
 ): void {
-  const px = Math.max(1, Math.round(zoom))
+  const charZoom = zoom * characterScale
+  const px = Math.max(1, Math.round(charZoom))
 
   for (const ch of characters) {
     if (!ch.speechText) continue
@@ -440,7 +446,7 @@ export function renderSpeechBubbles(
     }
     if (alpha <= 0) continue
 
-    const fontSize = Math.max(7, Math.round(4.5 * zoom))
+    const fontSize = Math.max(7, Math.round(4.5 * charZoom))
     ctx.save()
     ctx.imageSmoothingEnabled = false
     ctx.font = `${fontSize}px monospace`
@@ -457,7 +463,7 @@ export function renderSpeechBubbles(
     const sittingOff = ch.state === CharacterState.TYPE ? BUBBLE_SITTING_OFFSET_PX : 0
     const bubbleX = Math.round(offsetX + ch.x * zoom - boxW / 2)
     const bubbleY = Math.round(
-      offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX) * zoom - boxH - tailH - 4 * px
+      offsetY + (ch.y + sittingOff - BUBBLE_VERTICAL_OFFSET_PX * characterScale) * zoom - boxH - tailH - 4 * px
     )
 
     if (alpha < 1.0) ctx.globalAlpha = alpha
@@ -500,14 +506,16 @@ export function renderNameBadges(
   offsetX: number,
   offsetY: number,
   zoom: number,
+  characterScale = 1,
 ): void {
-  const px = Math.max(1, Math.round(zoom))
+  const charZoom = zoom * characterScale
+  const px = Math.max(1, Math.round(charZoom))
 
   for (const ch of characters) {
     if (!ch.label) continue
     if (ch.matrixEffect === 'despawn') continue
 
-    const fontSize = Math.max(6, Math.round(3.5 * zoom))
+    const fontSize = Math.max(6, Math.round(3.5 * charZoom))
     ctx.save()
     ctx.imageSmoothingEnabled = false
     ctx.font = `bold ${fontSize}px monospace`
@@ -524,7 +532,7 @@ export function renderNameBadges(
     // Position above the character head — bubbles drawn later will naturally overlap
     const BADGE_VERTICAL_OFFSET_PX = 26
     const badgeX = Math.round(offsetX + ch.x * zoom - boxW / 2)
-    const badgeY = Math.round(offsetY + (ch.y + sittingOff - BADGE_VERTICAL_OFFSET_PX) * zoom - boxH)
+    const badgeY = Math.round(offsetY + (ch.y + sittingOff - BADGE_VERTICAL_OFFSET_PX * characterScale) * zoom - boxH)
 
     const bgColor = ch.labelColor ?? '#8a7a6a'
 
@@ -586,7 +594,9 @@ export function renderFrame(
   layoutRows?: number,
   editor?: EditorRenderState,
   backgroundImage?: HTMLImageElement | null,
+  characterScale?: number,
 ): { offsetX: number; offsetY: number } {
+  const charScale = characterScale ?? 1
   // Clear
   ctx.clearRect(0, 0, canvasWidth, canvasHeight)
 
@@ -621,14 +631,14 @@ export function renderFrame(
     : furniture
 
   // Draw walls + furniture + characters (z-sorted)
-  renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedAgentId, hoveredAgentId)
+  renderScene(ctx, allFurniture, characters, offsetX, offsetY, zoom, selectedAgentId, hoveredAgentId, charScale)
 
   // Agent name badges (drawn before bubbles so bubbles cover them)
-  renderNameBadges(ctx, characters, offsetX, offsetY, zoom)
+  renderNameBadges(ctx, characters, offsetX, offsetY, zoom, charScale)
 
   // Speech bubbles (always on top)
-  renderBubbles(ctx, characters, offsetX, offsetY, zoom)
-  renderSpeechBubbles(ctx, characters, offsetX, offsetY, zoom)
+  renderBubbles(ctx, characters, offsetX, offsetY, zoom, charScale)
+  renderSpeechBubbles(ctx, characters, offsetX, offsetY, zoom, charScale)
 
   // Editor overlays
   if (editor) {

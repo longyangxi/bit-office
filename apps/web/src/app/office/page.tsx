@@ -1928,7 +1928,17 @@ export default function OfficePage() {
   const handleAgentClick = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
     setChatOpen(true);
-  }, []);
+    const agent = agents.get(agentId);
+    if (agent) {
+      if (agent.isExternal) {
+        setExpandedSection("external");
+      } else if (agent.teamId) {
+        setExpandedSection("team");
+      } else {
+        setExpandedSection("agents");
+      }
+    }
+  }, [agents]);
 
   const handleHire = useCallback((def: AgentDefinition, backend: string) => {
     const existing = Array.from(agents.values()).filter(

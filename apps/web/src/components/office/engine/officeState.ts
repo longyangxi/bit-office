@@ -26,6 +26,8 @@ import {
   CHARACTER_HIT_HEIGHT,
   SPEECH_BUBBLE_DURATION_SEC,
   SPEECH_BUBBLE_MAX_CHARS,
+  DEFAULT_COLS,
+  DEFAULT_ROWS,
 } from '../constants'
 import type { AgentStatus } from '@office/shared'
 
@@ -45,6 +47,8 @@ export class OfficeState {
   characters: Map<number, Character> = new Map()
   selectedCharId: number | null = null
   hoveredCharId: number | null = null
+  /** Scale factor for characters relative to default map size */
+  characterScale = 1
 
   // ── Agent ID mapping ──────────────────────────────────────────
   private agentIdToCharId = new Map<string, number>()
@@ -58,6 +62,14 @@ export class OfficeState {
     this.blockedTiles = getBlockedTiles(this.layout.furniture)
     this.furniture = layoutToFurnitureInstances(this.layout.furniture)
     this.walkableTiles = getWalkableTiles(this.tileMap, this.blockedTiles)
+    this.characterScale = this.computeCharacterScale()
+  }
+
+  private computeCharacterScale(): number {
+    const defaultSize = Math.max(DEFAULT_COLS, DEFAULT_ROWS)
+    const currentSize = Math.max(this.layout.cols, this.layout.rows)
+    if (currentSize <= defaultSize) return 1
+    return Math.pow(currentSize / defaultSize, 0.75)
   }
 
   /** Set background image (from room ZIP import) */
@@ -69,6 +81,7 @@ export class OfficeState {
   setLayout(layout: OfficeLayout): void {
     this.layout = layout
     this.tileMap = layoutToTileMap(layout)
+    this.characterScale = this.computeCharacterScale()
     this.seats = layoutToSeats(layout.furniture)
     this.blockedTiles = getBlockedTiles(layout.furniture)
     this.furniture = layoutToFurnitureInstances(layout.furniture)
@@ -276,14 +289,15 @@ export class OfficeState {
 
   /** Get character at pixel position (for hit testing). Returns agentId or null. */
   getAgentAtPixel(worldX: number, worldY: number): string | null {
+    const s = this.characterScale
     const chars = this.getCharacters().sort((a, b) => b.y - a.y)
     for (const ch of chars) {
       if (ch.matrixEffect === 'despawn') continue
       const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
       const anchorY = ch.y + sittingOffset
-      const left = ch.x - CHARACTER_HIT_HALF_WIDTH
-      const right = ch.x + CHARACTER_HIT_HALF_WIDTH
-      const top = anchorY - CHARACTER_HIT_HEIGHT
+      const left = ch.x - CHARACTER_HIT_HALF_WIDTH * s
+      const right = ch.x + CHARACTER_HIT_HALF_WIDTH * s
+      const top = anchorY - CHARACTER_HIT_HEIGHT * s
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
         return this.charIdToAgentId.get(ch.id) ?? null
@@ -294,14 +308,15 @@ export class OfficeState {
 
   /** Set hovered character by numeric id (for outline rendering) */
   setHoveredCharAtPixel(worldX: number, worldY: number): void {
+    const s = this.characterScale
     const chars = this.getCharacters().sort((a, b) => b.y - a.y)
     for (const ch of chars) {
       if (ch.matrixEffect === 'despawn') continue
       const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
       const anchorY = ch.y + sittingOffset
-      const left = ch.x - CHARACTER_HIT_HALF_WIDTH
-      const right = ch.x + CHARACTER_HIT_HALF_WIDTH
-      const top = anchorY - CHARACTER_HIT_HEIGHT
+      const left = ch.x - CHARACTER_HIT_HALF_WIDTH * s
+      const right = ch.x + CHARACTER_HIT_HALF_WIDTH * s
+      const top = anchorY - CHARACTER_HIT_HEIGHT * s
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
         this.hoveredCharId = ch.id
@@ -333,7 +348,7 @@ export class OfficeState {
 
       // Temporarily unblock own seat so character can pathfind to it
       this.withOwnSeatUnblocked(ch, () =>
-        updateCharacter(ch, dt, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles)
+        updateCharacter(ch, dt * this.characterScale, this.walkableTiles, this.seats, this.tileMap, this.blockedTiles)
       )
 
       // Tick bubble timer

@@ -2,8 +2,9 @@
  * Loads a tileEditor room.zip and converts it to an OfficeLayout
  * with a background image and custom furniture sprites.
  *
- * The grid is downsampled by a factor of 2 (e.g. 64×64 → 32×32)
- * so that characters remain a reasonable size at the game's zoom level.
+ * The grid is imported 1:1 — no downsampling. The tileEditor cellSize
+ * matches bit-office TILE_SIZE (16px), so tiles and furniture positions
+ * are preserved exactly.
  */
 
 import JSZip from 'jszip'
@@ -12,7 +13,6 @@ import { TileType, TILE_SIZE } from '../types'
 import { registerCustomSprites } from './furnitureCatalog'
 
 const PNG_ALPHA_THRESHOLD = 128
-const DOWNSAMPLE_FACTOR = 2
 
 interface RoomJson {
   version: number
@@ -114,46 +114,6 @@ function mapTileType(cell: number): number {
   return TileType.FLOOR_1
 }
 
-/**
- * Downsample a tile grid by merging NxN blocks into single tiles.
- * Uses majority vote: WALL > VOID > FLOOR (prioritize blocking tiles).
- */
-function downsampleTiles(
-  srcTiles: number[],
-  srcCols: number,
-  srcRows: number,
-  factor: number,
-): { tiles: number[]; cols: number; rows: number } {
-  const cols = Math.floor(srcCols / factor)
-  const rows = Math.floor(srcRows / factor)
-  const tiles: number[] = []
-
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      let wallCount = 0
-      let voidCount = 0
-      let floorCount = 0
-      for (let dr = 0; dr < factor; dr++) {
-        for (let dc = 0; dc < factor; dc++) {
-          const srcR = r * factor + dr
-          const srcC = c * factor + dc
-          const t = srcTiles[srcR * srcCols + srcC]
-          if (t === TileType.WALL) wallCount++
-          else if (t === TileType.VOID) voidCount++
-          else floorCount++
-        }
-      }
-      const total = factor * factor
-      // If majority is wall → wall, if majority void → void, else floor
-      if (wallCount > total / 2) tiles.push(TileType.WALL)
-      else if (voidCount > total / 2) tiles.push(TileType.VOID)
-      else tiles.push(TileType.FLOOR_1)
-    }
-  }
-
-  return { tiles, cols, rows }
-}
-
 export async function loadRoomZip(file: File): Promise<RoomZipResult | null> {
   const zip = await JSZip.loadAsync(file)
 
@@ -191,17 +151,13 @@ export async function loadRoomZip(file: File): Promise<RoomZipResult | null> {
       const ab = await tileFile.async('arraybuffer')
       const blob = new Blob([ab], { type: mimeFromFilename(tile.file) })
       const img = await loadImageFromBlob(blob)
-      // Footprint after downsampling
-      const dsW = Math.max(1, Math.round(tile.gridW / DOWNSAMPLE_FACTOR))
-      const dsH = Math.max(1, Math.round(tile.gridH / DOWNSAMPLE_FACTOR))
-      // Scale sprite to match downsampled tile grid
-      const targetW = dsW * TILE_SIZE
-      const targetH = dsH * TILE_SIZE
+      const targetW = tile.gridW * TILE_SIZE
+      const targetH = tile.gridH * TILE_SIZE
       const sprite = imageToSpriteData(img, targetW, targetH)
       customSprites.set(`room-${tile.id}`, {
         sprite,
-        footprintW: dsW,
-        footprintH: dsH,
+        footprintW: tile.gridW,
+        footprintH: tile.gridH,
         label: tile.name,
       })
     }
@@ -210,29 +166,28 @@ export async function loadRoomZip(file: File): Promise<RoomZipResult | null> {
     }
   }
 
-  // 3. Map tile types then downsample the grid
-  const mappedTiles = roomJson.tiles.map(mapTileType)
-  const ds = downsampleTiles(mappedTiles, roomJson.cols, roomJson.rows, DOWNSAMPLE_FACTOR)
+  // 3. Map tile types (1:1, no downsampling)
+  const tiles = roomJson.tiles.map(mapTileType)
 
   // 4. Generate default tileColors for floor tiles
   const defaultFloorColor: FloorColor = { h: 35, s: 30, b: 15, c: 0 }
-  const tileColors: Array<FloorColor | null> = ds.tiles.map((t) =>
+  const tileColors: Array<FloorColor | null> = tiles.map((t) =>
     t === TileType.WALL || t === TileType.VOID ? null : defaultFloorColor,
   )
 
-  // 5. Map furniture with downsampled positions
+  // 5. Map furniture positions (1:1, no scaling)
   const furniture: PlacedFurniture[] = (roomJson.furniture || []).map((f) => ({
     uid: f.uid,
     type: `room-${f.tileId}`,
-    col: Math.round(f.col / DOWNSAMPLE_FACTOR),
-    row: Math.round(f.row / DOWNSAMPLE_FACTOR),
+    col: f.col,
+    row: f.row,
   }))
 
   const layout: OfficeLayout = {
     version: 1,
-    cols: ds.cols,
-    rows: ds.rows,
-    tiles: ds.tiles as TileTypeVal[],
+    cols: roomJson.cols,
+    rows: roomJson.rows,
+    tiles: tiles as TileTypeVal[],
     furniture,
     tileColors,
   }

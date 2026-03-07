@@ -72,7 +72,7 @@ export const CAMERA_FOLLOW_LERP = 0.1
 export const CAMERA_FOLLOW_SNAP_THRESHOLD = 0.5
 
 // ── Zoom ─────────────────────────────────────────────────────
-export const ZOOM_MIN = 1
+export const ZOOM_MIN = 0.25
 export const ZOOM_MAX = 10
 export const ZOOM_DEFAULT_DPR_FACTOR = 2
 export const ZOOM_SCROLL_THRESHOLD = 50
