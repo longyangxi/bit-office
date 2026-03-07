@@ -71,6 +71,9 @@ export const ROTATE_BUTTON_BG = 'rgba(50, 120, 200, 0.85)'
 export const CAMERA_FOLLOW_LERP = 0.1
 export const CAMERA_FOLLOW_SNAP_THRESHOLD = 0.5
 
+// ── Pan ──────────────────────────────────────────────────────
+export const PAN_ENABLED = false
+
 // ── Zoom ─────────────────────────────────────────────────────
 export const ZOOM_MIN = 0.25
 export const ZOOM_MAX = 10

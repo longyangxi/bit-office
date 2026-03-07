@@ -93,6 +93,7 @@ export function updateCharacter(
   seats: Map<string, Seat>,
   tileMap: TileTypeVal[][],
   blockedTiles: Set<string>,
+  speedScale = 1,
 ): void {
   ch.frameTimer += dt
 
@@ -231,7 +232,7 @@ export function updateCharacter(
       const nextTile = ch.path[0]
       ch.dir = directionBetween(ch.tileCol, ch.tileRow, nextTile.col, nextTile.row)
 
-      ch.moveProgress += (WALK_SPEED_PX_PER_SEC / TILE_SIZE) * dt
+      ch.moveProgress += (WALK_SPEED_PX_PER_SEC / TILE_SIZE) * dt * speedScale
 
       const fromCenter = tileCenter(ch.tileCol, ch.tileRow)
       const toCenter = tileCenter(nextTile.col, nextTile.row)

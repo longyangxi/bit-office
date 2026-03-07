@@ -2142,8 +2142,8 @@ export default function OfficePage() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden", display: "flex" }}>
-      {/* Game Scene — fills remaining space */}
-      <div style={{ flex: 1, position: "relative", minWidth: 0 }}>
+      {/* Game Scene — square, fit to viewport height */}
+      <div style={{ width: isMobile ? "100%" : "100vh", flexShrink: 0, position: "relative", minWidth: 0 }}>
         <PixelOfficeScene
           onAdapterReady={handleAdapterReady}
           onAgentClick={handleAgentClick}
@@ -2306,10 +2306,8 @@ export default function OfficePage() {
       {/* ── Right Sidebar (desktop only) ── */}
       {!isMobile && (
         <div style={{
-          width: "33vw",
-          minWidth: 300,
-          maxWidth: 420,
-          flexShrink: 0,
+          flex: 1,
+          minWidth: 280,
           height: "100vh",
           backgroundColor: "#1e1a30",
           borderLeft: "2px solid #3d2e54",

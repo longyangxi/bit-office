@@ -6,7 +6,7 @@ import { startGameLoop } from "../engine/gameLoop";
 import { renderFrame } from "../engine/renderer";
 import type { EditorRenderState } from "../engine/renderer";
 import { EditTool } from "../types";
-import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX } from "../constants";
+import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX, PAN_ENABLED } from "../constants";
 import { loadAllAssets } from "../sprites/assetLoader";
 import { registerTilesetSprites, getCatalogEntry, isRotatable } from "../layout/furnitureCatalog";
 import { EditorState } from "../editor/editorState";
@@ -306,6 +306,7 @@ export default function PixelOfficeScene({
     }
 
     if (!isPanningRef.current) return;
+    if (!PAN_ENABLED) return;
     if (editorRef.current.dragUid) return; // don't pan while dragging furniture
 
     const dx = e.clientX - panStartRef.current.x;
@@ -418,7 +419,7 @@ export default function PixelOfficeScene({
         zoomRef.current = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomRef.current + direction));
         pinchDistRef.current = dist;
       }
-    } else if (e.touches.length === 1 && isPanningRef.current) {
+    } else if (e.touches.length === 1 && isPanningRef.current && PAN_ENABLED) {
       const dx = e.touches[0].clientX - panStartRef.current.x;
       const dy = e.touches[0].clientY - panStartRef.current.y;
       panRef.current = {
