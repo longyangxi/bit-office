@@ -1859,6 +1859,7 @@ export default function OfficePage() {
   const [showOfficeSwitcher, setShowOfficeSwitcher] = useState(false);
   const [currentOfficeId, setCurrentOfficeId] = useState<string | null>(null);
   const [showEditorControls, setShowEditorControls] = useState(false);
+  const [testActive, setTestActive] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [, forceUpdate] = useState(0);
   const editorRef = useRef(new EditorState());
@@ -2426,6 +2427,18 @@ export default function OfficePage() {
             onOpenHistory={() => setShowHistory(true)}
             onOpenOfficeSwitcher={() => setShowOfficeSwitcher(true)}
             showEditorControls={showEditorControls}
+            testActive={testActive}
+            onToggleTest={() => {
+              const office = officeStateRef.current;
+              if (!office) return;
+              if (office.hasTestCharacters()) {
+                office.clearTestCharacters();
+                setTestActive(false);
+              } else {
+                office.spawnTestCharacters();
+                setTestActive(true);
+              }
+            }}
           />
         )}
 

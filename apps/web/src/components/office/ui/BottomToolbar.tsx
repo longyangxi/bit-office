@@ -8,6 +8,8 @@ interface BottomToolbarProps {
   onOpenSettings: () => void
   onOpenHistory?: () => void
   onOpenOfficeSwitcher?: () => void
+  onToggleTest?: () => void
+  testActive?: boolean
   showEditorControls?: boolean
 }
 
@@ -45,7 +47,7 @@ const btnActive: React.CSSProperties = {
   color: '#e8b040',
 }
 
-export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettings, onOpenHistory, onOpenOfficeSwitcher, showEditorControls = true }: BottomToolbarProps) {
+export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettings, onOpenHistory, onOpenOfficeSwitcher, onToggleTest, testActive, showEditorControls = true }: BottomToolbarProps) {
   const [hovered, setHovered] = useState<string | null>(null)
 
   return (
@@ -112,6 +114,25 @@ export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettin
           title="Project history"
         >
           History
+        </button>
+      )}
+      {onToggleTest && (
+        <button
+          onClick={onToggleTest}
+          onMouseEnter={() => setHovered('test')}
+          onMouseLeave={() => setHovered(null)}
+          style={
+            testActive
+              ? { ...btnActive, color: '#e85040', borderColor: '#e8504060', background: 'rgba(200, 48, 48, 0.12)' }
+              : {
+                  ...btnBase,
+                  background: hovered === 'test' ? 'rgba(200,155,48,0.08)' : btnBase.background,
+                  color: hovered === 'test' ? '#a08a6c' : btnBase.color,
+                }
+          }
+          title="Fill all work seats with test characters"
+        >
+          {testActive ? 'Clear Test' : 'Test'}
         </button>
       )}
     </div>

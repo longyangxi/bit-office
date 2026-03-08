@@ -404,6 +404,57 @@ export class OfficeState {
     }
   }
 
+  // ── Test helpers ─────────────────────────────────────────────
+
+  /** Spawn test characters to fill all work seats (for layout testing) */
+  spawnTestCharacters(): void {
+    // Clear existing test characters
+    this.clearTestCharacters()
+
+    let idx = 0
+    for (const [uid, seat] of this.seats) {
+      if (seat.isRest || seat.assigned) continue
+      const agentId = `__test_${idx}`
+      const charId = this.nextCharId++
+      this.agentIdToCharId.set(agentId, charId)
+      this.charIdToAgentId.set(charId, agentId)
+
+      const palette = idx % PALETTE_COUNT
+      seat.assigned = true
+      const ch = createCharacter(charId, palette, uid, seat, 0, CharacterState.TYPE)
+      ch.isActive = true
+      this.characters.set(charId, ch)
+      idx++
+    }
+    this.rebuildFurnitureInstances()
+  }
+
+  /** Remove all test characters */
+  clearTestCharacters(): void {
+    const toRemove: string[] = []
+    for (const [agentId, charId] of this.agentIdToCharId) {
+      if (!agentId.startsWith('__test_')) continue
+      const ch = this.characters.get(charId)
+      if (ch?.seatId) {
+        const seat = this.seats.get(ch.seatId)
+        if (seat) seat.assigned = false
+      }
+      this.characters.delete(charId)
+      this.charIdToAgentId.delete(charId)
+      toRemove.push(agentId)
+    }
+    for (const id of toRemove) this.agentIdToCharId.delete(id)
+    if (toRemove.length > 0) this.rebuildFurnitureInstances()
+  }
+
+  /** Check if test characters are active */
+  hasTestCharacters(): boolean {
+    for (const agentId of this.agentIdToCharId.keys()) {
+      if (agentId.startsWith('__test_')) return true
+    }
+    return false
+  }
+
   // ── Private helpers ───────────────────────────────────────────
 
   private findFreeSeat(): string | null {
