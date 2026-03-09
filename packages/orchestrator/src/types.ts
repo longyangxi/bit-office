@@ -167,6 +167,13 @@ export interface TeamPhaseChangedEvent {
   leadAgentId: string;
 }
 
+export interface TokenUpdateEvent {
+  type: "token:update";
+  agentId: string;
+  inputTokens: number;
+  outputTokens: number;
+}
+
 export type OrchestratorEvent =
   | TaskStartedEvent
   | TaskDoneEvent
@@ -183,7 +190,8 @@ export type OrchestratorEvent =
   | AgentCreatedEvent
   | AgentFiredEvent
   | TaskResultReturnedEvent
-  | TeamPhaseChangedEvent;
+  | TeamPhaseChangedEvent
+  | TokenUpdateEvent;
 
 // ---------------------------------------------------------------------------
 // Event map for typed EventEmitter
@@ -206,6 +214,7 @@ export interface OrchestratorEventMap {
   "agent:fired": [AgentFiredEvent];
   "task:result-returned": [TaskResultReturnedEvent];
   "team:phase": [TeamPhaseChangedEvent];
+  "token:update": [TokenUpdateEvent];
 }
 
 // ---------------------------------------------------------------------------

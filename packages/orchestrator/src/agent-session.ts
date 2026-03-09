@@ -373,17 +373,28 @@ export class AgentSession {
             try {
               const msg = JSON.parse(line);
               seenFirstJson = true;
+              // DEBUG: log message structure to find where usage lives
+              const usageKeys = msg.message?.usage ? Object.keys(msg.message.usage) : (msg.usage ? Object.keys(msg.usage) : null);
+              if (usageKeys || msg.type === "result") {
+                console.log(`[Agent ${this.name} TOKEN-DEBUG] type=${msg.type}, msg.usage=${JSON.stringify(msg.usage)?.slice(0, 200)}, msg.message.usage=${JSON.stringify(msg.message?.usage)?.slice(0, 200)}, keys=${JSON.stringify(usageKeys)}`);
+              }
               // Capture session ID for --resume on next run
               if (msg.type === "system" && msg.session_id) {
                 this.sessionId = msg.session_id;
                 console.log(`[Agent ${this.name}] Session ID: ${msg.session_id}`);
               }
               if (msg.type === "assistant" && msg.message?.content) {
-                // Accumulate token usage
+                // Accumulate token usage and broadcast live updates
                 if (msg.message.usage) {
                   const usage = msg.message.usage;
                   if (typeof usage.input_tokens === "number") this.taskInputTokens += usage.input_tokens;
                   if (typeof usage.output_tokens === "number") this.taskOutputTokens += usage.output_tokens;
+                  this.onEvent({
+                    type: "token:update",
+                    agentId: this.agentId,
+                    inputTokens: this.taskInputTokens,
+                    outputTokens: this.taskOutputTokens,
+                  });
                 }
                 for (const block of msg.message.content) {
                   if (block.type === "text" && block.text) {

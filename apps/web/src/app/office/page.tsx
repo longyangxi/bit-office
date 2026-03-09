@@ -2555,6 +2555,7 @@ export default function OfficePage() {
                             {BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend}
                           </span>
                         )}
+                        {agentState && agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                       </div>
                       <div style={{ fontSize: 11, color: "#7a6858", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", display: "flex", alignItems: "center", gap: 4, marginTop: 2 }}
                         title={isExternal && agentState?.cwd ? agentState.cwd : undefined}
@@ -3134,6 +3135,18 @@ export default function OfficePage() {
                 ) : (
                   <>
                     {teamAgents.map((agent) => renderAgentRow(agent))}
+                    {/* Team token usage total */}
+                    {(() => {
+                      let totalIn = 0, totalOut = 0;
+                      for (const a of teamAgents) { totalIn += a.tokenUsage.inputTokens; totalOut += a.tokenUsage.outputTokens; }
+                      if (totalIn === 0 && totalOut === 0) return null;
+                      return (
+                        <div style={{ padding: "6px 14px", borderTop: "1px solid #2e2448", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span style={{ fontSize: 10, color: "#7a6858", fontFamily: "monospace" }}>Team Tokens</span>
+                          <TokenBadge inputTokens={totalIn} outputTokens={totalOut} />
+                        </div>
+                      );
+                    })()}
                     {/* Team Activity log */}
                     {teamMessages.length > 0 && (
                       <TeamActivityLog messages={teamMessages} agents={agents} assetsReady={assetsReady} onClear={clearTeamMessages} />
@@ -3246,7 +3259,7 @@ export default function OfficePage() {
                   {mobileIsTeamMember && (
                     <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: "#e8b04020", color: "#e8b040", border: "1px solid #e8b04050", fontFamily: "monospace" }}>TEAM</span>
                   )}
-                  {/* TODO: token usage display disabled for now */}
+                  {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                 </div>
                 <div style={{ fontSize: 11, color: "#7a6858" }}>{agentState.role}</div>
               </div>
@@ -3639,12 +3652,8 @@ export default function OfficePage() {
         isOpen={showHistory}
         onClose={() => setShowHistory(false)}
         onPreview={(preview) => {
-          // Construct preview URL based on preview type
-          if (preview.entryFile) {
-            setPreviewUrl(`http://localhost:9100/${preview.entryFile}`);
-          } else if (preview.previewCmd && preview.previewPort) {
-            setPreviewUrl(`http://localhost:${preview.previewPort}`);
-          }
+          const url = computePreviewUrl(preview);
+          if (url) setPreviewUrl(url);
         }}
       />
 

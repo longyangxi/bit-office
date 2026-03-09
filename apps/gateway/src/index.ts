@@ -222,6 +222,8 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       persistTeamState();
       return null; // already published directly
     }
+    case "token:update":
+      return { type: "TOKEN_UPDATE", agentId: e.agentId, inputTokens: e.inputTokens, outputTokens: e.outputTokens };
     // New events (worktree, retry) — log only, no wire protocol equivalent yet
     case "task:retrying":
       console.log(`[Retry] Agent ${e.agentId} retrying task ${e.taskId} (attempt ${e.attempt}/${e.maxRetries})`);
@@ -820,6 +822,7 @@ async function main() {
   orc.on("task:queued", forwardEvent);
   orc.on("worktree:created", forwardEvent);
   orc.on("worktree:merged", forwardEvent);
+  orc.on("token:update", forwardEvent);
   orc.on("agent:created", forwardEvent);
   orc.on("agent:fired", forwardEvent);
   orc.on("task:result-returned", forwardEvent);

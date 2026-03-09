@@ -59,12 +59,16 @@ class PreviewServer {
   runCommand(cmd: string, cwd: string, agentPort: number): string | undefined {
     this.stop();
 
-    // Always override the agent's port with our controlled port
+    // Always use our controlled port — strip any agent-specified port from the command,
+    // then inject --port flag. This is more reliable than string-replacing port numbers.
     const port = COMMAND_PORT;
-    if (agentPort !== port) {
-      cmd = cmd.replace(String(agentPort), String(port));
-      console.log(`[PreviewServer] Remapped port ${agentPort} → ${port}`);
-    }
+    // Remove any existing --port/--Port/-p flags with their values
+    cmd = cmd.replace(/\s+(?:--port|-p)\s+\d+/gi, "");
+    // Remove the agent port number if it appears as a bare argument (e.g. "serve -l 5173")
+    if (agentPort) cmd = cmd.replace(new RegExp(`\\b${agentPort}\\b`, "g"), String(port));
+    // Inject our port flag
+    cmd = `${cmd} --port ${port}`;
+    console.log(`[PreviewServer] Command: "${cmd}" (forced port ${port})`);
 
     // Kill anything already on our port before starting
     this.killPortHolder(port);
@@ -75,6 +79,7 @@ class PreviewServer {
         cwd,
         stdio: "ignore",
         detached: true,
+        env: { ...process.env, PORT: String(port) },
       });
       this.process.unref();
       this.currentDir = cwd;

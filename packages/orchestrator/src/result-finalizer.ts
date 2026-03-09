@@ -73,8 +73,8 @@ export function finalizeTeamResult(ctx: FinalizeContext): void {
   // 5. Auto-construct previewCmd for non-HTML entryFile
   autoConstructPreviewCmd(result);
 
-  // 6. Cascading preview URL resolution (only if no preview URL yet)
-  if (!result.previewUrl) {
+  // 6. Cascading preview URL resolution (only if no preview info yet)
+  if (!result.previewUrl && !result.previewPath) {
     resolvePreviewUrlFromTeam(result, ctx);
   }
 }
@@ -131,9 +131,9 @@ function resolvePreviewUrlFromTeam(result: TaskResultPayload, ctx: FinalizeConte
 
   // First: scan workers' detectPreview (team-specific, not in shared resolver)
   const workerPreview = ctx.detectWorkerPreview();
-  if (workerPreview?.previewUrl) {
-    result.previewUrl = workerPreview.previewUrl;
-    result.previewPath = workerPreview.previewPath;
+  if (workerPreview?.previewUrl || workerPreview?.previewPath) {
+    if (workerPreview.previewUrl) result.previewUrl = workerPreview.previewUrl;
+    if (workerPreview.previewPath) result.previewPath = workerPreview.previewPath;
     return;
   }
 
@@ -148,8 +148,6 @@ function resolvePreviewUrlFromTeam(result: TaskResultPayload, ctx: FinalizeConte
     workspace,
   });
 
-  if (preview.previewUrl) {
-    result.previewUrl = preview.previewUrl;
-    result.previewPath = preview.previewPath;
-  }
+  if (preview.previewUrl) result.previewUrl = preview.previewUrl;
+  if (preview.previewPath) result.previewPath = preview.previewPath;
 }

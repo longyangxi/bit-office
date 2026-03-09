@@ -35,6 +35,8 @@ interface AgentState {
   messages: ChatMessage[];
   lastLogLine: string | null;
   tokenUsage: { inputTokens: number; outputTokens: number };
+  /** Accumulated token baseline from completed tasks (live TOKEN_UPDATE adds on top) */
+  _tokenBaseline?: { inputTokens: number; outputTokens: number };
 }
 
 export interface TeamChatMessage {
@@ -445,6 +447,23 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             }
           }
 
+          // Finalize token usage for this task.
+          // If TOKEN_UPDATE was received during the task, agent.tokenUsage is already up-to-date
+          // (baseline + live task tokens). Just snapshot it as the new baseline.
+          // If no TOKEN_UPDATE was received (e.g. non-streaming backend), fall back to
+          // accumulating from event.result.tokenUsage.
+          const baseline = agent._tokenBaseline ?? { inputTokens: 0, outputTokens: 0 };
+          const liveUpdated = agent.tokenUsage.inputTokens > baseline.inputTokens
+            || agent.tokenUsage.outputTokens > baseline.outputTokens;
+          const updatedTokenUsage = liveUpdated
+            ? agent.tokenUsage  // TOKEN_UPDATE already set the correct value
+            : (event.result.tokenUsage
+              ? {
+                  inputTokens: agent.tokenUsage.inputTokens + event.result.tokenUsage.inputTokens,
+                  outputTokens: agent.tokenUsage.outputTokens + event.result.tokenUsage.outputTokens,
+                }
+              : agent.tokenUsage);
+
           // Team lead intermediate completions in EXECUTE phase (delegating, processing results)
           // should not appear as chat messages — only the final summary matters.
           // In conversational phases (create, design, complete), always show the message.
@@ -455,17 +474,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               currentTaskId: null,
               pendingApproval: null,
               lastLogLine: event.result.summary?.slice(0, 100) ?? "Coordinating team...",
+              tokenUsage: updatedTokenUsage,
+              _tokenBaseline: updatedTokenUsage,
             });
             break;
           }
-
-          // Accumulate token usage from this task
-          const updatedTokenUsage = event.result.tokenUsage
-            ? {
-                inputTokens: agent.tokenUsage.inputTokens + event.result.tokenUsage.inputTokens,
-                outputTokens: agent.tokenUsage.outputTokens + event.result.tokenUsage.outputTokens,
-              }
-            : agent.tokenUsage;
 
           const newMessages: ChatMessage[] = [
             ...agent.messages,
@@ -486,6 +499,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             lastLogLine: null,
             messages: newMessages,
             tokenUsage: updatedTokenUsage,
+            _tokenBaseline: updatedTokenUsage,
           });
           saveToStorage(agents);
           break;
@@ -640,11 +654,14 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "TOKEN_UPDATE": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
+          // Live per-task cumulative values — track baseline from completed tasks
+          // so multi-task agents accumulate correctly
+          const baseline = agent._tokenBaseline ?? { inputTokens: 0, outputTokens: 0 };
           agents.set(event.agentId, {
             ...agent,
             tokenUsage: {
-              inputTokens: event.inputTokens,
-              outputTokens: event.outputTokens,
+              inputTokens: baseline.inputTokens + event.inputTokens,
+              outputTokens: baseline.outputTokens + event.outputTokens,
             },
           });
           break;
