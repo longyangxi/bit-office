@@ -455,6 +455,7 @@ export class OfficeState {
     return false
   }
 
+
   // ── Private helpers ───────────────────────────────────────────
 
   private findFreeSeat(): string | null {

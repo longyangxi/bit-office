@@ -200,6 +200,8 @@ export function layoutToSeats(furniture: PlacedFurniture[]): Map<string, Seat> {
 
     if (bestChair) {
       usedChairs.add(bestChair.key)
+      const dirNames = ['UP', 'DOWN', 'LEFT', 'RIGHT']
+      console.log(`[Seat] desk(${dCol},${dRow}) → chair(${bestChair.item.col},${bestChair.item.row}) facing=${dirNames[bestChair.facingDesk] ?? bestChair.facingDesk}`)
       seats.set(bestChair.item.uid, {
         uid: bestChair.item.uid,
         seatCol: bestChair.item.col,
