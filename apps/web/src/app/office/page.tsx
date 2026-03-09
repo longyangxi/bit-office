@@ -2265,8 +2265,9 @@ export default function OfficePage() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden", display: "flex" }}>
-      {/* Game Scene — width = viewport height × map aspect ratio, sidebar gets the rest */}
-      <div style={{ width: `calc(100vh * ${mapAspect})`, maxWidth: "100vw", flexShrink: 1, position: "relative", minWidth: 0 }}>
+      {/* Game Scene — fills remaining space after sidebar, centered */}
+      <div style={{ flex: 1, position: "relative", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+        <div style={{ width: `min(100%, calc(100vh * ${mapAspect}))`, height: `min(100%, calc(100vw / ${mapAspect}))`, aspectRatio: `${mapAspect}`, position: "relative", maxHeight: "100vh" }}>
         <PixelOfficeScene
           onAdapterReady={handleAdapterReady}
           onAgentClick={handleAgentClick}
@@ -2441,13 +2442,15 @@ export default function OfficePage() {
           <TeamActivityToast messages={teamMessages} agents={agents} assetsReady={assetsReady} />
         )}
 
+        </div>
       </div>
 
       {/* ── Right Sidebar (desktop only) — takes remaining space after game scene ── */}
       {!isMobile && (
         <div style={{
-          flex: 1,
+          width: "35vw",
           minWidth: 260,
+          flexShrink: 0,
           height: "100vh",
           backgroundColor: "#1e1a30",
           borderLeft: "2px solid #3d2e54",
