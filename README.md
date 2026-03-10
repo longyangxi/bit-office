@@ -16,7 +16,7 @@
 </div>
 
 ---
-
+![Image](https://github.com/user-attachments/assets/8764fec6-f033-4d84-8953-d9ab6f0a25f2)
 ![Bit Office Demo](https://github.com/user-attachments/assets/0add1297-a4ac-488f-b590-b0440e8f2a0f)
 
 ## What is Bit Office

@@ -1858,6 +1858,91 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady }: {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Demo script — simulates a team working session for GIF recording
+// ---------------------------------------------------------------------------
+function runDemoScript(onDone: () => void) {
+  const store = useOfficeStore;
+  const h = (event: Parameters<ReturnType<typeof useOfficeStore.getState>["handleEvent"]>[0]) =>
+    store.getState().handleEvent(event);
+  const timers: ReturnType<typeof setTimeout>[] = [];
+  const at = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+
+  const LEADER = "demo-leader";
+  const DEV = "demo-dev";
+  const REVIEWER = "demo-reviewer";
+  const TEAM = "demo-team";
+  let ts = Date.now();
+  const tick = () => ts++;
+
+  const chat = (from: string, msg: string, type: "delegation" | "result" | "status" = "status", to?: string) =>
+    h({ type: "TEAM_CHAT", fromAgentId: from, toAgentId: to, message: msg, messageType: type, timestamp: tick() });
+
+  const log = (agentId: string, text: string) =>
+    h({ type: "LOG_APPEND", agentId, taskId: "demo-task", stream: "stdout", chunk: text });
+
+  // 0s — Create 3 agents
+  h({ type: "AGENT_CREATED", agentId: LEADER, name: "Ash (Leader)", role: "Team Leader", teamId: TEAM, isTeamLead: true, palette: 0, isExternal: false });
+  h({ type: "AGENT_CREATED", agentId: DEV, name: "Leo", role: "Developer", teamId: TEAM, palette: 1, isExternal: false });
+  h({ type: "AGENT_CREATED", agentId: REVIEWER, name: "Mae", role: "Code Reviewer", teamId: TEAM, palette: 2, isExternal: false });
+
+  // 0.5s — All agents sit at desks
+  at(500, () => {
+    h({ type: "AGENT_STATUS", agentId: LEADER, status: "working" });
+    h({ type: "AGENT_STATUS", agentId: DEV, status: "working" });
+    h({ type: "AGENT_STATUS", agentId: REVIEWER, status: "working" });
+  });
+
+  // 2s — Leader announces plan
+  at(2000, () => chat(LEADER, "Alright team! Let's build a space shooter game with PixiJS."));
+
+  // 5s — Leader delegates to dev
+  at(5000, () => chat(LEADER, "Build the complete game — player controls, enemies, scoring, and sound effects.", "delegation", DEV));
+
+  // 8s — Leader delegates to reviewer
+  at(8000, () => chat(LEADER, "Stand by to review Leo's code when he's done.", "delegation", REVIEWER));
+
+  // 11s — Dev progress
+  at(11000, () => log(DEV, "Setting up project structure"));
+
+  // 14s — Dev progress
+  at(14000, () => log(DEV, "Building player ship and controls"));
+
+  // 17s — Dev progress
+  at(17000, () => log(DEV, "Adding enemy waves and collision"));
+
+  // 20s — Dev progress
+  at(20000, () => log(DEV, "Implementing score system and UI"));
+
+  // 23s — Dev finishes
+  at(23000, () => {
+    log(DEV, "Build passed. All files verified.");
+    chat(DEV, "Space shooter complete — 5 enemy types, power-ups, and high score system.", "result");
+  });
+
+  // 26s — Reviewer starts
+  at(26000, () => log(REVIEWER, "Checking file structure"));
+
+  // 29s — Reviewer progress
+  at(29000, () => log(REVIEWER, "Reading game logic and collision detection"));
+
+  // 32s — Reviewer passes
+  at(32000, () => chat(REVIEWER, "VERDICT: PASS — Clean code, smooth gameplay loop, all features working.", "result"));
+
+  // 35s — Leader wraps up
+  at(35000, () => chat(LEADER, "Great work everyone! The space shooter is ready to ship.", "result"));
+
+  // 39s — Cleanup
+  at(39000, () => {
+    h({ type: "AGENT_FIRED", agentId: LEADER });
+    h({ type: "AGENT_FIRED", agentId: DEV });
+    h({ type: "AGENT_FIRED", agentId: REVIEWER });
+    // Clear team messages
+    store.setState({ teamMessages: [] });
+    onDone();
+  });
+}
+
 export default function OfficePage() {
   const router = useRouter();
   const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole } = useOfficeStore();
@@ -1884,7 +1969,12 @@ export default function OfficePage() {
   const [currentOfficeId, setCurrentOfficeId] = useState<string | null>(null);
   const [showEditorControls, setShowEditorControls] = useState(false);
   const [testActive, setTestActive] = useState(false);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [showDemoButton, setShowDemoButton] = useState(false);
   const showTestButton = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('test');
+  useEffect(() => {
+    setShowDemoButton(new URLSearchParams(window.location.search).has('demo'));
+  }, []);
   const [mapAspect, setMapAspect] = useState(1); // cols/rows ratio for scene width
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [, forceUpdate] = useState(0);
@@ -3708,6 +3798,24 @@ export default function OfficePage() {
       )}
 
       {confirmModal}
+
+      {/* Demo mode button */}
+      {showDemoButton && !demoRunning && (
+        <button
+          onClick={() => {
+            setDemoRunning(true);
+            runDemoScript(() => setDemoRunning(false));
+          }}
+          style={{
+            position: "fixed", bottom: 16, left: 16, zIndex: 50,
+            background: "rgba(232, 176, 64, 0.15)", border: "1px solid rgba(232, 176, 64, 0.4)",
+            color: "#e8b040", padding: "6px 14px", cursor: "pointer",
+            fontSize: 11, fontFamily: "monospace", fontWeight: 600,
+          }}
+        >
+          Run Demo
+        </button>
+      )}
     </div>
   );
 }
