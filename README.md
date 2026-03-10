@@ -1,155 +1,121 @@
 # Bit Office
 
-The first multi-model AI team that actually ships code together.
+Gameified command center for AI coding agents.
 
-Assemble a team of AI CLIs — Claude Code, Codex, Gemini, Aider — and watch them plan, code, review, and deliver a working prototype. A Leader designs the vision, a Developer writes every line, a Reviewer catches bugs. You're the CEO; they do the work.
+Bit Office turns invisible AI automation into a live, controllable workspace: you can run multiple AI CLIs, watch execution in a pixel office, approve risky actions, and inspect results from desktop or phone.
 
 <video src="https://github.com/user-attachments/assets/a13ac1a0-8440-49f1-ab1e-110a35847d0c" controls width="100%"></video>
 
-## Why Bit Office?
+## Why It Stands Out
 
-One AI CLI is powerful. A **team** of different AI models working together is a force multiplier:
+- Visual operations for AI coding: see status, logs, and approvals in one place
+- Multi-model runtime: connect different agent CLIs in the same project
+- Human-in-the-loop safety: approval gates for risky commands
+- Ship-first feedback loop: auto preview generation for completed tasks
+- 12 office visual styles: switch workspace themes to match your project mood
+- Built-in project history: every completed run is saved with replayable preview
+- Cost visibility by design: token usage tracked per agent and per team
+- Shareable live office: invite others to watch progress and suggest improvements in real time
+- Mobile-first control: pair your phone and manage sessions anywhere
+- Real-world integrations: WebSocket, Ably, Telegram, external process detection
 
-- **Real team collaboration, not just chat** — Leader designs, Developer builds, Reviewer checks. Structured delegation with design → execute → review loops, not a single agent doing everything
-- **Mix the best models for each role** — Claude Code leads, Codex develops, Gemini reviews. Each role runs whichever AI CLI fits best. Swap models per role to find the strongest combination
-- **You stay in control** — Approve plans before execution, preview results before accepting, give feedback at every stage. The team iterates until you're satisfied
-- **Monitor everything from anywhere** — Desktop browser, mobile PWA, Telegram bots. Approve risky commands from the couch, check progress on the bus
-- **See them work** — Pixel characters animate in a 2D office while agents think, delegate, and debate. Already running CLIs in your terminal? Bit Office auto-detects them and streams live output into the office
-
-## Quick Start
+## 30-Second Quick Start
 
 ```bash
 npx bit-office
 ```
 
-Opens a browser UI, auto-detects installed AI CLIs, generates a pair code for your phone.
+What you get:
 
-## Features
+- Local gateway starts
+- Browser UI opens
+- Installed AI CLIs are detected
+- Pair code is generated for phone access
 
-### Core
+## What You Can Build With It
 
-- **Multi-Agent Teams** — Leader + Developer + Reviewer collaborate on one project with structured delegation
-- **Mix & Match AI CLIs** — Claude Code, Codex, Gemini, Aider, OpenCode — assign any CLI to any role
-- **Live Preview** — Static HTML, build output, or running processes served automatically when work completes
-- **Approval System** — Risky commands trigger Yes/No bubbles you can approve from desktop or phone
+- AI-native product prototyping
+- Rapid feature spikes with continuous preview
+- Multi-agent coding experiments across different model backends
+- Live demos of autonomous development workflows
 
-### Team Workflow
+## Feature Highlights
 
-See [team-workflow.md](team-workflow.md) for the full workflow diagram.
+- Agent orchestration engine (`@bit-office/orchestrator`)
+- Pixel-art real-time office UI (Next.js + React + Zustand)
+- 12 selectable office skins for different visual themes
+- Event-safe protocol layer (`@office/shared`)
+- Preview resolution for static output, build artifacts, and running services
+- Project history timeline with preview links for completed deliveries
+- Token analytics dashboard across agent-level and team-level execution
+- Live office sharing with viewer feedback that agents can incorporate into next iterations
+- External agent process scanning + live output streaming
+- Cross-device session pairing and remote control channels
 
-## How Teams Work
+## Team Workflow
 
-### Phases
+All team-specific details (roles, phases, loops, reviewer cycles, lead behavior, preset roles) are documented in:
 
-| Phase | What happens | You can... |
-|-------|-------------|------------|
-| **Create** | Leader asks what you want to build | Chat freely |
-| **Design** | Leader presents a creative plan | Give feedback or **Approve** |
-| **Execute** | Dev codes, reviewer checks, leader coordinates | Cancel if needed |
-| **Complete** | Preview your prototype | Give feedback or **End Project** |
+- [team-workflow.md](team-workflow.md)
 
-### Roles
-
-| Role | What they do |
-|------|-------------|
-| **Team Lead** | Creative Director + coordinator. Designs vision, delegates work, never writes code |
-| **Developer** | Writes all code, builds, self-fixes until it works, delivers a previewable result |
-| **Code Reviewer** | Checks code quality + verifies features match the plan. PASS or FAIL |
-
-### Preview
-
-The system automatically serves your deliverable:
-
-| Deliverable | How |
-|-------------|-----|
-| Static HTML/CSS/JS | Served directly |
-| Build output (Vite, React, etc.) | Dev builds, system serves `dist/` |
-| Running process (Flask, Express) | System runs the start command |
-
-## Run from Source
+## Run From Source
 
 ### Prerequisites
 
-- Node.js 18+, pnpm
-- At least one AI CLI: `claude`, `codex`, `gemini`, `aider`, or `opencode`
+- Node.js 18+
+- pnpm
+- At least one supported AI CLI installed locally (`claude`, `codex`, `gemini`, `aider`, or `opencode`)
 
-### Setup
-
-```bash
-git clone https://github.com/anthropics/bit-office.git && cd bit-office
-pnpm bootstrap          # checks deps, installs packages, copies .env
-pnpm start:local        # launches web UI + gateway
-```
-
-### Development
+### Install and run
 
 ```bash
-pnpm dev                # start both web + gateway
-pnpm dev:web            # Next.js on :3000
-pnpm dev:gateway        # Gateway on :9090
+git clone https://github.com/longyangxi/bit-office.git
+cd bit-office
+pnpm install
+pnpm dev
 ```
 
-### Environment
+### Useful scripts
 
 ```bash
-WORKSPACE=/path/to/project     # where agents work (default: .workspace/)
-ABLY_API_KEY=your-key           # optional: remote access
-TELEGRAM_BOT_TOKENS=t1,t2,t3   # optional: one token per agent
+pnpm dev          # web + gateway in dev mode
+pnpm dev:web      # web only (Next.js)
+pnpm dev:gateway  # gateway only
+pnpm build        # build all packages
+pnpm start        # build web and start gateway
 ```
 
-### Assets
+### Environment variables
 
-Pixel office tileset not included (licensed). Purchase from [donarg.itch.io/officetileset](https://donarg.itch.io/officetileset), place at `apps/web/public/Office Tileset`.
+```bash
+WORKSPACE=/path/to/project       # optional; agent working directory
+ABLY_API_KEY=your-ably-key       # optional; remote realtime channel
+TELEGRAM_BOT_TOKENS=t1,t2,t3     # optional; one token per bot/agent
+WEB_DIR=/custom/web/out          # optional; override served web build dir
+```
 
 ## Architecture
 
-```
-Phone (PWA)                          Mac (Daemon)
-┌─────────────┐    WebSocket/Ably    ┌──────────────────────────┐
-│  Next.js 15 │ ◄─────────────────► │  Gateway                 │
-│  PixiJS v8  │    pair code auth    │  ├─ Orchestrator         │
-│  Zustand    │                      │  │  ├─ Agent Sessions    │
-│  PWA        │   commands ──────►   │  │  ├─ Delegation Router │
-│             │   ◄────── events     │  │  └─ Prompt Engine     │
-└─────────────┘                      │  ├─ Channels (WS/Ably/TG)│
-                                     │  └─ Policy Engine        │
-                                     └──────────┬───────────────┘
-                                                │ spawn
-                                     ┌──────────▼───────────────┐
-                                     │  AI CLI Processes         │
-                                     │  claude / codex / gemini  │
-                                     └──────────────────────────┘
-```
-
-```
+```text
 apps/
-  web/           Next.js 15 PWA — pixel office UI, pairing, agent control
-  gateway/       Node.js daemon — channels, orchestration, AI process management
+  web/           Next.js PWA + pixel office renderer + control UI
+  gateway/       runtime daemon (events, channels, policy, orchestration)
 
 packages/
-  shared/        Zod schemas — type-safe command/event protocol
-  orchestrator/  Multi-agent engine — delegation, review cycles, prompt templates
+  orchestrator/  multi-agent execution engine
+  shared/        typed command/event contracts
 ```
-
-## Agent Presets
-
-| Name | Role | Personality |
-|------|------|-------------|
-| Alex | Frontend Dev | Friendly, casual |
-| Mia | Backend Dev | Formal, professional |
-| Leo | Fullstack Dev | Aggressive, action-first |
-| Sophie | Code Reviewer | Patient, mentor-like |
-| Kai | Game Dev | Enthusiastic, creative |
-| Marcus | **Team Lead** | Visionary, decisive (always the leader, locked) |
 
 ## Inspiration
 
 Pixel office art inspired by [pixel-agents](https://github.com/pablodelucca/pixel-agents) by [@pablodelucca](https://github.com/pablodelucca).
 
+## Contributing
+
+Issues and PRs are welcome.
+
+If you are exploring AI-native dev tooling, workflows, or interfaces, Bit Office is a good playground for experiments.
+
 ## License
 
 MIT
-
----
-
-*This entire project was vibe-coded — built with AI, from start to finish.*
