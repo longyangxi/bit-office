@@ -11,7 +11,7 @@
 
 **Watch your AI agents work together in a pixel-art office. Claude, Codex, Gemini, Aider — one team, one flow.**
 
-[Quick Start](#-quick-start) | [Features](#-features) | [Team Workflow](#-team-workflow) | [Architecture](#-architecture) | [Contributing](#-contributing)
+[Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
 
 </div>
 
@@ -69,23 +69,6 @@ Track token usage **per agent and per team** in real time. Know exactly what eac
 Every completed run is saved with a replayable preview. Browse past sessions, compare approaches, and build on previous work.
 
 ## Team Workflow
-
-```mermaid
-flowchart TD
-    A([You]) --> B[Team Lead proposes plan]
-    B --> C{Approve plan?}
-    C -- Feedback --> B
-    C -- Yes --> D[Developer implements]
-    D --> E[Code Reviewer evaluates]
-    E -- FAIL --> D
-    E -- PASS --> F([Preview delivered])
-    F --> G{Project done?}
-    G -- More feedback --> D
-    G -- End --> A
-
-    style A fill:#4a9eff,color:#fff
-    style F fill:#2ecc71,color:#fff
-```
 
 | Phase | What Happens | Your Action |
 |---|---|---|
