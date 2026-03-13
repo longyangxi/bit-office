@@ -69,7 +69,7 @@ export class OfficeState {
     const defaultSize = Math.max(DEFAULT_COLS, DEFAULT_ROWS)
     const currentSize = Math.max(this.layout.cols, this.layout.rows)
     if (currentSize <= defaultSize) return 1
-    return Math.pow(currentSize / defaultSize, 0.75) * 1.15
+    return Math.pow(currentSize / defaultSize, 0.75)
   }
 
   /** Set background image (from room ZIP import) */
