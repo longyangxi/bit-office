@@ -1,13 +1,13 @@
 [
   {
     "id": "default",
-    "name": "Modern",
-    "file": "modernCozy.zip"
+    "name": "Retro",
+    "file": "nostalgic.zip"
   },
   {
-    "id": "Nostalgic",
-    "name": "Retro",
-    "file": "Nostalgic.zip"
+    "id": "Modern",
+    "name": "Modern",
+    "file": "modern-cozy.zip"
   }
   ,
   {
@@ -16,25 +16,11 @@
     "file": "cute-whimsical.zip"
   },
   {
-    "id": "Eastern Fantasy",
-    "name": "Eastern Fantasy",
-    "file": "easternFantasy.zip"
-  },
-  {
-    "id": "Historical",
-    "name": "Historical",
-    "file": "historical.zip"
-  },
-  {
     "id": "Mythological",
     "name": "Mythological",
     "file": "mythological.zip"
   },
-  {
-    "id": "Western Fantasy",
-    "name": "Western Fantasy",
-    "file": "westernFantasy.zip"
-  },
+
   {
     "id": "Cyberpunk",
     "name": "Cyberpunk",
@@ -46,14 +32,29 @@
     "file": "sifi.zip"
   },
   {
-    "id": "Gothic",
-    "name": "Gothic",
-    "file": "gothic.zip"
-  },
-  {
     "id": "Post Apocalyptic",
     "name": "Post Apocalyptic",
     "file": "postApocalyptic.zip"
+  },
+  {
+    "id": "Historical",
+    "name": "Historical",
+    "file": "historical.zip"
+  },
+  {
+    "id": "Eastern Fantasy",
+    "name": "Eastern Fantasy",
+    "file": "easternFantasy.zip"
+  },
+  {
+    "id": "Western Fantasy",
+    "name": "Western Fantasy",
+    "file": "westernFantasy.zip"
+  },
+  {
+    "id": "Gothic",
+    "name": "Gothic",
+    "file": "gothic.zip"
   },
   {
     "id": "DarkLegend",

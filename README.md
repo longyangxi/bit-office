@@ -9,14 +9,14 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/bit-office/pulls)
 
-**AI agents that learn from your feedback. Claude, Codex, Gemini, Aider — one team, getting better every project.**
+**Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project.**
 
 [Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
 
 </div>
 
 ---
-![Image](https://github.com/user-attachments/assets/8764fec6-f033-4d84-8953-d9ab6f0a25f2)
+![Image](https://github.com/user-attachments/assets/ecfcd88b-e72e-4b04-bdd7-87eea9f00b51)
 
 ## What is Bit Office
 
