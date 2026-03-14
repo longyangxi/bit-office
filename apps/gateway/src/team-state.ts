@@ -45,15 +45,6 @@ export function loadTeamState(): TeamState {
     if (existsSync(STATE_FILE)) {
       const raw = JSON.parse(readFileSync(STATE_FILE, "utf-8"));
       if (raw && Array.isArray(raw.agents)) {
-        // Migrate: drop orphan agents (no teamId and not team lead) from old versions
-        const before = raw.agents.length;
-        raw.agents = raw.agents.filter(
-          (a: PersistedAgent) => a.teamId || a.isTeamLead,
-        );
-        if (raw.agents.length < before) {
-          console.log(`[TeamState] Cleaned ${before - raw.agents.length} orphan agent(s) from saved state`);
-          saveTeamState(raw as TeamState);
-        }
         return raw as TeamState;
       }
     }
