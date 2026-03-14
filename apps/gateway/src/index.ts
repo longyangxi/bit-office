@@ -1106,7 +1106,5 @@ process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 process.on("SIGHUP", cleanup);
 process.on("beforeExit", () => { try { persistTeamState(); } catch { /* ignore */ } });
-// Auto-save state every 30 seconds (catches cases where process is force-killed)
-setInterval(() => { try { persistTeamState(); } catch { /* ignore */ } }, 30_000);
 
 main().catch(console.error);
