@@ -120,7 +120,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             animation: cursor-blink 1s step-end infinite;
             color: #18ff62;
           }
-          .chat-markdown, .chat-markdown * {
+          .chat-markdown, .chat-markdown *,
+          .term-msg, .term-msg *,
+          .crt-screen a, .crt-screen code, .crt-screen span {
             font-size: 12px !important; font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace !important;
             font-weight: 300 !important; line-height: 1.5 !important;
           }
@@ -149,8 +151,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           .chat-markdown p { margin: 0 0 2px !important; }
           .chat-markdown ul, .chat-markdown ol { margin: 2px 0 !important; padding-left: 16px !important; }
           .chat-markdown li { margin: 0 !important; }
-          .chat-markdown a { color: #7a9a7a !important; text-decoration: none !important; }
-          .chat-markdown a:hover { text-decoration: underline !important; }
+          .chat-markdown a, .crt-screen a { color: #7a9a7a !important; text-decoration: none !important; }
+          .chat-markdown a:hover, .crt-screen a:hover { text-decoration: underline !important; }
           @keyframes dot-pulse {
             0% { content: '.'; }
             33% { content: '..'; }

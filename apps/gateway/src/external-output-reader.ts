@@ -106,7 +106,7 @@ export class ExternalOutputReader {
     let stopped = false;
     let retryCount = 0;
 
-    const THROTTLE_MS = 2000;
+    const THROTTLE_MS = 500;
     const POLL_MS = 3000; // Fallback poll interval (fs.watch can be unreliable on macOS)
     const MAX_RETRIES = 5;
 
@@ -296,7 +296,7 @@ export class ExternalOutputReader {
       if (content && Array.isArray(content)) {
         for (const block of content) {
           if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
-            emit(block.text.slice(0, 200));
+            emit(block.text);
           }
         }
       }
@@ -312,7 +312,7 @@ export class ExternalOutputReader {
     if (entry.type === "result") {
       const result = entry.result;
       if (typeof result === "string" && result.trim()) {
-        emit(result.slice(0, 200));
+        emit(result);
       }
       this.onStatus?.(agentId, "idle");
     }

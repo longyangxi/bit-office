@@ -5,7 +5,7 @@ import { telegramChannel } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -33,7 +33,6 @@ const externalAgents = new Map<string, { agentId: string; name: string; backendI
 /** Snapshot current team state to disk (reads phase from orchestrator's PhaseMachine) */
 function persistTeamState() {
   const agents: PersistedAgent[] = orc.getAllAgents()
-    .filter(a => a.teamId || orc.isTeamLead(a.agentId))
     .map(a => ({
       agentId: a.agentId,
       name: a.name,
@@ -43,6 +42,7 @@ function persistTeamState() {
       palette: a.palette,
       teamId: a.teamId,
       isTeamLead: orc.isTeamLead(a.agentId),
+      workDir: agentWorkDirs.get(a.agentId),
     }));
 
   let team: TeamState["team"] = null;
@@ -159,7 +159,21 @@ function loadAgentDefs(): AgentDefinition[] {
   try {
     if (existsSync(AGENTS_FILE)) {
       const raw = JSON.parse(readFileSync(AGENTS_FILE, "utf-8"));
-      if (Array.isArray(raw.agents)) return raw.agents;
+      if (Array.isArray(raw.agents)) {
+        const saved: AgentDefinition[] = raw.agents;
+        // Merge any new builtin agents that aren't in the saved file
+        const savedIds = new Set(saved.map(a => a.id));
+        let added = false;
+        for (const def of DEFAULT_AGENT_DEFS) {
+          if (def.isBuiltin && !savedIds.has(def.id)) {
+            // Insert new builtins at the beginning (before existing ones)
+            saved.unshift(def);
+            added = true;
+          }
+        }
+        if (added) saveAgentDefs(saved);
+        return saved;
+      }
     }
   } catch (e) {
     console.log(`[Gateway] Failed to read agents.json: ${e}`);
@@ -231,9 +245,15 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
     case "task:started":
       return { type: "TASK_STARTED", agentId: e.agentId, taskId: e.taskId, prompt: e.prompt };
     case "task:done": {
-      // Phase transitions (create→design, execute→complete) are now handled
-      // internally by orchestrator's PhaseMachine — no detection needed here.
-      return { type: "TASK_DONE", agentId: e.agentId, taskId: e.taskId, result: e.result, isFinalResult: e.isFinalResult };
+      // output-parser.ts truncates fullOutput to 3000 chars; get raw stdout buffer instead
+      let fullOutput = e.result.fullOutput ?? e.result.summary;
+      try {
+        const session = (orc as any).agentManager?.get?.(e.agentId);
+        const raw = session?.stdoutBuffer as string | undefined;
+        if (raw && raw.length > fullOutput.length) fullOutput = raw;
+      } catch { /* ignore */ }
+      const result = { ...e.result, fullOutput };
+      return { type: "TASK_DONE", agentId: e.agentId, taskId: e.taskId, result, isFinalResult: e.isFinalResult };
     }
     case "task:failed":
       return { type: "TASK_FAILED", agentId: e.agentId, taskId: e.taskId, error: e.error };
@@ -497,10 +517,13 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       // Store team-level working directory override
       teamWorkDir = parsed.workDir || undefined;
 
-      // Clean up any orphan agents (no teamId) before creating team to avoid duplicates
+      // Clean up stale team agents from a previous team (no longer valid)
+      // Keep solo agents intact — they are independent
+      const newTeamDefNames = new Set(allIds.map(id => agentDefs.find(a => a.id === id)?.name).filter(Boolean));
       for (const agent of orc.getAllAgents()) {
-        if (!agent.teamId && !agent.isTeamLead) {
-          console.log(`[Gateway] Removing orphan agent "${agent.name}" before team creation`);
+        if (agent.teamId && !agent.isTeamLead) {
+          // Remove old team members (will be re-created below)
+          console.log(`[Gateway] Removing old team agent "${agent.name}" before team creation`);
           orc.removeAgent(agent.agentId);
         }
       }
@@ -842,11 +865,6 @@ async function main() {
   if (savedState.agents.length > 0) {
     console.log(`[Gateway] Restoring ${savedState.agents.length} agents from team-state.json`);
     for (const agent of savedState.agents) {
-      // Skip agents without a teamId — they're remnants of old/fired agents
-      if (!agent.teamId && !agent.isTeamLead) {
-        console.log(`[Gateway] Skipping orphan agent "${agent.name}" (no teamId)`);
-        continue;
-      }
       orc.createAgent({
         agentId: agent.agentId,
         name: agent.name,
@@ -859,6 +877,10 @@ async function main() {
       });
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
+      }
+      // Restore custom workDir for solo agents
+      if (agent.workDir) {
+        agentWorkDirs.set(agent.agentId, agent.workDir);
       }
     }
     if (savedState.team) {
@@ -1071,6 +1093,8 @@ async function main() {
 
 function cleanup() {
   console.log("[Gateway] Shutting down...");
+  // Save state before destroying agents
+  try { persistTeamState(); } catch { /* ignore */ }
   outputReader?.detachAll();
   scanner?.stop();
   previewServer.stop();
@@ -1081,5 +1105,8 @@ function cleanup() {
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 process.on("SIGHUP", cleanup);
+process.on("beforeExit", () => { try { persistTeamState(); } catch { /* ignore */ } });
+// Auto-save state every 30 seconds (catches cases where process is force-killed)
+setInterval(() => { try { persistTeamState(); } catch { /* ignore */ } }, 30_000);
 
 main().catch(console.error);

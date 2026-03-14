@@ -10,6 +10,7 @@ export interface AgentDefinition {
 }
 
 export const DEFAULT_AGENT_DEFS: AgentDefinition[] = [
+  { id: "dev",    name: "Dev",    role: "Developer",     skills: "",                                        personality: "You are a versatile senior developer. You adapt to any language, framework, or task. You write clean, working code and explain your reasoning concisely.", palette: 0, isBuiltin: true, teamRole: "dev" },
   { id: "alex",   name: "Alex",   role: "Frontend Dev",  skills: "UI components, React/Next.js/CSS",       personality: "You speak in a friendly, casual, encouraging, and natural tone.", palette: 0, isBuiltin: true, teamRole: "dev" },
   { id: "mia",    name: "Mia",    role: "Backend Dev",   skills: "APIs, database, server logic",           personality: "You speak formally, professionally, in an organized and concise manner.", palette: 1, isBuiltin: true, teamRole: "dev" },
   { id: "leo",    name: "Leo",    role: "Fullstack Dev", skills: "End-to-end, frontend + backend",         personality: "You are aggressive, action-first, always pursuing speed and efficiency.", palette: 2, isBuiltin: true, teamRole: "dev" },

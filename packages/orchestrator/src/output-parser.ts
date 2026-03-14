@@ -25,7 +25,7 @@ export interface ParsedResult {
  */
 export function parseAgentOutput(raw: string, fallbackText?: string | null): ParsedResult {
   const text = raw || fallbackText || "";
-  const fullOutput = text.slice(0, 3000);
+  const fullOutput = text;
 
   // Extract structured fields from worker output format
   const summaryMatch = text.match(/SUMMARY:\s*(.+)/i);

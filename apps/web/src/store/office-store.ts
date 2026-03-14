@@ -13,6 +13,9 @@ export interface ChatMessage {
   timestamp: number;
   result?: TaskResultPayload;
   isFinalResult?: boolean;
+  durationMs?: number;
+  /** Accumulated full output from LOG_APPEND (streaming only) */
+  _accumulatedText?: string;
 }
 
 interface AgentState {
@@ -507,16 +510,23 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
 
           // Replace streaming message with final result, or append if no stream
           const streamId = event.taskId + "-stream";
+          const streamMsg = agent.messages.find((m) => m.id === streamId);
+          const durationMs = streamMsg ? Date.now() - streamMsg.timestamp : undefined;
+          // Use the longest available text: accumulated stream > fullOutput > summary
+          const accumulated = streamMsg?._accumulatedText ?? "";
+          const serverFull = event.result.fullOutput || event.result.summary;
+          const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
           const filteredMessages = agent.messages.filter((m) => m.id !== streamId);
           const newMessages: ChatMessage[] = [
             ...filteredMessages,
             {
               id: replyId,
               role: "agent",
-              text: event.result.summary,
+              text: bestText,
               timestamp: Date.now(),
               result: event.result,
               isFinalResult: event.isFinalResult,
+              durationMs,
             },
           ];
           agents.set(event.agentId, {
@@ -600,33 +610,29 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const streamId = agent.currentTaskId ? agent.currentTaskId + "-stream" : null;
           const lastMsg = agent.messages.length > 0 ? agent.messages[agent.messages.length - 1] : null;
           if (streamId && lastMsg?.id === streamId) {
-            // Append chunk, deduplicating overlap with previous text
-            const prev = lastMsg.text;
-            const chunk = event.chunk;
-            let newText: string;
-            if (!prev) {
-              newText = chunk;
-            } else {
-              // Find if chunk overlaps with end of prev (agent sends last 3 lines which may repeat)
-              const lines = chunk.split("\n");
-              const newLines = lines.filter((l: string) => l && !prev.endsWith(l));
-              newText = newLines.length > 0 ? prev + "\n" + newLines.join("\n") : prev;
-            }
+            // Show latest chunk as streaming preview + always append to accumulated
+            const prev = lastMsg._accumulatedText ?? "";
+            const accumulated = prev ? prev + "\n" + event.chunk : event.chunk;
             const updatedMessages = [...agent.messages];
             updatedMessages[updatedMessages.length - 1] = {
               ...lastMsg,
-              text: newText,
+              text: event.chunk,
               timestamp: Date.now(),
+              _accumulatedText: accumulated,
             };
             agents.set(event.agentId, { ...agents.get(event.agentId)!, messages: updatedMessages });
           } else if (agent.isExternal) {
-            // External agents: append as separate messages (no stream id)
+            // External agents: accumulate text into the latest agent message (no task:done to replace)
             const now = Date.now();
-            if (lastMsg && lastMsg.role === "agent" && (now - lastMsg.timestamp) < 3000) {
+            if (lastMsg && lastMsg.role === "agent" && (now - lastMsg.timestamp) < 10000) {
+              // Append new content to existing message
+              const prev = lastMsg.text;
+              const newText = prev ? prev + "\n" + event.chunk : event.chunk;
               const updatedMessages = [...agent.messages];
-              updatedMessages[updatedMessages.length - 1] = { ...lastMsg, text: event.chunk, timestamp: now };
+              updatedMessages[updatedMessages.length - 1] = { ...lastMsg, text: newText, timestamp: now };
               agents.set(event.agentId, { ...agents.get(event.agentId)!, messages: updatedMessages });
             } else {
+              // New message block (gap > 10 seconds = new "turn")
               agents.set(event.agentId, {
                 ...agents.get(event.agentId)!,
                 messages: [...agents.get(event.agentId)!.messages, { id: `ext-log-${now}`, role: "agent", text: event.chunk, timestamp: now }],

@@ -21,6 +21,7 @@ export interface PersistedAgent {
   palette?: number;
   teamId?: string;
   isTeamLead?: boolean;
+  workDir?: string;
 }
 
 export interface PersistedTeam {

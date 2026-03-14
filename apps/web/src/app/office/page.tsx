@@ -36,59 +36,49 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   error: { color: "#e04848", label: "Error" },
 };
 
-// Match URLs (including inside [] brackets) and file paths
-const LINKIFY_RE = /\[?(https?:\/\/[^\s)>\]]+)\]?|((?:open\s+)?\/[\w./-]+\.\w+)/g;
+// Match URLs and absolute file paths — simple, non-greedy patterns
+const URL_RE = /https?:\/\/[^\s)>\]]+/g;
+const FILE_RE = /(?:^|\s)(\/[\w./-]+\.\w+)/g;
 
 function linkifyText(children: React.ReactNode): React.ReactNode {
-  if (typeof children === "string") {
-    const parts: React.ReactNode[] = [];
-    let lastIndex = 0;
-    let match: RegExpExecArray | null;
-    LINKIFY_RE.lastIndex = 0;
-    while ((match = LINKIFY_RE.exec(children)) !== null) {
-      if (match.index > lastIndex) {
-        parts.push(children.slice(lastIndex, match.index));
-      }
-      const url = match[1];
-      const filePath = match[2];
-      if (url) {
-        parts.push(
-          <a
-            key={match.index}
-            href={url}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: "#e8b040", textDecoration: "underline" }}
-          >{url}</a>
-        );
-      } else if (filePath) {
-        const path = filePath.replace(/^open\s+/, "");
-        parts.push(
-          <span
-            key={match.index}
-            onClick={() => sendCommand({ type: "OPEN_FILE", path })}
-            style={{
-              color: "#e8b040", textDecoration: "underline", cursor: "pointer",
-              fontFamily: "monospace", fontSize: 14,
-            }}
-            title="Click to open"
-          >{filePath}</span>
-        );
-      }
-      lastIndex = match.index + match[0].length;
+  if (typeof children !== "string") {
+    if (Array.isArray(children)) {
+      return children.map((child, i) => typeof child === "string" ? linkifyText(child) : child);
     }
-    if (parts.length === 0) return children;
-    if (lastIndex < children.length) {
-      parts.push(children.slice(lastIndex));
+    return children;
+  }
+  const text = children;
+  // Find all URLs
+  const links: { start: number; end: number; url: string; type: "url" | "file" }[] = [];
+  let m: RegExpExecArray | null;
+  URL_RE.lastIndex = 0;
+  while ((m = URL_RE.exec(text)) !== null) {
+    links.push({ start: m.index, end: m.index + m[0].length, url: m[0], type: "url" });
+  }
+  FILE_RE.lastIndex = 0;
+  while ((m = FILE_RE.exec(text)) !== null) {
+    const filePath = m[1];
+    const fileStart = m.index + m[0].indexOf(filePath);
+    // Don't overlap with existing URL matches
+    if (!links.some(l => fileStart >= l.start && fileStart < l.end)) {
+      links.push({ start: fileStart, end: fileStart + filePath.length, url: filePath, type: "file" });
     }
-    return parts;
   }
-  if (Array.isArray(children)) {
-    return children.map((child, i) =>
-      typeof child === "string" ? linkifyText(child) : child
-    );
+  if (links.length === 0) return text;
+  links.sort((a, b) => a.start - b.start);
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  for (const link of links) {
+    if (link.start > lastIdx) parts.push(text.slice(lastIdx, link.start));
+    if (link.type === "url") {
+      parts.push(<a key={link.start} href={link.url} target="_blank" rel="noopener noreferrer" style={{ color: "#7a9a7a" }}>{link.url}</a>);
+    } else {
+      parts.push(<span key={link.start} onClick={() => sendCommand({ type: "OPEN_FILE", path: link.url })} style={{ color: "#7a9a7a", cursor: "pointer" }} title="Click to open">{link.url}</span>);
+    }
+    lastIdx = link.end;
   }
-  return children;
+  if (lastIdx < text.length) parts.push(text.slice(lastIdx));
+  return parts;
 }
 
 /** Typewriter reveal — adaptive speed: slow for small chunks, faster for large backlogs. */
@@ -645,55 +635,48 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
           onClick={() => sendCommand({ type: "OPEN_FILE", path: filePath })}
           style={{
             backgroundColor: "#1a1830", padding: "8px 10px", borderRadius: 6,
-            fontSize: 13, cursor: "pointer", border: "1px solid #2a2a4a",
-            display: "flex", alignItems: "center", gap: 8,
+            cursor: "pointer", border: "1px solid #2a2a4a",
+            display: "flex", alignItems: "center", gap: 6,
             whiteSpace: "pre-wrap", wordBreak: "break-all",
           }}
           title="Click to open"
         >
-          <span style={{ fontSize: 15 }}>&#x1F517;</span>
-          <code style={{ fontFamily: "monospace", color: "#818cf8" }} {...props}>{text}</code>
+          <code {...props}>{text}</code>
         </pre>
       );
     }
     return isBlock ? (
-      <pre style={{
-        backgroundColor: "#1a1830", padding: "8px 10px", borderRadius: 6,
-        fontSize: 13, whiteSpace: "pre-wrap", wordBreak: "break-all",
-      }}>
-        <code style={{ fontFamily: "monospace", color: "#a5b4fc" }} {...props}>{children}</code>
+      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+        <code {...props}>{children}</code>
       </pre>
     ) : (
-      <code style={{
-        backgroundColor: "#1a1830", padding: "1px 5px", borderRadius: 4,
-        fontFamily: "monospace", color: "#a5b4fc", fontSize: 14,
-      }} {...props}>{children}</code>
+      <code {...props}>{children}</code>
     );
   },
   table({ children }) {
     return (
-      <div style={{ overflowX: "auto", margin: "6px 0", WebkitOverflowScrolling: "touch" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 14, whiteSpace: "nowrap" }}>{children}</table>
+      <div style={{ overflowX: "auto", margin: "4px 0" }}>
+        <table style={{ borderCollapse: "collapse", whiteSpace: "nowrap" }}>{children}</table>
       </div>
     );
   },
   th({ children }) {
-    return <th style={{ padding: "4px 10px", borderBottom: "1px solid #444", textAlign: "left", color: "#e2e8f0" }}>{children}</th>;
+    return <th style={{ padding: "2px 8px", borderBottom: "1px solid #333", textAlign: "left" }}>{children}</th>;
   },
   td({ children }) {
-    return <td style={{ padding: "4px 10px", borderBottom: "1px solid #222" }}>{children}</td>;
+    return <td style={{ padding: "2px 8px", borderBottom: "1px solid #1a1a1a" }}>{children}</td>;
   },
   ul({ children }) {
-    return <ul style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ul>;
+    return <ul style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ul>;
   },
   ol({ children }) {
-    return <ol style={{ margin: "4px 0", paddingLeft: 18 }}>{children}</ol>;
+    return <ol style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ol>;
   },
   a({ href, children }) {
-    return <a href={href} target="_blank" rel="noopener noreferrer" style={{ color: "#818cf8", textDecoration: "underline", wordBreak: "break-all" }}>{children}</a>;
+    return <a href={href} target="_blank" rel="noopener noreferrer" style={{ wordBreak: "break-all" }}>{children}</a>;
   },
   strong({ children }) {
-    return <strong style={{ color: "#f0f0f0" }}>{children}</strong>;
+    return <strong>{children}</strong>;
   },
 };
 
@@ -726,6 +709,16 @@ function MdContent({ text }: { text: string }) {
 }
 
 const TERM_FONT = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace";
+
+const DONE_VERBS = ["Brewed", "Crafted", "Forged", "Compiled", "Shipped", "Deployed", "Hacked", "Rendered", "Built", "Cooked"];
+function formatDuration(ms: number): string {
+  const verb = DONE_VERBS[Math.floor(ms / 1000) % DONE_VERBS.length];
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${verb} in ${sec}s`;
+  const min = Math.floor(sec / 60);
+  const remSec = sec % 60;
+  return `${verb} for ${min}m ${remSec}s`;
+}
 const TERM_SIZE = 12;
 const TERM_GREEN = "#18ff62";
 const TERM_DIM = "#3a5a3a";
@@ -757,7 +750,7 @@ function MessageBubble({ msg, onPreview, isTeamLead, isTeamMember, teamPhase }: 
       <div className="term-msg" style={base}>
         <span style={{ color: TERM_DIM }}>{ts} </span>
         <span style={{ color: TERM_GREEN, opacity: 0.4 }}>[{tag}] </span>
-        <span style={{ color: "#556655", wordBreak: "break-word" }} className="chat-markdown"><MdContent text={msg.text} /></span>
+        <span style={{ color: "#556655", wordBreak: "break-word", whiteSpace: "pre-wrap" }}>{linkifyText(msg.text)}</span>
       </div>
     );
   }
@@ -803,14 +796,19 @@ function MessageBubble({ msg, onPreview, isTeamLead, isTeamMember, teamPhase }: 
       <div className="term-msg" style={base}>
         <span style={{ color: TERM_DIM }}>{ts} </span>
         <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW }}>[done] </span>
-        <span style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></span>
+        <span style={{ color: TERM_TEXT, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>{linkifyText(cleanSummary || "completed.")}</span>
         {(projectDir || entryFile) && <div style={{ color: TERM_DIM, marginLeft: 0 }}>
           {projectDir && <span>  dir:{projectDir} </span>}
           {entryFile && <span style={{ cursor: "pointer", color: TERM_GREEN, opacity: 0.6 }} onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })}> entry:{entryFile}</span>}
         </div>}
         {changedFiles.length > 0 && <div style={{ color: TERM_DIM }}> {changedFiles.length} files changed</div>}
-        {hasWebPreview(r) && onPreview && <span onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={{ color: TERM_GREEN, cursor: "pointer", opacity: 0.5 }}> [preview]</span>}
-        {!hasWebPreview(r) && buildPreviewCommand(r) && <span onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={{ color: TERM_GREEN, cursor: "pointer", opacity: 0.5 }}> [launch]</span>}
+        {hasWebPreview(r) && onPreview && <span onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "2px 10px", marginTop: 4, display: "inline-block", fontSize: 10, fontFamily: TERM_FONT, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}40`; }}>preview</span>}
+        {!hasWebPreview(r) && buildPreviewCommand(r) && <span onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "2px 10px", marginTop: 4, display: "inline-block", fontSize: 10, fontFamily: TERM_FONT, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}40`; }}>launch</span>}
+        {msg.durationMs && msg.durationMs > 1000 && (
+          <div style={{ color: TERM_DIM, marginTop: 3, fontSize: 10, fontFamily: TERM_FONT }}>
+            {"\u2731"} {formatDuration(msg.durationMs)}
+          </div>
+        )}
       </div>
     );
   }
@@ -822,20 +820,25 @@ function MessageBubble({ msg, onPreview, isTeamLead, isTeamMember, teamPhase }: 
       <div style={{ marginLeft: 0, marginTop: 0, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
         {planContent ? (
           <>
-            {textWithoutPlan && <MdContent text={textWithoutPlan} />}
+            {textWithoutPlan && <span style={{ whiteSpace: "pre-wrap" }}>{linkifyText(textWithoutPlan)}</span>}
             <div style={{ marginTop: 2, paddingLeft: 8, borderLeft: `1px solid ${TERM_GREEN}15` }}>
               <span style={{ color: TERM_GREEN, opacity: 0.3 }}>[plan] </span>
-              <MdContent text={planContent} />
+              <span style={{ whiteSpace: "pre-wrap" }}>{linkifyText(planContent!)}</span>
             </div>
           </>
         ) : (
-          <MdContent text={displayText} />
+          <span style={{ whiteSpace: "pre-wrap" }}>{displayText}</span>
         )}
         {msg.result && msg.result.changedFiles.length > 0 && !planContent && (
           <div style={{ color: TERM_DIM }}> {msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
         {msg.result && hasWebPreview(msg.result) && onPreview && !isTeamMember && !isTeamLead && (
-          <span onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={{ color: TERM_GREEN, cursor: "pointer", opacity: 0.5 }}> [preview]</span>
+          <span onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "2px 10px", marginTop: 4, display: "inline-block", fontSize: 10, fontFamily: TERM_FONT, transition: "all 0.15s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}40`; }}>preview</span>
+        )}
+        {msg.durationMs && msg.durationMs > 1000 && (
+          <div style={{ color: TERM_DIM, marginTop: 3, fontSize: 10, fontFamily: TERM_FONT }}>
+            {"\u2731"} {formatDuration(msg.durationMs)}
+          </div>
         )}
       </div>
     </div>
@@ -2946,6 +2949,7 @@ export default function OfficePage() {
                         {agentState.messages.map((msg) => (
                           <MessageBubble key={msg.id} msg={msg} />
                         ))}
+                        <div ref={chatEndRef} />
                       </div>
 
                       {/* Read-only footer */}
