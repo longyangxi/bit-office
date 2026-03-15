@@ -261,7 +261,7 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
     case "task:queued":
       return { type: "TASK_QUEUED", agentId: e.agentId, taskId: e.taskId, prompt: e.prompt, position: e.position };
     case "agent:created":
-      return { type: "AGENT_CREATED", agentId: e.agentId, name: e.name, role: e.role, palette: e.palette, personality: e.personality, backend: e.backend, isTeamLead: e.isTeamLead || undefined, teamId: e.teamId };
+      return { type: "AGENT_CREATED", agentId: e.agentId, name: e.name, role: e.role, palette: e.palette, personality: e.personality, backend: e.backend, isTeamLead: e.isTeamLead || undefined, teamId: e.teamId, workDir: agentWorkDirs.get(e.agentId) ?? config.defaultWorkspace };
     case "agent:fired":
       return { type: "AGENT_FIRED", agentId: e.agentId };
     case "task:result-returned":
@@ -683,6 +683,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           backend: agent.backend,
           isTeamLead: agent.isTeamLead || undefined,
           teamId: agent.teamId,
+          workDir: agentWorkDirs.get(agent.agentId) ?? config.defaultWorkspace,
         });
         publishEvent({
           type: "AGENT_STATUS",

@@ -371,6 +371,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               isExternal: event.isExternal ?? existing.isExternal,
               pid: event.pid ?? existing.pid,
               cwd: event.cwd ?? existing.cwd,
+              workDir: event.workDir ?? existing.workDir,
               startedAt: event.startedAt ?? existing.startedAt,
             });
           } else {
@@ -385,6 +386,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.isExternal = event.isExternal;
             agent.pid = event.pid;
             agent.cwd = event.cwd;
+            agent.workDir = event.workDir;
             agent.startedAt = event.startedAt;
             if (saved) {
               agent.messages = saved.messages;

@@ -3143,21 +3143,21 @@ export default function OfficePage() {
                       backdropFilter: "blur(12px)",
                       WebkitBackdropFilter: "blur(12px)",
                       boxShadow: `0 1px 0 rgba(26,42,26,0.5), inset 0 1px 0 rgba(24,255,98,0.05)`,
-                      fontSize: TERM_SIZE, fontFamily: TERM_FONT, color: TERM_DIM,
+                      fontSize: 10, fontFamily: TERM_FONT,
                       flexShrink: 0,
                     }}
                   >
-                    <span style={{ color: TERM_TEXT }}>
+                    <span style={{ color: "#c8a050", fontWeight: 600, flexShrink: 0 }}>
                       {agent.role?.split("—")[0]?.trim()}
-                      {agent.backend && <span style={{ color: TERM_DIM }}> ({BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend})</span>}
+                      {agent.backend && <span style={{ color: "#8a7040" }}> ({BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend})</span>}
                     </span>
-                    {agent.role?.includes("—") && (
-                      <span style={{ color: TERM_DIM, fontSize: 10, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
-                        {agent.role.split("—")[1]?.trim()}
+                    {(agentState?.cwd || agentState?.workDir) && (
+                      <span className="term-path-scroll" style={{ fontSize: 9, color: "#7a6848", flexShrink: 1, minWidth: 0 }} title={agentState.cwd ?? agentState.workDir}>
+                        {agentState.cwd ?? agentState.workDir}
                       </span>
                     )}
                     <span style={{ flex: 1 }} />
-                    <span style={{ color: cfg.color, fontSize: 10 }}>{cfg.label}</span>
+                    <span style={{ color: cfg.color, fontSize: 10, flexShrink: 0 }}>{cfg.label}</span>
                     {agentState && agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                     {!agentState?.teamId && isOwner && (
                       <span

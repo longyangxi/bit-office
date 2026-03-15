@@ -90,6 +90,7 @@ export const AgentCreatedEvent = z.object({
   isExternal: z.boolean().optional(),
   pid: z.number().optional(),
   cwd: z.string().optional(),
+  workDir: z.string().optional(),
   startedAt: z.number().optional(),
 });
 
