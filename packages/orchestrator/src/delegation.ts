@@ -370,36 +370,24 @@ export class DelegationRouter {
         phase: "completed",
       });
 
-      // ── Worktree merge on task completion ──
+      // ── Worktree merge on task completion (non-blocking) ──
       if (fromSession?.worktreePath && fromSession.worktreeBranch && this.teamProjectDir) {
-        if (this.worktreeMerge && success) {
-          // Check for conflicts before merging
-          const conflicts = checkConflicts(this.teamProjectDir, fromSession.worktreeBranch);
-          if (conflicts.length > 0) {
-            console.log(`[Worktree] Conflict detected for ${fromName} on files: ${conflicts.join(", ")}`);
-            // Remove worktree dir but keep branch for manual conflict resolution
-            removeWorktreeOnly(fromSession.worktreePath, this.teamProjectDir);
-            this.emitEvent({
-              type: "worktree:merged",
-              agentId,
-              taskId,
-              branch: fromSession.worktreeBranch,
-              success: false,
-              conflictFiles: conflicts,
-            });
+        try {
+          if (this.worktreeMerge && success) {
+            const conflicts = checkConflicts(this.teamProjectDir, fromSession.worktreeBranch);
+            if (conflicts.length > 0) {
+              console.log(`[Worktree] Conflict detected for ${fromName}: ${conflicts.join(", ")}`);
+              removeWorktreeOnly(fromSession.worktreePath, this.teamProjectDir);
+              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: false, conflictFiles: conflicts });
+            } else {
+              const result = mergeWorktree(this.teamProjectDir, fromSession.worktreePath, fromSession.worktreeBranch);
+              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: result.success, conflictFiles: result.conflictFiles });
+            }
           } else {
-            const result = mergeWorktree(this.teamProjectDir, fromSession.worktreePath, fromSession.worktreeBranch);
-            this.emitEvent({
-              type: "worktree:merged",
-              agentId,
-              taskId,
-              branch: fromSession.worktreeBranch,
-              success: result.success,
-              conflictFiles: result.conflictFiles,
-            });
+            removeWorktree(fromSession.worktreePath, fromSession.worktreeBranch, this.teamProjectDir);
           }
-        } else {
-          removeWorktree(fromSession.worktreePath, fromSession.worktreeBranch, this.teamProjectDir);
+        } catch (err) {
+          console.error(`[Worktree] Merge failed for ${fromName}, continuing result forwarding:`, err);
         }
         fromSession.worktreePath = null;
         fromSession.worktreeBranch = null;

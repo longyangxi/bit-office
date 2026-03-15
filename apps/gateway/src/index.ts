@@ -244,17 +244,8 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
   switch (e.type) {
     case "task:started":
       return { type: "TASK_STARTED", agentId: e.agentId, taskId: e.taskId, prompt: e.prompt };
-    case "task:done": {
-      // output-parser.ts truncates fullOutput to 3000 chars; get raw stdout buffer instead
-      let fullOutput = e.result.fullOutput ?? e.result.summary;
-      try {
-        const session = (orc as any).agentManager?.get?.(e.agentId);
-        const raw = session?.stdoutBuffer as string | undefined;
-        if (raw && raw.length > fullOutput.length) fullOutput = raw;
-      } catch { /* ignore */ }
-      const result = { ...e.result, fullOutput };
-      return { type: "TASK_DONE", agentId: e.agentId, taskId: e.taskId, result, isFinalResult: e.isFinalResult };
-    }
+    case "task:done":
+      return { type: "TASK_DONE", agentId: e.agentId, taskId: e.taskId, result: e.result, isFinalResult: e.isFinalResult };
     case "task:failed":
       return { type: "TASK_FAILED", agentId: e.agentId, taskId: e.taskId, error: e.error };
     case "task:delegated":

@@ -770,7 +770,7 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
         <div style={base}>
           <span style={{ color: TERM_DIM }}>{ts} </span>
           <span style={{ color: TERM_GREEN, opacity: 0.4 }}>[{agentName ?? "agent"}] </span>
-          <span style={{ color: TERM_DIM }}>...</span>
+          <span style={{ color: TERM_GREEN, opacity: 0.3 }} className="working-dots" />
         </div>
       );
     }
@@ -3053,11 +3053,7 @@ export default function OfficePage() {
                           </div>
                         )}
 
-                        {busy && !agentState.pendingApproval ? (
-                          <div style={{ fontSize: TERM_SIZE, fontFamily: TERM_FONT, color: TERM_GREEN, opacity: 0.4, padding: "2px 0" }}>
-                            <span className="working-dots" />
-                          </div>
-                        ) : !busy && agentState.messages.length > 0 && (
+                        {!busy && agentState.messages.length > 0 && (
                           <div style={{ fontSize: TERM_SIZE, fontFamily: TERM_FONT, color: TERM_GREEN, opacity: 0.25, padding: "2px 0" }}>
                             &gt;_
                           </div>
@@ -3194,76 +3190,54 @@ export default function OfficePage() {
                                   <span
                                     onClick={async () => { if (await confirm("End project?")) handleEndProject(); }}
                                     style={{ padding: "2px 8px 4px", color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: TERM_FONT }}
-                                  >end project</span>
+                                  >close project</span>
                                 )}
                               </div>
                             ) : cardPhase === "design" && !busy ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: `1px solid ${TERM_GREEN}10`, padding: "4px 8px" }}>
                                 <button
                                   onClick={handleApprovePlan}
                                   style={{
-                                    width: "100%", padding: "9px 16px", border: "1px solid #48cc6a",
-                                    backgroundColor: "#143a14", color: "#48cc6a", fontSize: 13, cursor: "pointer",
-                                    fontWeight: 700, fontFamily: "monospace",
+                                    padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
+                                    backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                                    fontFamily: TERM_FONT,
                                   }}
-                                >{"\u25B6"} Approve Plan</button>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <input
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
-                                    placeholder="Or give feedback..."
-                                    style={{
-                                      flex: 1, padding: "9px 12px", border: "1px solid #3d2e54",
-                                      backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
-                                    }}
-                                  />
-                                  <button
-                                    onClick={handleRunTask}
-                                    disabled={!prompt.trim() && pendingImages.length === 0}
-                                    style={{
-                                      padding: "9px 14px", border: "none",
-                                      backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#272040",
-                                      color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
-                                      fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
-                                      fontWeight: 700, fontFamily: "monospace",
-                                    }}
-                                  >Send</button>
-                                </div>
+                                >approve</button>
+                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                                <input
+                                  value={prompt}
+                                  onChange={(e) => setPrompt(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                                  placeholder="or give feedback..."
+                                  style={{
+                                    flex: 1, padding: "5px 6px", border: "none",
+                                    backgroundColor: "transparent", color: "#b8d0b0", fontSize: TERM_SIZE, outline: "none",
+                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                                  }}
+                                />
                               </div>
                             ) : cardPhase === "complete" && !busy ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <input
-                                    value={prompt}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
-                                    placeholder="Request changes..."
-                                    style={{
-                                      flex: 1, padding: "9px 12px", border: "1px solid #3d2e54",
-                                      backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
-                                    }}
-                                  />
-                                  <button
-                                    onClick={handleRunTask}
-                                    disabled={!prompt.trim() && pendingImages.length === 0}
-                                    style={{
-                                      padding: "9px 14px", border: "none",
-                                      backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#272040",
-                                      color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
-                                      fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
-                                      fontWeight: 700, fontFamily: "monospace",
-                                    }}
-                                  >Send</button>
-                                </div>
-                                <button
-                                  onClick={async () => { if (await confirm("End this project and start a new one?")) handleEndProject(); }}
+                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: `1px solid ${TERM_GREEN}10`, padding: "4px 8px" }}>
+                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                                <input
+                                  value={prompt}
+                                  onChange={(e) => setPrompt(e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                                  placeholder="request changes..."
                                   style={{
-                                    width: "100%", padding: "9px 16px", border: "1px solid #e89030",
-                                    backgroundColor: "#261a00", color: "#e89030", fontSize: 13, cursor: "pointer",
-                                    fontWeight: 700, fontFamily: "monospace",
+                                    flex: 1, padding: "5px 6px", border: "none",
+                                    backgroundColor: "transparent", color: "#b8d0b0", fontSize: TERM_SIZE, outline: "none",
+                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
                                   }}
-                                >End Project</button>
+                                />
+                                <button
+                                  onClick={async () => { if (await confirm("End project?")) handleEndProject(); }}
+                                  style={{
+                                    padding: "5px 14px", border: "1px solid #e8903040",
+                                    backgroundColor: "transparent", color: "#e89030", fontSize: TERM_SIZE, cursor: "pointer",
+                                    fontFamily: TERM_FONT, flexShrink: 0,
+                                  }}
+                                >Close Project</button>
                               </div>
                             ) : (
                               <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: `1px solid ${TERM_GREEN}10` }}>
@@ -3747,7 +3721,7 @@ export default function OfficePage() {
                           backgroundColor: "#261a00", color: "#e89030", fontSize: 13, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
-                      >End Project</button>
+                      >Close Project</button>
                     </div>
                   ) : mobilePhase === "design" && !busy ? (
                     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3815,7 +3789,7 @@ export default function OfficePage() {
                           backgroundColor: "#261a00", color: "#e89030", fontSize: 13, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
-                      >End Project</button>
+                      >Close Project</button>
                     </div>
                   ) : busy ? (
                     <button

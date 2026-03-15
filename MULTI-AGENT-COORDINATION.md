@@ -42,11 +42,12 @@ Hybrid approach: **Git Worktree hard isolation + Activity Board soft coordinatio
 - A custom `workDir` can be specified when hiring an agent (Browse button opens native macOS folder picker via gateway, or paste full path)
 - If not specified, the built-in default workspace is used (gateway's `defaultWorkspace`)
 - `workDir` is stored in gateway's `agentWorkDirs` map and passed as `repoPath` with every `RUN_TASK`
-- The `PICK_FOLDER` command triggers a native macOS folder dialog (`osascript` → `choose folder`), returns full path via `FOLDER_PICKED` event
+- `PICK_FOLDER` command triggers native macOS folder dialog (`osascript` → `choose folder`), returns full path via `FOLDER_PICKED` event
+- Solo agents and their workDir are persisted to `team-state.json` and survive gateway restarts
 
 ### Team Mode
 - A custom `workDir` can be specified when creating a team (parent directory for projects)
-- On `APPROVE_PLAN`, the gateway runs `git init` + initial commit, then creates a unique project subdirectory inside this directory
+- On `APPROVE_PLAN`, the gateway runs `git init` + initial commit, then creates a unique project subdirectory
 - All team members share the same `teamProjectDir`
 - If not specified, `config.defaultWorkspace` is used
 
@@ -77,7 +78,7 @@ Each dev agent works in its own git worktree, physically isolating the filesyste
    git worktree add .worktrees/<agentId>-<taskId> -b agent/<name>/<taskId>
    ```
 3. Each dev agent works in its own worktree (isolated cwd)
-4. On task completion: auto-merge back to main via `git merge --no-ff`
+4. On task completion: auto-merge back to main via `git merge --no-ff` (wrapped in try/catch — merge failure does NOT block result forwarding to leader)
 5. Reviewer reviews on main branch (after merge)
 6. Direct fix loop: dev works on main (worktree already merged)
 
@@ -86,6 +87,11 @@ Each dev agent works in its own git worktree, physically isolating the filesyste
 2. Second solo agent targeting the same workDir → `orchestrator.ts` detects the neighbor via `hasSoloNeighbor()` → auto-creates worktree
 3. On completion: merge back to main
 4. Requires workDir to be a git repo (otherwise no isolation)
+
+### Safety: Worktree Operations Never Block Team Flow
+- **delegation.ts**: worktree merge in `wireResultForwarding` is wrapped in try/catch — if merge fails, result forwarding to leader continues uninterrupted
+- **orchestrator.ts**: worktree handling in `handleSessionEvent` only runs for solo agents (`!session.teamId`), skips team agents entirely (team worktrees are handled by delegation.ts)
+- **orchestrator.ts**: worktree operations wrapped in try/catch
 
 ## Layer 2: Conflict Detection (Pre-merge Safety)
 
@@ -109,10 +115,6 @@ export function checkConflicts(workspace: string, branch: string): string[] {
   - `worktree:merged` event emitted with `success: false` and `conflictFiles`
 - If clean: normal merge proceeds via `mergeWorktree()`
 
-### Cleanup on Conflict
-- `removeWorktreeOnly()` removes the worktree directory but keeps the branch
-- The branch can be manually merged later: `git merge agent/<name>/<taskId>`
-
 ## Layer 3: Activity Board (Real-time Awareness)
 
 ### Event Protocol
@@ -132,26 +134,54 @@ interface AgentActivityEvent {
 ### Current Implementation
 - `agent:activity` event emitted on delegation start and task completion in `delegation.ts`
 - Events forwarded and logged by gateway
-- Gateway logs: `[Activity] AgentName [started/completed]: intent...`
 
 ### Planned (Phase 5)
 - Inject other agents' activity summaries into current agent's system prompt
 - `exports`/`needs` dependency graph for interface contract broadcasting
 - File ownership map for soft coordination
 
+## Persistence
+
+### Agent State (`~/.bit-office/team-state.json`)
+- All agents persisted (solo + team), including `workDir`
+- Saved on: CREATE_AGENT, FIRE_AGENT, team:phase changes, gateway shutdown
+- `loadTeamState()` restores all agents on gateway startup (no filtering)
+- Solo agents are NOT removed when creating a team
+
+### Session Context (`~/.bit-office/agent-sessions.json` + `~/.claude/`)
+- `agent-sessions.json` stores agentId → Claude Code session ID mapping
+- Actual conversation history lives in `~/.claude/projects/` (managed by Claude Code)
+- On restart: `--resume <sessionId>` continues the conversation
+- Session IDs should NOT be cleared — causes context loss
+
 ## Console Mode (UI)
 
-A toggle button on the left edge of the chat sidebar expands it to full screen, hiding the PixiJS office scene to save GPU/CPU resources.
+Terminal-style chat interface with CRT effects:
+- **Layout**: Left vertical tab bar (Agents/Team/External) + top horizontal agent strip + full-height chat
+- **Visual**: JetBrains Mono font, green terminal theme (#18ff62), CRT scanlines, screen flicker
+- **Messages**: Terminal log format with timestamps and agent name tags `[Marcus]`
+- **Input**: Always-visible `>` prompt, ESC to stop working agent, type to continue
+- **Streaming**: Real-time output via LOG_APPEND, typewriter reveal effect
+- **Completion**: Duration display (e.g. "✱ Brewed for 1m 45s")
+- **Working indicator**: Animated dots `...` in streaming message, `>_` when idle
+- **Console toggle**: Button on sidebar left edge, expands chat to full screen (unmounts PixiJS scene)
 
-- **Collapsed**: Arrow button `‹` on sidebar left edge, pointing left
-- **Expanded**: Full screen chat, arrow flips to `›`, button at screen left edge with right-side rounded corners
-- Office scene is unmounted (not just hidden) when in console mode
+## External Agent Output
+- External agents (detected by process scanner) bypass the orchestrator
+- Output read from `~/.claude/projects/` JSONL files by `external-output-reader.ts`
+- Text blocks sent as LOG_APPEND events (no truncation, 500ms throttle)
+- Frontend accumulates chunks into growing messages (10s window per message block)
+- No TASK_DONE event — streaming messages are the final display
+
+## Team Execution Notes
+- Leader's non-delegation responses in execute phase are treated as conversational replies (marked `isFinalResult`, phase returns to complete)
+- Streaming messages (`-stream` suffix) are cleaned up on: TASK_DONE, TASK_FAILED, TASK_STARTED (stale cleanup), and leader intermediate completions
 
 ## Implementation Status
 
 | Phase | Content | Status |
 |-------|---------|--------|
-| Phase 1 | Working directory config (workDir on CREATE_AGENT/CREATE_TEAM, PICK_FOLDER native dialog) | Done |
+| Phase 1 | Working directory config (workDir, PICK_FOLDER, persistence) | Done |
 | Phase 2 | Git worktree isolation (team delegation + solo neighbor detection) | Done |
 | Phase 3 | Conflict detection (git merge-tree dry-run before merge) | Done |
 | Phase 4 | Activity Board (agent:activity event on delegation start/complete) | Done |
@@ -161,17 +191,19 @@ A toggle button on the left edge of the chat sidebar expands it to full screen, 
 
 | File | Responsibility |
 |------|---------------|
-| `packages/shared/src/commands.ts` | Command protocol — `workDir` on CREATE_AGENT/CREATE_TEAM, `PICK_FOLDER` command |
-| `packages/shared/src/events.ts` | Wire events — `FOLDER_PICKED` event for native folder dialog response |
+| `packages/shared/src/commands.ts` | Command protocol — `workDir` on CREATE_AGENT/CREATE_TEAM, `PICK_FOLDER`, `UPLOAD_IMAGE` |
+| `packages/shared/src/events.ts` | Wire events — `FOLDER_PICKED`, `IMAGE_UPLOADED` |
 | `packages/orchestrator/src/types.ts` | Internal events — `AgentActivityEvent`, `WorktreeCreatedEvent`, `WorktreeMergedEvent` |
 | `packages/orchestrator/src/worktree.ts` | Git worktree CRUD — `createWorktree`, `mergeWorktree`, `removeWorktree`, `removeWorktreeOnly`, `checkConflicts` |
-| `packages/orchestrator/src/delegation.ts` | Team delegation — worktree creation per dev agent, merge on completion, conflict check, activity broadcast |
-| `packages/orchestrator/src/orchestrator.ts` | Orchestrator — solo agent neighbor detection (`hasSoloNeighbor`), worktree lifecycle, config passthrough to DelegationRouter |
+| `packages/orchestrator/src/delegation.ts` | Team delegation — worktree creation per dev agent, non-blocking merge on completion, activity broadcast |
+| `packages/orchestrator/src/orchestrator.ts` | Orchestrator — solo agent neighbor detection, worktree lifecycle (solo only), leader conversational reply handling |
 | `packages/orchestrator/src/agent-session.ts` | Agent session — `worktreePath`/`worktreeBranch` storage, `currentWorkingDir` getter, CLI cwd resolution |
-| `apps/gateway/src/index.ts` | Gateway — `agentWorkDirs` map, `teamWorkDir`, `git init` on APPROVE_PLAN, `PICK_FOLDER` handler (osascript), event forwarding |
-| `apps/gateway/src/config.ts` | Default workspace resolution |
-| `apps/web/src/app/office/page.tsx` | UI — HireModal/HireTeamModal with Browse button, console mode toggle |
-| `apps/web/src/store/office-store.ts` | Store — `folderPickCallbacks` for PICK_FOLDER async response, `FOLDER_PICKED` handler |
+| `packages/orchestrator/src/output-parser.ts` | Output parsing — `fullOutput` (no truncation), `summary` fallback |
+| `apps/gateway/src/index.ts` | Gateway — `agentWorkDirs` map, `git init` on APPROVE_PLAN, agent persistence, event forwarding |
+| `apps/gateway/src/external-output-reader.ts` | External agent output — reads JSONL, no text truncation, 500ms throttle |
+| `apps/gateway/src/team-state.ts` | State persistence — all agents (solo + team), no orphan filtering |
+| `apps/web/src/app/office/page.tsx` | UI — console layout, terminal messages, typewriter effect, image support |
+| `apps/web/src/store/office-store.ts` | Store — streaming message lifecycle, external agent text accumulation |
 
 ## Rejected Approaches
 
@@ -182,3 +214,4 @@ A toggle button on the left edge of the chat sidebar expands it to full screen, 
 | Pure file locking (no worktree) | LLM agents are unpredictable — they may ignore locks and write files directly |
 | Custom merge algorithms | Git's three-way merge is already optimal — no need to reinvent the wheel |
 | External clash CLI | Native `git merge-tree` achieves the same goal without extra dependencies |
+| Clearing session on error | Causes context loss — session should be preserved for retry |

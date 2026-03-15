@@ -585,22 +585,27 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
-    // Handle worktree merge on task completion
+    // Handle worktree merge on task completion (solo agents only; team agents handled in delegation.ts)
     if (event.type === "task:done") {
       const session = this.agentManager.get(agentId);
-      if (session?.worktreePath && session.worktreeBranch) {
-        if (this.worktreeMerge) {
-          const result = mergeWorktree(this.workspace, session.worktreePath, session.worktreeBranch);
-          this.emitEvent({
-            type: "worktree:merged",
-            agentId,
-            taskId: event.taskId,
-            branch: session.worktreeBranch,
-            success: result.success,
-            conflictFiles: result.conflictFiles,
-          });
-        } else {
-          removeWorktree(session.worktreePath, session.worktreeBranch, this.workspace);
+      if (session?.worktreePath && session.worktreeBranch && !session.teamId) {
+        try {
+          const base = this.delegationRouter.getTeamProjectDir() ?? this.workspace;
+          if (this.worktreeMerge) {
+            const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
+            this.emitEvent({
+              type: "worktree:merged",
+              agentId,
+              taskId: event.taskId,
+              branch: session.worktreeBranch,
+              success: result.success,
+              conflictFiles: result.conflictFiles,
+            });
+          } else {
+            removeWorktree(session.worktreePath, session.worktreeBranch, base);
+          }
+        } catch (err) {
+          console.error(`[Orchestrator] Worktree cleanup failed for ${session.name}:`, err);
         }
         session.worktreePath = null;
         session.worktreeBranch = null;
@@ -709,7 +714,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             timestamp: Date.now(),
           });
         } else if (!isResultTask && !this.delegationRouter.hasPendingFrom(agentId)) {
-          console.warn(`[Orchestrator] Leader ${agentId} completed initial task with no delegations. Output may have failed to parse.`);
+          // Leader answered without delegating (e.g. user asked a question in execute phase).
+          // Treat as conversational — mark as final so the frontend shows it.
+          console.log(`[Orchestrator] Leader ${agentId} completed without delegations — treating as conversational reply`);
+          event.isFinalResult = true;
+          const completeInfo = this.phaseMachine.checkFinalResult(agentId);
+          if (completeInfo) {
+            this.emitEvent({ type: "team:phase", teamId: completeInfo.teamId, phase: completeInfo.phase, leadAgentId: completeInfo.leadAgentId });
+          }
         }
       }
     }

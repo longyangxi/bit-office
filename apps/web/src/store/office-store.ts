@@ -427,8 +427,10 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         case "TASK_STARTED": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
           // Add a streaming placeholder message that LOG_APPEND will update in-place
+          // Also clean up any stale streaming messages from previous tasks
           const streamId = event.taskId + "-stream";
           const hasStream = agent.messages.some((m) => m.id === streamId);
+          const cleanedMsgs = agent.messages.filter((m) => !m.id.endsWith("-stream") || m.id === streamId);
           agents.set(event.agentId, {
             ...agent,
             status: "working",
@@ -436,7 +438,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             currentPrompt: event.prompt,
             pendingApproval: null,
             lastLogLine: null,
-            messages: hasStream ? agent.messages : [...agent.messages, {
+            messages: hasStream ? cleanedMsgs : [...cleanedMsgs, {
               id: streamId,
               role: "agent" as const,
               text: "",
@@ -496,12 +498,16 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // should not appear as chat messages — only the final summary matters.
           // In conversational phases (create, design, complete), always show the message.
           if (agent.isTeamLead && !event.isFinalResult && !leaderConversational) {
+            // Clean up streaming message for this intermediate task
+            const intStreamId = event.taskId + "-stream";
+            const intCleanedMsgs = agent.messages.filter((m) => m.id !== intStreamId);
             agents.set(event.agentId, {
               ...agent,
               status: "working",
               currentTaskId: null,
               pendingApproval: null,
               lastLogLine: event.result.summary?.slice(0, 100) ?? "Coordinating team...",
+              messages: intCleanedMsgs,
               tokenUsage: updatedTokenUsage,
               _tokenBaseline: updatedTokenUsage,
             });
@@ -550,13 +556,16 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const displayText = isCancelled
             ? "Current task has been cancelled. Tell me continue to pick up where I left off, or start something entirely new."
             : event.error;
+          // Remove streaming message for this task
+          const failStreamId = event.taskId + "-stream";
+          const cleanedMessages = agent.messages.filter((m) => m.id !== failStreamId);
           agents.set(event.agentId, {
             ...agent,
             status: "error",
             currentTaskId: null,
             pendingApproval: null,
             lastLogLine: null,
-            messages: [...agent.messages, {
+            messages: [...cleanedMessages, {
               id: errorId,
               role: "system",
               text: displayText,
