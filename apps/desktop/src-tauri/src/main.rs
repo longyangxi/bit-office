@@ -10,16 +10,23 @@ use std::sync::Mutex;
 
 struct GatewayState {
     child: Option<tauri_plugin_shell::process::CommandChild>,
+    pid: Option<u32>,
 }
 
 fn kill_gateway(app: &tauri::AppHandle) {
     let state = app.state::<Mutex<GatewayState>>();
     let mut guard = state.lock().unwrap();
+    // Drop the Tauri child handle
     if let Some(child) = guard.child.take() {
         let _ = child.kill();
-        println!("[desktop] Gateway sidecar killed");
-        // Give process time to release the port
-        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
+    // Force kill the process group with SIGKILL — guaranteed cleanup
+    if let Some(pid) = guard.pid.take() {
+        unsafe {
+            // Kill entire process group (node + any child processes)
+            libc::kill(-(pid as i32), libc::SIGKILL);
+        }
+        println!("[desktop] Gateway process group killed (pid={})", pid);
     }
 }
 
@@ -32,7 +39,7 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
-        .manage(Mutex::new(GatewayState { child: None }))
+        .manage(Mutex::new(GatewayState { child: None, pid: None }))
         .setup(move |app| {
             // -- System tray --
             let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
@@ -102,10 +109,13 @@ fn main() {
                     .spawn()
                 {
                     Ok((mut rx, child)) => {
-                        app.state::<Mutex<GatewayState>>()
-                            .lock()
-                            .unwrap()
-                            .child = Some(child);
+                        let pid = child.pid();
+                        let state = app.state::<Mutex<GatewayState>>();
+                        {
+                            let mut guard = state.lock().unwrap();
+                            guard.child = Some(child);
+                            guard.pid = Some(pid);
+                        }
 
                         tauri::async_runtime::spawn(async move {
                             use tauri_plugin_shell::process::CommandEvent;
