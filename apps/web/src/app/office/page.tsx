@@ -8,6 +8,7 @@ import { connect, sendCommand } from "@/lib/connection";
 import { getConnection } from "@/lib/storage";
 import { nanoid } from "nanoid";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { AgentDefinition } from "@office/shared";
 import { getCharacterThumbnail } from "@/components/office/sprites/spriteData";
 import { OfficeState } from "@/components/office/engine/officeState";
@@ -621,13 +622,10 @@ function useConfirm() {
 const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   pre({ children }) {
     return (
-      <div style={{ overflowX: "auto", margin: "6px 0", WebkitOverflowScrolling: "touch" }}>
+      <div style={{ overflowX: "auto", margin: "8px 0", WebkitOverflowScrolling: "touch" }}>
         {children}
       </div>
     );
-  },
-  p({ children }) {
-    return <div style={{ margin: "4px 0" }}>{children}</div>;
   },
   code({ className, children, ...props }) {
     const text = String(children).replace(/\n$/, "");
@@ -661,28 +659,13 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   },
   table({ children }) {
     return (
-      <div style={{ overflowX: "auto", margin: "4px 0" }}>
-        <table style={{ borderCollapse: "collapse", whiteSpace: "nowrap" }}>{children}</table>
+      <div style={{ overflowX: "auto", margin: "8px 0", WebkitOverflowScrolling: "touch" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>{children}</table>
       </div>
     );
   },
-  th({ children }) {
-    return <th style={{ padding: "2px 8px", borderBottom: "1px solid #333", textAlign: "left" }}>{children}</th>;
-  },
-  td({ children }) {
-    return <td style={{ padding: "2px 8px", borderBottom: "1px solid #1a1a1a" }}>{children}</td>;
-  },
-  ul({ children }) {
-    return <ul style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ul>;
-  },
-  ol({ children }) {
-    return <ol style={{ margin: "2px 0", paddingLeft: 16 }}>{children}</ol>;
-  },
   a({ href, children }) {
     return <a href={href} target="_blank" rel="noopener noreferrer" style={{ wordBreak: "break-all" }}>{children}</a>;
-  },
-  strong({ children }) {
-    return <strong>{children}</strong>;
   },
 };
 
@@ -708,7 +691,7 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
 
 function MdContent({ text }: { text: string }) {
   return (
-    <ReactMarkdown urlTransform={(url) => url} components={mdComponents}>
+    <ReactMarkdown urlTransform={(url) => url} remarkPlugins={[remarkGfm]} components={mdComponents}>
       {text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)')}
     </ReactMarkdown>
   );

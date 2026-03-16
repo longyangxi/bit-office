@@ -177,36 +177,90 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           .term-msg, .term-msg *,
           .crt-screen a, .crt-screen code, .crt-screen span {
             font-size: 12px !important; font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace !important;
-            font-weight: 300 !important; line-height: 1.5 !important;
+            font-weight: 300 !important; line-height: 1.6 !important;
           }
-          .chat-markdown h1, .chat-markdown h2, .chat-markdown h3,
+          /* ── Headings ── */
+          .chat-markdown h1 {
+            font-size: 14px !important; font-weight: 600 !important;
+            color: var(--term-green) !important; opacity: 0.9;
+            margin: 12px 0 6px !important; padding: 0 !important;
+            border-bottom: 1px solid rgba(var(--term-accent-rgb),0.12) !important;
+            padding-bottom: 4px !important;
+          }
+          .chat-markdown h2 {
+            font-size: 13px !important; font-weight: 600 !important;
+            color: var(--term-green) !important; opacity: 0.8;
+            margin: 10px 0 4px !important; padding: 0 !important;
+          }
+          .chat-markdown h3 {
+            font-size: 12px !important; font-weight: 600 !important;
+            color: var(--term-green) !important; opacity: 0.7;
+            margin: 8px 0 3px !important; padding: 0 !important;
+          }
           .chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
-            margin: 0 !important; padding: 0 !important; color: inherit !important;
+            font-size: 12px !important; font-weight: 500 !important;
+            color: var(--term-text-bright) !important;
+            margin: 6px 0 2px !important; padding: 0 !important;
           }
+          /* ── Inline emphasis ── */
           .chat-markdown strong, .chat-markdown b {
-            font-weight: 400 !important; color: inherit !important;
+            font-weight: 600 !important; color: var(--term-text-bright) !important;
           }
           .chat-markdown em, .chat-markdown i {
-            font-style: normal !important; color: inherit !important;
+            font-style: italic !important; color: var(--term-dim) !important;
+            opacity: 0.9;
           }
+          /* ── Code ── */
           .chat-markdown code {
             font-size: inherit !important; font-family: inherit !important;
-            background: none !important; padding: 0 !important; border: none !important;
-            color: var(--term-green) !important; opacity: 0.5 !important;
+            background: rgba(var(--term-accent-rgb),0.06) !important;
+            padding: 1px 5px !important; border-radius: 3px !important;
+            border: 1px solid rgba(var(--term-accent-rgb),0.1) !important;
+            color: var(--term-green) !important; opacity: 0.7 !important;
           }
           .chat-markdown pre {
-            margin: 2px 0 !important; padding: 4px 8px !important;
-            background: var(--term-code-bg) !important; border-left: 1px solid rgba(var(--term-accent-rgb),0.08) !important; overflow-x: auto;
+            margin: 8px 0 !important; padding: 10px 12px !important;
+            background: var(--term-code-bg) !important;
+            border-left: 2px solid rgba(var(--term-accent-rgb),0.2) !important;
+            border-radius: 0 4px 4px 0 !important;
+            overflow-x: auto;
           }
           .chat-markdown pre code {
             color: var(--term-code-text) !important; opacity: 1 !important;
+            background: none !important; padding: 0 !important;
+            border: none !important; border-radius: 0 !important;
           }
-          .chat-markdown p { margin: 0 0 2px !important; }
-          .chat-markdown ul, .chat-markdown ol { margin: 2px 0 !important; padding-left: 16px !important; }
-          .chat-markdown li { margin: 0 !important; }
-          .chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border) !important; margin: 4px 0 !important; }
-          .chat-markdown a, .crt-screen a { color: var(--term-text) !important; text-decoration: none !important; }
-          .chat-markdown a:hover, .crt-screen a:hover { text-decoration: underline !important; }
+          /* ── Block elements ── */
+          .chat-markdown p { margin: 0 0 6px !important; }
+          .chat-markdown p:last-child { margin-bottom: 0 !important; }
+          .chat-markdown ul, .chat-markdown ol { margin: 4px 0 8px !important; padding-left: 20px !important; }
+          .chat-markdown li { margin: 2px 0 !important; }
+          .chat-markdown li::marker { color: var(--term-dim) !important; }
+          .chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border) !important; margin: 8px 0 !important; }
+          .chat-markdown blockquote {
+            margin: 6px 0 !important; padding: 4px 12px !important;
+            border-left: 2px solid rgba(var(--term-accent-rgb),0.3) !important;
+            color: var(--term-dim) !important;
+          }
+          /* ── Links ── */
+          .chat-markdown a, .crt-screen a { color: var(--term-green) !important; opacity: 0.7; text-decoration: none !important; }
+          .chat-markdown a:hover, .crt-screen a:hover { opacity: 1; text-decoration: underline !important; }
+          /* ── Tables ── */
+          .chat-markdown table {
+            border-collapse: collapse !important; margin: 8px 0 !important; width: 100% !important;
+          }
+          .chat-markdown th {
+            padding: 4px 12px !important; text-align: left !important;
+            font-weight: 600 !important; color: var(--term-text-bright) !important;
+            border-bottom: 2px solid rgba(var(--term-accent-rgb),0.2) !important;
+          }
+          .chat-markdown td {
+            padding: 3px 12px !important;
+            border-bottom: 1px solid rgba(var(--term-accent-rgb),0.06) !important;
+          }
+          .chat-markdown tr:hover td {
+            background: rgba(var(--term-accent-rgb),0.03) !important;
+          }
           @keyframes dot-pulse {
             0% { content: '.'; }
             33% { content: '..'; }
