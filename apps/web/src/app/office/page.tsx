@@ -1779,6 +1779,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
   assetsReady?: boolean;
 }) {
   const endRef = useRef<HTMLDivElement>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length]);
@@ -1831,12 +1832,33 @@ function TeamChatView({ messages, agents, assetsReady }: {
                 {cfg.label}
               </span>
             </div>
-            <div style={{
-              fontSize: 12, color: "#b09878", wordBreak: "break-word",
-              maxHeight: 120, overflow: "hidden", fontFamily: "monospace",
-            }}>
-              {msgText.slice(0, 300)}{msgText.length > 300 ? "..." : ""}
-            </div>
+            {(() => {
+              const msgKey = msg.id ?? `tc-${i}`;
+              const isLong = msgText.length > 300;
+              const isExpanded = expandedIds.has(msgKey);
+              return (
+                <>
+                  <div style={{
+                    fontSize: 12, color: "#b09878", wordBreak: "break-word",
+                    maxHeight: isExpanded ? "none" : 120, overflow: "hidden", fontFamily: "monospace",
+                  }}>
+                    {isExpanded ? msgText : msgText.slice(0, 300)}{!isExpanded && isLong ? "..." : ""}
+                  </div>
+                  {isLong && (
+                    <div
+                      style={{ fontSize: 10, color: "#6a8aaa", cursor: "pointer", marginTop: 2, fontFamily: "monospace" }}
+                      onClick={() => setExpandedIds(prev => {
+                        const next = new Set(prev);
+                        if (next.has(msgKey)) next.delete(msgKey); else next.add(msgKey);
+                        return next;
+                      })}
+                    >
+                      {isExpanded ? "▲ Collapse" : "▼ Show more"}
+                    </div>
+                  )}
+                </>
+              );
+            })()}
             <div style={{ fontSize: 10, color: "#5a4838", marginTop: 4, fontFamily: "monospace" }}>
               {new Date(msg.timestamp).toLocaleTimeString()}
             </div>
@@ -1849,13 +1871,15 @@ function TeamChatView({ messages, agents, assetsReady }: {
 }
 
 /** Shared card component for team activity messages (used by both toast and log) */
-function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow }: {
+function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow, expandable = false }: {
   msg: TeamChatMessage;
   agents: Map<string, { name: string; palette?: number }>;
   assetsReady?: boolean;
   maxChars?: number;
   shadow?: boolean;
+  expandable?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const cfg = TEAM_MSG_COLORS[msg.messageType] ?? TEAM_MSG_COLORS.status;
   const fromAgent = agents.get(msg.fromAgentId);
   const toAgent = msg.toAgentId ? agents.get(msg.toAgentId) : undefined;
@@ -1894,12 +1918,27 @@ function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow }: 
           {cfg.label}
         </span>
       </div>
-      <div style={{
-        fontSize: 12, color: "#b09878", wordBreak: "break-word",
-        maxHeight: 80, overflow: "hidden", fontFamily: "monospace",
-      }}>
-        {msgText.slice(0, maxChars)}{msgText.length > maxChars ? "..." : ""}
-      </div>
+      {(() => {
+        const isLong = expandable && msgText.length > maxChars;
+        return (
+          <>
+            <div style={{
+              fontSize: 12, color: "#b09878", wordBreak: "break-word",
+              maxHeight: expanded ? "none" : 80, overflow: "hidden", fontFamily: "monospace",
+            }}>
+              {expanded ? msgText : msgText.slice(0, maxChars)}{!expanded && msgText.length > maxChars ? "..." : ""}
+            </div>
+            {isLong && (
+              <div
+                style={{ fontSize: 10, color: "#6a8aaa", cursor: "pointer", marginTop: 2, fontFamily: "monospace" }}
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? "▲ Collapse" : "▼ Show more"}
+              </div>
+            )}
+          </>
+        );
+      })()}
     </div>
   );
 }
@@ -1997,7 +2036,7 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
           {messages.map((msg, i) => {
             if (!msg || !msg.fromAgentId) return null;
             return (
-              <TeamActivityCard key={msg.id ?? `tc-${i}`} msg={msg} agents={agents} assetsReady={assetsReady} />
+              <TeamActivityCard key={msg.id ?? `tc-${i}`} msg={msg} agents={agents} assetsReady={assetsReady} expandable />
             );
           })}
           <div ref={endRef} />

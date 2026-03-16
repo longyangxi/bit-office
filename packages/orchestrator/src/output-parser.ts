@@ -104,6 +104,6 @@ function extractFallbackSummary(raw: string, _hasFiles: boolean, _entryFile?: st
     return `Delegated tasks to ${delegationTargets.join(", ")}`;
   }
 
-  const firstChunk = meaningful.slice(0, 5).join("\n").trim();
-  return firstChunk.slice(0, 500) || "Task completed";
+  const firstChunk = meaningful.slice(0, 20).join("\n").trim();
+  return firstChunk.slice(0, 2000) || "Task completed";
 }

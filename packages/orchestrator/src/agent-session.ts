@@ -556,6 +556,14 @@ export class AgentSession {
             this.onTaskComplete?.(this.agentId, completedTaskId, summary, true, fullOutput);
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleDoneDelayMs);
           } else {
+            // If resume failed (0 output, immediate error), clear the corrupted session
+            // so retries start fresh instead of hitting the same bad session repeatedly.
+            if (this.sessionId && this.stdoutBuffer.length === 0) {
+              console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} appears corrupted (0ch output), clearing`);
+              this.sessionId = null;
+              this.hasHistory = false;
+              saveSessionId(this.agentId, null);
+            }
             // Extract meaningful error lines from stderr (e.g. "ERROR: You've hit your usage limit...")
             const stderrErrorLines = this.stderrBuffer
               .split("\n")

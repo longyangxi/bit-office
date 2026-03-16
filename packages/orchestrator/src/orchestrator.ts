@@ -707,7 +707,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             });
           }
 
-          const summary = event.result?.summary?.slice(0, 200) ?? "All tasks completed.";
+          const summary = event.result?.summary?.slice(0, 2000) ?? "All tasks completed.";
 
           // ── Memory: record project completion ──
           const leaderSession = this.agentManager.get(agentId);
