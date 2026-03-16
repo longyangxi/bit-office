@@ -2,6 +2,9 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
+
+const OfficeSplash = dynamic(() => import("@/components/OfficeSplash"), { ssr: false });
 
 export default function PairPage() {
   const [gateway, setGateway] = useState("");
@@ -23,7 +26,6 @@ export default function PairPage() {
           const data = await res.json();
           const { saveConnection } = await import("@/lib/storage");
           saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: window.location.origin.replace(/^http/, "ws"), role: data.role ?? "owner", sessionToken: data.sessionToken });
-          router.push("/office");
           return true;
         }
       } catch { /* not bundled mode */ }
@@ -43,7 +45,6 @@ export default function PairPage() {
         console.log(`[pair] Connected to gateway on port ${gwPort}`);
         const { saveConnection } = await import("@/lib/storage");
         saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: `ws://localhost:${gwPort}`, role: data.role ?? "owner", sessionToken: data.sessionToken });
-        router.push("/office");
         return true;
       }
     } catch {
@@ -57,22 +58,38 @@ export default function PairPage() {
     }
 
     return false;
-  }, [router]);
+  }, []);
 
   useEffect(() => {
-    const { getConnection } = require("@/lib/storage");
-    const conn = getConnection();
-    if (conn && conn.sessionToken) {
-      router.push("/office");
-      return;
-    }
-    if (conn && !conn.sessionToken) {
-      const { clearConnection } = require("@/lib/storage");
-      clearConnection();
-    }
-    tryAutoConnect().then((ok) => {
-      if (!ok) setStatus("failed");
-    });
+    const startTime = Date.now();
+    const minDisplayMs = 3000; // Show loading animation for at least 3 seconds
+
+    const navigateAfterDelay = () => {
+      const elapsed = Date.now() - startTime;
+      const remaining = Math.max(0, minDisplayMs - elapsed);
+      return new Promise((r) => setTimeout(r, remaining));
+    };
+
+    const run = async () => {
+      const { getConnection, clearConnection } = require("@/lib/storage");
+      const conn = getConnection();
+      if (conn && conn.sessionToken) {
+        await navigateAfterDelay();
+        router.push("/office");
+        return;
+      }
+      if (conn && !conn.sessionToken) {
+        clearConnection();
+      }
+      const ok = await tryAutoConnect();
+      if (ok) {
+        await navigateAfterDelay();
+        router.push("/office");
+      } else {
+        setStatus("failed");
+      }
+    };
+    run();
   }, [router, tryAutoConnect]);
 
   async function handleRetry() {
@@ -116,14 +133,9 @@ export default function PairPage() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Bit Office</h1>
-
-      {/* Connecting to local gateway */}
+      {/* Matrix splash — shown during auto-connect */}
       {status === "connecting" && (
-        <div style={{ textAlign: "center", marginTop: 24 }}>
-          <p style={{ color: "#888", fontSize: 14 }}>Connecting to local gateway...</p>
-          <div style={{ marginTop: 12, width: 32, height: 32, border: "3px solid #333", borderTopColor: "#4f46e5", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "12px auto" }} />
-        </div>
+        <OfficeSplash onComplete={() => {}} />
       )}
 
       {/* Local connection failed */}

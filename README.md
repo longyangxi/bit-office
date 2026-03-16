@@ -131,7 +131,9 @@ pnpm dev
 | `pnpm dev` | Web + gateway in dev mode |
 | `pnpm dev:web` | Web only (Next.js) |
 | `pnpm dev:gateway` | Gateway only |
+| `pnpm dev:desktop` | Tauri desktop app (dev mode) |
 | `pnpm build` | Build all packages |
+| `pnpm build:desktop` | Build Tauri .app + .dmg |
 | `pnpm start` | Build web and start gateway |
 
 ### Environment Variables
@@ -141,7 +143,52 @@ pnpm dev
 | `WORKSPACE` | No | Agent working directory |
 | `ABLY_API_KEY` | No | Remote real-time channel |
 | `TELEGRAM_BOT_TOKENS` | No | One token per bot/agent (comma-separated) |
+| `WS_PORT` | No | Gateway WebSocket port (default: 9090) |
 | `WEB_DIR` | No | Override served web build directory |
+
+## Desktop App (Tauri)
+
+Bit Office also ships as a native **macOS desktop app** powered by [Tauri](https://tauri.app). The app bundles the gateway as a sidecar — no terminal, no browser, just launch and go.
+
+### Prerequisites
+
+- **Rust** toolchain (`rustup`)
+- **Node.js** 18+, **pnpm**
+
+### Dev Mode
+
+```bash
+pnpm dev:desktop
+```
+
+This starts the gateway (port 9099), web dev server, and Tauri window in one command.
+
+### Build Release
+
+```bash
+pnpm build:desktop
+```
+
+Produces `Bit Office.app` and `.dmg` at:
+```
+apps/desktop/src-tauri/target/release/bundle/macos/Bit Office.app
+apps/desktop/src-tauri/target/release/bundle/dmg/Bit Office_0.1.0_aarch64.dmg
+```
+
+The release app:
+- Auto-starts an embedded gateway (sidecar)
+- Connects via local WebSocket (port 9090)
+- Minimizes to system tray on close
+- Reopens from Dock click
+
+### Port Convention
+
+| Mode | Gateway Port | Web |
+|------|-------------|-----|
+| `npx bit-office` | 9090 | Bundled at same port |
+| `pnpm dev` | 9099 | localhost:3000 |
+| `pnpm dev:desktop` | 9099 | Tauri window → localhost:3000 |
+| Desktop app (release) | 9090 | Tauri window → static export |
 
 ## Architecture
 
@@ -149,7 +196,8 @@ pnpm dev
 bit-office/
 ├── apps/
 │   ├── web/            # Next.js PWA + PixiJS pixel office + control UI
-│   └── gateway/        # Runtime daemon: events, channels, policy, orchestration
+│   ├── gateway/        # Runtime daemon: events, channels, policy, orchestration
+│   └── desktop/        # Tauri v2 native shell (macOS .app/.dmg)
 └── packages/
     ├── orchestrator/   # Multi-agent execution engine
     └── shared/         # Typed command/event contracts (Zod schemas)
@@ -160,6 +208,7 @@ bit-office/
 ## Tech Stack
 
 - **Frontend**: Next.js 15, React, PixiJS v8, Zustand
+- **Desktop**: Tauri v2 (Rust + system WebView)
 - **Backend**: Node.js daemon, WebSocket
 - **Protocol**: Zod-validated event schemas
 - **Integrations**: Ably, Telegram, external process detection
