@@ -100,14 +100,43 @@ fn main() {
                 let gateway_js = sidecar_dir.join("gateway.js");
                 let web_dir = sidecar_dir.join("web");
 
-                // Resolve user's full PATH from login shell (macOS GUI apps only get /usr/bin:/bin)
-                let full_path = std::process::Command::new("/bin/bash")
-                    .args(["-l", "-c", "echo $PATH"])
-                    .output()
-                    .ok()
-                    .and_then(|o| String::from_utf8(o.stdout).ok())
-                    .map(|p| p.trim().to_string())
-                    .unwrap_or_else(|| std::env::var("PATH").unwrap_or_default());
+                // Resolve user's full PATH — GUI apps inherit a minimal PATH
+                // macOS: get PATH from login shell, then append well-known CLI tool dirs
+                // that may only be added in .zshrc (not sourced by non-interactive login shells)
+                // Windows/Linux: inherit from environment (usually sufficient)
+                let full_path = if cfg!(target_os = "macos") {
+                    let resolve_path = |shell: &str| -> Option<String> {
+                        std::process::Command::new(shell)
+                            .args(["-l", "-c", "printenv PATH"])
+                            .output()
+                            .ok()
+                            .and_then(|o| if o.status.success() { String::from_utf8(o.stdout).ok() } else { None })
+                            .and_then(|p| p.lines().rev().find(|l| !l.trim().is_empty()).map(|l| l.trim().to_string()))
+                            .filter(|p| !p.is_empty())
+                    };
+                    let mut base = resolve_path("/bin/zsh")
+                        .or_else(|| resolve_path("/bin/bash"))
+                        .unwrap_or_else(|| std::env::var("PATH").unwrap_or_default());
+
+                    // Append common CLI tool paths that .zshrc might add but login shell misses
+                    let home = std::env::var("HOME").unwrap_or_default();
+                    let extra_paths = [
+                        format!("{}/.local/bin", home),         // claude, pip, pipx
+                        format!("{}/.local/share/pnpm", home),  // pnpm global
+                        format!("{}/.cargo/bin", home),         // rust/cargo
+                        "/opt/homebrew/bin".to_string(),        // homebrew (arm64)
+                        "/usr/local/bin".to_string(),           // homebrew (x86)
+                    ];
+                    for p in &extra_paths {
+                        if !base.split(':').any(|e| e == p) && std::path::Path::new(p).is_dir() {
+                            base.push(':');
+                            base.push_str(p);
+                        }
+                    }
+                    base
+                } else {
+                    std::env::var("PATH").unwrap_or_default()
+                };
 
                 let shell = app.shell();
                 match shell
