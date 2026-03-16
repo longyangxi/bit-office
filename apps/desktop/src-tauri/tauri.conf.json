@@ -7,7 +7,7 @@
     "frontendDist": "../../web/out",
     "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "bash scripts/build-desktop.sh",
-    "beforeDevCommand": ""
+    "beforeDevCommand": "pnpm --filter bit-office dev & pnpm --filter web dev"
   },
   "app": {
     "withGlobalTauri": true,
@@ -17,7 +17,8 @@
         "width": 1200,
         "height": 800,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "url": "pair"
       }
     ],
     "trayIcon": {

@@ -27,7 +27,10 @@ export default function PairPage() {
     tryAutoConnect();
   }, [router]);
 
-  async function tryAutoConnect() {
+  async function tryAutoConnect(attempt = 0) {
+    const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+    const maxAttempts = isTauri ? 10 : 1; // Tauri: retry up to 10 times (gateway may still be starting)
+
     // 1. Production: try same-origin (gateway serves the web bundle)
     if (window.location.port !== "3000" && window.location.port !== "3002") {
       try {
@@ -44,20 +47,29 @@ export default function PairPage() {
 
     // 2. Scan gateway port range (9090–9099, matching gateway auto-retry)
     const BASE_PORT = 9090;
-    const MAX_RETRIES = 10;
-    for (let port = BASE_PORT; port < BASE_PORT + MAX_RETRIES; port++) {
+    const PORT_RANGE = 10;
+    const timeout = isTauri ? 2000 : 500;
+    console.log(`[pair] Scanning localhost:${BASE_PORT}-${BASE_PORT + PORT_RANGE - 1} (tauri=${isTauri}, timeout=${timeout}ms, attempt=${attempt})`);
+    for (let port = BASE_PORT; port < BASE_PORT + PORT_RANGE; port++) {
       try {
         const origin = `http://localhost:${port}`;
-        const res = await fetch(`${origin}/connect`, { signal: AbortSignal.timeout(500) });
+        const res = await fetch(`${origin}/connect`, { signal: AbortSignal.timeout(timeout) });
         if (!res.ok) continue;
         const data = await res.json();
+        console.log(`[pair] Connected to gateway on port ${port}`);
         const { saveConnection } = await import("@/lib/storage");
         saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: `ws://localhost:${port}`, role: data.role ?? "owner", sessionToken: data.sessionToken });
         router.push("/office");
         return;
-      } catch {
-        // try next port
+      } catch (err) {
+        console.log(`[pair] Port ${port} failed:`, (err as Error).message);
       }
+    }
+
+    // Retry for Tauri (gateway sidecar may need time to start)
+    if (attempt < maxAttempts - 1) {
+      await new Promise((r) => setTimeout(r, 1000));
+      return tryAutoConnect(attempt + 1);
     }
 
     // No local gateway found — show pair code form (remote mode)

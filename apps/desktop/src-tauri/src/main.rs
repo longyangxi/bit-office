@@ -13,6 +13,8 @@ struct GatewayState {
 }
 
 fn main() {
+    let is_dev = cfg!(debug_assertions);
+
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_autostart::init(
@@ -20,7 +22,7 @@ fn main() {
             Some(vec![]),
         ))
         .manage(Mutex::new(GatewayState { child: None }))
-        .setup(|app| {
+        .setup(move |app| {
             // -- System tray --
             let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
             let quit = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
@@ -55,49 +57,57 @@ fn main() {
                 })
                 .build(app)?;
 
-            // -- Spawn gateway sidecar --
-            let resource_dir = app
-                .path()
-                .resource_dir()
-                .expect("failed to resolve resource dir");
-            let sidecar_dir = resource_dir.join("sidecar");
-            let node_bin = sidecar_dir.join("node");
-            let gateway_js = sidecar_dir.join("gateway.js");
-            let web_dir = sidecar_dir.join("web");
+            // -- Spawn gateway sidecar (production only) --
+            // In dev mode, run gateway separately via `pnpm dev:gateway`
+            if !is_dev {
+                let resource_dir = app
+                    .path()
+                    .resource_dir()
+                    .expect("failed to resolve resource dir");
+                let sidecar_dir = resource_dir.join("sidecar");
+                let node_bin = sidecar_dir.join("node");
+                let gateway_js = sidecar_dir.join("gateway.js");
+                let web_dir = sidecar_dir.join("web");
 
-            let shell = app.shell();
-            let (mut rx, child) = shell
-                .command(node_bin.to_str().unwrap())
-                .args([gateway_js.to_str().unwrap()])
-                .env("WEB_DIR", web_dir.to_str().unwrap())
-                .spawn()
-                .expect("failed to spawn gateway sidecar");
+                let shell = app.shell();
+                match shell
+                    .command(node_bin.to_str().unwrap())
+                    .args([gateway_js.to_str().unwrap()])
+                    .env("WEB_DIR", web_dir.to_str().unwrap())
+                    .spawn()
+                {
+                    Ok((mut rx, child)) => {
+                        app.state::<Mutex<GatewayState>>()
+                            .lock()
+                            .unwrap()
+                            .child = Some(child);
 
-            // Store child handle for cleanup
-            app.state::<Mutex<GatewayState>>()
-                .lock()
-                .unwrap()
-                .child = Some(child);
-
-            // Forward sidecar output to stdout
-            tauri::async_runtime::spawn(async move {
-                use tauri_plugin_shell::process::CommandEvent;
-                while let Some(event) = rx.recv().await {
-                    match event {
-                        CommandEvent::Stdout(line) => {
-                            println!("[gateway] {}", String::from_utf8_lossy(&line));
-                        }
-                        CommandEvent::Stderr(line) => {
-                            eprintln!("[gateway] {}", String::from_utf8_lossy(&line));
-                        }
-                        CommandEvent::Terminated(status) => {
-                            println!("[gateway] exited: {:?}", status);
-                            break;
-                        }
-                        _ => {}
+                        tauri::async_runtime::spawn(async move {
+                            use tauri_plugin_shell::process::CommandEvent;
+                            while let Some(event) = rx.recv().await {
+                                match event {
+                                    CommandEvent::Stdout(line) => {
+                                        println!("[gateway] {}", String::from_utf8_lossy(&line));
+                                    }
+                                    CommandEvent::Stderr(line) => {
+                                        eprintln!("[gateway] {}", String::from_utf8_lossy(&line));
+                                    }
+                                    CommandEvent::Terminated(status) => {
+                                        println!("[gateway] exited: {:?}", status);
+                                        break;
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        });
+                    }
+                    Err(e) => {
+                        eprintln!("[desktop] Failed to spawn gateway sidecar: {}", e);
                     }
                 }
-            });
+            } else {
+                println!("[desktop] Dev mode — gateway sidecar skipped. Run `pnpm dev:gateway` separately.");
+            }
 
             Ok(())
         })
