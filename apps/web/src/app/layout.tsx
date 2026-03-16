@@ -198,8 +198,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }
           /* ── Dot-grid background ── */
           .term-dotgrid {
-            background-image: radial-gradient(circle, rgba(var(--term-accent-rgb),0.07) 1px, transparent 1px);
-            background-size: 22px 22px;
+            background-image: radial-gradient(circle, rgba(var(--term-accent-rgb),0.12) 1px, transparent 1px);
+            background-size: 20px 20px;
           }
           /* ── Text rendering ── */
           .crt-screen, .crt-screen * {
@@ -221,6 +221,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           /* ── Horizontal scroll for paths ── */
           .term-path-scroll { overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
           .term-path-scroll::-webkit-scrollbar { display: none; }
+          /* ── Chat area vignette ── */
+          .term-chat-area {
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40px, transparent 100%);
+          }
         `}} />
         {children}
         <script

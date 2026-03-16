@@ -881,15 +881,15 @@ function formatDuration(ms: number): string {
 function SysMsg({ ts, tag, text, firstLine, isLong }: { ts: string; tag: string; text: string; firstLine: string; isLong: boolean }) {
   const [expanded, setExpanded] = useState(false);
   return (
-    <div className="term-msg" style={{ marginBottom: 1, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.4 }}>
-      <span style={{ color: TERM_DIM }}>{ts} </span>
+    <div className="term-msg" style={{ marginBottom: 1, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.4, opacity: 0.5 }}>
+      <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
       {isLong && (
         <span
           onClick={() => setExpanded(!expanded)}
           style={{ color: TERM_GREEN, opacity: 0.4, cursor: "pointer", marginRight: 2 }}
         >{expanded ? "\u25BE" : "\u25B8"}</span>
       )}
-      <span style={{ color: TERM_GREEN, opacity: 0.4 }}>[{tag}] </span>
+      <span style={{ color: TERM_DIM, fontSize: 10 }}>[{tag}] </span>
       <span style={{ color: TERM_DIM, wordBreak: "break-word" }} className="chat-markdown">
         {isLong && !expanded
           ? <span>{firstLine}</span>
@@ -911,8 +911,15 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
       return <SysMsg ts={ts} tag="task" text={msg.text} firstLine={msg.text.slice(0, 80) + "..."} isLong={true} />;
     }
     return (
-      <div className="term-msg" style={{ ...base, marginTop: 8 }}>
-        <span style={{ color: TERM_DIM }}>{ts} </span>
+      <div className="term-msg" style={{
+        ...base, marginTop: 12, marginBottom: 6,
+        borderLeft: `2px solid ${TERM_GREEN}50`,
+        paddingLeft: 10,
+        backgroundColor: `${TERM_GREEN}06`,
+        padding: "4px 10px",
+        borderRadius: "0 4px 4px 0",
+      }}>
+        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
         <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW }}>&gt; </span>
         <span style={{ color: TERM_TEXT_BRIGHT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
@@ -943,16 +950,16 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
     if (!msg.text) {
       return (
         <div style={base}>
-          <span style={{ color: TERM_DIM }}>{ts} </span>
-          <span style={{ color: TERM_GREEN, opacity: 0.4 }}>[{agentName ?? "agent"}] </span>
+          <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
+          <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
           <span style={{ color: TERM_GREEN, opacity: 0.3 }} className="working-dots" />
         </div>
       );
     }
     return (
       <div style={base}>
-        <span style={{ color: TERM_DIM }}>{ts} </span>
-        <span style={{ color: TERM_GREEN, opacity: 0.4 }}>[{agentName ?? "agent"}] </span>
+        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
+        <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
         <span style={{ color: TERM_TEXT, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
           <TypewriterText text={msg.text} />
         </span>
@@ -969,8 +976,8 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
     const changedFiles = r.changedFiles ?? [];
     return (
       <div className="term-msg" style={{ ...base, marginTop: 6 }}>
-        <span style={{ color: TERM_DIM }}>{ts} </span>
-        <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW }}>[done] </span>
+        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
+        <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW, fontSize: 10 }}>[done] </span>
         <span style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></span>
         {(projectDir || entryFile) && <div style={{ color: TERM_DIM, marginLeft: 0 }}>
           {projectDir && <span>  dir:{projectDir} </span>}
@@ -990,8 +997,8 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
 
   return (
     <div className="term-msg" style={base}>
-      <span style={{ color: TERM_DIM }}>{ts} </span>
-      <span style={{ color: TERM_GREEN, opacity: 0.5 }}>[{agentName ?? "agent"}] </span>
+      <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
+      <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
       <div style={{ marginLeft: 0, marginTop: 0, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
         {planContent ? (
           <>
@@ -3138,11 +3145,12 @@ export default function OfficePage() {
                     style={{
                       display: isExpanded ? "flex" : "none",
                       alignItems: "center", gap: 8,
-                      padding: "3px 10px",
-                      background: "rgba(10,14,10,0.75)",
-                      backdropFilter: "blur(12px)",
-                      WebkitBackdropFilter: "blur(12px)",
-                      boxShadow: `0 1px 0 rgba(26,42,26,0.5), inset 0 1px 0 rgba(24,255,98,0.05)`,
+                      padding: "4px 12px",
+                      background: "rgba(6,10,6,0.85)",
+                      backdropFilter: "blur(16px)",
+                      WebkitBackdropFilter: "blur(16px)",
+                      boxShadow: `0 1px 0 ${TERM_GREEN}08, inset 0 1px 0 rgba(24,255,98,0.06)`,
+                      borderBottom: `1px solid ${TERM_GREEN}08`,
                       fontSize: 10, fontFamily: TERM_FONT,
                       flexShrink: 0,
                     }}
@@ -3247,8 +3255,8 @@ export default function OfficePage() {
                     }}>
                       {/* CRT scanline bar */}
                       {/* Messages */}
-                      <div className="term-dotgrid" style={{
-                        flex: 1, overflowY: "auto", padding: "8px 10px",
+                      <div className="term-dotgrid term-chat-area" style={{
+                        flex: 1, overflowY: "auto", padding: "8px 12px",
                         display: "flex", flexDirection: "column",
                         minHeight: 0,
                       }}>
@@ -3564,12 +3572,12 @@ export default function OfficePage() {
             {/* -- Horizontal Agent Bar -- */}
             <div style={{
               display: "flex", alignItems: "center", gap: 10,
-              padding: "8px 12px", minHeight: 52,
-              borderBottom: `1px solid ${TERM_BORDER_DIM}`,
-              background: "rgba(10,14,10,0.75)",
-              backdropFilter: "blur(12px)",
-              WebkitBackdropFilter: "blur(12px)",
-              boxShadow: `0 1px 0 rgba(26,42,26,0.5), inset 0 1px 0 rgba(24,255,98,0.05)`,
+              padding: "10px 14px", minHeight: 56,
+              borderBottom: `1px solid ${TERM_GREEN}10`,
+              background: "rgba(6,10,6,0.85)",
+              backdropFilter: "blur(16px)",
+              WebkitBackdropFilter: "blur(16px)",
+              boxShadow: `0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(24,255,98,0.06), 0 1px 0 ${TERM_GREEN}08`,
               overflowX: "auto", overflowY: "hidden",
               scrollbarWidth: "none",
             }}>
