@@ -16,29 +16,29 @@ struct GatewayState {
 fn kill_gateway(app: &tauri::AppHandle) {
     let state = app.state::<Mutex<GatewayState>>();
     let mut guard = state.lock().unwrap();
-    let pid = guard.pid.take();
-    // Drop Tauri child handle (sends SIGTERM via Tauri)
-    if let Some(child) = guard.child.take() {
-        let _ = child.kill();
-    }
-    if let Some(pid) = pid {
-        let pid_i32 = pid as i32;
-        // 1. SIGTERM → gateway runs cleanup (kills agent CLIs, saves state)
-        unsafe { libc::kill(pid_i32, libc::SIGTERM); }
-        println!("[desktop] Sent SIGTERM to gateway (pid={})", pid);
-        // 2. Wait up to 2 seconds for graceful exit
-        for _ in 0..20 {
-            std::thread::sleep(std::time::Duration::from_millis(100));
-            let alive = unsafe { libc::kill(pid_i32, 0) };
-            if alive != 0 {
-                println!("[desktop] Gateway exited gracefully");
-                return;
-            }
+    let pid = match guard.pid.take() {
+        Some(p) => p,
+        None => return, // Already killed or never spawned
+    };
+    // Drop Tauri child handle without calling kill (we manage signals ourselves)
+    let _ = guard.child.take();
+    drop(guard); // Release lock before blocking
+
+    let pid_i32 = pid as i32;
+    // 1. SIGTERM → gateway runs cleanup (kills agent CLIs, saves state)
+    unsafe { libc::kill(pid_i32, libc::SIGTERM); }
+    println!("[desktop] Sent SIGTERM to gateway (pid={})", pid);
+    // 2. Wait up to 2 seconds for graceful exit
+    for _ in 0..20 {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        if unsafe { libc::kill(pid_i32, 0) } != 0 {
+            println!("[desktop] Gateway exited gracefully");
+            return;
         }
-        // 3. Still alive after 2s — force kill entire process group
-        unsafe { libc::kill(-pid_i32, libc::SIGKILL); }
-        println!("[desktop] Gateway force-killed (SIGKILL)");
     }
+    // 3. Still alive after 2s — force kill entire process group
+    unsafe { libc::kill(-pid_i32, libc::SIGKILL); }
+    println!("[desktop] Gateway force-killed (SIGKILL)");
 }
 
 fn main() {
