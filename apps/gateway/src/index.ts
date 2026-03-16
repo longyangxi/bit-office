@@ -341,6 +341,10 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const backendId = parsed.backend ?? config.defaultBackend;
       const workDir = parsed.workDir || undefined;
       console.log(`[Gateway] Creating agent: ${parsed.agentId} (${parsed.name} - ${parsed.role}) backend=${backendId}${workDir ? ` workDir=${workDir}` : ""}`);
+      // Store custom workDir BEFORE createAgent so the AGENT_CREATED event has it
+      if (workDir) {
+        agentWorkDirs.set(parsed.agentId, workDir);
+      }
       orc.createAgent({
         agentId: parsed.agentId,
         name: parsed.name,
@@ -350,10 +354,6 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         palette: parsed.palette,
         teamId: parsed.teamId,
       });
-      // Store custom workDir for solo agents
-      if (workDir) {
-        agentWorkDirs.set(parsed.agentId, workDir);
-      }
       persistTeamState();
       break;
     }

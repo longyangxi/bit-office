@@ -36,6 +36,12 @@ const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
   error: { color: "#e04848", label: "Error" },
 };
 
+// Check if Enter key is a real submit (not IME confirmation)
+// Chrome: isComposing=true during IME; WKWebView (Tauri): keyCode=229 during IME
+function isRealEnter(e: React.KeyboardEvent): boolean {
+  return e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229;
+}
+
 // Match URLs and absolute file paths — simple, non-greedy patterns
 const URL_RE = /https?:\/\/[^\s)>\]]+/g;
 const FILE_RE = /(?:^|\s)(\/[\w./-]+\.\w+)/g;
@@ -882,17 +888,16 @@ function formatDuration(ms: number): string {
 function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: string; tag: string; text: string; firstLine: string; isLong: boolean; isError?: boolean }) {
   const [expanded, setExpanded] = useState(false);
   const textColor = isError ? TERM_ERROR : TERM_DIM;
-  const tagColor = isError ? TERM_ERROR : TERM_DIM;
   return (
-    <div className="term-msg" style={{ marginBottom: 1, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.4, opacity: isError ? 0.9 : 0.5 }}>
-      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, fontSize: 10 }}>{ts} </span>
+    <div className="term-msg" style={{ marginBottom: 2, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.5, opacity: isError ? 0.9 : 0.5, padding: "1px 0" }}>
+      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
       {isLong && (
         <span
           onClick={() => setExpanded(!expanded)}
-          style={{ color: isError ? TERM_ERROR : TERM_GREEN, opacity: 0.4, cursor: "pointer", marginRight: 2 }}
+          style={{ color: isError ? TERM_ERROR : TERM_GREEN, opacity: 0.4, cursor: "pointer", marginRight: 4 }}
         >{expanded ? "\u25BE" : "\u25B8"}</span>
       )}
-      <span style={{ color: tagColor, fontSize: 10 }}>[{tag}] </span>
+      <span style={{ color: isError ? TERM_ERROR : TERM_GREEN, opacity: 0.5, fontSize: 10, marginRight: 6 }}>{tag}</span>
       <span style={{ color: textColor, wordBreak: "break-word" }} className="chat-markdown">
         {isLong && !expanded
           ? <span>{firstLine}</span>
@@ -905,7 +910,7 @@ function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: string; tag
 
 function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, teamPhase }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const base: React.CSSProperties = { marginBottom: 3, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.5 };
+  const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.6 };
 
   // ── User input ──
   if (msg.role === "user") {
@@ -915,14 +920,13 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
     }
     return (
       <div className="term-msg" style={{
-        ...base, marginTop: 12, marginBottom: 6,
+        ...base, marginTop: 14, marginBottom: 8,
         borderLeft: `2px solid ${TERM_GREEN}50`,
-        paddingLeft: 10,
         backgroundColor: `${TERM_GREEN}06`,
-        padding: "4px 10px",
+        padding: "6px 12px",
         borderRadius: "0 4px 4px 0",
       }}>
-        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
+        <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
         <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW }}>&gt; </span>
         <span style={{ color: TERM_TEXT_BRIGHT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
@@ -953,20 +957,20 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
   if (isStreaming) {
     if (!msg.text) {
       return (
-        <div style={base}>
-          <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
-          <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
-          <span style={{ color: TERM_GREEN, opacity: 0.3 }} className="working-dots" />
+        <div style={{ ...base, padding: "2px 0" }}>
+          <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
+          <span style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10 }}>{agentName ?? "agent"}</span>
+          <span style={{ color: TERM_GREEN, opacity: 0.3, marginLeft: 6 }} className="working-dots" />
         </div>
       );
     }
     return (
-      <div style={base}>
-        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
-        <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
-        <span style={{ color: TERM_TEXT, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
+      <div style={{ ...base, padding: "2px 0" }}>
+        <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
+        <span style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10 }}>{agentName ?? "agent"}</span>
+        <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
           <TypewriterText text={msg.text} />
-        </span>
+        </div>
       </div>
     );
   }
@@ -978,60 +982,70 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
     const entryFile = r.entryFile ?? r.summary.match(/ENTRY_FILE:\s*(.+)/i)?.[1]?.trim();
     const projectDir = r.projectDir ?? r.summary.match(/PROJECT_DIR:\s*(.+)/i)?.[1]?.trim();
     const changedFiles = r.changedFiles ?? [];
+    const btnStyle: React.CSSProperties = { color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s", boxShadow: "none" };
+    const btnHover = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; };
+    const btnLeave = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; };
     return (
-      <div className="term-msg" style={{ ...base, marginTop: 10, borderTop: `1px solid ${TERM_GREEN}08`, paddingTop: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+      <div className="term-msg" style={{ ...base, marginTop: 12, borderTop: `1px solid ${TERM_GREEN}10`, paddingTop: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
           <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts}</span>
           <span style={{
-            display: "inline-block", padding: "1px 8px", borderRadius: 10,
-            backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN,
-            fontSize: 9, fontFamily: TERM_FONT, fontWeight: 600, letterSpacing: "0.03em",
+            display: "inline-block", padding: "2px 10px", borderRadius: 3,
+            backgroundColor: `${TERM_GREEN}15`, color: TERM_GREEN,
+            fontSize: 10, fontFamily: TERM_FONT, fontWeight: 600, letterSpacing: "0.04em",
           }}>DONE</span>
           {msg.durationMs && msg.durationMs > 1000 && (
-            <span style={{ color: TERM_DIM, fontSize: 9, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
+            <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
           )}
         </div>
-        <span style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></span>
+        <div style={{ color: TERM_TEXT, wordBreak: "break-word", lineHeight: 1.6 }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></div>
         {(projectDir || entryFile) && (
-          <div style={{ color: TERM_DIM, fontSize: 10, marginTop: 2 }}>
-            {projectDir && <span className="term-path-scroll" style={{ opacity: 0.7 }}>{projectDir}</span>}
-            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_GREEN, opacity: 0.6, marginLeft: projectDir ? 8 : 0 }}>{entryFile}</span>}
+          <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4, display: "flex", gap: 8, alignItems: "center" }}>
+            {projectDir && <span className="term-path-scroll" style={{ opacity: 0.6 }}>{projectDir}</span>}
+            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_GREEN, opacity: 0.6 }}>{entryFile}</span>}
           </div>
         )}
-        {changedFiles.length > 0 && <div style={{ color: TERM_DIM, fontSize: 10, marginTop: 1 }}>{changedFiles.length} files changed</div>}
-        <div style={{ display: "flex", gap: 6, marginTop: 6 }}>
-          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 4, fontSize: 10, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}10`, transition: "all 0.15s", boxShadow: `0 0 0 transparent` }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}20`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}20`; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; e.currentTarget.style.boxShadow = "0 0 0 transparent"; }}>preview</button>}
-          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 4, fontSize: 10, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}10`, transition: "all 0.15s", boxShadow: `0 0 0 transparent` }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}20`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}20`; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; e.currentTarget.style.boxShadow = "0 0 0 transparent"; }}>launch</button>}
+        {changedFiles.length > 0 && <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 2 }}>{changedFiles.length} files changed</div>}
+        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>}
+          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>launch</button>}
         </div>
       </div>
     );
   }
 
+  // ── Regular agent message ──
+  const btnStyle: React.CSSProperties = { color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s", boxShadow: "none", marginTop: 8, display: "inline-block" };
+  const btnHover = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; };
+  const btnLeave = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; };
+
   return (
-    <div className="term-msg" style={{ ...base, borderTop: `1px solid ${TERM_GREEN}06`, paddingTop: 6, marginTop: 4 }}>
-      <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts} </span>
-      <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[{agentName ?? "agent"}] </span>
-      <div style={{ marginLeft: 0, marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
+    <div className="term-msg" style={{ ...base, paddingTop: 8, marginTop: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts}</span>
+        <span style={{ color: TERM_GREEN, opacity: 0.5, fontSize: 10 }}>{agentName ?? "agent"}</span>
+      </div>
+      <div style={{ color: TERM_TEXT, wordBreak: "break-word", lineHeight: 1.6 }} className="chat-markdown">
         {planContent ? (
           <>
-            {textWithoutPlan && <span className="chat-markdown"><MdContent text={textWithoutPlan} /></span>}
-            <div style={{ marginTop: 4, paddingLeft: 10, borderLeft: `2px solid ${TERM_GREEN}20`, borderRadius: 1 }}>
-              <span style={{ color: TERM_GREEN, opacity: 0.3, fontSize: 10 }}>[plan] </span>
-              <span className="chat-markdown"><MdContent text={planContent!} /></span>
+            {textWithoutPlan && <div className="chat-markdown"><MdContent text={textWithoutPlan} /></div>}
+            <div style={{ marginTop: 6, paddingLeft: 12, borderLeft: `2px solid ${TERM_GREEN}18` }}>
+              <div style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10, marginBottom: 4, letterSpacing: "0.04em" }}>PLAN</div>
+              <div className="chat-markdown"><MdContent text={planContent!} /></div>
             </div>
           </>
         ) : (
           <MdContent text={displayText} />
         )}
         {msg.result && msg.result.changedFiles.length > 0 && !planContent && (
-          <div style={{ color: TERM_DIM, fontSize: 10, marginTop: 2 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
+          <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
         {msg.result && hasWebPreview(msg.result) && onPreview && !isTeamMember && !isTeamLead && (
-          <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={{ color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 4, marginTop: 6, display: "inline-block", fontSize: 10, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}10`, transition: "all 0.15s", boxShadow: "0 0 0 transparent" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}20`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}20`; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; e.currentTarget.style.boxShadow = "0 0 0 transparent"; }}>preview</button>
+          <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
         )}
         {msg.durationMs && msg.durationMs > 1000 && (
-          <div style={{ color: TERM_DIM, marginTop: 3, fontSize: 9, fontFamily: TERM_FONT }}>
-            {"\u2731"} {formatDuration(msg.durationMs)}
+          <div style={{ color: TERM_DIM, marginTop: 4, fontSize: 10, fontFamily: TERM_FONT }}>
+            {formatDuration(msg.durationMs)}
           </div>
         )}
       </div>
@@ -1435,7 +1449,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
             <input
               value={customSkillInput}
               onChange={(e) => setCustomSkillInput(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustomSkill(); } }}
+              onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); addCustomSkill(); } }}
               placeholder="Add custom skill..."
               style={{
                 flex: 1, padding: "6px 10px", fontSize: 13, fontFamily: "monospace",
@@ -2261,7 +2275,6 @@ export default function OfficePage() {
   const pasteMapRef = useRef(new Map<string, string>()); // label → full text
   const pasteCountRef = useRef(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
-
   // Editor state
   const [editMode, setEditMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -3208,34 +3221,34 @@ export default function OfficePage() {
                   <div
                     style={{
                       display: isExpanded ? "flex" : "none",
-                      alignItems: "center", gap: 8,
-                      padding: "4px 12px",
+                      alignItems: "center", gap: 10,
+                      padding: "6px 14px",
                       background: "rgba(6,10,6,0.85)",
                       backdropFilter: "blur(16px)",
                       WebkitBackdropFilter: "blur(16px)",
                       boxShadow: `0 1px 0 ${TERM_GREEN}08, inset 0 1px 0 rgba(24,255,98,0.06)`,
                       borderBottom: `1px solid ${TERM_GREEN}08`,
-                      fontSize: 10, fontFamily: TERM_FONT,
+                      fontSize: 12, fontFamily: TERM_FONT,
                       flexShrink: 0,
                     }}
                   >
-                    <span style={{ color: "#c8a050", fontWeight: 600, flexShrink: 0 }}>
+                    <span style={{ color: "#c8a050", fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
                       {agent.role?.split("—")[0]?.trim()}
-                      {agent.backend && <span style={{ color: "#8a7040" }}> ({BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend})</span>}
+                      {agent.backend && <span style={{ color: "#8a7040", fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend})</span>}
                     </span>
                     {(agentState?.cwd || agentState?.workDir) && (
-                      <span className="term-path-scroll" style={{ fontSize: 9, color: "#7a6848", flexShrink: 1, minWidth: 0 }} title={agentState.cwd ?? agentState.workDir}>
+                      <span className="term-path-scroll" style={{ fontSize: 11, color: "#7a6848", flexShrink: 1, minWidth: 0 }} title={agentState.cwd ?? agentState.workDir}>
                         {agentState.cwd ?? agentState.workDir}
                       </span>
                     )}
                     <span style={{ flex: 1 }} />
-                    <span style={{ color: cfg.color, fontSize: 10, flexShrink: 0 }}>{cfg.label}</span>
+                    <span style={{ color: cfg.color, fontSize: 11, flexShrink: 0, fontWeight: 500 }}>{cfg.label}</span>
                     {agentState && agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                     {!agentState?.teamId && isOwner && (
                       <span
                         onClick={(e) => { e.stopPropagation(); handleFire(agent.agentId); }}
                         style={{
-                          fontSize: 11, color: "#c04040", cursor: "pointer", lineHeight: 1,
+                          fontSize: 12, color: "#c04040", cursor: "pointer", lineHeight: 1,
                           padding: "4px", flexShrink: 0,
                         }}
                         onMouseEnter={(e) => { e.currentTarget.style.color = "#ff4040"; }}
@@ -3320,7 +3333,7 @@ export default function OfficePage() {
                       {/* CRT scanline bar */}
                       {/* Messages */}
                       <div className="term-dotgrid term-chat-area" style={{
-                        flex: 1, overflowY: "auto", padding: "8px 12px",
+                        flex: 1, overflowY: "auto", padding: "10px 14px",
                         display: "flex", flexDirection: "column",
                         minHeight: 0,
                       }}>
@@ -3475,7 +3488,7 @@ export default function OfficePage() {
                                 <input
                                   value={suggestText}
                                   onChange={(e) => setSuggestText(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleSuggest()}
+                                  onKeyDown={(e) => isRealEnter(e) && handleSuggest()}
                                   placeholder="Share an idea..."
                                   maxLength={500}
                                   style={{
@@ -3526,7 +3539,7 @@ export default function OfficePage() {
                                     onChange={(e) => setPrompt(e.target.value)}
                                     onKeyDown={(e) => {
                                       if (e.key === "Escape" && busy) { handleCancel(); return; }
-                                      if (e.key === "Enter" && !e.nativeEvent.isComposing) handleRunTask();
+                                      if (isRealEnter(e)) handleRunTask();
                                     }}
                                     placeholder={busy ? "esc stop · type to continue" : ""}
                                     style={{
@@ -3560,7 +3573,7 @@ export default function OfficePage() {
                                   value={prompt}
                                   onPaste={handlePasteText}
                                   onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                                   placeholder="or give feedback..."
                                   style={{
                                     flex: 1, padding: "5px 6px", border: "none",
@@ -3577,7 +3590,7 @@ export default function OfficePage() {
                                   value={prompt}
                                   onPaste={handlePasteText}
                                   onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                                   placeholder="request changes..."
                                   style={{
                                     flex: 1, padding: "5px 6px", border: "none",
@@ -3604,7 +3617,7 @@ export default function OfficePage() {
                                   onChange={(e) => setPrompt(e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === "Escape" && isAgentBusy) { handleCancel(); return; }
-                                    if (e.key === "Enter" && !e.nativeEvent.isComposing) handleRunTask();
+                                    if (isRealEnter(e)) handleRunTask();
                                   }}
                                   placeholder={isAgentBusy ? "esc stop · type to continue" : ""}
                                   style={{
@@ -4012,7 +4025,7 @@ export default function OfficePage() {
                       <input
                         value={suggestText}
                         onChange={(e) => setSuggestText(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleSuggest()}
+                        onKeyDown={(e) => isRealEnter(e) && handleSuggest()}
                         placeholder="Share an idea..."
                         maxLength={500}
                         style={{
@@ -4062,7 +4075,7 @@ export default function OfficePage() {
                           value={prompt}
                           onPaste={handlePasteText}
                           onChange={(e) => setPrompt(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                          onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Send a message..."
                           style={{
                             flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
@@ -4105,7 +4118,7 @@ export default function OfficePage() {
                           value={prompt}
                           onPaste={handlePasteText}
                           onChange={(e) => setPrompt(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                          onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Or give feedback..."
                           style={{
                             flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
@@ -4132,7 +4145,7 @@ export default function OfficePage() {
                           value={prompt}
                           onPaste={handlePasteText}
                           onChange={(e) => setPrompt(e.target.value)}
-                          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                          onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Request changes..."
                           style={{
                             flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
@@ -4174,7 +4187,7 @@ export default function OfficePage() {
                         value={prompt}
                         onPaste={handlePasteText}
                         onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && handleRunTask()}
+                        onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                         placeholder="Send a message..."
                         style={{
                           flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",

@@ -77,7 +77,12 @@ function resolveDefaultWorkspace(): string {
     return ws;
   }
   // Published mode (npx bit-office): use the directory where the user ran the command
-  return process.cwd();
+  // Tauri sidecar runs with cwd="/", fall back to home directory
+  const cwd = process.cwd();
+  if (cwd === "/" || cwd === "C:\\") {
+    return process.env.HOME || homedir();
+  }
+  return cwd;
 }
 
 function buildConfig() {
