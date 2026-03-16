@@ -16,17 +16,28 @@ struct GatewayState {
 fn kill_gateway(app: &tauri::AppHandle) {
     let state = app.state::<Mutex<GatewayState>>();
     let mut guard = state.lock().unwrap();
-    // Drop the Tauri child handle
+    let pid = guard.pid.take();
+    // Drop Tauri child handle (sends SIGTERM via Tauri)
     if let Some(child) = guard.child.take() {
         let _ = child.kill();
     }
-    // Force kill the process group with SIGKILL — guaranteed cleanup
-    if let Some(pid) = guard.pid.take() {
-        unsafe {
-            // Kill entire process group (node + any child processes)
-            libc::kill(-(pid as i32), libc::SIGKILL);
+    if let Some(pid) = pid {
+        let pid_i32 = pid as i32;
+        // 1. SIGTERM → gateway runs cleanup (kills agent CLIs, saves state)
+        unsafe { libc::kill(pid_i32, libc::SIGTERM); }
+        println!("[desktop] Sent SIGTERM to gateway (pid={})", pid);
+        // 2. Wait up to 2 seconds for graceful exit
+        for _ in 0..20 {
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            let alive = unsafe { libc::kill(pid_i32, 0) };
+            if alive != 0 {
+                println!("[desktop] Gateway exited gracefully");
+                return;
+            }
         }
-        println!("[desktop] Gateway process group killed (pid={})", pid);
+        // 3. Still alive after 2s — force kill entire process group
+        unsafe { libc::kill(-pid_i32, libc::SIGKILL); }
+        println!("[desktop] Gateway force-killed (SIGKILL)");
     }
 }
 
