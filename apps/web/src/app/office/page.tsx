@@ -2468,7 +2468,7 @@ export default function OfficePage() {
 
       // For ws mode: detect live gateway port
       const isDev = window.location.port === "3000" || window.location.port === "3002";
-      const ports = isDev ? [9099, 9090] : [9090, 9099];
+      const ports = isDev ? [9099, 9090, 9091] : [9090, 9091, 9099];
 
       // Try same-origin first (production bundled mode)
       if (!isDev) {

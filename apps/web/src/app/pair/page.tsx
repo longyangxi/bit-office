@@ -31,24 +31,25 @@ export default function PairPage() {
       } catch { /* not bundled mode */ }
     }
 
-    // 2. Connect to local gateway — dev=9099, release=9090
+    // 2. Connect to local gateway — dev prefers 9099, release prefers 9090, fallback to nearby ports
     const isDev = window.location.port === "3000" || window.location.port === "3002";
-    const gwPort = isDev ? 9099 : 9090;
+    const ports = isDev ? [9099, 9090, 9091] : [9090, 9091, 9099];
     const scanTimeout = isTauri ? 2000 : 1500;
     setStatus("connecting");
-    console.log(`[pair] Connecting to localhost:${gwPort} (dev=${isDev}, attempt=${attempt + 1}/${maxAttempts})`);
-    try {
-      const origin = `http://localhost:${gwPort}`;
-      const res = await fetch(`${origin}/connect`, { signal: AbortSignal.timeout(scanTimeout) });
-      if (res.ok) {
+    console.log(`[pair] Trying ports [${ports}] (dev=${isDev}, attempt=${attempt + 1}/${maxAttempts})`);
+    for (const gwPort of ports) {
+      try {
+        const origin = `http://localhost:${gwPort}`;
+        const res = await fetch(`${origin}/connect`, { signal: AbortSignal.timeout(scanTimeout) });
+        if (!res.ok) continue;
         const data = await res.json();
         console.log(`[pair] Connected to gateway on port ${gwPort}`);
         const { saveConnection } = await import("@/lib/storage");
         saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: `ws://localhost:${gwPort}`, role: data.role ?? "owner", sessionToken: data.sessionToken });
         return true;
+      } catch {
+        // try next port
       }
-    } catch {
-      // gateway not ready yet
     }
 
     // Retry

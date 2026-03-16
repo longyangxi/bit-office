@@ -18,6 +18,8 @@ fn kill_gateway(app: &tauri::AppHandle) {
     if let Some(child) = guard.child.take() {
         let _ = child.kill();
         println!("[desktop] Gateway sidecar killed");
+        // Give process time to release the port
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
 }
 
@@ -94,6 +96,7 @@ fn main() {
                     .command(node_bin.to_str().unwrap())
                     .args([gateway_js.to_str().unwrap()])
                     .env("PATH", &full_path)
+                    .env("HOME", std::env::var("HOME").unwrap_or_default())
                     .env("WEB_DIR", web_dir.to_str().unwrap())
                     .env("NO_OPEN", "1")
                     .spawn()
@@ -144,12 +147,19 @@ fn main() {
         .build(tauri::generate_context!())
         .expect("error while building Bit Office")
         .run(|app, event| {
-            // Re-show window when Dock icon is clicked (macOS)
-            if let tauri::RunEvent::Reopen { .. } = event {
-                if let Some(w) = app.get_webview_window("main") {
-                    let _ = w.show();
-                    let _ = w.set_focus();
+            match event {
+                // Re-show window when Dock icon is clicked (macOS)
+                tauri::RunEvent::Reopen { .. } => {
+                    if let Some(w) = app.get_webview_window("main") {
+                        let _ = w.show();
+                        let _ = w.set_focus();
+                    }
                 }
+                // Kill sidecar when app is actually exiting
+                tauri::RunEvent::Exit => {
+                    kill_gateway(app);
+                }
+                _ => {}
             }
         });
 }
