@@ -536,7 +536,8 @@ export class AgentSession {
             // Leader preview is handled by the orchestrator when isFinalResult is set.
             // Also skip when no work was done (no changed files and no structured preview fields)
             // to prevent false-positive previews on casual conversations like "hi".
-            const hasWorkOutput = changedFiles.length > 0 || entryFile || previewCmd || projectDir;
+            const stdoutMentionsFile = /\.html?\b/i.test(this.stdoutBuffer);
+            const hasWorkOutput = changedFiles.length > 0 || entryFile || previewCmd || projectDir || stdoutMentionsFile;
             const { previewUrl, previewPath } = (this._isTeamLead || !hasWorkOutput)
               ? { previewUrl: undefined, previewPath: undefined }
               : this.detectPreview();
