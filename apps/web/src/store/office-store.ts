@@ -150,7 +150,7 @@ function saveToStorage(agents: Map<string, AgentState>) {
           backend: agent.backend,
           isTeamLead: agent.isTeamLead,
           teamId: agent.teamId,
-          messages: agent.messages,
+          messages: agent.messages.map(({ _accumulatedText, ...m }) => m),
         });
       }
     }
@@ -429,10 +429,14 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         case "TASK_STARTED": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
           // Add a streaming placeholder message that LOG_APPEND will update in-place
-          // Also clean up any stale streaming messages from previous tasks
+          // Finalize any stale streaming messages from previous tasks (stop them from updating)
           const streamId = event.taskId + "-stream";
           const hasStream = agent.messages.some((m) => m.id === streamId);
-          const cleanedMsgs = agent.messages.filter((m) => !m.id.endsWith("-stream") || m.id === streamId);
+          const staleFinalized = agent.messages.map((m) =>
+            m.id.endsWith("-stream") && m.id !== streamId
+              ? { ...m, id: m.id.replace("-stream", "-streamed") }
+              : m
+          );
           agents.set(event.agentId, {
             ...agent,
             status: "working",
@@ -440,7 +444,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             currentPrompt: event.prompt,
             pendingApproval: null,
             lastLogLine: null,
-            messages: hasStream ? cleanedMsgs : [...cleanedMsgs, {
+            messages: hasStream ? staleFinalized : [...staleFinalized, {
               id: streamId,
               role: "agent" as const,
               text: "",
@@ -500,23 +504,27 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // should not appear as chat messages — only the final summary matters.
           // In conversational phases (create, design, complete), always show the message.
           if (agent.isTeamLead && !event.isFinalResult && !leaderConversational) {
-            // Clean up streaming message for this intermediate task
+            // Finalize streaming message for intermediate leader task (keep it visible)
             const intStreamId = event.taskId + "-stream";
-            const intCleanedMsgs = agent.messages.filter((m) => m.id !== intStreamId);
+            const intStreamMsg = agent.messages.find((m) => m.id === intStreamId);
+            // Mark streaming message as finalized by removing the -stream suffix
+            const finalizedMsgs = intStreamMsg
+              ? agent.messages.map((m) => m.id === intStreamId ? { ...m, id: intStreamId.replace("-stream", "-streamed") } : m)
+              : agent.messages;
             agents.set(event.agentId, {
               ...agent,
               status: "working",
               currentTaskId: null,
               pendingApproval: null,
               lastLogLine: event.result.summary?.slice(0, 100) ?? "Coordinating team...",
-              messages: intCleanedMsgs,
+              messages: finalizedMsgs,
               tokenUsage: updatedTokenUsage,
               _tokenBaseline: updatedTokenUsage,
             });
             break;
           }
 
-          // Replace streaming message with final result, or append if no stream
+          // Keep streaming message and append the final result after it
           const streamId = event.taskId + "-stream";
           const streamMsg = agent.messages.find((m) => m.id === streamId);
           const durationMs = streamMsg ? Date.now() - streamMsg.timestamp : undefined;
@@ -524,9 +532,18 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const accumulated = streamMsg?._accumulatedText ?? "";
           const serverFull = event.result.fullOutput || event.result.summary;
           const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
-          const filteredMessages = agent.messages.filter((m) => m.id !== streamId);
+          // Finalize streaming message: if content overlaps with final result, remove it to avoid duplication;
+          // otherwise rename id so it stops updating and stays visible above the result.
+          const streamContentOverlaps = streamMsg && accumulated && (
+            bestText.startsWith(accumulated) || bestText === accumulated || accumulated.length < 50
+          );
+          const finalizedMessages = streamMsg
+            ? streamContentOverlaps
+              ? agent.messages.filter((m) => m.id !== streamId)
+              : agent.messages.map((m) => m.id === streamId ? { ...m, id: streamId.replace("-stream", "-streamed"), _accumulatedText: undefined } : m)
+            : agent.messages;
           const newMessages: ChatMessage[] = [
-            ...filteredMessages,
+            ...finalizedMessages,
             {
               id: replyId,
               role: "agent",
@@ -555,23 +572,21 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const errorId = event.taskId + "-error";
           if (agent.messages.some((m) => m.id === errorId)) break; // dedupe
           const isCancelled = event.error === "Task cancelled by user";
-          // Preserve error details from streaming output before removing it
-          const failStreamId = event.taskId + "-stream";
-          const failStreamMsg = agent.messages.find((m) => m.id === failStreamId);
-          const streamErrorText = failStreamMsg?._accumulatedText || failStreamMsg?.text || "";
-          // Use streaming text if it contains a more specific error than the generic exit message
-          const isGenericExit = /^Process exited with code \d+$/.test(event.error);
           const displayText = isCancelled
             ? "Current task has been cancelled. Tell me continue to pick up where I left off, or start something entirely new."
-            : (isGenericExit && streamErrorText) ? streamErrorText : event.error;
-          const cleanedMessages = agent.messages.filter((m) => m.id !== failStreamId);
+            : event.error;
+          // Finalize streaming message (keep it visible, stop updates)
+          const failStreamId = event.taskId + "-stream";
+          const finalizedMessages = agent.messages.map((m) =>
+            m.id === failStreamId ? { ...m, id: failStreamId.replace("-stream", "-streamed") } : m
+          );
           agents.set(event.agentId, {
             ...agent,
             status: "error",
             currentTaskId: null,
             pendingApproval: null,
             lastLogLine: null,
-            messages: [...cleanedMessages, {
+            messages: [...finalizedMessages, {
               id: errorId,
               role: "system",
               text: displayText,
