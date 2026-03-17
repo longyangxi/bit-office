@@ -1932,7 +1932,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
       >
         <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em", flexShrink: 0 }}>Hire Agent</h2>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
+        <div style={{ padding: "0 18px", flexShrink: 0 }}>
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
@@ -1988,6 +1988,8 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           </div>
         </div>
 
+        </div>
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
         {/* Built-in agents */}
         <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
