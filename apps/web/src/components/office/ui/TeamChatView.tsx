@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
@@ -16,10 +16,49 @@ function TeamChatView({ messages, agents, assetsReady }: {
   agents: Map<string, { name: string; palette?: number }>;
   assetsReady?: boolean;
 }) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const wasAtBottom = useRef(true);
+
+  // Track scroll position — updated on user/programmatic scroll events.
+  // This captures the "before new content" state that useLayoutEffect reads.
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
+    const el = containerRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      wasAtBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  // Scroll to bottom synchronously after DOM commit (before paint / before scroll events).
+  // wasAtBottom.current still reflects the state BEFORE React added the new message,
+  // so it won't be fooled by the increased scrollHeight.
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (el && wasAtBottom.current) {
+      el.scrollTop = el.scrollHeight;
+    }
   }, [messages.length]);
+
+  // MutationObserver for streaming text / typewriter reveals within existing messages.
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    let raf = 0;
+    const observer = new MutationObserver(() => {
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          if (wasAtBottom.current) {
+            el.scrollTop = el.scrollHeight;
+          }
+        });
+      }
+    });
+    observer.observe(el, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, []);
 
   if (messages.length === 0) {
     return (
@@ -30,7 +69,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
   }
 
   return (
-    <div style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+    <div ref={containerRef} style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
       {messages.map((msg, i) => {
         if (!msg || !msg.fromAgentId) return null;
         const cfg = TEAM_MSG_COLORS[msg.messageType] ?? TEAM_MSG_COLORS.status;
@@ -76,7 +115,6 @@ function TeamChatView({ messages, agents, assetsReady }: {
           </div>
         );
       })}
-      <div ref={endRef} />
     </div>
   );
 }

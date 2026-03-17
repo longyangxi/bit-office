@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef, useMemo } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useOfficeStore, imageUploadCallbacks } from "@/store/office-store";
 import { connect, sendCommand } from "@/lib/connection";
@@ -427,33 +427,54 @@ export default function OfficePage() {
 
   const selectedAgentState = selectedAgent ? agents.get(selectedAgent) : null;
   const isAgentBusy = selectedAgentState?.status === "working" || selectedAgentState?.status === "waiting_approval";
+  const selectedMsgCount = selectedAgentState?.messages.length ?? 0;
+  const wasAtBottomRef = useRef(true);
 
-  // Auto-scroll: follow content growth unless user scrolled up
+  // Track scroll position via scroll events (captures "before new content" state)
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
     const container = el.parentElement;
     if (!container) return;
-    let userScrolledUp = false;
-    const scrollToBottom = () => {
-      if (!userScrolledUp) container.scrollTop = container.scrollHeight;
-    };
     const onScroll = () => {
-      userScrolledUp = container.scrollHeight - container.scrollTop - container.clientHeight > 80;
+      wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
     };
-    // MutationObserver catches everything: new elements, text changes, typewriter reveals
-    let scrollRaf = 0;
-    const throttledScroll = () => {
-      if (!scrollRaf) scrollRaf = requestAnimationFrame(() => { scrollRaf = 0; scrollToBottom(); });
-    };
-    const observer = new MutationObserver(throttledScroll);
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [selectedAgent]);
+
+  // Scroll to bottom synchronously after DOM commit when messages change.
+  // useLayoutEffect runs before paint and before scroll events, so wasAtBottomRef
+  // still reflects the state BEFORE new content increased scrollHeight.
+  useLayoutEffect(() => {
+    const el = chatEndRef.current;
+    const container = el?.parentElement;
+    if (container && wasAtBottomRef.current) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [selectedAgent, selectedMsgCount]);
+
+  // MutationObserver for streaming text / typewriter reveals within existing messages.
+  // Uses wasAtBottomRef (set by scroll events BEFORE content changed) instead of
+  // measuring current distance, so large chunks that push distance > 80px still scroll.
+  useEffect(() => {
+    const el = chatEndRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    let raf = 0;
+    const observer = new MutationObserver(() => {
+      if (!raf) {
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          if (wasAtBottomRef.current) {
+            container.scrollTop = container.scrollHeight;
+          }
+        });
+      }
+    });
     observer.observe(container, { childList: true, subtree: true, characterData: true });
-    container.addEventListener("scroll", onScroll);
-    scrollToBottom();
-    return () => {
-      container.removeEventListener("scroll", onScroll);
-      observer.disconnect();
-    };
+    return () => observer.disconnect();
   }, [selectedAgent]);
 
   // Auto-select team lead when a team is first created
