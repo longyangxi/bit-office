@@ -35,6 +35,7 @@ interface AgentState {
   status: AgentStatus;
   currentTaskId: string | null;
   currentPrompt: string | null;
+  awaitingApproval: boolean;
   pendingApproval: {
     approvalId: string;
     title: string;
@@ -246,6 +247,7 @@ function defaultAgent(agentId: string, name = agentId, role = ""): AgentState {
     status: "idle",
     currentTaskId: null,
     currentPrompt: null,
+    awaitingApproval: false,
     pendingApproval: null,
     messages: [],
     lastLogLine: null,
@@ -444,6 +446,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             status: "working",
             currentTaskId: event.taskId,
             currentPrompt: event.prompt,
+            awaitingApproval: false,
             pendingApproval: null,
             lastLogLine: null,
             messages: hasStream ? staleFinalized : [...staleFinalized, {
@@ -534,6 +537,27 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const accumulated = streamMsg?._accumulatedText ?? "";
           const serverFull = event.result.fullOutput || event.result.summary;
           const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
+          // Detect solo agent asking for user approval before proceeding.
+          // Covers: [PLAN] tagged plans, question-form asks, and Chinese phrasing.
+          const isSoloAgent = !agent.isTeamLead && !agent.teamId;
+          const trimmed = bestText.trim();
+          // Check last 200 chars for approval signals (the ask is usually at the end)
+          const tail = trimmed.slice(-200);
+          const hasQuestionMark = /[?\uff1f]\s*$/.test(tail);
+          const hasApprovalKeyword = /\b(shall I|should I|do you want|want me to|proceed|approve|go ahead|ready to|confirm|ok to|can I|may I)\b/i.test(tail)
+            || /(?:批准|同意|开始执行|要开始|请审阅|审批|确认|可以开始|是否继续|要继续|可以吗|好吗|行吗|要不要|能否|是否可以|没问题吗)/.test(tail);
+          // Dangerous command mentioned + any approval signal (question or keyword)
+          const hasDangerousCmd = /\b(chmod|chown|rm\s+-rf|rmdir|git\s+reset|git\s+push\s+--force|sudo|mkfs|dd\s+if=|kill\s+-9|shutdown|reboot)\b/i.test(bestText);
+          const hasPlanAsk = isSoloAgent && (
+            /\[PLAN\]/i.test(bestText) ||
+            (hasQuestionMark && hasApprovalKeyword) ||
+            // Statement-form: "approve 后" / "请审阅方案" without question mark
+            (/\bapprove\b/i.test(tail) && /后|before|first/i.test(tail)) ||
+            /请.{0,4}(?:审阅|审批|确认)/.test(tail) ||
+            // Dangerous command + any approval cue (question mark OR keyword)
+            (hasDangerousCmd && (hasQuestionMark || hasApprovalKeyword))
+          );
+
           // Remove streaming message — final result (bestText) already contains the complete content
           const finalizedMessages = agent.messages.filter((m) => m.id !== streamId);
           const newMessages: ChatMessage[] = [
@@ -552,6 +576,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             ...agent,
             status: "done",
             currentTaskId: null,
+            awaitingApproval: hasPlanAsk,
             pendingApproval: null,
             lastLogLine: null,
             messages: newMessages,
@@ -578,6 +603,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             ...agent,
             status: "error",
             currentTaskId: null,
+            awaitingApproval: false,
             pendingApproval: null,
             lastLogLine: null,
             messages: [...finalizedMessages, {
@@ -663,6 +689,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               });
             }
           }
+          break;
+        }
+        case "TOOL_ACTIVITY": {
+          const agent = agents.get(event.agentId);
+          if (agent) agents.set(event.agentId, { ...agent, lastLogLine: event.text });
           break;
         }
         case "TASK_RESULT_RETURNED": {

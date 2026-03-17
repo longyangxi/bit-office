@@ -93,6 +93,13 @@ export interface LogAppendEvent {
   chunk: string;
 }
 
+export interface LogActivityEvent {
+  type: "log:activity";
+  agentId: string;
+  taskId: string;
+  text: string;
+}
+
 export interface TeamChatEvent {
   type: "team:chat";
   fromAgentId: string;
@@ -194,6 +201,7 @@ export type OrchestratorEvent =
   | AgentStatusEvent
   | ApprovalNeededEvent
   | LogAppendEvent
+  | LogActivityEvent
   | TeamChatEvent
   | TaskQueuedEvent
   | WorktreeCreatedEvent
@@ -218,6 +226,7 @@ export interface OrchestratorEventMap {
   "agent:status": [AgentStatusEvent];
   "approval:needed": [ApprovalNeededEvent];
   "log:append": [LogAppendEvent];
+  "log:activity": [LogActivityEvent];
   "team:chat": [TeamChatEvent];
   "task:queued": [TaskQueuedEvent];
   "worktree:created": [WorktreeCreatedEvent];

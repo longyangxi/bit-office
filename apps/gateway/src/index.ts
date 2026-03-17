@@ -256,6 +256,8 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return { type: "APPROVAL_NEEDED", approvalId: e.approvalId, agentId: e.agentId, taskId: e.taskId, title: e.title, summary: e.summary, riskLevel: e.riskLevel };
     case "log:append":
       return { type: "LOG_APPEND", agentId: e.agentId, taskId: e.taskId, stream: e.stream, chunk: e.chunk };
+    case "log:activity":
+      return { type: "TOOL_ACTIVITY", agentId: e.agentId, text: e.text };
     case "team:chat":
       return { type: "TEAM_CHAT", fromAgentId: e.fromAgentId, toAgentId: e.toAgentId, message: e.message, messageType: e.messageType, taskId: e.taskId, timestamp: e.timestamp };
     case "task:queued":
@@ -973,6 +975,7 @@ async function main() {
   orc.on("agent:status", forwardEvent);
   orc.on("approval:needed", forwardEvent);
   orc.on("log:append", forwardEvent);
+  orc.on("log:activity", forwardEvent);
   orc.on("team:chat", forwardEvent);
   orc.on("task:queued", forwardEvent);
   orc.on("worktree:created", forwardEvent);

@@ -42,6 +42,7 @@ export type {
   AgentStatusEvent,
   ApprovalNeededEvent,
   LogAppendEvent,
+  LogActivityEvent,
   TeamChatEvent,
   TaskQueuedEvent,
   WorktreeCreatedEvent,

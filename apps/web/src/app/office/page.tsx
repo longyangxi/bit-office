@@ -1295,8 +1295,13 @@ export default function OfficePage() {
 
 
                         {busy && !agentState.pendingApproval && agentState.messages.length > 0 && agentState.messages[agentState.messages.length - 1]?.text && (
-                          <div style={{ padding: "4px 0" }}>
+                          <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
                             <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+                            {agentState.lastLogLine && (
+                              <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
+                                {agentState.lastLogLine.slice(0, 60)}
+                              </span>
+                            )}
                           </div>
                         )}
                         <div ref={chatEndRef} />
@@ -1493,6 +1498,39 @@ export default function OfficePage() {
                                     fontFamily: TERM_FONT, flexShrink: 0,
                                   }}
                                 >Close Project</button>
+                              </div>
+                            ) : agentState?.awaitingApproval && !busy ? (
+                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
+                                <button
+                                  className="term-btn"
+                                  onClick={() => {
+                                    if (!selectedAgent) return;
+                                    const tid = nanoid();
+                                    const approveText = "Yes, approved. Proceed.";
+                                    addUserMessage(selectedAgent, tid, approveText);
+                                    sendCommand({ type: "RUN_TASK", agentId: selectedAgent, taskId: tid, prompt: approveText, repoPath: agentWorkDirMap.get(selectedAgent), name: agent?.name, role: agent?.role, personality: agent?.personality });
+                                    setPrompt("");
+                                  }}
+                                  style={{
+                                    padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
+                                    backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                                    fontFamily: TERM_FONT,
+                                  }}
+                                >approve</button>
+                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                                <input
+                                  className="term-input"
+                                  value={prompt}
+                                  onPaste={handlePasteText}
+                                  onChange={(e) => setPrompt(e.target.value)}
+                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
+                                  placeholder="or give feedback..."
+                                  style={{
+                                    flex: 1, padding: "5px 6px", border: "none",
+                                    backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
+                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                                  }}
+                                />
                               </div>
                             ) : (
                               <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: "none" }}>

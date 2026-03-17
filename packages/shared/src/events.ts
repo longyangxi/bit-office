@@ -133,6 +133,12 @@ export const TokenUpdateEvent = z.object({
   outputTokens: z.number(),
 });
 
+export const ToolActivityEvent = z.object({
+  type: z.literal("TOOL_ACTIVITY"),
+  agentId: z.string(),
+  text: z.string(),
+});
+
 export const TeamPhaseEvent = z.object({
   type: z.literal("TEAM_PHASE"),
   teamId: z.string(),
@@ -236,6 +242,7 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   TeamChatEvent,
   TaskQueuedEvent,
   TokenUpdateEvent,
+  ToolActivityEvent,
   TeamPhaseEvent,
   AgentDefsEvent,
   SuggestionEvent,
@@ -262,6 +269,7 @@ export type TaskResultReturnedEvent = z.infer<typeof TaskResultReturnedEvent>;
 export type TeamChatEvent = z.infer<typeof TeamChatEvent>;
 export type TaskQueuedEvent = z.infer<typeof TaskQueuedEvent>;
 export type TokenUpdateEvent = z.infer<typeof TokenUpdateEvent>;
+export type ToolActivityEvent = z.infer<typeof ToolActivityEvent>;
 export type TeamPhaseEvent = z.infer<typeof TeamPhaseEvent>;
 export type AgentDefsEvent = z.infer<typeof AgentDefsEvent>;
 export type SuggestionEvent = z.infer<typeof SuggestionEvent>;

@@ -7,9 +7,35 @@ import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
 import type { AIBackend } from "./ai-backend.js";
-import type { AgentStatus, TaskResultPayload, OrchestratorEvent } from "./types.js";
+import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
 import type { TemplateName } from "./prompt-templates.js";
 import { getMemoryContext } from "./memory.js";
+
+/* ── Tool activity summarizer ──────────────────────────────────── */
+
+function summarizeToolUse(name: string, input: Record<string, unknown> | undefined): string | null {
+  if (!input) return `Using ${name}`;
+  const filePath = input.file_path as string | undefined;
+  const basename = filePath ? filePath.split("/").pop() : undefined;
+  switch (name) {
+    case "Read":
+      return basename ? `Reading ${basename}` : "Reading file";
+    case "Write":
+      return basename ? `Writing ${basename}` : "Writing file";
+    case "Edit":
+      return basename ? `Editing ${basename}` : "Editing file";
+    case "Grep":
+      return `Searching for "${String(input.pattern ?? "").slice(0, 40)}"`;
+    case "Glob":
+      return `Finding files: ${String(input.pattern ?? "").slice(0, 40)}`;
+    case "Bash": {
+      const cmd = String(input.command ?? "").slice(0, 50);
+      return cmd ? `Running: ${cmd}` : "Running command";
+    }
+    default:
+      return `Using ${name}`;
+  }
+}
 
 /* ── Persist session IDs across restarts ────────────────────────── */
 const SESSION_FILE = path.join(homedir(), ".bit-office", "agent-sessions.json");
@@ -230,7 +256,8 @@ export class AgentSession {
         prompt,
         memory: this._memoryContext || getMemoryContext(),
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
-- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game"). Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.`,
+- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game"). Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
+- Before making large changes, wrap your plan in a [PLAN] tag and ask the user to approve. For dangerous operations (chmod, rm -rf, git reset, etc.), also ask for approval. Always end approval requests with a question mark.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
@@ -323,18 +350,22 @@ export class AgentSession {
       // Delegation detection regex
       const DELEGATION_RE = /^\s*(?:[-*>]\s*)?(?:\*\*)?@(\w+)(?:\*\*)?:\s*(.+)$/;
 
-      // Filter out system/diagnostic noise that should not appear in the UI
-      const isSystemNoise = (line: string): boolean => {
+      // Filter out system/diagnostic noise that should not appear in the UI.
+      // fromStreamJson: when true, skip verb/path filters (those are only for plain-text backends).
+      const isSystemNoise = (line: string, fromStreamJson = false): boolean => {
         const t = line.trim().toLowerCase();
         if (!t) return true;
         // MCP-related
         if (t.includes("mcp") && (t.startsWith("[") || t.includes("server") || t.includes("connect") || t.includes("tool"))) return true;
-        // Claude Code internal diagnostics
-        if (/^\s*>?\s*(fetching|loaded|reading|writing|searching|running|executing|checking)\s/i.test(line)) return true;
-        // Progress indicators / spinners
-        if (/^[\s⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏✓✗•·…\-]+$/.test(line.trim())) return true;
-        // Bare file path lines (no sentence content)
-        if (/^\s*[\w./\\-]+\.(ts|tsx|js|jsx|json|md|css|py)\s*$/.test(line)) return true;
+        // The following filters only apply to plain-text mode (non-Claude backends)
+        if (!fromStreamJson) {
+          // Claude Code internal diagnostics
+          if (/^\s*>?\s*(fetching|loaded|reading|writing|searching|running|executing|checking)\s/i.test(line)) return true;
+          // Progress indicators / spinners
+          if (/^[\s⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏✓✗•·…\-]+$/.test(line.trim())) return true;
+          // Bare file path lines (no sentence content)
+          if (/^\s*[\w./\\-]+\.(ts|tsx|js|jsx|json|md|css|py)\s*$/.test(line)) return true;
+        }
         return false;
       };
 
@@ -351,7 +382,8 @@ export class AgentSession {
       };
 
       // Handle a line of plain text output (delegation detection + logging)
-      const handleTextLine = (text: string) => {
+      // fromStreamJson: true when text comes from stream-json blocks (skip verb/path noise filters)
+      const handleTextLine = (text: string, fromStreamJson = false) => {
         const lines = text.split("\n").filter((l) => l.trim());
         const visibleLines: string[] = [];
         for (const line of lines) {
@@ -367,7 +399,7 @@ export class AgentSession {
             // Continuation line of current delegation
             pendingDelegation.lines.push(trimmed);
           }
-          if (!isSystemNoise(line)) {
+          if (!isSystemNoise(line, fromStreamJson)) {
             visibleLines.push(trimmed);
           }
         }
@@ -435,10 +467,21 @@ export class AgentSession {
                 for (const block of msg.message.content) {
                   if (block.type === "text" && block.text) {
                     this.stdoutBuffer += block.text + "\n";
-                    handleTextLine(block.text);
+                    handleTextLine(block.text, true);
                   }
                   if (block.type === "thinking" && block.thinking) {
                     console.log(`[Agent ${this.name} thinking] ${block.thinking.slice(0, 120)}...`);
+                  }
+                  if (block.type === "tool_use" && block.name) {
+                    const activity = summarizeToolUse(block.name as string, block.input as Record<string, unknown> | undefined);
+                    if (activity) {
+                      this.onEvent({
+                        type: "log:activity",
+                        agentId: this.agentId,
+                        taskId,
+                        text: activity,
+                      });
+                    }
                   }
                 }
               } else if (msg.type === "result") {
