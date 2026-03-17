@@ -1480,6 +1480,95 @@ for (const cat of AGENCY_CATALOG) {
   }
 }
 
+function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role: string) => void }) {
+  const [search, setSearch] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const query = search.toLowerCase();
+  const filtered = query
+    ? AGENCY_CATALOG.map((cat) => ({
+        ...cat,
+        subcategories: cat.subcategories.map((sub) => ({
+          ...sub,
+          agents: sub.agents.filter((a) =>
+            a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query) || cat.label.toLowerCase().includes(query)
+          ),
+        })).filter((sub) => sub.agents.length > 0),
+      })).filter((cat) => cat.subcategories.length > 0)
+    : AGENCY_CATALOG;
+
+  const inputStyle: React.CSSProperties = {
+    width: "100%", padding: "7px 10px", fontSize: 14, fontFamily: "monospace",
+    border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
+    boxSizing: "border-box",
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <input
+        value={open ? search : value}
+        onChange={(e) => { setSearch(e.target.value); if (!open) setOpen(true); }}
+        onFocus={() => { setOpen(true); setSearch(""); }}
+        placeholder="Search roles..."
+        style={inputStyle}
+      />
+      {open && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
+          maxHeight: 250, overflowY: "auto", backgroundColor: "#14112a",
+          border: "1px solid #1a2a1a", borderTop: "none",
+        }}>
+          {filtered.map((cat) =>
+            cat.subcategories.map((sub) => (
+              <div key={`${cat.category}/${sub.name}`}>
+                <div style={{
+                  padding: "4px 10px", fontSize: 10, color: "#5a4838",
+                  fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em",
+                  backgroundColor: "#0a0e0a", position: "sticky", top: 0,
+                }}>
+                  {cat.subcategories.length > 1 && sub.name !== "_root" ? `${cat.label} > ${sub.label}` : cat.label}
+                </div>
+                {sub.agents.map((a) => (
+                  <div
+                    key={a.name}
+                    onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
+                    style={{
+                      padding: "5px 10px", fontSize: 13, fontFamily: "monospace",
+                      color: a.name === value ? "#e8b040" : "#eddcb8",
+                      cursor: "pointer", backgroundColor: a.name === value ? "#382800" : "transparent",
+                    }}
+                    onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "#1a1a2a"; }}
+                    onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >
+                    {a.name}
+                  </div>
+                ))}
+              </div>
+            ))
+          )}
+          {filtered.length === 0 && (
+            <div
+              onClick={() => { onSelect(search.trim()); setOpen(false); setSearch(""); }}
+              style={{ padding: "8px 10px", fontSize: 13, fontFamily: "monospace", color: "#7a6858", cursor: "pointer" }}
+            >
+              Use custom: &quot;{search.trim()}&quot;
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
   onSave: (agent: AgentDefinition) => void;
   onClose: () => void;
@@ -1628,58 +1717,26 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
           />
         </div>
 
-        {/* Role */}
-        <div style={{ marginBottom: 8 }}>
+        {/* Role — searchable dropdown */}
+        <div style={{ marginBottom: 8, position: "relative" }}>
           <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>ROLE</div>
-          <select
-            value={rolePresetIndex}
-            onChange={(e) => handleRoleChange(Number(e.target.value))}
-            style={{
-              width: "100%", padding: "7px 10px", fontSize: 14, fontFamily: "monospace",
-              border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
-              boxSizing: "border-box", cursor: "pointer",
-            }}
-          >
-            {AGENCY_CATALOG.map((cat) => {
-              const hasMultipleSubs = cat.subcategories.length > 1 || cat.subcategories[0]?.name !== "_root";
-              if (hasMultipleSubs) {
-                return cat.subcategories.map((sub) => (
-                  <optgroup key={`${cat.category}/${sub.name}`} label={`${cat.label} > ${sub.label}`}>
-                    {sub.agents.map((a) => {
-                      const idx = ROLE_PRESETS.indexOf(a.name);
-                      return <option key={a.name} value={idx}>{a.name}</option>;
-                    })}
-                  </optgroup>
-                ));
+          <RoleSearchSelect
+            value={currentRole}
+            onSelect={(roleName) => {
+              const idx = ROLE_PRESETS.indexOf(roleName);
+              if (idx >= 0) {
+                handleRoleChange(idx);
+              } else {
+                // Custom role
+                setRolePresetIndex(-1);
+                setCustomRole(roleName);
               }
-              return (
-                <optgroup key={cat.category} label={cat.label}>
-                  {cat.subcategories[0].agents.map((a) => {
-                    const idx = ROLE_PRESETS.indexOf(a.name);
-                    return <option key={a.name} value={idx}>{a.name}</option>;
-                  })}
-                </optgroup>
-              );
-            })}
-            <option value={-1}>Custom...</option>
-          </select>
-          {rolePresetIndex === -1 ? (
-            <input
-              value={customRole}
-              onChange={(e) => setCustomRole(e.target.value)}
-              placeholder="e.g. Python Expert"
-              style={{
-                width: "100%", padding: "7px 10px", fontSize: 14, fontFamily: "monospace",
-                border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
-                boxSizing: "border-box", marginTop: 4,
-              }}
-            />
-          ) : (
-            AGENCY_AGENT_MAP.get(currentRole) && (
-              <div style={{ fontSize: 11, color: "#5a4838", marginTop: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
-                {AGENCY_AGENT_MAP.get(currentRole)}
-              </div>
-            )
+            }}
+          />
+          {AGENCY_AGENT_MAP.get(currentRole) && (
+            <div style={{ fontSize: 11, color: "#5a4838", marginTop: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
+              {AGENCY_AGENT_MAP.get(currentRole)}
+            </div>
           )}
         </div>
 
