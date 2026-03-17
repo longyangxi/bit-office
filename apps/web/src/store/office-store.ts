@@ -532,16 +532,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const accumulated = streamMsg?._accumulatedText ?? "";
           const serverFull = event.result.fullOutput || event.result.summary;
           const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
-          // Finalize streaming message: if content overlaps with final result, remove it to avoid duplication;
-          // otherwise rename id so it stops updating and stays visible above the result.
-          const streamContentOverlaps = streamMsg && accumulated && (
-            bestText.startsWith(accumulated) || bestText === accumulated || accumulated.length < 50
-          );
-          const finalizedMessages = streamMsg
-            ? streamContentOverlaps
-              ? agent.messages.filter((m) => m.id !== streamId)
-              : agent.messages.map((m) => m.id === streamId ? { ...m, id: streamId.replace("-stream", "-streamed"), _accumulatedText: undefined } : m)
-            : agent.messages;
+          // Remove streaming message — final result (bestText) already contains the complete content
+          const finalizedMessages = agent.messages.filter((m) => m.id !== streamId);
           const newMessages: ChatMessage[] = [
             ...finalizedMessages,
             {
