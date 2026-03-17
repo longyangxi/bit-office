@@ -145,6 +145,7 @@ RULES:
 - Do NOT launch GUI apps (Pygame, Tkinter, Electron) or dev servers. You CANNOT see UI.
 - You MAY run one-shot commands: npm install, npm run build, npx tsc, syntax checks.
 - Default to static HTML/CSS/JS unless a backend is explicitly required.
+- When the task requires specialized expertise, use the appropriate subagent (e.g. game-designer, frontend-developer, pixi-js-developer). They provide domain-specific knowledge and best practices.
 {{soloHint}}
 {{memory}}
 
@@ -189,6 +190,7 @@ RULES:
 - NEVER run servers, dev commands, or GUI apps. You CANNOT see UI.
 - ONLY use: code reading, "ls" to check files, "npm run build" (one-shot), syntax checks.
 - This is a prototype — do NOT nitpick style, naming, formatting, or security.
+- When reviewing, use the appropriate subagent (e.g. code-reviewer) for domain-specific quality checks if available.
 
 OUTPUT STYLE:
 - While reviewing, output a SHORT status line (≤8 words) at each step, prefixed with →. Example: "→ Checking file structure" or "→ Reading game logic". No other prose.

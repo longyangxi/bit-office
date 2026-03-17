@@ -99,6 +99,7 @@ interface OfficeStore {
   viewingProjectEvents: GatewayEvent[];
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
+  agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
   connected: boolean;
   hydrated: boolean;
   consumePreviewUrl: () => string | null;
@@ -264,6 +265,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   viewingProjectEvents: [],
   viewingProjectName: null,
   pendingPreviewUrl: null,
+  agencyAgentsResult: null,
   connected: false,
   hydrated: false,
 
@@ -765,6 +767,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             imageUploadCallbacks.delete(event.requestId);
           }
           return { agents };
+        }
+        case "AGENCY_AGENTS_UPDATED": {
+          return { agents, agencyAgentsResult: { success: event.success, message: event.message, count: event.count } };
         }
         case "PROJECT_LIST": {
           return { agents, projectList: event.projects };

@@ -13,7 +13,10 @@
     "lint": "pnpm -r lint",
     "start:local": "bash scripts/start-local.sh",
     "dev:desktop": "pnpm --filter bit-office-desktop dev",
-    "build:desktop": "pnpm --filter bit-office-desktop build"
+    "build:desktop": "pnpm --filter bit-office-desktop build",
+    "postinstall": "bash scripts/install-agents.sh || true",
+    "agents:install": "bash scripts/install-agents.sh",
+    "agents:update": "bash scripts/install-agents.sh --update"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

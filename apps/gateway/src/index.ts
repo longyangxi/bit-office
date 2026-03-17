@@ -806,6 +806,40 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       }
       break;
     }
+    case "UPDATE_AGENCY_AGENTS": {
+      console.log("[Gateway] Updating agency agents...");
+      const scriptPath = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "..", "..", "scripts", "install-agents.sh");
+      if (!existsSync(scriptPath)) {
+        console.warn("[Gateway] install-agents.sh not found — only available in git checkout");
+        publishEvent({
+          type: "AGENCY_AGENTS_UPDATED",
+          success: false,
+          message: "Agency agents update is only available when running from the git checkout (not the npm package).",
+        });
+        break;
+      }
+      execFile("bash", [scriptPath, "--update"], { timeout: 60000 }, (err, stdout, stderr) => {
+        if (err) {
+          console.error("[Gateway] Agency agents update failed:", stderr || err.message);
+          publishEvent({
+            type: "AGENCY_AGENTS_UPDATED",
+            success: false,
+            message: stderr || err.message,
+          });
+        } else {
+          const countMatch = stdout.match(/(\d+) agents/);
+          const count = countMatch ? parseInt(countMatch[1], 10) : undefined;
+          console.log("[Gateway] Agency agents updated:", stdout.trim().split("\n").pop());
+          publishEvent({
+            type: "AGENCY_AGENTS_UPDATED",
+            success: true,
+            message: `Agency agents updated successfully`,
+            count,
+          });
+        }
+      });
+      break;
+    }
   }
 }
 

@@ -149,6 +149,10 @@ export const LoadProjectCommand = z.object({
   projectId: z.string(),
 });
 
+export const UpdateAgencyAgentsCommand = z.object({
+  type: z.literal("UPDATE_AGENCY_AGENTS"),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -172,6 +176,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
   RateProjectCommand,
   ListProjectsCommand,
   LoadProjectCommand,
+  UpdateAgencyAgentsCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -196,4 +201,5 @@ export type SuggestCommand = z.infer<typeof SuggestCommand>;
 export type RateProjectCommand = z.infer<typeof RateProjectCommand>;
 export type ListProjectsCommand = z.infer<typeof ListProjectsCommand>;
 export type LoadProjectCommand = z.infer<typeof LoadProjectCommand>;
+export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand>;
 export type Command = z.infer<typeof CommandSchema>;

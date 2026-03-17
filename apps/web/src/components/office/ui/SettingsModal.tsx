@@ -1,9 +1,11 @@
 "use client"
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { OfficeLayout } from '../types'
 import { serializeLayout, deserializeLayout } from '../layout/layoutSerializer'
 import { loadRoomZip } from '../layout/roomZipLoader'
+import { sendCommand } from '@/lib/connection'
+import { useOfficeStore } from '@/store/office-store'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -40,8 +42,25 @@ export default function SettingsModal({
   onSoundEnabledChange,
 }: SettingsModalProps) {
   const [hovered, setHovered] = useState<string | null>(null)
+  const [agentsUpdating, setAgentsUpdating] = useState(false)
+  const [agentsMessage, setAgentsMessage] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const roomZipInputRef = useRef<HTMLInputElement>(null)
+  const agencyResult = useOfficeStore((s) => s.agencyAgentsResult)
+
+  // Listen for gateway response
+  useEffect(() => {
+    if (agencyResult && agentsUpdating) {
+      setAgentsUpdating(false)
+      setAgentsMessage(
+        agencyResult.success
+          ? `Updated${agencyResult.count ? ` (${agencyResult.count} agents)` : ''}`
+          : `Failed: ${agencyResult.message}`
+      )
+      const t = setTimeout(() => setAgentsMessage(null), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [agencyResult])
 
   if (!isOpen) return null
 
@@ -230,6 +249,34 @@ export default function SettingsModal({
           >
             {soundEnabled ? 'X' : ''}
           </span>
+        </button>
+        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+        <button
+          onClick={() => {
+            setAgentsUpdating(true)
+            setAgentsMessage(null)
+            sendCommand({ type: "UPDATE_AGENCY_AGENTS" })
+          }}
+          disabled={agentsUpdating}
+          onMouseEnter={() => setHovered('agents')}
+          onMouseLeave={() => setHovered(null)}
+          style={{
+            ...menuItemBase,
+            background: hovered === 'agents' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            opacity: agentsUpdating ? 0.5 : 1,
+          }}
+        >
+          <span>
+            {agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}
+          </span>
+          {agentsMessage && (
+            <span style={{
+              fontSize: 11,
+              color: agentsMessage.startsWith('Failed') ? '#e04848' : '#48cc6a',
+            }}>
+              {agentsMessage.startsWith('Failed') ? 'X' : 'OK'}
+            </span>
+          )}
         </button>
       </div>
     </>
