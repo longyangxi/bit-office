@@ -12,8 +12,11 @@ export type TemplateName =
   | "leader-result"
   | "worker-initial"
   | "worker-reviewer-initial"
+  | "worker-subagent-reviewer-initial"
   | "worker-continue"
   | "worker-direct-fix"
+  | "worker-subagent-initial"
+  | "worker-subagent-dev-initial"
   | "delegation-prefix"
   | "delegation-hint"
   | "leader-create"
@@ -206,6 +209,43 @@ VERDICT: PASS | FAIL
 - FAIL = crashes/bugs prevent usage OR core features missing
 ISSUES: (numbered list)
 SUGGESTIONS: (optional, brief)
+SUMMARY: (one sentence)
+
+{{prompt}}`,
+
+  "worker-subagent-reviewer-initial": `Your name is {{name}}. {{personality}}
+{{memory}}
+
+After reviewing, output your verdict in this exact format (the system parses it):
+VERDICT: PASS | FAIL
+- PASS = runs without crashes AND core features implemented
+- FAIL = crashes/bugs prevent usage OR core features missing
+ISSUES: (numbered list)
+SUGGESTIONS: (optional, brief)
+SUMMARY: (one sentence)
+
+{{prompt}}`,
+
+  "worker-subagent-initial": `Your name is {{name}}. {{personality}}
+{{soloHint}}
+{{memory}}
+
+{{prompt}}`,
+
+  "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
+{{soloHint}}
+{{memory}}
+
+When you produce a deliverable, follow these rules:
+- NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
+- Do NOT launch GUI apps or dev servers. You CANNOT see UI.
+- For web servers, your app MUST read port from the PORT env variable.
+- Report results in this format:
+STATUS: done | failed
+FILES_CHANGED: (one per line)
+ENTRY_FILE: (for static web, e.g. index.html)
+PREVIEW_CMD: (for server/CLI apps)
+PREVIEW_PORT: (for web servers)
 SUMMARY: (one sentence)
 
 {{prompt}}`,

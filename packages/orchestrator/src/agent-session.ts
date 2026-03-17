@@ -235,6 +235,16 @@ export class AgentSession {
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
 
+      // Resolve subagent type for Claude Code (matches ~/.claude/agents/ by name field).
+      // If no matching agent exists, Claude CLI silently ignores it.
+      let agentType: string | undefined;
+      if (this.backend.id === "claude" && !this._isTeamLead) {
+        const roleName = this.role.split(/\s*[—–]\s*/)[0].trim();
+        if (roleName && roleName.length > 2) {
+          agentType = roleName;
+        }
+      }
+
       let fullPrompt: string;
       if (this._isTeamLead && phaseOverride && ["create", "design", "complete"].includes(phaseOverride)) {
         // Conversational phases: use continuation template if resuming, full template if first turn
@@ -247,21 +257,24 @@ export class AgentSession {
         fullPrompt = this._renderPrompt(useInitial ? "leader-initial" : "leader-continue", templateVars);
         if (phaseOverride === "execute") this._hasExecuted = true;
       } else {
-        const workerInitial = this.role.toLowerCase().includes("review") ? "worker-reviewer-initial" : "worker-initial";
+        let workerInitial: TemplateName;
+        const isReviewer = this.role.toLowerCase().includes("review");
+        if (isReviewer && agentType) {
+          workerInitial = "worker-subagent-reviewer-initial";
+        } else if (isReviewer) {
+          workerInitial = "worker-reviewer-initial";
+        } else if (agentType) {
+          // Has a matching subagent — use lightweight template.
+          // Dev-like roles get preview rules; non-dev roles get minimal prompt.
+          const isDevRole = /developer|engineer|architect|scripter|builder|prototyper|coder/i.test(this.role);
+          workerInitial = isDevRole ? "worker-subagent-dev-initial" : "worker-subagent-initial";
+        } else {
+          workerInitial = "worker-initial";
+        }
         fullPrompt = this._renderPrompt(this.hasHistory ? "worker-continue" : workerInitial, templateVars);
       }
       const fullAccess = this.sandboxMode === "full";
       const verbose = !!process.env.DEBUG;
-
-      // Pass role name as --agent for Claude Code (matches ~/.claude/agents/ by name field).
-      // If no matching agent exists, Claude CLI silently ignores it.
-      let agentType: string | undefined;
-      if (this.backend.id === "claude" && !this._isTeamLead) {
-        const roleName = this.role.split(/\s*[—–]\s*/)[0].trim();
-        if (roleName && roleName.length > 2) {
-          agentType = roleName;
-        }
-      }
 
       const args = this.backend.buildArgs(fullPrompt, {
         continue: this.hasHistory,
