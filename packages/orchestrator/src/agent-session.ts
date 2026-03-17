@@ -38,18 +38,33 @@ function summarizeToolUse(name: string, input: Record<string, unknown> | undefin
 }
 
 /* ── Persist session IDs across restarts ────────────────────────── */
-const SESSION_FILE = path.join(homedir(), ".bit-office", "agent-sessions.json");
+
+/**
+ * Session file path is instance-scoped to prevent cross-instance contamination.
+ * Set via setSessionDir() from the gateway using its instanceDir config.
+ * Falls back to ~/.bit-office/agent-sessions.json for backwards compatibility.
+ */
+let _sessionDir: string = path.join(homedir(), ".bit-office");
+
+export function setSessionDir(dir: string) {
+  _sessionDir = dir;
+}
+
+function getSessionFile(): string {
+  return path.join(_sessionDir, "agent-sessions.json");
+}
 
 export function loadSessionMap(): Record<string, string> {
   try {
-    if (existsSync(SESSION_FILE)) return JSON.parse(readFileSync(SESSION_FILE, "utf-8"));
+    const f = getSessionFile();
+    if (existsSync(f)) return JSON.parse(readFileSync(f, "utf-8"));
   } catch { /* corrupt file, start fresh */ }
   return {};
 }
 
 export function clearAllSessionIds() {
   try {
-    writeFileSync(SESSION_FILE, "{}", "utf-8");
+    writeFileSync(getSessionFile(), "{}", "utf-8");
   } catch { /* ignore */ }
 }
 
@@ -58,7 +73,7 @@ export function clearSessionId(agentId: string) {
 }
 
 function saveSessionId(agentId: string, sessionId: string | null) {
-  const dir = path.dirname(SESSION_FILE);
+  const dir = path.dirname(getSessionFile());
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   const map = loadSessionMap();
   if (sessionId) {
@@ -66,7 +81,7 @@ function saveSessionId(agentId: string, sessionId: string | null) {
   } else {
     delete map[agentId];
   }
-  writeFileSync(SESSION_FILE, JSON.stringify(map), "utf-8");
+  writeFileSync(getSessionFile(), JSON.stringify(map), "utf-8");
 }
 
 interface PendingApproval {

@@ -6,6 +6,33 @@ export const folderPickCallbacks = new Map<string, (path: string) => void>();
 /** Pending UPLOAD_IMAGE callbacks: requestId → callback */
 export const imageUploadCallbacks = new Map<string, (path: string) => void>();
 
+// ── Tauri desktop notifications ──
+
+const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+
+function notifyTaskDone(agentName: string, summary: string) {
+  if (!isTauri) return;
+  // Skip if window is focused — no need to distract
+  if (typeof document !== "undefined" && document.hasFocus()) return;
+  // Dock bounce
+  // @ts-ignore — only available in Tauri context
+  import("@tauri-apps/api/core").then(({ invoke }) => {
+    invoke("bounce_dock").catch(() => {});
+  }).catch(() => {});
+  // Native notification
+  // @ts-ignore — only available in Tauri context
+  import("@tauri-apps/plugin-notification").then(async ({ sendNotification, isPermissionGranted, requestPermission }: any) => {
+    let granted = await isPermissionGranted();
+    if (!granted) granted = (await requestPermission()) === "granted";
+    if (granted) {
+      sendNotification({
+        title: `${agentName} — Task Complete`,
+        body: summary.slice(0, 200),
+      });
+    }
+  }).catch(() => {});
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "agent" | "system";
@@ -600,6 +627,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             _tokenBaseline: updatedTokenUsage,
           });
           saveToStorage(agents);
+          notifyTaskDone(agent.name, bestText.slice(0, 200));
           break;
         }
         case "TASK_FAILED": {

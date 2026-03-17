@@ -1,5 +1,5 @@
 export { Orchestrator } from "./orchestrator.js";
-export { AgentSession } from "./agent-session.js";
+export { AgentSession, setSessionDir } from "./agent-session.js";
 export { previewServer } from "./preview-server.js";
 export { AgentManager } from "./agent-manager.js";
 export { DelegationRouter } from "./delegation.js";

@@ -86,10 +86,37 @@ function resolveDefaultWorkspace(): string {
   return cwd;
 }
 
+/**
+ * Resolve a stable gateway instance ID.
+ * - GATEWAY_ID env var takes precedence (e.g. Tauri sets "desktop")
+ * - Falls back to "port-{wsPort}" so different ports auto-isolate
+ *
+ * Each gateway instance gets its own state directory under
+ * ~/.bit-office/instances/{gatewayId}/ to prevent cross-instance
+ * context contamination (e.g. Tauri vs Web vs CLI all running separately).
+ */
+function resolveGatewayId(): string {
+  if (process.env.GATEWAY_ID) return process.env.GATEWAY_ID;
+  const port = Number(process.env.WS_PORT) || 9090;
+  return `port-${port}`;
+}
+
+function resolveInstanceDir(gatewayId: string): string {
+  const dir = resolve(CONFIG_DIR, "instances", gatewayId);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
 function buildConfig() {
   const saved = loadSavedConfig();
+  const gatewayId = resolveGatewayId();
+  const instanceDir = resolveInstanceDir(gatewayId);
   return {
     machineId: getOrCreateMachineId(),
+    /** Unique identifier for this gateway instance (isolates state from other instances) */
+    gatewayId,
+    /** Per-instance state directory: ~/.bit-office/instances/{gatewayId}/ */
+    instanceDir,
     defaultWorkspace: (() => {
       const envWs = process.env.WORKSPACE;
       if (envWs && existsSync(envWs)) return envWs;

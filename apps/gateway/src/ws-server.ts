@@ -20,12 +20,14 @@ let onCommand: ((cmd: Command, meta: CommandMeta) => void) | null = null;
 const shareTokens = new Map<string, { role: "collaborator" | "spectator" }>();
 
 // Session tokens — persisted to disk so they survive gateway restarts
-const SESSION_TOKENS_FILE = resolve(homedir(), ".bit-office", "session-tokens.json");
+// Instance-scoped to prevent cross-instance auth token leakage
+function getSessionTokensFile(): string { return resolve(config.instanceDir, "session-tokens.json"); }
 
 function loadSessionTokens(): Map<string, UserRole> {
   try {
-    if (existsSync(SESSION_TOKENS_FILE)) {
-      const data = JSON.parse(readFileSync(SESSION_TOKENS_FILE, "utf-8"));
+    const f = getSessionTokensFile();
+    if (existsSync(f)) {
+      const data = JSON.parse(readFileSync(f, "utf-8"));
       return new Map(Object.entries(data) as [string, UserRole][]);
     }
   } catch { /* corrupt file, start fresh */ }
@@ -33,9 +35,9 @@ function loadSessionTokens(): Map<string, UserRole> {
 }
 
 function persistSessionTokens() {
-  const dir = resolve(homedir(), ".bit-office");
+  const dir = resolve(config.instanceDir);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  writeFileSync(SESSION_TOKENS_FILE, JSON.stringify(Object.fromEntries(sessionTokens)), "utf-8");
+  writeFileSync(getSessionTokensFile(), JSON.stringify(Object.fromEntries(sessionTokens)), "utf-8");
 }
 
 const sessionTokens = loadSessionTokens();

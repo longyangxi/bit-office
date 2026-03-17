@@ -13,7 +13,12 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
   const [collapsed, setCollapsed] = useState(true);
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (!collapsed) endRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (collapsed) return;
+    const el = endRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
   }, [messages.length, collapsed]);
 
   return (

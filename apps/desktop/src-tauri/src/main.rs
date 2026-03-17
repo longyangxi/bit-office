@@ -8,6 +8,11 @@ use tauri::{
 use tauri_plugin_shell::ShellExt;
 use std::sync::Mutex;
 
+#[tauri::command]
+fn bounce_dock(window: tauri::Window) {
+    let _ = window.request_user_attention(Some(tauri::UserAttentionType::Informational));
+}
+
 struct GatewayState {
     child: Option<tauri_plugin_shell::process::CommandChild>,
     pid: Option<u32>,
@@ -50,6 +55,7 @@ fn main() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec![]),
         ))
+        .plugin(tauri_plugin_notification::init())
         .manage(Mutex::new(GatewayState { child: None, pid: None }))
         .setup(move |app| {
             // -- System tray --
@@ -146,6 +152,7 @@ fn main() {
                     .env("HOME", std::env::var("HOME").unwrap_or_default())
                     .env("WEB_DIR", web_dir.to_str().unwrap())
                     .env("NO_OPEN", "1")
+                    .env("GATEWAY_ID", "desktop")
                     .spawn()
                 {
                     Ok((mut rx, child)) => {
@@ -193,7 +200,7 @@ fn main() {
                 api.prevent_close();
             }
         })
-        .invoke_handler(tauri::generate_handler![])
+        .invoke_handler(tauri::generate_handler![bounce_dock])
         .build(tauri::generate_context!())
         .expect("error while building Bit Office")
         .run(|app, event| {

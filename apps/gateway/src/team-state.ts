@@ -6,11 +6,15 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, rea
 import path from "path";
 import os from "os";
 import type { GatewayEvent } from "@office/shared";
+import { config } from "./config.js";
 
 const BIT_OFFICE_DIR = path.join(os.homedir(), ".bit-office");
-const STATE_FILE = path.join(BIT_OFFICE_DIR, "team-state.json");
+// Projects dir is shared (archives are instance-agnostic)
 const PROJECTS_DIR = path.join(BIT_OFFICE_DIR, "projects");
-const EVENTS_FILE = path.join(BIT_OFFICE_DIR, "project-events.jsonl");
+
+// Instance-scoped state files — isolates Tauri / Web / CLI gateway instances
+function getStateFile(): string { return path.join(config.instanceDir, "team-state.json"); }
+function getEventsFile(): string { return path.join(config.instanceDir, "project-events.jsonl"); }
 
 export interface PersistedAgent {
   agentId: string;
@@ -42,8 +46,8 @@ const EMPTY_STATE: TeamState = { agents: [], team: null };
 
 export function loadTeamState(): TeamState {
   try {
-    if (existsSync(STATE_FILE)) {
-      const raw = JSON.parse(readFileSync(STATE_FILE, "utf-8"));
+    if (existsSync(getStateFile())) {
+      const raw = JSON.parse(readFileSync(getStateFile(), "utf-8"));
       if (raw && Array.isArray(raw.agents)) {
         return raw as TeamState;
       }
@@ -54,9 +58,9 @@ export function loadTeamState(): TeamState {
 
 export function saveTeamState(state: TeamState): void {
   try {
-    const dir = path.dirname(STATE_FILE);
+    const dir = path.dirname(getStateFile());
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(STATE_FILE, JSON.stringify(state, null, 2), "utf-8");
+    writeFileSync(getStateFile(), JSON.stringify(state, null, 2), "utf-8");
   } catch (e) {
     console.log(`[TeamState] Failed to save: ${e}`);
   }
@@ -132,7 +136,7 @@ export function resetProjectBuffer(): void {
   projectStartedAt = Date.now();
   projectName = "";
   // Truncate the on-disk buffer
-  try { writeFileSync(EVENTS_FILE, "", "utf-8"); } catch { /* ignore */ }
+  try { writeFileSync(getEventsFile(), "", "utf-8"); } catch { /* ignore */ }
 }
 
 /**
@@ -141,8 +145,8 @@ export function resetProjectBuffer(): void {
  */
 export function loadProjectBuffer(): void {
   try {
-    if (!existsSync(EVENTS_FILE)) return;
-    const raw = readFileSync(EVENTS_FILE, "utf-8").trim();
+    if (!existsSync(getEventsFile())) return;
+    const raw = readFileSync(getEventsFile(), "utf-8").trim();
     if (!raw) return;
     const lines = raw.split("\n");
     for (const line of lines) {
@@ -171,20 +175,20 @@ export function bufferEvent(event: GatewayEvent): void {
   projectEvents.push(stamped as GatewayEvent);
   // Append to disk (one JSON line) — survives gateway restart
   try {
-    const dir = path.dirname(EVENTS_FILE);
+    const dir = path.dirname(getEventsFile());
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    appendFileSync(EVENTS_FILE, JSON.stringify(stamped) + "\n", "utf-8");
+    appendFileSync(getEventsFile(), JSON.stringify(stamped) + "\n", "utf-8");
   } catch { /* best-effort */ }
 }
 
 /** Rewrite the full JSONL file (used when header metadata changes, e.g. projectName) */
 function rewriteEventsFile(): void {
   try {
-    const dir = path.dirname(EVENTS_FILE);
+    const dir = path.dirname(getEventsFile());
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
     const header: EventsFileHeader = { _header: true, startedAt: projectStartedAt, projectName };
     const lines = [JSON.stringify(header), ...projectEvents.map(e => JSON.stringify(e))];
-    writeFileSync(EVENTS_FILE, lines.join("\n") + "\n", "utf-8");
+    writeFileSync(getEventsFile(), lines.join("\n") + "\n", "utf-8");
   } catch { /* best-effort */ }
 }
 
