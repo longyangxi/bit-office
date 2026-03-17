@@ -103,12 +103,16 @@ interface OfficeStore {
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
   connected: boolean;
   hydrated: boolean;
+  /** Per-agent visible message count for lazy loading (default: 50) */
+  visibleMessageCount: Map<string, number>;
   consumePreviewUrl: () => string | null;
   setConnected: (c: boolean) => void;
   setRole: (role: UserRole) => void;
   hydrate: () => void;
   handleEvent: (event: GatewayEvent) => void;
   getAgent: (id: string) => AgentState;
+  getVisibleMessages: (agentId: string) => ChatMessage[];
+  loadMoreMessages: (agentId: string) => void;
   addUserMessage: (agentId: string, taskId: string, prompt: string) => void;
   removeAgent: (agentId: string) => void;
   clearTeamMessages: () => void;
@@ -135,6 +139,13 @@ function isBrowser() {
   return typeof window !== "undefined";
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function filterRecentMessages(messages: ChatMessage[]): ChatMessage[] {
+  const cutoff = Date.now() - SEVEN_DAYS_MS;
+  return messages.filter((m) => m.timestamp >= cutoff);
+}
+
 function saveToStorage(agents: Map<string, AgentState>) {
   if (!isBrowser()) return;
   try {
@@ -142,7 +153,8 @@ function saveToStorage(agents: Map<string, AgentState>) {
     for (const [, agent] of agents) {
       // Skip external agents — they are transient
       if (agent.isExternal) continue;
-      if (agent.messages.length > 0 || agent.name !== agent.agentId) {
+      const recentMessages = filterRecentMessages(agent.messages);
+      if (recentMessages.length > 0 || agent.name !== agent.agentId) {
         data.push({
           agentId: agent.agentId,
           name: agent.name,
@@ -152,7 +164,7 @@ function saveToStorage(agents: Map<string, AgentState>) {
           backend: agent.backend,
           isTeamLead: agent.isTeamLead,
           teamId: agent.teamId,
-          messages: agent.messages.map(({ _accumulatedText, ...m }) => m),
+          messages: recentMessages.map(({ _accumulatedText, ...m }) => m),
         });
       }
     }
@@ -170,6 +182,7 @@ function loadFromStorage(): Map<string, PersistedAgent> {
     const data: PersistedAgent[] = JSON.parse(raw);
     const map = new Map<string, PersistedAgent>();
     for (const item of data) {
+      item.messages = filterRecentMessages(item.messages);
       map.set(item.agentId, item);
     }
     return map;
@@ -270,6 +283,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   agencyAgentsResult: null,
   connected: false,
   hydrated: false,
+  visibleMessageCount: new Map(),
 
   consumePreviewUrl: () => {
     const url = get().pendingPreviewUrl;
@@ -308,12 +322,31 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
     return get().agents.get(id) ?? defaultAgent(id);
   },
 
+  getVisibleMessages: (agentId) => {
+    const agent = get().agents.get(agentId);
+    if (!agent) return [];
+    const limit = get().visibleMessageCount.get(agentId) ?? 50;
+    const msgs = agent.messages;
+    return msgs.length <= limit ? msgs : msgs.slice(-limit);
+  },
+
+  loadMoreMessages: (agentId) => {
+    set((state) => {
+      const vmc = new Map(state.visibleMessageCount);
+      const current = vmc.get(agentId) ?? 50;
+      vmc.set(agentId, current + 50);
+      return { visibleMessageCount: vmc };
+    });
+  },
+
   removeAgent: (agentId) => {
     set((state) => {
       const agents = new Map(state.agents);
       agents.delete(agentId);
       removeFromStorage(agentId);
-      return { agents };
+      const vmc = new Map(state.visibleMessageCount);
+      vmc.delete(agentId);
+      return { agents, visibleMessageCount: vmc };
     });
   },
 
@@ -537,26 +570,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const accumulated = streamMsg?._accumulatedText ?? "";
           const serverFull = event.result.fullOutput || event.result.summary;
           const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
-          // Detect solo agent asking for user approval before proceeding.
-          // Covers: [PLAN] tagged plans, question-form asks, and Chinese phrasing.
+          // Detect solo agent presenting a [PLAN] that needs user approval.
           const isSoloAgent = !agent.isTeamLead && !agent.teamId;
-          const trimmed = bestText.trim();
-          // Check last 200 chars for approval signals (the ask is usually at the end)
-          const tail = trimmed.slice(-200);
-          const hasQuestionMark = /[?\uff1f]\s*$/.test(tail);
-          const hasApprovalKeyword = /\b(shall I|should I|do you want|want me to|proceed|approve|go ahead|ready to|confirm|ok to|can I|may I)\b/i.test(tail)
-            || /(?:批准|同意|开始执行|要开始|请审阅|审批|确认|可以开始|是否继续|要继续|可以吗|好吗|行吗|要不要|能否|是否可以|没问题吗)/.test(tail);
-          // Dangerous command mentioned + any approval signal (question or keyword)
-          const hasDangerousCmd = /\b(chmod|chown|rm\s+-rf|rmdir|git\s+reset|git\s+push\s+--force|sudo|mkfs|dd\s+if=|kill\s+-9|shutdown|reboot)\b/i.test(bestText);
-          const hasPlanAsk = isSoloAgent && (
-            /\[PLAN\]/i.test(bestText) ||
-            (hasQuestionMark && hasApprovalKeyword) ||
-            // Statement-form: "approve 后" / "请审阅方案" without question mark
-            (/\bapprove\b/i.test(tail) && /后|before|first/i.test(tail)) ||
-            /请.{0,4}(?:审阅|审批|确认)/.test(tail) ||
-            // Dangerous command + any approval cue (question mark OR keyword)
-            (hasDangerousCmd && (hasQuestionMark || hasApprovalKeyword))
-          );
+          const hasPlanAsk = isSoloAgent && /\[PLAN\]/i.test(bestText);
 
           // Remove streaming message — final result (bestText) already contains the complete content
           const finalizedMessages = agent.messages.filter((m) => m.id !== streamId);

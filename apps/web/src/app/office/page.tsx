@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOfficeStore, imageUploadCallbacks } from "@/store/office-store";
 import { connect, sendCommand } from "@/lib/connection";
@@ -48,6 +48,21 @@ const TeamActivityLog = dynamic(() => import("@/components/office/ui/TeamActivit
 const CreateAgentModal = dynamic(() => import("@/components/office/ui/CreateAgentModal"), { ssr: false });
 const HireModal = dynamic(() => import("@/components/office/ui/HireModal"), { ssr: false });
 const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal"), { ssr: false });
+
+/** Sentinel that triggers loadMore when scrolled into view */
+function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) onLoadMore();
+    }, { threshold: 0 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [onLoadMore]);
+  return <div ref={ref} style={{ height: 1, flexShrink: 0 }} />;
+}
 
 
 
@@ -142,7 +157,7 @@ const agentWorkDirMap = new Map<string, string>();
 
 export default function OfficePage() {
   const router = useRouter();
-  const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole } = useOfficeStore();
+  const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole, getVisibleMessages, loadMoreMessages } = useOfficeStore();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRatings, setPreviewRatings] = useState<Ratings>({});
@@ -1185,9 +1200,16 @@ export default function OfficePage() {
                             Waiting for output...
                           </div>
                         )}
-                        {agentState.messages.map((msg) => (
-                          <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} />
-                        ))}
+                        {(() => {
+                          const visible = getVisibleMessages(agent.agentId);
+                          const hasMore = visible.length < agentState.messages.length;
+                          return <>
+                            {hasMore && <LoadMoreSentinel onLoadMore={() => loadMoreMessages(agent.agentId)} />}
+                            {visible.map((msg) => (
+                              <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} />
+                            ))}
+                          </>;
+                        })()}
                         <div ref={chatEndRef} />
                       </div>
 
@@ -1259,9 +1281,16 @@ export default function OfficePage() {
                           </div>
                         )}
 
-                        {agentState.messages.map((msg) => (
-                          <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} onPreview={setPreviewUrl} isTeamLead={agentState?.isTeamLead} isTeamMember={isTeamMember} teamPhase={agentState?.isTeamLead ? getAgentPhase(agent.agentId) : null} />
-                        ))}
+                        {(() => {
+                          const visible = getVisibleMessages(agent.agentId);
+                          const hasMore = visible.length < agentState.messages.length;
+                          return <>
+                            {hasMore && <LoadMoreSentinel onLoadMore={() => loadMoreMessages(agent.agentId)} />}
+                            {visible.map((msg) => (
+                              <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} onPreview={setPreviewUrl} isTeamLead={agentState?.isTeamLead} isTeamMember={isTeamMember} teamPhase={agentState?.isTeamLead ? getAgentPhase(agent.agentId) : null} />
+                            ))}
+                          </>;
+                        })()}
 
 
                         {agentState.pendingApproval && (
@@ -1875,9 +1904,16 @@ export default function OfficePage() {
                 </div>
               )}
 
-              {agentState.messages.map((msg) => (
-                <MessageBubble key={msg.id} msg={msg} agentName={agentState.name} onPreview={setPreviewUrl} isTeamLead={agentState.isTeamLead} isTeamMember={mobileIsTeamMember} teamPhase={agentState.isTeamLead ? getAgentPhase(agentState.agentId) : null} />
-              ))}
+              {(() => {
+                const visible = getVisibleMessages(agentState.agentId);
+                const hasMore = visible.length < agentState.messages.length;
+                return <>
+                  {hasMore && <LoadMoreSentinel onLoadMore={() => loadMoreMessages(agentState.agentId)} />}
+                  {visible.map((msg) => (
+                    <MessageBubble key={msg.id} msg={msg} agentName={agentState.name} onPreview={setPreviewUrl} isTeamLead={agentState.isTeamLead} isTeamMember={mobileIsTeamMember} teamPhase={agentState.isTeamLead ? getAgentPhase(agentState.agentId) : null} />
+                  ))}
+                </>;
+              })()}
 
 
               {agentState.pendingApproval && (
