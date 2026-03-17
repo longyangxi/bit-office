@@ -1486,8 +1486,11 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
   assetsReady?: boolean;
   editAgent?: AgentDefinition | null;
 }) {
-  const [palette, setPalette] = useState(editAgent?.palette ?? 0);
-  const [name, setName] = useState(editAgent?.name ?? "");
+  const [palette, setPalette] = useState(editAgent?.palette ?? Math.floor(Math.random() * 6));
+  const [name, setName] = useState(editAgent?.name ?? (() => {
+    const names = ["Alex", "Sam", "Max", "Leo", "Mia", "Kai", "Zoe", "Eli", "Ava", "Jay", "Rio", "Ash", "Sky", "Kit", "Noa", "Rex", "Ivy", "Ace", "Ren", "Jax"];
+    return names[Math.floor(Math.random() * names.length)];
+  })());
 
   // Role: preset index (-1 = custom)
   const [rolePresetIndex, setRolePresetIndex] = useState<number>(() => {

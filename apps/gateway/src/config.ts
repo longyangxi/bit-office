@@ -68,8 +68,9 @@ function resolveWebDir(): string {
 function resolveDefaultWorkspace(): string {
   const isDev = process.env.NODE_ENV === "development";
   if (isDev) {
-    // Dev mode (pnpm dev:gateway): use .workspace dir to avoid working in source tree
-    const ws = resolve(__dirname, "../.workspace");
+    // Dev mode: use ~/.bit-office/workspace/ (outside git repo so Claude Code
+    // doesn't resolve to the bit-office source tree as its working directory)
+    const ws = resolve(homedir(), ".bit-office", "workspace");
     if (!existsSync(ws)) {
       mkdirSync(ws, { recursive: true });
       console.log(`[Config] Created default workspace: ${ws}`);
