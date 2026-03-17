@@ -1672,17 +1672,16 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: TERM_PANEL,
+          backgroundColor: TERM_PANEL, padding: "18px 18px 14px",
           width: "90%", maxWidth: 400, border: "2px solid #1a2a1a",
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
-          maxHeight: "90vh", display: "flex", flexDirection: "column",
+          maxHeight: "90vh", overflowY: "auto",
         }}
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em", flexShrink: 0 }}>
+        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 12px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>
           {editAgent ? "Edit Agent" : "Create Agent"}
         </h2>
 
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
         {/* Avatar palette selector */}
         <div style={{ marginBottom: 10 }}>
           <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>AVATAR</div>
@@ -1869,9 +1868,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
           </div>
         </div>
 
-        </div>
-        {/* Buttons — fixed at bottom */}
-        <div style={{ display: "flex", gap: 6, padding: "10px 18px 14px", flexShrink: 0, borderTop: "1px solid #1a2a1a" }}>
+        {/* Buttons */}
+        <div style={{ display: "flex", gap: 6 }}>
           <button
             onClick={handleSave}
             style={{
