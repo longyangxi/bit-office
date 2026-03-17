@@ -3832,7 +3832,7 @@ export default function OfficePage() {
               return null;
             })()}
             {selectedAgent && selectedInTab ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+              <div key={consoleMode ? "console" : "sidebar"} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
                 {renderAgentRow(activeAgentList.find((a) => a.agentId === selectedAgent)!)}
               </div>
             ) : (
