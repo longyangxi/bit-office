@@ -10,6 +10,8 @@ CLAUDE.md
 demo.mp4
 demo1.mp4
 apps/web/out
+apps/web/public/sw.js
+apps/web/tsconfig.tsbuildinfo
 docs
 .env
 settings.local.json
