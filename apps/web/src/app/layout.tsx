@@ -261,38 +261,44 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           .chat-markdown tr:hover td {
             background: rgba(var(--term-accent-rgb),0.03) !important;
           }
-          @keyframes bounce-dot {
-            0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
-            40% { transform: translateY(-5px); opacity: 1; }
+          @keyframes dot1 {
+            0%, 24%  { opacity: 0; }
+            25%, 100% { opacity: 1; }
+          }
+          @keyframes dot2 {
+            0%, 49%  { opacity: 0; }
+            50%, 100% { opacity: 1; }
+          }
+          @keyframes dot3 {
+            0%, 74%  { opacity: 0; }
+            75%, 100% { opacity: 1; }
           }
           .working-dots {
             display: inline-flex;
-            gap: 3px;
+            gap: 2px;
             align-items: center;
             vertical-align: middle;
           }
           .working-dots::before,
           .working-dots::after {
             content: '';
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
             background: currentColor;
-            animation: bounce-dot 1.2s ease-in-out infinite;
           }
           .working-dots::before {
-            animation-delay: 0s;
+            animation: dot1 2s step-end infinite;
           }
           .working-dots::after {
-            animation-delay: 0.3s;
+            animation: dot3 2s step-end infinite;
           }
           .working-dots-mid {
-            width: 6px;
-            height: 6px;
+            width: 4px;
+            height: 4px;
             border-radius: 50%;
             background: currentColor;
-            animation: bounce-dot 1.2s ease-in-out infinite;
-            animation-delay: 0.15s;
+            animation: dot2 2s step-end infinite;
           }
           @keyframes px-blink {
             0%, 49% { opacity: 1; }
