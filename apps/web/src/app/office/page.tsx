@@ -1926,14 +1926,15 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
       <div
         onClick={(e) => e.stopPropagation()}
         style={{
-          backgroundColor: TERM_PANEL, padding: "18px 18px 14px",
+          backgroundColor: TERM_PANEL,
           width: "90%", maxWidth: 420, border: "2px solid #1a2a1a",
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
-          maxHeight: "90vh", overflowY: "auto",
+          maxHeight: "90vh", display: "flex", flexDirection: "column",
         }}
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 14px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>Hire Agent</h2>
+        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em", flexShrink: 0 }}>Hire Agent</h2>
 
+        <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
@@ -2064,7 +2065,8 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           </>
         )}
 
-        <div style={{ display: "flex", gap: 6 }}>
+        </div>
+        <div style={{ display: "flex", gap: 6, padding: "10px 18px 14px", flexShrink: 0, borderTop: "1px solid #1a2a1a" }}>
           <button
             onClick={onCreate}
             style={{
