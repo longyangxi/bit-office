@@ -15,6 +15,8 @@ export interface BuildArgsOpts {
   verbose?: boolean;
   /** Skip session resume for this invocation (leader state-summary mode) */
   skipResume?: boolean;
+  /** Run as a specific subagent type (e.g. "Game Designer" → --agent "Game Designer") */
+  agentType?: string;
 }
 
 export interface AIBackend {

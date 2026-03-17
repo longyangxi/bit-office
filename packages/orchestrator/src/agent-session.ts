@@ -252,12 +252,24 @@ export class AgentSession {
       }
       const fullAccess = this.sandboxMode === "full";
       const verbose = !!process.env.DEBUG;
+
+      // Pass role name as --agent for Claude Code (matches ~/.claude/agents/ by name field).
+      // If no matching agent exists, Claude CLI silently ignores it.
+      let agentType: string | undefined;
+      if (this.backend.id === "claude" && !this._isTeamLead) {
+        const roleName = this.role.split(/\s*[—–]\s*/)[0].trim();
+        if (roleName && roleName.length > 2) {
+          agentType = roleName;
+        }
+      }
+
       const args = this.backend.buildArgs(fullPrompt, {
         continue: this.hasHistory,
         resumeSessionId: this.sessionId ?? undefined,
         fullAccess,
         noTools: this._isTeamLead,
         verbose,
+        agentType,
         // Only skip resume on first execute (to shed conversational create/design context).
         // On subsequent runs (result forwarding, user feedback), resume so leader keeps context.
         skipResume: isFirstExecute && this.hasHistory,

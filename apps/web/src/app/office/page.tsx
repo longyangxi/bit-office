@@ -1231,22 +1231,99 @@ const PERSONALITY_PRESETS = [
   { label: "Patient Mentor", value: "You teach patiently, explain the reasoning, and guide like a mentor." },
 ];
 
-const ROLE_PRESETS = [
-  "Frontend Dev", "Backend Dev", "Fullstack Dev", "Game Dev",
-  "Data Scientist", "DevOps Engineer", "Mobile Dev", "UI/UX Designer", "QA Engineer",
-] as const;
+/** Agency-agents catalog: category → agents with name + description */
+const AGENCY_CATALOG: { category: string; label: string; agents: { name: string; desc: string }[] }[] = [
+  { category: "engineering", label: "Engineering", agents: [
+    { name: "Frontend Developer", desc: "Modern web technologies, React/Vue/Angular, UI implementation, performance optimization" },
+    { name: "Backend Architect", desc: "Scalable system design, database architecture, API development, cloud infrastructure" },
+    { name: "Senior Developer", desc: "Laravel/Livewire/FluxUI, advanced CSS, Three.js integration" },
+    { name: "Software Architect", desc: "System design, domain-driven design, architectural patterns" },
+    { name: "AI Engineer", desc: "ML model development, deployment, AI-powered applications" },
+    { name: "Database Optimizer", desc: "Schema design, query optimization, PostgreSQL/MySQL tuning" },
+    { name: "DevOps Automator", desc: "Infrastructure automation, CI/CD pipelines, cloud operations" },
+    { name: "Mobile App Builder", desc: "Native iOS/Android and cross-platform frameworks" },
+    { name: "Security Engineer", desc: "Threat modeling, vulnerability assessment, secure code review" },
+    { name: "Rapid Prototyper", desc: "Ultra-fast POC development and MVP creation" },
+    { name: "Code Reviewer", desc: "Constructive feedback on correctness, maintainability, security, performance" },
+    { name: "Technical Writer", desc: "Developer documentation, API references, README files, tutorials" },
+    { name: "Data Engineer", desc: "Data pipelines, lakehouse architectures, ETL/ELT, Apache Spark, dbt" },
+    { name: "Embedded Firmware Engineer", desc: "ESP32, Arduino, ARM Cortex-M, FreeRTOS, Zephyr" },
+    { name: "Git Workflow Master", desc: "Git workflows, branching strategies, conventional commits" },
+    { name: "SRE (Site Reliability Engineer)", desc: "SLOs, error budgets, observability, chaos engineering" },
+    { name: "Solidity Smart Contract Engineer", desc: "EVM architecture, gas optimization, DeFi protocols" },
+    { name: "WeChat Mini Program Developer", desc: "WXML/WXSS/WXS, WeChat API, payment systems" },
+    { name: "Feishu Integration Developer", desc: "Feishu bots, mini programs, Bitable, workflow automation" },
+    { name: "MCP Builder", desc: "Model Context Protocol servers, custom tools, resources, prompts" },
+  ]},
+  { category: "game-development", label: "Game Dev", agents: [
+    { name: "Game Designer", desc: "GDD authorship, player psychology, economy balancing, gameplay loops" },
+    { name: "Level Designer", desc: "Layout theory, pacing, encounter design, environmental narrative" },
+    { name: "Narrative Designer", desc: "Branching dialogue, lore architecture, environmental storytelling" },
+    { name: "Technical Artist", desc: "Shaders, VFX systems, LOD pipelines, cross-engine asset optimization" },
+    { name: "Game Audio Engineer", desc: "FMOD/Wwise integration, adaptive music, spatial audio" },
+  ]},
+  { category: "design", label: "Design", agents: [
+    { name: "UI Designer", desc: "Visual design systems, component libraries, pixel-perfect interfaces" },
+    { name: "UX Researcher", desc: "User behavior analysis, usability testing, data-driven design insights" },
+    { name: "UX Architect", desc: "Technical architecture, CSS systems, implementation guidance" },
+    { name: "Brand Guardian", desc: "Brand identity, consistency maintenance, strategic positioning" },
+    { name: "Visual Storyteller", desc: "Visual narratives, multimedia content, brand storytelling" },
+    { name: "Image Prompt Engineer", desc: "AI image generation prompts, photography concepts" },
+  ]},
+  { category: "product", label: "Product", agents: [
+    { name: "Product Manager", desc: "Full product lifecycle, roadmap, stakeholder alignment, go-to-market" },
+    { name: "Sprint Prioritizer", desc: "Agile sprint planning, feature prioritization, resource allocation" },
+    { name: "Trend Researcher", desc: "Emerging trends, competitive analysis, opportunity assessment" },
+    { name: "Feedback Synthesizer", desc: "User feedback analysis, actionable product insights" },
+  ]},
+  { category: "testing", label: "Testing & QA", agents: [
+    { name: "Accessibility Auditor", desc: "WCAG standards, assistive technologies, inclusive design" },
+    { name: "API Tester", desc: "API validation, performance testing, quality assurance" },
+    { name: "Performance Benchmarker", desc: "System performance measurement, analysis, optimization" },
+    { name: "Test Results Analyzer", desc: "Test result evaluation, quality metrics, insight generation" },
+    { name: "Workflow Optimizer", desc: "Process improvement, workflow automation" },
+  ]},
+  { category: "project-management", label: "Project Mgmt", agents: [
+    { name: "Senior Project Manager", desc: "Spec-to-task conversion, realistic scope, exact requirements" },
+    { name: "Project Shepherd", desc: "Cross-functional coordination, timeline management" },
+    { name: "Studio Producer", desc: "Creative/technical orchestration, resource allocation" },
+  ]},
+  { category: "marketing", label: "Marketing", agents: [
+    { name: "SEO Specialist", desc: "Technical SEO, content optimization, organic search growth" },
+    { name: "Content Creator", desc: "Multi-platform campaigns, editorial calendars, brand storytelling" },
+    { name: "Growth Hacker", desc: "Rapid user acquisition, viral loops, conversion funnels" },
+    { name: "TikTok Strategist", desc: "Viral content creation, algorithm optimization, community building" },
+    { name: "Social Media Strategist", desc: "Cross-platform campaigns, community management" },
+    { name: "Xiaohongshu Specialist", desc: "Lifestyle content, trend-driven strategies, aesthetic storytelling" },
+    { name: "Douyin Strategist", desc: "Short-video marketing, livestream commerce, content matrix" },
+  ]},
+  { category: "support", label: "Support & Ops", agents: [
+    { name: "Analytics Reporter", desc: "Dashboards, statistical analysis, KPI tracking" },
+    { name: "Finance Tracker", desc: "Financial planning, budget management, cash flow optimization" },
+    { name: "Infrastructure Maintainer", desc: "System reliability, performance optimization" },
+    { name: "Support Responder", desc: "Customer service, issue resolution, multi-channel support" },
+    { name: "Legal Compliance Checker", desc: "Laws, regulations, industry standards compliance" },
+  ]},
+];
 
-const SKILLS_MAP: Record<string, string[]> = {
-  "Frontend Dev":    ["React", "Next.js", "CSS", "TypeScript", "Vue", "Tailwind", "HTML", "Webpack"],
-  "Backend Dev":     ["Node.js", "Python", "APIs", "Database", "SQL", "Redis", "GraphQL", "Docker"],
-  "Fullstack Dev":   ["React", "Node.js", "TypeScript", "APIs", "Database", "CSS", "Next.js", "Docker"],
-  "Game Dev":        ["PixiJS", "Three.js", "Canvas", "Pygame", "WebGL", "Unity", "Godot", "TypeScript", "Physics"],
-  "Data Scientist":  ["Python", "Pandas", "ML", "TensorFlow", "Data Viz", "Jupyter", "NumPy", "SQL"],
-  "DevOps Engineer": ["Docker", "K8s", "CI/CD", "AWS", "Terraform", "Linux", "Monitoring", "Bash"],
-  "Mobile Dev":      ["React Native", "Swift", "Kotlin", "Flutter", "iOS", "Android", "TypeScript", "Expo"],
-  "UI/UX Designer":  ["Figma", "CSS", "Design Systems", "Prototyping", "Animation", "Accessibility", "Tailwind"],
-  "QA Engineer":     ["Testing", "Cypress", "Jest", "Playwright", "Automation", "CI/CD", "Performance", "A11y"],
-};
+/** Flat lookup: agent name → description */
+const AGENCY_AGENT_MAP = new Map<string, string>();
+for (const cat of AGENCY_CATALOG) {
+  for (const a of cat.agents) {
+    AGENCY_AGENT_MAP.set(a.name, a.desc);
+  }
+}
+
+/** Legacy compatibility: first few common roles */
+const ROLE_PRESETS = AGENCY_CATALOG.flatMap((c) => c.agents.map((a) => a.name));
+
+/** Skills are now derived from the agent description keywords */
+const SKILLS_MAP: Record<string, string[]> = {};
+for (const cat of AGENCY_CATALOG) {
+  for (const a of cat.agents) {
+    SKILLS_MAP[a.name] = a.desc.split(/[,/]/).map((s) => s.trim()).filter((s) => s.length > 2 && s.length < 30).slice(0, 8);
+  }
+}
 
 function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
   onSave: (agent: AgentDefinition) => void;
@@ -1260,12 +1337,12 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
   // Role: preset index (-1 = custom)
   const [rolePresetIndex, setRolePresetIndex] = useState<number>(() => {
     if (!editAgent?.role) return 0;
-    const idx = ROLE_PRESETS.indexOf(editAgent.role as typeof ROLE_PRESETS[number]);
+    const idx = ROLE_PRESETS.indexOf(editAgent.role);
     return idx >= 0 ? idx : -1;
   });
   const [customRole, setCustomRole] = useState(() => {
     if (!editAgent?.role) return "";
-    const idx = ROLE_PRESETS.indexOf(editAgent.role as typeof ROLE_PRESETS[number]);
+    const idx = ROLE_PRESETS.indexOf(editAgent.role);
     return idx >= 0 ? "" : editAgent.role;
   });
 
@@ -1405,12 +1482,17 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
               boxSizing: "border-box", cursor: "pointer",
             }}
           >
-            {ROLE_PRESETS.map((r, i) => (
-              <option key={r} value={i}>{r}</option>
+            {AGENCY_CATALOG.map((cat) => (
+              <optgroup key={cat.category} label={cat.label}>
+                {cat.agents.map((a) => {
+                  const idx = ROLE_PRESETS.indexOf(a.name);
+                  return <option key={a.name} value={idx}>{a.name}</option>;
+                })}
+              </optgroup>
             ))}
             <option value={-1}>Custom...</option>
           </select>
-          {rolePresetIndex === -1 && (
+          {rolePresetIndex === -1 ? (
             <input
               value={customRole}
               onChange={(e) => setCustomRole(e.target.value)}
@@ -1421,6 +1503,12 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                 boxSizing: "border-box", marginTop: 4,
               }}
             />
+          ) : (
+            AGENCY_AGENT_MAP.get(currentRole) && (
+              <div style={{ fontSize: 11, color: "#5a4838", marginTop: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
+                {AGENCY_AGENT_MAP.get(currentRole)}
+              </div>
+            )
           )}
         </div>
 
