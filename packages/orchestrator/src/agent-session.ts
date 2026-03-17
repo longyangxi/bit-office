@@ -354,7 +354,7 @@ export class AgentSession {
             agentId: this.agentId,
             taskId,
             stream: "stdout",
-            chunk: visibleLines.slice(-3).join("\n"),
+            chunk: visibleLines.join("\n"),
           });
         }
       };
