@@ -694,7 +694,7 @@ export default function OfficePage() {
     }
   }, [addImageFromFile]);
 
-  const handlePasteText = useCallback((e: React.ClipboardEvent<HTMLInputElement>) => {
+  const handlePasteText = useCallback((e: React.ClipboardEvent<HTMLElement>) => {
     const text = e.clipboardData?.getData("text/plain");
     if (text) {
       const lines = text.split("\n");
@@ -704,7 +704,7 @@ export default function OfficePage() {
         const info = lines.length > 1 ? `+${lines.length} lines` : `${text.length} chars`;
         const label = `[Pasted text #${pasteCountRef.current} ${info}]`;
         pasteMapRef.current.set(label, text);
-        const input = e.currentTarget;
+        const input = e.currentTarget as HTMLInputElement | HTMLTextAreaElement;
         const pos = input.selectionStart ?? prompt.length;
         setPrompt(prev => prev.slice(0, pos) + label + prev.slice(pos));
       }

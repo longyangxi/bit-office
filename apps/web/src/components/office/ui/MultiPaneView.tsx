@@ -58,7 +58,7 @@ export interface MultiPaneViewProps {
   detectedBackends?: string[];
   onLoadMore: (agentId: string) => void;
   onPasteImage: (e: React.ClipboardEvent) => void;
-  onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+  onPasteText: (e: React.ClipboardEvent<HTMLElement>) => void;
   onDropImage: (e: React.DragEvent) => void;
   // Review overlay support
   reviewOverlay?: { reviewerAgentId: string; sourceAgentId: string } | null;

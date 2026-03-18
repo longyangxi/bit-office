@@ -95,7 +95,7 @@ export interface AgentPaneProps {
   onPreview: (url: string) => void;
   onLoadMore: () => void;
   onPasteImage: (e: React.ClipboardEvent) => void;
-  onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
+  onPasteText: (e: React.ClipboardEvent<HTMLElement>) => void;
   onDropImage: (e: React.DragEvent) => void;
   onQuickApprove?: () => void;
   onReview?: (result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => void;
