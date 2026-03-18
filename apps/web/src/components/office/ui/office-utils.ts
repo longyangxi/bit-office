@@ -2,10 +2,10 @@ import React from "react";
 import { sendCommand } from "@/lib/connection";
 import { TERM_TEXT } from "./termTheme";
 
-// Check if Enter key is a real submit (not IME confirmation)
+// Check if Enter key is a real submit (not IME confirmation, not Shift/Ctrl+Enter newline)
 // Chrome: isComposing=true during IME; WKWebView (Tauri): keyCode=229 during IME
 export function isRealEnter(e: React.KeyboardEvent): boolean {
-  return e.key === "Enter" && !e.nativeEvent.isComposing && e.keyCode !== 229;
+  return e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.nativeEvent.isComposing && e.keyCode !== 229;
 }
 
 // Match URLs and absolute file paths — simple, non-greedy patterns

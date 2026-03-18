@@ -8,6 +8,16 @@ import dynamic from "next/dynamic";
 
 const MessageBubble = dynamic(() => import("./MessageBubble"), { ssr: false });
 
+/** Auto-resize a textarea to fit content (1-row min, maxRows cap) */
+function autoResize(el: HTMLTextAreaElement | null, maxRows = 5) {
+  if (!el) return;
+  el.style.height = "auto";
+  const lineHeight = parseInt(getComputedStyle(el).lineHeight) || 20;
+  const maxHeight = lineHeight * maxRows;
+  el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
+  el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+}
+
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -579,15 +589,17 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   flexShrink: 0,
                 }}>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <input
+                    <textarea
+                      rows={1}
                       value={suggestText}
-                      onChange={(e) => onSuggestTextChange(e.target.value)}
-                      onKeyDown={(e) => isRealEnter(e) && onSuggest()}
+                      onChange={(e) => { onSuggestTextChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => isRealEnter(e) && (e.preventDefault(), onSuggest())}
                       placeholder="Share an idea..."
                       maxLength={500}
                       style={{
                         flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
                         backgroundColor: "#16122a", color: "#c084fc", fontSize: 14, outline: "none",
+                        resize: "none", lineHeight: "20px", fontFamily: "inherit",
                       }}
                     />
                     <button
@@ -625,22 +637,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 ) : cardPhase === "execute" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                    <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: "none" }}>
+                    <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
                       <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
-                      <input
+                      <textarea
+                        rows={1}
                         className="term-input"
                         value={prompt}
                         onPaste={onPasteText}
-                        onChange={(e) => onPromptChange(e.target.value)}
+                        onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
                         onKeyDown={(e) => {
                           if (e.key === "Escape" && busy) { onCancel(); return; }
-                          if (isRealEnter(e)) onSubmit();
+                          if (isRealEnter(e)) { e.preventDefault(); onSubmit(); }
                         }}
                         placeholder={busy ? "esc stop \u00b7 type to continue" : ""}
                         style={{
                           flex: 1, padding: "6px 5px", border: "none",
                           backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                           fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
+                          resize: "none", lineHeight: "20px",
                         }}
                       />
                     </div>
@@ -652,7 +666,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     )}
                   </div>
                 ) : cardPhase === "design" && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
                     <button
                       className="term-btn"
                       onClick={onApprovePlan}
@@ -663,34 +677,38 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                     >approve</button>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                    <input
+                    <textarea
+                      rows={1}
                       className="term-input"
                       value={prompt}
                       onPaste={onPasteText}
-                      onChange={(e) => onPromptChange(e.target.value)}
-                      onKeyDown={(e) => isRealEnter(e) && onSubmit()}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
                       placeholder="or give feedback..."
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                         fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
                       }}
                     />
                   </div>
                 ) : cardPhase === "complete" && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                    <input
+                    <textarea
+                      rows={1}
                       className="term-input"
                       value={prompt}
                       onPaste={onPasteText}
-                      onChange={(e) => onPromptChange(e.target.value)}
-                      onKeyDown={(e) => isRealEnter(e) && onSubmit()}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
                       placeholder="request changes..."
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                         fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
                       }}
                     />
                     <button
@@ -703,7 +721,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     >Close Project</button>
                   </div>
                 ) : awaitingApproval && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
                     <button
                       className="term-btn"
                       onClick={onQuickApprove}
@@ -714,37 +732,41 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                     >approve</button>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                    <input
+                    <textarea
+                      rows={1}
                       className="term-input"
                       value={prompt}
                       onPaste={onPasteText}
-                      onChange={(e) => onPromptChange(e.target.value)}
-                      onKeyDown={(e) => isRealEnter(e) && onSubmit()}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
                       placeholder="or give feedback..."
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                         fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
                       }}
                     />
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: "none" }}>
+                  <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
                     <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
-                    <input
+                    <textarea
+                      rows={1}
                       className="term-input"
                       value={prompt}
                       onPaste={onPasteText}
-                      onChange={(e) => onPromptChange(e.target.value)}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
                       onKeyDown={(e) => {
                         if (e.key === "Escape" && busy) { onCancel(); return; }
-                        if (isRealEnter(e)) onSubmit();
+                        if (isRealEnter(e)) { e.preventDefault(); onSubmit(); }
                       }}
                       placeholder={busy ? "esc stop \u00b7 type to continue" : ""}
                       style={{
                         flex: 1, padding: "6px 5px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                         fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
                       }}
                       autoFocus
                     />

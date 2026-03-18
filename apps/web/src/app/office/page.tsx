@@ -242,6 +242,58 @@ export default function OfficePage() {
     } catch { /* ignore */ }
   }, []);
 
+  // Tauri: listen for drag-drop events to capture folder/file paths AND images
+  // (Tauri intercepts native drop events, so web onDrop doesn't fire in desktop mode)
+  useEffect(() => {
+    const isTauri = !!(window as any).__TAURI_INTERNALS__;
+    if (!isTauri) return;
+    let unlisten: (() => void) | undefined;
+    const IMAGE_EXT = /\.(png|jpe?g|gif|webp|svg|bmp|ico)$/i;
+    Promise.all([
+      // @ts-ignore — only available in Tauri context
+      import("@tauri-apps/api/webview"),
+      // @ts-ignore
+      import("@tauri-apps/api/core"),
+    ]).then(([{ getCurrentWebview }, { convertFileSrc }]) => {
+      getCurrentWebview().onDragDropEvent((event: any) => {
+        if (event.payload.type !== "drop" || !event.payload.paths?.length) return;
+        const paths: string[] = event.payload.paths;
+        const imagePaths = paths.filter((p: string) => IMAGE_EXT.test(p));
+        const otherPaths = paths.filter((p: string) => !IMAGE_EXT.test(p));
+
+        // Handle images: read via asset protocol → blob → File → addImageFromFile
+        for (const imgPath of imagePaths) {
+          const url = convertFileSrc(imgPath);
+          fetch(url)
+            .then(r => r.blob())
+            .then(blob => {
+              const name = imgPath.split("/").pop() || "image.png";
+              const file = new File([blob], name, { type: blob.type || "image/png" });
+              const reader = new FileReader();
+              reader.onload = () => {
+                const dataUrl = reader.result as string;
+                const base64 = dataUrl.split(",")[1];
+                const ext = name.split(".").pop() || "png";
+                const label = `image-${Date.now()}.${ext}`;
+                setPendingImages(prev => [...prev, { name: label, dataUrl, base64 }]);
+              };
+              reader.readAsDataURL(file);
+            })
+            .catch(() => {});
+        }
+
+        // Handle folders/other files: insert path into prompt
+        if (otherPaths.length > 0) {
+          setPrompt(prev => {
+            const insert = otherPaths.join(" ");
+            return prev ? prev + " " + insert : insert;
+          });
+        }
+      }).then((fn: () => void) => { unlisten = fn; });
+    }).catch(() => {});
+    return () => { unlisten?.(); };
+  }, []);
+
   // Celebrate task completion:
   // - Solo agent (no teamId, not leader): status === "done"
   // - Team leader: message has isFinalResult === true (set by orchestrator when no pending delegations)
