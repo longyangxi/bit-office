@@ -433,7 +433,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             fontSize: 11, color: TERM_SEM_PURPLE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            {reviewerOverlay.reviewDone ? (
+            {(reviewerOverlay.status === "done" || reviewerOverlay.status === "idle") ? (
               <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                 {onApplyReviewFixes && (
                   <button

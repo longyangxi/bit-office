@@ -970,8 +970,12 @@ export default function OfficePage() {
 
   // User actions on review completion
   const handleApplyReviewFixes = useCallback(() => {
-    if (!reviewOverlay || !reviewResultText) return;
+    if (!reviewOverlay) return;
     const { reviewerAgentId, sourceAgentId } = reviewOverlay;
+    const reviewer = agents.get(reviewerAgentId);
+    const resolvedText = reviewResultText
+      ?? reviewer?.messages.filter(m => m.role === "agent" && m.text).at(-1)?.text;
+    if (!resolvedText) return;
     const sourceAgent = agents.get(sourceAgentId);
     const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? "";
     const fixTaskId = `fix-${nanoid(6)}`;
@@ -993,7 +997,7 @@ export default function OfficePage() {
       // Fallback: use last 1000 chars (likely the conclusion)
       return text.length > 1000 ? text.slice(-1000).trim() : text;
     };
-    const structuredFeedback = extractStructured(reviewResultText);
+    const structuredFeedback = extractStructured(resolvedText);
     const fixPrompt = [
       `A code review found issues. Fix ONLY CRITICAL items (bugs, crashes, security).`,
       `IGNORE SUGGESTION items. Make minimum changes — do NOT rewrite or restructure.`,
