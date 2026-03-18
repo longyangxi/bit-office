@@ -41,8 +41,8 @@ export interface MultiPaneViewProps {
   isOwner: boolean;
   isCollaborator: boolean;
   isSpectator: boolean;
-  pendingImages: { name: string; dataUrl: string; base64: string }[];
-  onPendingImagesChange: (imgs: { name: string; dataUrl: string; base64: string }[]) => void;
+  panePendingImages: Map<string, { name: string; dataUrl: string; base64: string }[]>;
+  onPanePendingImagesChange: (agentId: string, imgs: { name: string; dataUrl: string; base64: string }[]) => void;
   suggestions: { text: string; author: string; timestamp: number }[];
   suggestText: string;
   onSuggestTextChange: (val: string) => void;
@@ -57,9 +57,9 @@ export interface MultiPaneViewProps {
   onReview?: (agentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => void;
   detectedBackends?: string[];
   onLoadMore: (agentId: string) => void;
-  onPasteImage: (e: React.ClipboardEvent) => void;
-  onPasteText: (e: React.ClipboardEvent<HTMLElement>) => void;
-  onDropImage: (e: React.DragEvent) => void;
+  onPasteImage: (agentId: string, e: React.ClipboardEvent) => void;
+  onPasteText: (agentId: string, e: React.ClipboardEvent<HTMLElement>) => void;
+  onDropImage: (agentId: string, e: React.DragEvent) => void;
   // Review overlay support
   reviewOverlay?: { reviewerAgentId: string; sourceAgentId: string } | null;
   getReviewerData?: (reviewerAgentId: string) => ReviewerOverlayData | null;
@@ -79,8 +79,8 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     isOwner,
     isCollaborator,
     isSpectator,
-    pendingImages,
-    onPendingImagesChange,
+    panePendingImages,
+    onPanePendingImagesChange,
     suggestions,
     suggestText,
     onSuggestTextChange,
@@ -174,8 +174,8 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 isSpectator={isSpectator}
                 prompt={panePrompts.get(agentId) || ""}
                 onPromptChange={(val) => onPanePromptChange(agentId, val)}
-                pendingImages={pendingImages}
-                onPendingImagesChange={onPendingImagesChange}
+                pendingImages={panePendingImages.get(agentId) || []}
+                onPendingImagesChange={(imgs) => onPanePendingImagesChange(agentId, imgs)}
                 suggestions={suggestions}
                 suggestText={suggestText}
                 onSuggestTextChange={onSuggestTextChange}
@@ -190,9 +190,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onReview={onReview ? (result, backend) => onReview(agentId, result, backend) : undefined}
                 detectedBackends={detectedBackends}
                 onLoadMore={() => onLoadMore(agentId)}
-                onPasteImage={onPasteImage}
-                onPasteText={onPasteText}
-                onDropImage={onDropImage}
+                onPasteImage={(e) => onPasteImage(agentId, e)}
+                onPasteText={(e) => onPasteText(agentId, e)}
+                onDropImage={(e) => onDropImage(agentId, e)}
                 reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
                 onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                 onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}

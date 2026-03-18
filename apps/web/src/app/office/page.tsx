@@ -668,7 +668,7 @@ export default function OfficePage() {
     setMobileTeamOpen(false);
   }, [agents, clearTeamMessages, confirm]);
 
-  const addImageFromFile = useCallback((file: File) => {
+  const addImageFromFile = useCallback((file: File, agentId?: string) => {
     if (!file.type.startsWith("image/")) return;
     const reader = new FileReader();
     reader.onload = () => {
@@ -676,11 +676,21 @@ export default function OfficePage() {
       const base64 = dataUrl.split(",")[1];
       const ext = file.name.split(".").pop() || "png";
       const name = `image-${nanoid(6)}.${ext}`;
-      setPendingImages((prev) => [...prev, { name, dataUrl, base64 }]);
+      const img = { name, dataUrl, base64 };
+      if (agentId) {
+        setPanePendingImages((prev) => {
+          const m = new Map(prev);
+          m.set(agentId, [...(m.get(agentId) || []), img]);
+          return m;
+        });
+      } else {
+        setPendingImages((prev) => [...prev, img]);
+      }
     };
     reader.readAsDataURL(file);
   }, []);
 
+  // Single-agent paste (non-console mode)
   const handlePasteImage = useCallback((e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items;
     if (!items) return;
@@ -689,6 +699,20 @@ export default function OfficePage() {
         e.preventDefault();
         const file = item.getAsFile();
         if (file) addImageFromFile(file);
+        return;
+      }
+    }
+  }, [addImageFromFile]);
+
+  // Multi-pane paste (console mode) — receives agentId from MultiPaneView
+  const handlePanePasteImage = useCallback((agentId: string, e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) addImageFromFile(file, agentId);
         return;
       }
     }
@@ -711,6 +735,31 @@ export default function OfficePage() {
     }
   }, [prompt]);
 
+  const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
+
+  // Multi-pane text paste — updates per-pane prompt instead of shared prompt
+  const handlePanePasteText = useCallback((agentId: string, e: React.ClipboardEvent<HTMLElement>) => {
+    const text = e.clipboardData?.getData("text/plain");
+    if (text) {
+      const lines = text.split("\n");
+      if (lines.length > 3 || text.length > 200) {
+        e.preventDefault();
+        pasteCountRef.current++;
+        const info = lines.length > 1 ? `+${lines.length} lines` : `${text.length} chars`;
+        const label = `[Pasted text #${pasteCountRef.current} ${info}]`;
+        pasteMapRef.current.set(label, text);
+        const input = e.currentTarget as HTMLInputElement | HTMLTextAreaElement;
+        const curPrompt = panePrompts.get(agentId) || "";
+        const pos = input.selectionStart ?? curPrompt.length;
+        setPanePrompts(prev => {
+          const m = new Map(prev);
+          m.set(agentId, curPrompt.slice(0, pos) + label + curPrompt.slice(pos));
+          return m;
+        });
+      }
+    }
+  }, [panePrompts]);
+
   const handleDropImage = useCallback((e: React.DragEvent) => {
     const files = e.dataTransfer?.files;
     if (!files) return;
@@ -722,26 +771,40 @@ export default function OfficePage() {
     }
   }, [addImageFromFile]);
 
+  // Multi-pane drop
+  const handlePaneDropImage = useCallback((agentId: string, e: React.DragEvent) => {
+    const files = e.dataTransfer?.files;
+    if (!files) return;
+    for (const file of files) {
+      if (file.type.startsWith("image/")) {
+        e.preventDefault();
+        addImageFromFile(file, agentId);
+      }
+    }
+  }, [addImageFromFile]);
+
+  /** Upload pending images to gateway and return file paths */
+  const uploadImages = useCallback(async (images: { name: string; dataUrl: string; base64: string }[]): Promise<string[]> => {
+    if (images.length === 0) return [];
+    const uploads = images.map((img) => {
+      return new Promise<string>((resolve) => {
+        const rid = nanoid(6);
+        imageUploadCallbacks.set(rid, resolve);
+        sendCommand({ type: "UPLOAD_IMAGE", requestId: rid, data: img.base64, filename: img.name });
+        setTimeout(() => { imageUploadCallbacks.delete(rid); resolve(""); }, 5000);
+      });
+    });
+    const paths = await Promise.all(uploads);
+    return paths.filter((p) => !!p);
+  }, []);
+
   const handleRunTask = useCallback(async () => {
     if (!selectedAgent || (!prompt.trim() && pendingImages.length === 0)) return;
     const agent = agents.get(selectedAgent);
     if (agent?.isExternal) return;
 
     // Upload images first, collect paths
-    const imagePaths: string[] = [];
-    if (pendingImages.length > 0) {
-      const uploads = pendingImages.map((img) => {
-        return new Promise<string>((resolve) => {
-          const rid = nanoid(6);
-          imageUploadCallbacks.set(rid, resolve);
-          sendCommand({ type: "UPLOAD_IMAGE", requestId: rid, data: img.base64, filename: img.name });
-          // Timeout fallback
-          setTimeout(() => { imageUploadCallbacks.delete(rid); resolve(""); }, 5000);
-        });
-      });
-      const paths = await Promise.all(uploads);
-      for (const p of paths) { if (p) imagePaths.push(p); }
-    }
+    const imagePaths = await uploadImages(pendingImages);
 
     // Expand pasted text labels back to full content
     let finalPrompt = prompt.trim();
@@ -770,7 +833,7 @@ export default function OfficePage() {
     setPrompt("");
     setPendingImages([]);
     pasteMapRef.current.clear();
-  }, [selectedAgent, prompt, pendingImages, addUserMessage, agents]);
+  }, [selectedAgent, prompt, pendingImages, addUserMessage, agents, uploadImages]);
 
   const handleCancel = useCallback(() => {
     if (!selectedAgent) return;
@@ -852,7 +915,8 @@ export default function OfficePage() {
   // Multi-pane state (console mode only)
   const [openPanes, setOpenPanes] = useState<string[]>([]);
   const [paneOffset, setPaneOffset] = useState(0);
-  const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
+  type ImageItem = { name: string; dataUrl: string; base64: string };
+  const [panePendingImages, setPanePendingImages] = useState<Map<string, ImageItem[]>>(new Map());
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
   // Review overlay: reviewer floats on top of source agent's pane
   const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
@@ -1519,20 +1583,33 @@ export default function OfficePage() {
                 isOwner={isOwner}
                 isCollaborator={isCollaborator}
                 isSpectator={isSpectator}
-                pendingImages={pendingImages}
-                onPendingImagesChange={setPendingImages}
+                panePendingImages={panePendingImages}
+                onPanePendingImagesChange={(agentId, imgs) => setPanePendingImages(prev => { const m = new Map(prev); m.set(agentId, imgs); return m; })}
                 suggestions={suggestions}
                 suggestText={suggestText}
                 onSuggestTextChange={setSuggestText}
-                onSubmit={(agentId) => {
-                  const p = panePrompts.get(agentId)?.trim();
-                  if (!p) return;
+                onSubmit={async (agentId) => {
+                  const p = panePrompts.get(agentId)?.trim() || "";
+                  const paneImages = panePendingImages.get(agentId) || [];
+                  if (!p && paneImages.length === 0) return;
                   const ag = agents.get(agentId);
                   if (!ag || ag.isExternal) return;
+
+                  // Upload images first, collect paths
+                  const imagePaths = await uploadImages(paneImages);
+
+                  let finalPrompt = p;
+                  if (imagePaths.length > 0) {
+                    finalPrompt += (finalPrompt ? "\n\n" : "") + imagePaths.map((ip) => `[Attached image: ${ip}]`).join("\n");
+                  }
+                  finalPrompt = finalPrompt.trim();
+                  if (!finalPrompt) return;
+
                   const taskId = 'task-' + Date.now().toString(36);
-                  addUserMessage(agentId, taskId, p);
-                  sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: p, repoPath: agentWorkDirMap.get(agentId) });
+                  addUserMessage(agentId, taskId, finalPrompt);
+                  sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: finalPrompt, repoPath: agentWorkDirMap.get(agentId) });
                   setPanePrompts(prev => { const m = new Map(prev); m.set(agentId, ''); return m; });
+                  setPanePendingImages(prev => { const m = new Map(prev); m.delete(agentId); return m; });
                 }}
                 onCancel={(agentId) => sendCommand({ type: "CANCEL_TASK", agentId, taskId: "" })}
                 onFire={handleFire}
@@ -1548,9 +1625,9 @@ export default function OfficePage() {
                 onReview={(agentId, result, backend) => handleReview(agentId, result, backend)}
                 detectedBackends={detectedBackends}
                 onLoadMore={(agentId) => loadMoreMessages(agentId)}
-                onPasteImage={handlePasteImage}
-                onPasteText={handlePasteText}
-                onDropImage={handleDropImage}
+                onPasteImage={handlePanePasteImage}
+                onPasteText={handlePanePasteText}
+                onDropImage={handlePaneDropImage}
                 reviewOverlay={reviewOverlay}
                 getReviewerData={getReviewerData}
                 onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
