@@ -142,6 +142,8 @@ export class AgentSession {
   private stderrBuffer = "";
   private taskInputTokens = 0;
   private taskOutputTokens = 0;
+  /** Files actually written/edited during the current task (tracked from tool_use events) */
+  private taskChangedFiles = new Set<string>();
   /** Dedup same-turn repeated usage in assistant messages */
   private lastUsageSignature = "";
   private hasHistory: boolean;
@@ -243,6 +245,7 @@ export class AgentSession {
     this.stderrBuffer = "";
     this.taskInputTokens = 0;
     this.taskOutputTokens = 0;
+    this.taskChangedFiles.clear();
     this.lastUsageSignature = "";
 
     this.onEvent({
@@ -500,7 +503,13 @@ export class AgentSession {
                     console.log(`[Agent ${this.name} thinking] ${block.thinking.slice(0, 120)}...`);
                   }
                   if (block.type === "tool_use" && block.name) {
-                    const activity = summarizeToolUse(block.name as string, block.input as Record<string, unknown> | undefined);
+                    const toolName = block.name as string;
+                    const toolInput = block.input as Record<string, unknown> | undefined;
+                    // Track files actually modified by Write/Edit tools
+                    if ((toolName === "Write" || toolName === "Edit") && toolInput?.file_path) {
+                      this.taskChangedFiles.add(toolInput.file_path as string);
+                    }
+                    const activity = summarizeToolUse(toolName, toolInput);
                     if (activity) {
                       this.onEvent({
                         type: "log:activity",
@@ -758,7 +767,16 @@ export class AgentSession {
    * Falls back to a cleaned-up excerpt of the raw output.
    */
   private extractResult() {
-    return parseAgentOutput(this.stdoutBuffer, this._lastResultText);
+    const result = parseAgentOutput(this.stdoutBuffer, this._lastResultText);
+    // Merge files tracked from actual tool_use events (Write/Edit) into changedFiles.
+    // This ensures changedFiles is populated even when the agent doesn't output FILES_CHANGED.
+    if (this.taskChangedFiles.size > 0) {
+      const existing = new Set(result.changedFiles);
+      for (const f of this.taskChangedFiles) {
+        if (!existing.has(f)) result.changedFiles.push(f);
+      }
+    }
+    return result;
   }
 
   private dequeueNext() {
