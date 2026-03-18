@@ -48,6 +48,7 @@ const TeamActivityLog = dynamic(() => import("@/components/office/ui/TeamActivit
 const CreateAgentModal = dynamic(() => import("@/components/office/ui/CreateAgentModal"), { ssr: false });
 const HireModal = dynamic(() => import("@/components/office/ui/HireModal"), { ssr: false });
 const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal"), { ssr: false });
+const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
@@ -1133,496 +1134,6 @@ export default function OfficePage() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: consoleMode ? "90%" : undefined, maxWidth: consoleMode ? "90%" : undefined, margin: consoleMode ? "10px auto" : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
 
           {(() => {
-            // Shared agent row renderer
-            const renderAgentRow = (agent: typeof agentList[number]) => {
-              const cfg = STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle;
-              const isExpanded = chatOpen && selectedAgent === agent.agentId;
-              const agentState = agents.get(agent.agentId);
-              const busy = agentState?.status === "working" || agentState?.status === "waiting_approval";
-              const isTeamMember = !!agentState?.teamId && !agentState?.isTeamLead;
-              const isExternal = !!agentState?.isExternal;
-
-              return (
-                <div key={agent.agentId} style={{
-                  display: "flex", flexDirection: "column",
-                  flex: isExpanded ? 1 : undefined,
-                  minHeight: isExpanded ? 0 : undefined,
-                  border: "none",
-                  backgroundColor: "transparent",
-                }}>
-                  {/* Agent info bar */}
-                  <div
-                    style={{
-                      display: isExpanded ? "flex" : "none",
-                      alignItems: "center", gap: 10,
-                      padding: "6px 14px",
-                      background: "rgba(6,10,6,0.85)",
-                      backdropFilter: "blur(16px)",
-                      WebkitBackdropFilter: "blur(16px)",
-                      boxShadow: `0 1px 0 ${TERM_GREEN}08, inset 0 1px 0 rgba(24,255,98,0.06)`,
-                      borderBottom: `1px solid ${TERM_GREEN}08`,
-                      fontSize: 12, fontFamily: TERM_FONT,
-                      flexShrink: 0,
-                    }}
-                  >
-                    <span style={{ color: "#c8a050", fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
-                      {agent.role?.split("—")[0]?.trim()}
-                      {agent.backend && <span style={{ color: "#8a7040", fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === agent.backend)?.name ?? agent.backend})</span>}
-                    </span>
-                    {(agentState?.cwd || agentState?.workDir) && (
-                      <span className="term-path-scroll" style={{ fontSize: 11, color: "#7a6848", flexShrink: 1, minWidth: 0 }} title={agentState.cwd ?? agentState.workDir}>
-                        {agentState.cwd ?? agentState.workDir}
-                      </span>
-                    )}
-                    <span style={{ flex: 1 }} />
-                    <span style={{ color: cfg.color, fontSize: 11, flexShrink: 0, fontWeight: 500 }}>{cfg.label}</span>
-                    {agentState && agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
-                    {!agentState?.teamId && isOwner && (
-                      <span
-                        onClick={(e) => { e.stopPropagation(); handleFire(agent.agentId); }}
-                        style={{
-                          fontSize: 12, color: "#c04040", cursor: "pointer", lineHeight: 1,
-                          padding: "4px", flexShrink: 0,
-                        }}
-                        onMouseEnter={(e) => { e.currentTarget.style.color = "#ff4040"; }}
-                        onMouseLeave={(e) => { e.currentTarget.style.color = "#c04040"; }}
-                      >{"\u2715"}</span>
-                    )}
-                  </div>
-
-                  {/* Expanded: hybrid panel for external agents (info header + messages) */}
-                  {isExpanded && agentState && isExternal && (
-                    <div style={{
-                      flex: 1,
-                      display: "flex", flexDirection: "column",
-                      backgroundColor: TERM_BG,
-                      minHeight: 0,
-                      overflow: "hidden",
-                    }}>
-                      {/* Compact info header */}
-                      <div style={{
-                        padding: "8px 12px",
-                        boxShadow: "0 1px 0 rgba(26,42,26,0.5)",
-                        background: "rgba(10,14,10,0.75)",
-                        backdropFilter: "blur(12px)",
-                        WebkitBackdropFilter: "blur(12px)",
-                        flexShrink: 0,
-                      }}>
-                        <div style={{ fontSize: TERM_SIZE, color: TERM_GREEN, opacity: 0.6, marginBottom: 4, fontFamily: TERM_FONT, letterSpacing: "0.05em" }}>
-                          EXTERNAL PROCESS
-                        </div>
-                        <div style={{ display: "flex", gap: 12, fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, flexWrap: "wrap" }}>
-                          <span>{agentState.backend ?? "unknown"}</span>
-                          <span>PID {agentState.pid ?? "\u2014"}</span>
-                          <span className="term-path-scroll" title={agentState.cwd ?? undefined} style={{ maxWidth: 300 }}>
-                            {agentState.cwd ?? "\u2014"}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Scrollable messages */}
-                      <div className="crt-screen" style={{
-                        flex: 1, overflowY: "auto", padding: "8px 10px",
-                        display: "flex", flexDirection: "column",
-                        minHeight: 0,
-                      }}>
-                        {agentState.messages.length === 0 && (
-                          <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 13 }}>
-                            Waiting for output...
-                          </div>
-                        )}
-                        {(() => {
-                          const visible = getVisibleMessages(agent.agentId);
-                          const hasMore = visible.length < agentState.messages.length;
-                          return <>
-                            {hasMore && <LoadMoreSentinel onLoadMore={() => loadMoreMessages(agent.agentId)} />}
-                            {visible.map((msg) => (
-                              <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} />
-                            ))}
-                          </>;
-                        })()}
-                        <div ref={chatEndRef} />
-                      </div>
-
-                      {/* Read-only footer */}
-                      <div style={{
-                        padding: "6px 12px",
-                        backgroundColor: TERM_SURFACE,
-                        fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT,
-                        textAlign: "center", flexShrink: 0,
-                      }}>
-                        Read-only — this process is running externally
-                      </div>
-                    </div>
-                  )}
-                  {isExpanded && agentState && !isExternal && (
-                    <div
-                      onPaste={handlePasteImage}
-                      onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); e.currentTarget.style.outline = "2px solid #e8b04060"; } }}
-                      onDragLeave={(e) => { e.currentTarget.style.outline = "none"; }}
-                      onDrop={(e) => { e.currentTarget.style.outline = "none"; handleDropImage(e); }}
-                      className="crt-screen"
-                      style={{
-                      flex: 1,
-                      display: "flex",
-                      flexDirection: "column",
-                      backgroundColor: TERM_BG,
-                      minHeight: 0,
-                      overflow: "hidden",
-                    }}>
-                      {/* CRT scanline bar */}
-                      {/* Messages */}
-                      <div className="term-dotgrid term-chat-area" style={{
-                        flex: 1, overflowY: "auto", padding: "10px 14px",
-                        display: "flex", flexDirection: "column",
-                        minHeight: 0,
-                      }}>
-                        {/* Phase banner for team leads */}
-                        {agentState?.isTeamLead && (() => {
-                          const phase = getAgentPhase(agent.agentId);
-                          if (!phase) return null;
-                          const PHASE_INFO: Record<string, { color: string; icon: string; hint: string }> = {
-                            create: { color: "#5aacff", icon: "\uD83D\uDCAC", hint: "Chat with your team lead to define the project" },
-                            design: { color: "#e8b040", icon: "\uD83D\uDCCB", hint: "Review the plan \u2014 approve it or give feedback" },
-                            execute: { color: "#e89030", icon: "\u26A1", hint: "Team is building your project" },
-                            complete: { color: "#48cc6a", icon: "\u2713", hint: "Review results \u2014 give feedback or end project" },
-                          };
-                          const info = PHASE_INFO[phase];
-                          if (!info) return null;
-                          return (
-                            <div style={{
-                              padding: "6px 10px", marginBottom: 8,
-                              backgroundColor: info.color + "10",
-                              backdropFilter: "blur(6px)",
-                              WebkitBackdropFilter: "blur(6px)",
-                              border: `1px solid ${info.color}30`,
-                              display: "flex", alignItems: "center", gap: 6,
-                              fontSize: 12, fontFamily: "monospace",
-                            }}>
-                              <span>{info.icon}</span>
-                              <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.05em" }}>{phase}</span>
-                              <span style={{ color: "#7a6858" }}>{info.hint}</span>
-                            </div>
-                          );
-                        })()}
-
-                        {agentState.messages.length === 0 && (
-                          <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 13 }}>
-                            {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
-                          </div>
-                        )}
-
-                        {(() => {
-                          const visible = getVisibleMessages(agent.agentId);
-                          const hasMore = visible.length < agentState.messages.length;
-                          return <>
-                            {hasMore && <LoadMoreSentinel onLoadMore={() => loadMoreMessages(agent.agentId)} />}
-                            {visible.map((msg) => (
-                              <MessageBubble key={msg.id} msg={msg} agentName={agentState?.name} onPreview={setPreviewUrl} isTeamLead={agentState?.isTeamLead} isTeamMember={isTeamMember} teamPhase={agentState?.isTeamLead ? getAgentPhase(agent.agentId) : null} />
-                            ))}
-                          </>;
-                        })()}
-
-
-                        {agentState.pendingApproval && (
-                          <div style={{
-                            marginBottom: 8, padding: 12,
-                            backgroundColor: "#261a00",
-                            border: "1px solid #e89030",
-                          }}>
-                            <div style={{ fontSize: 12, fontWeight: "bold", color: "#e89030", marginBottom: 6, fontFamily: "monospace" }}>
-                              {"\u25B2"} {agentState.pendingApproval.title}
-                            </div>
-                            <div style={{ fontSize: 13, color: "#b89868", marginBottom: 10, lineHeight: 1.5 }}>
-                              {agentState.pendingApproval.summary}
-                            </div>
-                            {isOwner && (
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button
-                                  className="term-btn"
-                                  onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "yes")}
-                                  style={{ flex: 1, padding: "8px", border: "1px solid #48cc6a", backgroundColor: "#143a14", color: "#48cc6a", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-                                >{"\u25B6"} Approve</button>
-                                <button
-                                  className="term-btn"
-                                  onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "no")}
-                                  style={{ flex: 1, padding: "8px", border: "1px solid #e04848", backgroundColor: "#3e1818", color: "#e04848", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-                                >{"\u2715"} Reject</button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-
-                        {busy && !agentState.pendingApproval && agentState.messages.length > 0 && agentState.messages[agentState.messages.length - 1]?.text && (
-                          <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                            <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
-                            {agentState.lastLogLine && (
-                              <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
-                                {agentState.lastLogLine.slice(0, 60)}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        <div ref={chatEndRef} />
-                      </div>
-
-                      {/* Suggestion feed (visible to owner and collaborator) */}
-                      {!isSpectator && suggestions.length > 0 && (
-                        <div style={{
-                          padding: "6px 10px", borderTop: "1px solid #152515",
-                          backgroundColor: "#0a0e0a", maxHeight: 120, overflowY: "auto",
-                        }}>
-                          <div style={{ fontSize: 10, color: "#a855f7", fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
-                          {suggestions.slice(-10).map((s, i) => (
-                            <div key={i} style={{ fontSize: 12, color: "#c084fc", marginBottom: 2, lineHeight: 1.4 }}>
-                              <span style={{ color: "#7c3aed", fontWeight: 600 }}>{s.author}:</span> {s.text}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Pending image previews */}
-                      {pendingImages.length > 0 && (
-                        <div style={{
-                          padding: "6px 10px", borderTop: "1px solid #152515",
-                          backgroundColor: "#0a0e0a", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
-                        }}>
-                          {pendingImages.map((img, i) => (
-                            <div key={i} style={{ position: "relative", display: "inline-block" }}>
-                              <img src={img.dataUrl} alt={img.name} style={{ height: 48, borderRadius: 4, border: "1px solid #1a2a1a" }} />
-                              <button
-                                onClick={() => setPendingImages((prev) => prev.filter((_, j) => j !== i))}
-                                style={{
-                                  position: "absolute", top: -4, right: -4,
-                                  width: 16, height: 16, borderRadius: "50%",
-                                  border: "none", backgroundColor: "#e04848", color: "#fff",
-                                  fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                                  padding: 0, lineHeight: 1,
-                                }}
-                              >{"\u00d7"}</button>
-                            </div>
-                          ))}
-                          <span style={{ fontSize: 10, color: "#7a6858", fontFamily: "monospace" }}>
-                            {pendingImages.length} image{pendingImages.length > 1 ? "s" : ""} attached
-                          </span>
-                        </div>
-                      )}
-
-                      {/* Input / Cancel */}
-                      {(() => {
-                        const cardPhase = agentState?.isTeamLead ? getAgentPhase(agent.agentId) : null;
-
-                        // Spectator: read-only footer
-                        if (isSpectator) {
-                          return (
-                            <div style={{
-                              padding: "8px 10px", borderTop: "1px solid #152515",
-                              backgroundColor: "#182844", flexShrink: 0,
-                              fontSize: 12, color: "#7ab8f5", fontFamily: "monospace", textAlign: "center",
-                            }}>
-                              Watching — read-only mode
-                            </div>
-                          );
-                        }
-
-                        // Collaborator: suggest input only
-                        if (isCollaborator) {
-                          return (
-                            <div style={{
-                              padding: "8px 10px", borderTop: "1px solid #152515",
-                              background: "rgba(10,14,10,0.8)",
-                              backdropFilter: "blur(8px)",
-                              WebkitBackdropFilter: "blur(8px)",
-                              flexShrink: 0,
-                            }}>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <input
-                                  value={suggestText}
-                                  onChange={(e) => setSuggestText(e.target.value)}
-                                  onKeyDown={(e) => isRealEnter(e) && handleSuggest()}
-                                  placeholder="Share an idea..."
-                                  maxLength={500}
-                                  style={{
-                                    flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
-                                    backgroundColor: "#16122a", color: "#c084fc", fontSize: 14, outline: "none",
-                                  }}
-                                />
-                                <button
-                                  onClick={handleSuggest}
-                                  disabled={!suggestText.trim()}
-                                  style={{
-                                    padding: "9px 14px", border: "none",
-                                    backgroundColor: suggestText.trim() ? "#a855f7" : "#0e1a0e",
-                                    color: suggestText.trim() ? "#fff" : "#5a4838",
-                                    fontSize: 13, cursor: suggestText.trim() ? "pointer" : "default",
-                                    fontWeight: 700, fontFamily: "monospace",
-                                  }}
-                                >Suggest</button>
-                              </div>
-                            </div>
-                          );
-                        }
-
-                        return (
-                          <div style={{
-                            padding: "8px 12px",
-                            borderTop: `1px solid ${TERM_GREEN}10`,
-                            background: "rgba(6,10,6,0.85)",
-                            backdropFilter: "blur(16px)",
-                            WebkitBackdropFilter: "blur(16px)",
-                            boxShadow: `0 -1px 8px rgba(0,0,0,0.2), inset 0 1px 0 ${TERM_GREEN}06`,
-                            flexShrink: 0,
-                          }}>
-                            {isTeamMember ? (
-                              <div style={{
-                                textAlign: "center", color: "#5a4838", fontSize: 12, padding: "8px 0", fontFamily: "monospace",
-                              }}>
-                                Tasks are assigned by the Team Lead
-                              </div>
-                            ) : cardPhase === "execute" ? (
-                              <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                                <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: "none" }}>
-                                  <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
-                                  <input
-                                    className="term-input"
-                                    value={prompt}
-                                    onPaste={handlePasteText}
-                                    onChange={(e) => setPrompt(e.target.value)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Escape" && busy) { handleCancel(); return; }
-                                      if (isRealEnter(e)) handleRunTask();
-                                    }}
-                                    placeholder={busy ? "esc stop · type to continue" : ""}
-                                    style={{
-                                      flex: 1, padding: "6px 5px", border: "none",
-                                      backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                                      fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
-                                    }}
-                                  />
-                                                                  </div>
-                                {!busy && (
-                                  <span
-                                    onClick={async () => { if (await confirm("End project?")) handleEndProject(); }}
-                                    style={{ padding: "2px 8px 4px", color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: TERM_FONT }}
-                                  >close project</span>
-                                )}
-                              </div>
-                            ) : cardPhase === "design" && !busy ? (
-                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
-                                <button
-                                  className="term-btn"
-                                  onClick={handleApprovePlan}
-                                  style={{
-                                    padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                                    backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
-                                    fontFamily: TERM_FONT,
-                                  }}
-                                >approve</button>
-                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                                <input
-                                  className="term-input"
-                                  value={prompt}
-                                  onPaste={handlePasteText}
-                                  onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
-                                  placeholder="or give feedback..."
-                                  style={{
-                                    flex: 1, padding: "5px 6px", border: "none",
-                                    backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
-                                  }}
-                                />
-                              </div>
-                            ) : cardPhase === "complete" && !busy ? (
-                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
-                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                                <input
-                                  className="term-input"
-                                  value={prompt}
-                                  onPaste={handlePasteText}
-                                  onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
-                                  placeholder="request changes..."
-                                  style={{
-                                    flex: 1, padding: "5px 6px", border: "none",
-                                    backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
-                                  }}
-                                />
-                                <button
-                                  onClick={async () => { if (await confirm("End project?")) handleEndProject(); }}
-                                  style={{
-                                    padding: "5px 14px", border: "1px solid #e8903040",
-                                    backgroundColor: "transparent", color: "#e89030", fontSize: TERM_SIZE, cursor: "pointer",
-                                    fontFamily: TERM_FONT, flexShrink: 0,
-                                  }}
-                                >Close Project</button>
-                              </div>
-                            ) : agentState?.awaitingApproval && !busy ? (
-                              <div style={{ display: "flex", gap: 6, alignItems: "center", borderTop: "none", padding: "4px 8px" }}>
-                                <button
-                                  className="term-btn"
-                                  onClick={() => {
-                                    if (!selectedAgent) return;
-                                    const tid = nanoid();
-                                    const approveText = "Yes, approved. Proceed.";
-                                    addUserMessage(selectedAgent, tid, approveText);
-                                    sendCommand({ type: "RUN_TASK", agentId: selectedAgent, taskId: tid, prompt: approveText, repoPath: agentWorkDirMap.get(selectedAgent), name: agent?.name, role: agent?.role, personality: agent?.personality });
-                                    setPrompt("");
-                                  }}
-                                  style={{
-                                    padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                                    backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
-                                    fontFamily: TERM_FONT,
-                                  }}
-                                >approve</button>
-                                <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
-                                <input
-                                  className="term-input"
-                                  value={prompt}
-                                  onPaste={handlePasteText}
-                                  onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
-                                  placeholder="or give feedback..."
-                                  style={{
-                                    flex: 1, padding: "5px 6px", border: "none",
-                                    backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                                    fontFamily: TERM_FONT, caretColor: TERM_GREEN,
-                                  }}
-                                />
-                              </div>
-                            ) : (
-                              <div style={{ display: "flex", gap: 0, alignItems: "center", borderTop: "none" }}>
-                                <span style={{ color: isAgentBusy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: isAgentBusy ? "none" : TERM_GLOW }}>&gt;</span>
-                                <input
-                                  className="term-input"
-                                  value={prompt}
-                                  onPaste={handlePasteText}
-                                  onChange={(e) => setPrompt(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Escape" && isAgentBusy) { handleCancel(); return; }
-                                    if (isRealEnter(e)) handleRunTask();
-                                  }}
-                                  placeholder={isAgentBusy ? "esc stop · type to continue" : ""}
-                                  style={{
-                                    flex: 1, padding: "6px 5px", border: "none",
-                                    backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                                    fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
-                                  }}
-                                  autoFocus
-                                />
-                                                              </div>
-                            )}
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-                </div>
-              );
-            };
-
             // Get the active agent list based on current tab
             const activeAgentList = expandedSection === "agents" ? soloAgents
               : expandedSection === "team" ? teamAgents
@@ -1763,11 +1274,61 @@ export default function OfficePage() {
               setTimeout(() => { setSelectedAgent(first.agentId); setChatOpen(true); }, 0);
               return null;
             })()}
-            {selectedAgent && selectedInTab ? (
-              <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
-                {renderAgentRow(activeAgentList.find((a) => a.agentId === selectedAgent)!)}
-              </div>
-            ) : (
+            {selectedAgent && selectedInTab ? (() => {
+              const ag = agents.get(selectedAgent);
+              if (!ag) return null;
+              const visible = getVisibleMessages(selectedAgent);
+              const isTeamMember = !!ag.teamId && !ag.isTeamLead;
+              const busy = ag.status === "working" || ag.status === "waiting_approval";
+              return (
+                <AgentPane
+                  key={selectedAgent}
+                  agentId={selectedAgent}
+                  name={ag.name}
+                  role={ag.role}
+                  backend={ag.backend}
+                  status={ag.status}
+                  cwd={ag.cwd}
+                  workDir={ag.workDir}
+                  messages={ag.messages}
+                  visibleMessages={visible}
+                  hasMoreMessages={visible.length < ag.messages.length}
+                  tokenUsage={ag.tokenUsage}
+                  isTeamLead={ag.isTeamLead}
+                  isTeamMember={isTeamMember}
+                  isExternal={!!ag.isExternal}
+                  teamId={ag.teamId}
+                  teamPhase={ag.isTeamLead ? getAgentPhase(selectedAgent) : null}
+                  pendingApproval={ag.pendingApproval ?? null}
+                  awaitingApproval={ag.awaitingApproval}
+                  lastLogLine={ag.lastLogLine ?? null}
+                  busy={busy}
+                  pid={ag.pid}
+                  isOwner={isOwner}
+                  isCollaborator={isCollaborator}
+                  isSpectator={isSpectator}
+                  prompt={prompt}
+                  onPromptChange={setPrompt}
+                  pendingImages={pendingImages}
+                  onPendingImagesChange={setPendingImages}
+                  suggestions={suggestions}
+                  suggestText={suggestText}
+                  onSuggestTextChange={setSuggestText}
+                  onSubmit={handleRunTask}
+                  onCancel={handleCancel}
+                  onFire={handleFire}
+                  onApproval={handleApproval}
+                  onApprovePlan={handleApprovePlan}
+                  onEndProject={handleEndProject}
+                  onSuggest={handleSuggest}
+                  onPreview={setPreviewUrl}
+                  onLoadMore={() => loadMoreMessages(selectedAgent)}
+                  onPasteImage={handlePasteImage}
+                  onPasteText={handlePasteText}
+                  onDropImage={handleDropImage}
+                />
+              );
+            })() : (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#3a3a3a", fontFamily: TERM_FONT, fontSize: TERM_SIZE }}>
                 {activeAgentList.length > 0 ? "Select an agent" : ""}
               </div>
