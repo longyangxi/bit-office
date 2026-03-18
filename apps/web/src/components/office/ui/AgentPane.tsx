@@ -136,6 +136,15 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const wasAtBottomRef = useRef(true);
   const msgCount = messages.length;
 
+  // When prompt clears (user submitted), force next auto-scroll
+  const prevPromptRef = useRef(prompt);
+  useEffect(() => {
+    if (prevPromptRef.current && !prompt) {
+      wasAtBottomRef.current = true;
+    }
+    prevPromptRef.current = prompt;
+  }, [prompt]);
+
   // Track scroll position via scroll events
   useEffect(() => {
     const el = chatEndRef.current;
@@ -147,6 +156,21 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     };
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
+  }, [agentId]);
+
+  // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink)
+  useEffect(() => {
+    const el = chatEndRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    const ro = new ResizeObserver(() => {
+      if (wasAtBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
   }, [agentId]);
 
   // Scroll to bottom synchronously after DOM commit when messages change

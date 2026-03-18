@@ -487,6 +487,15 @@ export default function OfficePage() {
   const selectedMsgCount = selectedAgentState?.messages.length ?? 0;
   const wasAtBottomRef = useRef(true);
 
+  // When prompt clears (user submitted), force next auto-scroll
+  const prevPromptRef = useRef(prompt);
+  useEffect(() => {
+    if (prevPromptRef.current && !prompt) {
+      wasAtBottomRef.current = true;
+    }
+    prevPromptRef.current = prompt;
+  }, [prompt]);
+
   // Track scroll position via scroll events (captures "before new content" state)
   useEffect(() => {
     const el = chatEndRef.current;
@@ -498,6 +507,21 @@ export default function OfficePage() {
     };
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
+  }, [selectedAgent]);
+
+  // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink, layout change)
+  useEffect(() => {
+    const el = chatEndRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    const ro = new ResizeObserver(() => {
+      if (wasAtBottomRef.current) {
+        container.scrollTop = container.scrollHeight;
+      }
+    });
+    ro.observe(container);
+    return () => ro.disconnect();
   }, [selectedAgent]);
 
   // Scroll to bottom synchronously after DOM commit when messages change.
