@@ -912,6 +912,8 @@ export default function OfficePage() {
 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [consoleMode, setConsoleMode] = useState(false);
+  // Freeze scroll during CSS width transition (300ms) to prevent scroll corruption
+  const [scrollFrozen, setScrollFrozen] = useState(false);
   // Multi-pane state (console mode only)
   const [openPanes, setOpenPanes] = useState<string[]>([]);
   const [paneOffset, setPaneOffset] = useState(0);
@@ -1371,12 +1373,14 @@ export default function OfficePage() {
           {/* Arrow button */}
           <button
             onClick={() => {
+              setScrollFrozen(true);
               if (consoleMode) {
                 setConsoleMode(false);
-                setTimeout(() => setSceneVisible(true), 320);
+                setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
               } else {
                 setSceneVisible(false);
                 requestAnimationFrame(() => setConsoleMode(true));
+                setTimeout(() => setScrollFrozen(false), 350);
               }
             }}
             style={{
@@ -1648,6 +1652,7 @@ export default function OfficePage() {
                 onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onApplyReviewFixes={handleApplyReviewFixes}
                 onDismissReview={handleDismissReview}
+                scrollFrozen={scrollFrozen}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -1707,6 +1712,7 @@ export default function OfficePage() {
                   onReviewerLoadMore={reviewOverlay?.sourceAgentId === selectedAgent ? () => loadMoreMessages(reviewOverlay.reviewerAgentId) : undefined}
                   onApplyReviewFixes={reviewOverlay?.sourceAgentId === selectedAgent ? handleApplyReviewFixes : undefined}
                   onDismissReview={reviewOverlay?.sourceAgentId === selectedAgent ? handleDismissReview : undefined}
+                  scrollFrozen={scrollFrozen}
                 />
               );
             })() : (

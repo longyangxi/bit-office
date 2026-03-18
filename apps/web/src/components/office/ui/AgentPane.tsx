@@ -105,6 +105,8 @@ export interface AgentPaneProps {
   onReviewerLoadMore?: () => void;
   onApplyReviewFixes?: () => void;
   onDismissReview?: () => void;
+  /** When true, all scroll management is frozen (e.g. during CSS width transition) */
+  scrollFrozen?: boolean;
 }
 
 function getPhaseInfo(): Record<string, { color: string; icon: string; hint: string }> {
@@ -129,6 +131,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
+    scrollFrozen,
   } = props;
 
   const statusConfig = getStatusConfig();
@@ -157,19 +160,36 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     prevPromptRef.current = prompt;
   }, [prompt]);
 
-  // Track scroll position via scroll events (skip during resize to avoid false negatives)
+  // When scrollFrozen transitions false→true, just wait.
+  // When it transitions true→false (transition ended), force scroll to bottom.
+  const prevFrozenRef = useRef(scrollFrozen);
+  useEffect(() => {
+    const wasFrozen = prevFrozenRef.current;
+    prevFrozenRef.current = scrollFrozen;
+    if (wasFrozen && !scrollFrozen) {
+      // Transition just ended — force scroll to bottom
+      const el = chatEndRef.current;
+      const container = el?.parentElement;
+      if (container) {
+        wasAtBottomRef.current = true;
+        requestAnimationFrame(() => scrollToBottom(container));
+      }
+    }
+  }, [scrollFrozen]);
+
+  // Track scroll position via scroll events (skip during resize/frozen to avoid false negatives)
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
     const container = el.parentElement;
     if (!container) return;
     const onScroll = () => {
-      if (resizingRef.current) return;
+      if (resizingRef.current || scrollFrozen) return;
       wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
     };
     container.addEventListener("scroll", onScroll, { passive: true });
     return () => container.removeEventListener("scroll", onScroll);
-  }, [agentId]);
+  }, [agentId, scrollFrozen]);
 
   // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink)
   // IMPORTANT: Defer scroll to double-rAF to ensure flex layout is fully settled
@@ -182,6 +202,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     let rafId = 0;
     const ro = new ResizeObserver(() => {
+      if (scrollFrozen) return; // Don't touch scroll during CSS transition
       resizingRef.current = true;
       if (rafId) cancelAnimationFrame(rafId);
       // Double-rAF: first rAF lets the browser finish layout, second rAF scrolls safely
@@ -201,16 +222,17 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       if (rafId) cancelAnimationFrame(rafId);
       resizingRef.current = false; // Ensure flag resets when effect cleans up
     };
-  }, [agentId]);
+  }, [agentId, scrollFrozen]);
 
   // Scroll to bottom synchronously after DOM commit when messages change
   useLayoutEffect(() => {
+    if (scrollFrozen) return; // Don't touch scroll during CSS transition
     const el = chatEndRef.current;
     const container = el?.parentElement;
     if (container && wasAtBottomRef.current) {
       scrollToBottom(container);
     }
-  }, [agentId, msgCount]);
+  }, [agentId, msgCount, scrollFrozen]);
 
   // MutationObserver for streaming text updates
   useEffect(() => {
@@ -220,6 +242,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     let raf = 0;
     const observer = new MutationObserver(() => {
+      if (scrollFrozen) return; // Don't touch scroll during CSS transition
       if (!raf) {
         raf = requestAnimationFrame(() => {
           raf = 0;
@@ -231,7 +254,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     });
     observer.observe(container, { childList: true, subtree: true, characterData: true });
     return () => { observer.disconnect(); cancelAnimationFrame(raf); };
-  }, [agentId]);
+  }, [agentId, scrollFrozen]);
 
   // ── Reviewer overlay scroll management ──
   const reviewChatEndRef = useRef<HTMLDivElement>(null);

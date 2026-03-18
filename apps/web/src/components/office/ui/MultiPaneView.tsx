@@ -66,6 +66,8 @@ export interface MultiPaneViewProps {
   onReviewerLoadMore?: (agentId: string) => void;
   onApplyReviewFixes?: () => void;
   onDismissReview?: () => void;
+  /** Freeze scroll management during CSS width transitions */
+  scrollFrozen?: boolean;
 }
 
 const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
@@ -103,6 +105,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onApplyReviewFixes,
     onDismissReview,
     detectedBackends,
+    scrollFrozen,
   } = props;
 
   const visiblePanes = openPanes.slice(paneOffset, paneOffset + MAX_VISIBLE);
@@ -197,6 +200,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                 onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
                 onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                scrollFrozen={scrollFrozen}
               />
             </div>
           );
