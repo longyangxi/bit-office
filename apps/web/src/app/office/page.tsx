@@ -766,6 +766,18 @@ export default function OfficePage() {
   const [consoleMode, setConsoleMode] = useState(false);
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
 
+  // Scroll to bottom when console mode toggles (width change causes content reflow)
+  const prevConsoleModeRef = useRef(consoleMode);
+  useEffect(() => {
+    if (prevConsoleModeRef.current === consoleMode) return;
+    prevConsoleModeRef.current = consoleMode;
+    const timer = setTimeout(() => {
+      chatEndRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
+      wasAtBottomRef.current = true;
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [consoleMode]);
+
   const handleCreateShareLink = useCallback(async (shareRole: "collaborator" | "spectator") => {
     try {
       const { getGatewayHttpUrl } = await import("@/lib/storage");
@@ -1066,11 +1078,9 @@ export default function OfficePage() {
           <button
             onClick={() => {
               if (consoleMode) {
-                // Collapsing: animate sidebar first, then mount scene after transition
                 setConsoleMode(false);
                 setTimeout(() => setSceneVisible(true), 320);
               } else {
-                // Expanding: hide scene immediately, then expand
                 setSceneVisible(false);
                 requestAnimationFrame(() => setConsoleMode(true));
               }
@@ -1754,7 +1764,7 @@ export default function OfficePage() {
               return null;
             })()}
             {selectedAgent && selectedInTab ? (
-              <div key={consoleMode ? "console" : "sidebar"} style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
+              <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "hidden" }}>
                 {renderAgentRow(activeAgentList.find((a) => a.agentId === selectedAgent)!)}
               </div>
             ) : (
