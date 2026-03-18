@@ -49,6 +49,7 @@ const CreateAgentModal = dynamic(() => import("@/components/office/ui/CreateAgen
 const HireModal = dynamic(() => import("@/components/office/ui/HireModal"), { ssr: false });
 const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal"), { ssr: false });
 const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
+const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
@@ -765,6 +766,10 @@ export default function OfficePage() {
 
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [consoleMode, setConsoleMode] = useState(false);
+  // Multi-pane state (console mode only)
+  const [openPanes, setOpenPanes] = useState<string[]>([]);
+  const [paneOffset, setPaneOffset] = useState(0);
+  const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
 
   // Scroll to bottom when console mode toggles (width change causes content reflow)
@@ -1131,7 +1136,7 @@ export default function OfficePage() {
           </div>
           </div>
           {/* ── Main content area ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: consoleMode ? "90%" : undefined, maxWidth: consoleMode ? "90%" : undefined, margin: consoleMode ? "10px auto" : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: consoleMode && openPanes.length <= 1 ? "90%" : undefined, maxWidth: consoleMode && openPanes.length <= 1 ? "90%" : undefined, margin: consoleMode && openPanes.length <= 1 ? "10px auto" : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
 
           {(() => {
             // Get the active agent list based on current tab
@@ -1162,14 +1167,14 @@ export default function OfficePage() {
                 </div>
               )}
               {activeAgentList.map((agent, idx) => {
-                const isActive = selectedAgent === agent.agentId;
+                const isActive = consoleMode ? openPanes.includes(agent.agentId) : selectedAgent === agent.agentId;
                 const agentState = agents.get(agent.agentId);
                 const agentBusy = agentState?.status === "working";
                 const isLead = !!agentState?.isTeamLead;
                 return (
                   <button
                     key={agent.agentId}
-                    onClick={() => { setSelectedAgent(agent.agentId); setChatOpen(true); }}
+                    onClick={() => { if (consoleMode) { setOpenPanes(prev => prev.includes(agent.agentId) ? prev.filter(id => id !== agent.agentId) : [...prev, agent.agentId]); } else { setSelectedAgent(agent.agentId); setChatOpen(true); } }}
                     title={`${agent.name}\n${agent.role}\n${(STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle).label}`}
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center",
@@ -1267,14 +1272,75 @@ export default function OfficePage() {
               )}
             </div>
 
-            {/* -- Chat for selected agent (replaces accordion) -- */}
-            {/* Auto-select first agent if none selected in current tab */}
-            {!selectedInTab && activeAgentList.length > 0 && (() => {
+            {/* -- Chat content: single pane (sidebar) or multi pane (console) -- */}
+            {/* Auto-select first agent if none selected in current tab (sidebar mode only) */}
+            {!consoleMode && !selectedInTab && activeAgentList.length > 0 && (() => {
               const first = activeAgentList[0];
               setTimeout(() => { setSelectedAgent(first.agentId); setChatOpen(true); }, 0);
               return null;
             })()}
-            {selectedAgent && selectedInTab ? (() => {
+            {consoleMode ? (
+              <MultiPaneView
+                openPanes={openPanes.filter(id => activeAgentList.some(a => a.agentId === id))}
+                getAgentData={(agentId) => {
+                  const ag = agents.get(agentId);
+                  if (!ag) return null;
+                  const visible = getVisibleMessages(agentId);
+                  return {
+                    agentId, name: ag.name, role: ag.role, backend: ag.backend,
+                    status: ag.status, cwd: ag.cwd, workDir: ag.workDir,
+                    messages: ag.messages, visibleMessages: visible,
+                    hasMoreMessages: visible.length < ag.messages.length,
+                    tokenUsage: ag.tokenUsage, isTeamLead: ag.isTeamLead,
+                    isTeamMember: !!ag.teamId && !ag.isTeamLead,
+                    isExternal: !!ag.isExternal, teamId: ag.teamId,
+                    teamPhase: ag.isTeamLead ? getAgentPhase(agentId) : null,
+                    pendingApproval: ag.pendingApproval ?? null,
+                    awaitingApproval: ag.awaitingApproval,
+                    lastLogLine: ag.lastLogLine ?? null,
+                    busy: ag.status === "working" || ag.status === "waiting_approval",
+                    pid: ag.pid,
+                  };
+                }}
+                paneOffset={paneOffset}
+                onPaneOffsetChange={setPaneOffset}
+                panePrompts={panePrompts}
+                onPanePromptChange={(agentId, val) => setPanePrompts(prev => { const m = new Map(prev); m.set(agentId, val); return m; })}
+                isOwner={isOwner}
+                isCollaborator={isCollaborator}
+                isSpectator={isSpectator}
+                pendingImages={pendingImages}
+                onPendingImagesChange={setPendingImages}
+                suggestions={suggestions}
+                suggestText={suggestText}
+                onSuggestTextChange={setSuggestText}
+                onSubmit={(agentId) => {
+                  const p = panePrompts.get(agentId)?.trim();
+                  if (!p) return;
+                  const ag = agents.get(agentId);
+                  if (!ag || ag.isExternal) return;
+                  const taskId = 'task-' + Date.now().toString(36);
+                  addUserMessage(agentId, taskId, p);
+                  sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: p, repoPath: agentWorkDirMap.get(agentId) });
+                  setPanePrompts(prev => { const m = new Map(prev); m.set(agentId, ''); return m; });
+                }}
+                onCancel={(agentId) => sendCommand({ type: "CANCEL_TASK", agentId, taskId: "" })}
+                onFire={handleFire}
+                onApproval={handleApproval}
+                onApprovePlan={(agentId) => sendCommand({ type: "APPROVE_PLAN", agentId })}
+                onEndProject={(agentId) => {
+                  const ag = agents.get(agentId);
+                  sendCommand({ type: "END_PROJECT", agentId, name: ag?.name, role: ag?.role, personality: ag?.personality, backend: ag?.backend });
+                  clearTeamMessages();
+                }}
+                onSuggest={handleSuggest}
+                onPreview={setPreviewUrl}
+                onLoadMore={(agentId) => loadMoreMessages(agentId)}
+                onPasteImage={handlePasteImage}
+                onPasteText={handlePasteText}
+                onDropImage={handleDropImage}
+              />
+            ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
               if (!ag) return null;
               const visible = getVisibleMessages(selectedAgent);
