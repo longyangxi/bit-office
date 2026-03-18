@@ -78,6 +78,11 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
 }
 
 const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
+  // Use <div> instead of <p> to avoid hydration errors when block elements
+  // (like <pre>) appear inside paragraphs — HTML forbids <pre> inside <p>.
+  p({ children }) {
+    return <div style={{ marginBottom: 8 }}>{children}</div>;
+  },
   pre({ children }) {
     return (
       <div style={{ overflowX: "auto", margin: "8px 0", WebkitOverflowScrolling: "touch" }}>
@@ -93,7 +98,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     const filePath = openMatch?.[1] ?? fileMatch?.[1];
     if (filePath) {
       return (
-        <span
+        <pre
           onClick={() => sendCommand({ type: "OPEN_FILE", path: filePath })}
           style={{
             backgroundColor: "#1a1830", padding: "8px 10px", borderRadius: 6,
@@ -104,13 +109,13 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
           title="Click to open"
         >
           <code {...props}>{text}</code>
-        </span>
+        </pre>
       );
     }
     return isBlock ? (
-      <span style={{ display: "block", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
         <code {...props}>{children}</code>
-      </span>
+      </pre>
     ) : (
       <code {...props}>{children}</code>
     );
