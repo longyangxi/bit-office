@@ -1136,7 +1136,7 @@ export default function OfficePage() {
           </div>
           </div>
           {/* ── Main content area ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, width: consoleMode && openPanes.length <= 1 ? "90%" : undefined, maxWidth: consoleMode && openPanes.length <= 1 ? "90%" : undefined, margin: consoleMode && openPanes.length <= 1 ? "10px auto" : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, paddingLeft: consoleMode ? 36 : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
 
           {(() => {
             // Get the active agent list based on current tab
