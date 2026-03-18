@@ -271,7 +271,8 @@ export class AgentSession {
         prompt,
         memory: this._memoryContext || getMemoryContext(),
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
-- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game"). Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
+- WORKSPACE: Your working directory is ${this.workspace}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
+- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
 - Before making large changes, wrap your plan in a [PLAN] tag and ask the user to approve. For dangerous operations (chmod, rm -rf, git reset, etc.), also ask for approval. Always end approval requests with a question mark.`,
       };
       // Capture before template selection modifies it
