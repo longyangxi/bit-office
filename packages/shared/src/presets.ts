@@ -7,14 +7,14 @@ export interface AgentPreset {
   isLeader?: boolean;
 }
 
-/** 6 predefined agents: 1/3/5 male, 2/4/6 female */
+/** 5 predefined agents for team hiring — role names match agency-agents for subagent resolution */
 export const AGENT_PRESETS: AgentPreset[] = [
-  { palette: 0, name: "Alex",   role: "Frontend Dev",  description: "UI components, React/Next.js/CSS",       personality: "You speak in a friendly, casual, encouraging, and natural tone." },
-  { palette: 1, name: "Mia",    role: "Backend Dev",   description: "APIs, database, server logic",           personality: "You speak formally, professionally, in an organized and concise manner." },
-  { palette: 2, name: "Leo",    role: "Fullstack Dev", description: "End-to-end, frontend + backend",         personality: "You are aggressive, action-first, always pursuing speed and efficiency." },
-  { palette: 3, name: "Sophie", role: "Code Reviewer", description: "Review PRs, find bugs, quality",         personality: "You teach patiently, explain the reasoning, and guide like a mentor." },
-  { palette: 4, name: "Kai",    role: "Game Dev",      description: "Web games, PixiJS/Three.js/Canvas",      personality: "You are enthusiastic, creative, and obsessive about game feel. You care deeply about smooth animations, tight controls, and the little details that make a game satisfying to play." },
-  { palette: 5, name: "Marcus", role: "Team Lead",     description: "Creative direction, planning, delegation", personality: "You have strong product intuition and communicate with clarity and vision. You focus on the big picture, make decisive creative calls, and keep the team aligned.", isLeader: true },
+  { palette: 0, name: "Alex",   role: "Frontend Developer",  description: "UI, React/Vue/Next.js, CSS, accessibility",     personality: "Detail-oriented and user-centric. Focuses on performance, accessibility, and pixel-perfect implementation." },
+  { palette: 1, name: "Mia",    role: "Backend Architect",   description: "APIs, databases, system design, cloud",         personality: "Strategic and security-focused. Designs for scale, reliability, and maintainability." },
+  { palette: 2, name: "Leo",    role: "Rapid Prototyper",    description: "MVP, proof-of-concept, fast iteration",         personality: "Speed-focused and pragmatic. Ships working prototypes fast, iterates based on feedback." },
+  { palette: 3, name: "Sophie", role: "Code Reviewer",       description: "Code review, bugs, security, quality",          personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what." },
+  { palette: 5, name: "Marcus", role: "Team Lead",           description: "Creative direction, planning, delegation",      personality: "Strong product intuition, communicates with clarity and vision. Focuses on the big picture and keeps the team aligned.", isLeader: true },
+  { palette: 4, name: "Nova",   role: "UX Architect",        description: "UX foundations, CSS systems, layout, component architecture", personality: "Systematic and developer-empathetic. Bridges design vision and implementation with clear, buildable structures." },
 ];
 
 /** Index of the default (and mandatory) team leader preset. */

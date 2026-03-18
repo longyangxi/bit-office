@@ -17,3 +17,4 @@ docs
 settings.local.json
 apps/desktop/src-tauri/target
 apps/desktop/src-tauri/sidecar
+CONVENTIONS.md

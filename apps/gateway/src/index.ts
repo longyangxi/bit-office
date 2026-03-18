@@ -161,18 +161,12 @@ function loadAgentDefs(): AgentDefinition[] {
       const raw = JSON.parse(readFileSync(AGENTS_FILE, "utf-8"));
       if (Array.isArray(raw.agents)) {
         const saved: AgentDefinition[] = raw.agents;
-        // Merge any new builtin agents that aren't in the saved file
-        const savedIds = new Set(saved.map(a => a.id));
-        let added = false;
-        for (const def of DEFAULT_AGENT_DEFS) {
-          if (def.isBuiltin && !savedIds.has(def.id)) {
-            // Insert new builtins at the beginning (before existing ones)
-            saved.unshift(def);
-            added = true;
-          }
-        }
-        if (added) saveAgentDefs(saved);
-        return saved;
+        // Keep only custom (non-builtin) agents from the saved file
+        const custom = saved.filter(a => !a.isBuiltin);
+        // Rebuild: fresh builtins (in DEFAULT order) + custom agents appended
+        const merged = [...DEFAULT_AGENT_DEFS, ...custom];
+        saveAgentDefs(merged);
+        return merged;
       }
     }
   } catch (e) {
