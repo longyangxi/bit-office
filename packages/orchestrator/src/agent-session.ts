@@ -295,7 +295,8 @@ export class AgentSession {
       } else if (this._isTeamLead) {
         // First time entering execute: use leader-initial (full delegation rules)
         // Subsequent execute (feedback loop / result forwarding): use leader-continue to keep context
-        const useInitial = isFirstExecute || !this.hasHistory;
+        const canResumeLeader = this.hasHistory && !!this.sessionId;
+        const useInitial = isFirstExecute || !canResumeLeader;
         fullPrompt = this._renderPrompt(useInitial ? "leader-initial" : "leader-continue", templateVars);
         if (phaseOverride === "execute") this._hasExecuted = true;
       } else {
@@ -313,13 +314,18 @@ export class AgentSession {
         } else {
           workerInitial = "worker-initial";
         }
-        fullPrompt = this._renderPrompt(this.hasHistory ? "worker-continue" : workerInitial, templateVars);
+        // Only use continue template if we have an actual session to resume
+        const canResume = this.hasHistory && !!this.sessionId;
+        fullPrompt = this._renderPrompt(canResume ? "worker-continue" : workerInitial, templateVars);
       }
       const fullAccess = this.sandboxMode === "full";
       const verbose = !!process.env.DEBUG;
 
+      // IMPORTANT: Only use --resume with a specific session ID, never --continue.
+      // --continue resumes the LAST Claude Code session globally, which in multi-agent
+      // setups causes agent context contamination (e.g. Dev gets Kai's session).
       const args = this.backend.buildArgs(fullPrompt, {
-        continue: this.hasHistory,
+        continue: false,
         resumeSessionId: this.sessionId ?? undefined,
         fullAccess,
         noTools: this._isTeamLead,
