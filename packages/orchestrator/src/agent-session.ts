@@ -591,6 +591,17 @@ export class AgentSession {
                   }
                   if (block.type === "thinking" && block.thinking) {
                     console.log(`[Agent ${this.name} thinking] ${block.thinking.slice(0, 120)}...`);
+                    // Surface a one-line summary as lastLogLine so the UI shows thinking activity
+                    const snippet = block.thinking.slice(0, 80).replace(/\n/g, " ").trim();
+                    if (snippet) {
+                      this.onEvent({
+                        type: "log:append",
+                        agentId: this.agentId,
+                        taskId,
+                        stream: "stderr",
+                        chunk: `💭 ${snippet}…`,
+                      });
+                    }
                   }
                   if (block.type === "tool_use" && block.name) {
                     const toolName = block.name as string;

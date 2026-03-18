@@ -702,6 +702,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           if (!agent || !event.chunk) break;
           agents.set(event.agentId, { ...agent, lastLogLine: event.chunk });
 
+          // Thinking snippets (💭 prefix) are status-only — update lastLogLine but skip chat
+          if (event.chunk.startsWith("\uD83D\uDCAD ")) break;
+
           // Update the streaming message — append new lines to build up output
           const streamId = agent.currentTaskId ? agent.currentTaskId + "-stream" : null;
           const lastMsg = agent.messages.length > 0 ? agent.messages[agent.messages.length - 1] : null;

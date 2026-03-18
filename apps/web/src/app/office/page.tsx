@@ -961,7 +961,7 @@ export default function OfficePage() {
     const { reviewerAgentId } = reviewOverlay;
     const reviewer = agents.get(reviewerAgentId);
     if (!reviewer) return;
-    if ((reviewer.status === "done" || reviewer.status === "idle") && reviewer.messages.length > 1) {
+    if ((reviewer.status === "done" || reviewer.status === "idle") && reviewer.messages.length > 0) {
       const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(No issues found)");

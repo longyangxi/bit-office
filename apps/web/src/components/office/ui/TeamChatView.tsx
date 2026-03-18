@@ -42,7 +42,8 @@ function TeamChatView({ messages, agents, assetsReady }: {
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (el && wasAtBottom.current) {
-      el.scrollTop = el.scrollHeight;
+      const max = el.scrollHeight - el.clientHeight;
+      if (max > 0) el.scrollTop = max;
     }
   }, [messages.length]);
 
@@ -56,7 +57,8 @@ function TeamChatView({ messages, agents, assetsReady }: {
         raf = requestAnimationFrame(() => {
           raf = 0;
           if (wasAtBottom.current) {
-            el.scrollTop = el.scrollHeight;
+            const max = el.scrollHeight - el.clientHeight;
+            if (max > 0) el.scrollTop = max;
           }
         });
       }

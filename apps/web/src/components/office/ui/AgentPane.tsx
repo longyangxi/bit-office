@@ -140,6 +140,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const resizingRef = useRef(false);
   const msgCount = messages.length;
 
+  /** Safely scroll container to bottom, clamping to valid range */
+  const scrollToBottom = (container: HTMLElement) => {
+    const maxScroll = container.scrollHeight - container.clientHeight;
+    if (maxScroll > 0) {
+      container.scrollTop = maxScroll;
+    }
+  };
+
   // When prompt clears (user submitted), force next auto-scroll
   const prevPromptRef = useRef(prompt);
   useEffect(() => {
@@ -164,20 +172,35 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   }, [agentId]);
 
   // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink)
+  // IMPORTANT: Defer scroll to double-rAF to ensure flex layout is fully settled
+  // before reading scrollHeight. Synchronous scroll during ResizeObserver caused
+  // "blank screen" issues in 3-pane fullscreen layout due to stale scrollHeight.
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
     const container = el.parentElement;
     if (!container) return;
+    let rafId = 0;
     const ro = new ResizeObserver(() => {
       resizingRef.current = true;
-      if (wasAtBottomRef.current) {
-        container.scrollTop = container.scrollHeight;
-      }
-      requestAnimationFrame(() => { resizingRef.current = false; });
+      if (rafId) cancelAnimationFrame(rafId);
+      // Double-rAF: first rAF lets the browser finish layout, second rAF scrolls safely
+      rafId = requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
+          rafId = 0;
+          if (wasAtBottomRef.current) {
+            scrollToBottom(container);
+          }
+          resizingRef.current = false;
+        });
+      });
     });
     ro.observe(container);
-    return () => ro.disconnect();
+    return () => {
+      ro.disconnect();
+      if (rafId) cancelAnimationFrame(rafId);
+      resizingRef.current = false; // Ensure flag resets when effect cleans up
+    };
   }, [agentId]);
 
   // Scroll to bottom synchronously after DOM commit when messages change
@@ -185,7 +208,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     const el = chatEndRef.current;
     const container = el?.parentElement;
     if (container && wasAtBottomRef.current) {
-      container.scrollTop = container.scrollHeight;
+      scrollToBottom(container);
     }
   }, [agentId, msgCount]);
 
@@ -201,7 +224,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         raf = requestAnimationFrame(() => {
           raf = 0;
           if (wasAtBottomRef.current) {
-            container.scrollTop = container.scrollHeight;
+            scrollToBottom(container);
           }
         });
       }
@@ -231,7 +254,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     const el = reviewChatEndRef.current;
     const container = el?.parentElement;
     if (container && reviewWasAtBottomRef.current) {
-      container.scrollTop = container.scrollHeight;
+      scrollToBottom(container);
     }
   }, [reviewerOverlay?.agentId, reviewMsgCount]);
 
