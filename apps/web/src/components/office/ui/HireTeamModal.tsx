@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
 function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends }: {
@@ -100,17 +100,17 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
               title={def.skills ? `Skills: ${def.skills}` : undefined}
               style={{
                 display: "flex", alignItems: "center", gap: 8, padding: "7px 10px",
-                border: "1px solid #e8903070",
-                backgroundColor: "#261a00",
+                border: `1px solid ${TERM_SEM_YELLOW}70`,
+                backgroundColor: TERM_SURFACE,
                 textAlign: "left",
               }}
             >
               <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: "#eddcb8" }}>
-                  {def.name} <span style={{ color: "#e89030", fontSize: 11, fontFamily: "monospace" }}>{label}</span>
+                <div style={{ fontSize: 15, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
+                  {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: 11, fontFamily: "monospace" }}>{label}</span>
                 </div>
-                <div style={{ fontSize: 13, color: "#7a6858" }}>{def.role}</div>
+                <div style={{ fontSize: 13, color: TERM_DIM }}>{def.role}</div>
               </div>
               <select
                 value={backends[def.id] ?? "claude"}

@@ -18,9 +18,9 @@ import type { SceneAdapter } from "@/components/office/scene/SceneAdapter";
 import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 
 // Extracted constants, theme, and utils
-import { STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
+import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_GLOW_BORDER, applyTermTheme } from "@/components/office/ui/termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
 import { isRealEnter, computePreviewUrl } from "@/components/office/ui/office-utils";
 
 // Extracted components — regular imports for hooks and inline-rendered components
@@ -209,11 +209,11 @@ export default function OfficePage() {
   // ── Theme ──
   // Always start with default to avoid SSR/client hydration mismatch,
   // then restore saved theme in useEffect (client-only).
-  const [termTheme, setTermTheme] = useState("green-hacker");
+  const [termTheme, setTermTheme] = useState("catppuccin");
   applyTermTheme(termTheme);
   useEffect(() => {
     const saved = localStorage.getItem("bit-office-theme");
-    if (saved && saved !== "green-hacker" && TERM_THEMES[saved]) {
+    if (saved && saved !== "catppuccin" && TERM_THEMES[saved]) {
       setTermTheme(saved);
     }
   }, []);
@@ -1142,9 +1142,9 @@ export default function OfficePage() {
             <h1 className="px-font" style={{ fontSize: 12, margin: 0, color: "#e8b040", textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Bit Office</h1>
             <span style={{
               fontSize: 10, padding: "3px 7px",
-              border: `1px solid ${connected ? "#2a5c2a" : "#5c1a1a"}`,
-              backgroundColor: connected ? "#143a14" : "#3e1818",
-              color: connected ? "#48cc6a" : "#e04848",
+              border: `1px solid ${connected ? `${TERM_SEM_GREEN}40` : `${TERM_SEM_RED}40`}`,
+              backgroundColor: connected ? `${TERM_SEM_GREEN}15` : `${TERM_SEM_RED}15`,
+              color: connected ? TERM_SEM_GREEN : TERM_SEM_RED,
               fontFamily: "monospace", letterSpacing: "0.05em",
             }}>
               {connected ? "● ONLINE" : "● OFFLINE"}
@@ -1325,9 +1325,9 @@ export default function OfficePage() {
           }}>
           {/* Bookmark tabs */}
           {[
-            { key: "agents" as const, label: "Agents", color: "#c8a050" },
-            { key: "team" as const, label: "Team", color: "#d09040" },
-            { key: "external" as const, label: "Ext", color: "#b87830" },
+            { key: "agents" as const, label: "Agents", color: TERM_SEM_CYAN },
+            { key: "team" as const, label: "Team", color: TERM_SEM_YELLOW },
+            { key: "external" as const, label: "Ext", color: TERM_SEM_BLUE },
           ].map((tab) => {
             const active = expandedSection === tab.key;
             return (
@@ -1388,8 +1388,8 @@ export default function OfficePage() {
               boxShadow: "-2px 0 8px rgba(0,0,0,0.3)",
               color: "#e8b040", fontSize: 14,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "#2a2444"; e.currentTarget.style.color = "#f0c860"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = "#e8b040"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_SEM_YELLOW; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_SEM_YELLOW; }}
             title={consoleMode ? "Back to Office" : "Console Mode"}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: consoleMode ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}>
@@ -1437,11 +1437,8 @@ export default function OfficePage() {
             <div style={{
               display: "flex", alignItems: "center", gap: 10,
               padding: "10px 14px", minHeight: 56,
-              borderBottom: `1px solid ${TERM_GREEN}10`,
-              background: "rgba(6,10,6,0.85)",
-              backdropFilter: "blur(16px)",
-              WebkitBackdropFilter: "blur(16px)",
-              boxShadow: `0 2px 8px rgba(0,0,0,0.3), inset 0 1px 0 rgba(24,255,98,0.06), 0 1px 0 ${TERM_GREEN}08`,
+              borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+              background: TERM_PANEL,
               overflowX: "auto", overflowY: "hidden",
               scrollbarWidth: "none",
             }}>
@@ -1459,19 +1456,18 @@ export default function OfficePage() {
                   <button
                     key={agent.agentId}
                     onClick={() => { if (consoleMode) { setOpenPanes(prev => prev.includes(agent.agentId) ? prev.filter(id => id !== agent.agentId) : [...prev, agent.agentId]); } else { setSelectedAgent(agent.agentId); setChatOpen(true); } }}
-                    title={`${agent.name}\n${agent.role}\n${(STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle).label}`}
+                    title={`${agent.name}\n${agent.role}\n${(getStatusConfig()[agent.status] ?? getStatusConfig().idle).label}`}
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center",
                       padding: "6px 10px 4px", gap: 2,
                       border: "none", cursor: "pointer",
-                      backgroundColor: isActive ? `${TERM_GREEN}08` : "transparent",
-                      borderBottom: isActive ? `2px solid ${TERM_GREEN}60` : "2px solid transparent",
+                      backgroundColor: isActive ? `${TERM_GREEN}10` : "transparent",
+                      borderBottom: isActive ? `2px solid ${TERM_GREEN}` : "2px solid transparent",
                       borderRadius: "4px 4px 0 0",
                       flexShrink: 0, position: "relative",
                       transition: "all 0.15s",
-                      boxShadow: isActive ? `0 2px 8px ${TERM_GREEN}15, inset 0 -4px 8px ${TERM_GREEN}08` : "none",
                     }}
-                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = `${TERM_GREEN}05`; }}
+                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; }}
                     onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     <div style={{ position: "relative", width: 28, height: 34, overflow: "hidden", borderRadius: 2 }}>
@@ -1487,11 +1483,11 @@ export default function OfficePage() {
                         }} />
                       )}
                       {isLead && (
-                        <span style={{ position: "absolute", top: -2, left: -1, fontSize: 8, color: "#e89030" }}>{"\u2605"}</span>
+                        <span style={{ position: "absolute", top: -2, left: -1, fontSize: 8, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
                       )}
                     </div>
                     <span style={{
-                      fontSize: 9, color: isActive ? "#eddcb8" : "#7a6858",
+                      fontSize: 9, color: isActive ? TERM_TEXT_BRIGHT : TERM_DIM,
                       fontFamily: TERM_FONT, maxWidth: 48,
                       overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                     }}>{agent.name}</span>
@@ -1505,13 +1501,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 40, height: "80%", flexShrink: 0,
-                    border: "1px dashed #e8b04050", cursor: "pointer",
-                    backgroundColor: "transparent", color: "#e8b040",
+                    border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_SEM_YELLOW,
                     fontSize: 16, fontFamily: TERM_FONT,
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#e8b04015"; e.currentTarget.style.borderColor = "#e8b040"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = "#e8b04050"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
                 >+</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}
@@ -1520,13 +1516,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 40, height: "80%", flexShrink: 0,
-                    border: "1px dashed #e8903050", cursor: "pointer",
-                    backgroundColor: "transparent", color: "#e89030",
+                    border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_SEM_YELLOW,
                     fontSize: 16, fontFamily: TERM_FONT,
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#e8903015"; e.currentTarget.style.borderColor = "#e89030"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = "#e8903050"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
                 >+</button>
               )}
               {isOwner && expandedSection === "team" && hasTeam && teamBusy && (
@@ -1534,8 +1530,8 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, padding: "0 10px", height: "80%",
-                    border: "1px solid #e8903060", cursor: "pointer",
-                    backgroundColor: "#e8903015", color: "#e89030",
+                    border: `1px solid ${TERM_SEM_YELLOW}60`, cursor: "pointer",
+                    backgroundColor: `${TERM_SEM_YELLOW}15`, color: TERM_SEM_YELLOW,
                     fontSize: 10, fontFamily: TERM_FONT,
                   }}
                 >stop</button>
@@ -1545,13 +1541,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     flexShrink: 0, padding: "0 10px", height: "80%",
-                    border: "1px solid #e0484830", cursor: "pointer",
-                    backgroundColor: "transparent", color: "#c04040",
+                    border: `1px solid ${TERM_SEM_RED}30`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_SEM_RED,
                     fontSize: 10, fontFamily: TERM_FONT,
-                    transition: "all 0.15s",
+                    transition: "all 0.15s", opacity: 0.7,
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#e0484815"; e.currentTarget.style.borderColor = "#e04848"; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = "#e0484830"; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}15`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.backgroundColor = "transparent"; }}
                 >fire</button>
               )}
             </div>
@@ -1748,14 +1744,14 @@ export default function OfficePage() {
             onClick={() => setMobileTeamOpen(true)}
             style={{
               width: 44, height: 44, flexShrink: 0,
-              border: "1px solid #e8903070", backgroundColor: "rgba(224,133,48,0.12)",
-              color: "#e89030", fontSize: 11, fontWeight: 700, cursor: "pointer",
+              border: `1px solid ${TERM_SEM_YELLOW}70`, backgroundColor: `${TERM_SEM_YELLOW}20`,
+              color: TERM_SEM_YELLOW, fontSize: 11, fontWeight: 700, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontFamily: "monospace",
             }}
           >Team</button>
           {agentList.map((agent) => {
-            const cfg = STATUS_CONFIG[agent.status] ?? STATUS_CONFIG.idle;
+            const cfg = getStatusConfig()[agent.status] ?? getStatusConfig().idle;
             return (
               <button
                 key={agent.agentId}
@@ -1763,7 +1759,7 @@ export default function OfficePage() {
                 style={{
                   position: "relative", flexShrink: 0,
                   width: 44, height: 44,
-                  border: selectedAgent === agent.agentId ? "1px solid #e8b040" : "1px solid #1a2a1a",
+                  border: selectedAgent === agent.agentId ? `1px solid ${TERM_SEM_YELLOW}` : `1px solid ${TERM_BORDER_DIM}`,
                   backgroundColor: TERM_PANEL,
                   cursor: "pointer", padding: 0,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -1786,13 +1782,13 @@ export default function OfficePage() {
       {isMobile && isChatExpanded && (() => {
         const agentState = selectedAgent ? agents.get(selectedAgent) : null;
         if (!agentState) return null;
-        const cfg = STATUS_CONFIG[agentState.status] ?? STATUS_CONFIG.idle;
+        const cfg = getStatusConfig()[agentState.status] ?? getStatusConfig().idle;
         const busy = agentState.status === "working" || agentState.status === "waiting_approval";
         const mobileIsTeamMember = !!agentState.teamId && !agentState.isTeamLead;
         return (
           <div style={{
             position: "absolute", inset: 0, zIndex: 30,
-            backgroundColor: "#0a0e0a",
+            backgroundColor: TERM_BG,
             display: "flex", flexDirection: "column",
           }}>
             {/* Header */}
@@ -1800,7 +1796,7 @@ export default function OfficePage() {
               onClick={() => setChatOpen(false)}
               style={{
                 padding: "12px 14px",
-                borderBottom: "1px solid #152515",
+                borderBottom: `1px solid ${TERM_BORDER_DIM}`,
                 display: "flex", alignItems: "center", gap: 10,
                 flexShrink: 0,
                 backgroundColor: TERM_PANEL,
@@ -1810,13 +1806,13 @@ export default function OfficePage() {
               <span style={{ fontSize: 15, color: "#7a6858", marginRight: 4 }}>&larr;</span>
               <SpriteAvatar palette={agentState.palette ?? 0} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#eddcb8", display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
                   {agentState.name}
                   {agentState.isTeamLead && (
-                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: "#e8903028", color: "#e89030", border: "1px solid #e8903060", fontFamily: "monospace" }}>LEAD</span>
+                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}28`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}60`, fontFamily: "monospace" }}>LEAD</span>
                   )}
                   {mobileIsTeamMember && (
-                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: "#e8b04020", color: "#e8b040", border: "1px solid #e8b04050", fontFamily: "monospace" }}>TEAM</span>
+                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}20`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}50`, fontFamily: "monospace" }}>TEAM</span>
                   )}
                   {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                 </div>
@@ -1842,10 +1838,10 @@ export default function OfficePage() {
                 const phase = getAgentPhase(agentState.agentId);
                 if (!phase) return null;
                 const PHASE_INFO: Record<string, { color: string; icon: string; hint: string }> = {
-                  create: { color: "#5aacff", icon: "💬", hint: "Define the project" },
-                  design: { color: "#e8b040", icon: "📋", hint: "Review the plan" },
-                  execute: { color: "#e89030", icon: "⚡", hint: "Team is building" },
-                  complete: { color: "#48cc6a", icon: "✓", hint: "Review results" },
+                  create: { color: TERM_SEM_BLUE, icon: "💬", hint: "Define the project" },
+                  design: { color: TERM_SEM_YELLOW, icon: "📋", hint: "Review the plan" },
+                  execute: { color: TERM_SEM_YELLOW, icon: "⚡", hint: "Team is building" },
+                  complete: { color: TERM_SEM_GREEN, icon: "✓", hint: "Review results" },
                 };
                 const info = PHASE_INFO[phase];
                 if (!info) return null;
@@ -1861,13 +1857,13 @@ export default function OfficePage() {
                   }}>
                     <span>{info.icon}</span>
                     <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 9, letterSpacing: "0.05em" }}>{phase}</span>
-                    <span style={{ color: "#7a6858" }}>{info.hint}</span>
+                    <span style={{ color: TERM_DIM }}>{info.hint}</span>
                   </div>
                 );
               })()}
 
               {agentState.messages.length === 0 && (
-                <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 13, fontFamily: "monospace" }}>
+                <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13, fontFamily: "monospace" }}>
                   {mobileIsTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
                 </div>
               )}
@@ -1887,22 +1883,22 @@ export default function OfficePage() {
               {agentState.pendingApproval && (
                 <div style={{
                   marginBottom: 8, padding: 12,
-                  backgroundColor: "#261a00", border: "1px solid #e89030",
+                  backgroundColor: TERM_SURFACE, border: `1px solid ${TERM_SEM_YELLOW}`,
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: "bold", color: "#e89030", marginBottom: 6, fontFamily: "monospace" }}>
+                  <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
                     ▲ {agentState.pendingApproval.title}
                   </div>
-                  <div style={{ fontSize: 13, color: "#b89868", marginBottom: 10, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
                     {agentState.pendingApproval.summary}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
                       onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "yes")}
-                      style={{ flex: 1, padding: "8px", border: "1px solid #48cc6a", backgroundColor: "#143a14", color: "#48cc6a", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
                     >▶ Approve</button>
                     <button
                       onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "no")}
-                      style={{ flex: 1, padding: "8px", border: "1px solid #e04848", backgroundColor: "#3e1818", color: "#e04848", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
                     >✕ Reject</button>
                   </div>
                 </div>
@@ -1993,8 +1989,8 @@ export default function OfficePage() {
                     <button
                       onClick={async () => { if (await confirm("Cancel current work?")) handleCancel(); }}
                       style={{
-                        width: "100%", padding: "9px 16px", border: "1px solid #e04848",
-                        backgroundColor: "#3e1818", color: "#e04848", fontSize: 13, cursor: "pointer", fontFamily: "monospace",
+                        width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_RED}`,
+                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
                       }}
                     >✕ Cancel current work</button>
                   ) : mobilePhase === "execute" && !busy ? (
@@ -2007,8 +2003,8 @@ export default function OfficePage() {
                           onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Send a message..."
                           style={{
-                            flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
-                            backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
+                            flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER_DIM}`,
+                            backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: 14, outline: "none",
                           }}
                         />
                         <button
@@ -2016,8 +2012,8 @@ export default function OfficePage() {
                           disabled={!prompt.trim() && pendingImages.length === 0}
                           style={{
                             padding: "9px 14px", border: "none",
-                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#0e1a0e",
-                            color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
+                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_SEM_YELLOW : TERM_SURFACE,
+                            color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                             fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
@@ -2026,8 +2022,8 @@ export default function OfficePage() {
                       <button
                         onClick={async () => { if (await confirm("End this project and start a new one?")) handleEndProject(); }}
                         style={{
-                          width: "100%", padding: "9px 16px", border: "1px solid #e89030",
-                          backgroundColor: "#261a00", color: "#e89030", fontSize: 13, cursor: "pointer",
+                          width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_YELLOW}`,
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: 13, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Close Project</button>
@@ -2037,8 +2033,8 @@ export default function OfficePage() {
                       <button
                         onClick={handleApprovePlan}
                         style={{
-                          width: "100%", padding: "9px 16px", border: "1px solid #48cc6a",
-                          backgroundColor: "#143a14", color: "#48cc6a", fontSize: 13, cursor: "pointer",
+                          width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_GREEN}`,
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, fontSize: 13, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >▶ Approve Plan</button>
@@ -2086,8 +2082,8 @@ export default function OfficePage() {
                           disabled={!prompt.trim() && pendingImages.length === 0}
                           style={{
                             padding: "9px 14px", border: "none",
-                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#0e1a0e",
-                            color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
+                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_SEM_YELLOW : TERM_SURFACE,
+                            color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                             fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
@@ -2096,8 +2092,8 @@ export default function OfficePage() {
                       <button
                         onClick={async () => { if (await confirm("End this project and start a new one?")) handleEndProject(); }}
                         style={{
-                          width: "100%", padding: "9px 16px", border: "1px solid #e89030",
-                          backgroundColor: "#261a00", color: "#e89030", fontSize: 13, cursor: "pointer",
+                          width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_YELLOW}`,
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: 13, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Close Project</button>
@@ -2106,8 +2102,8 @@ export default function OfficePage() {
                     <button
                       onClick={async () => { if (await confirm("Cancel current work?")) handleCancel(); }}
                       style={{
-                        width: "100%", padding: "9px 16px", border: "1px solid #e04848",
-                        backgroundColor: "#3e1818", color: "#e04848", fontSize: 13, cursor: "pointer", fontFamily: "monospace",
+                        width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_RED}`,
+                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
                       }}
                     >✕ Cancel current work</button>
                   ) : (

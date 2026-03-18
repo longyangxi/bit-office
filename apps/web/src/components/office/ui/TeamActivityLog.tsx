@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { TERM_DIM, TERM_BORDER_DIM, TERM_SEM_RED } from "./termTheme";
 import type { TeamChatMessage } from "@/store/office-store";
 import TeamActivityCard from "./TeamActivityCard";
 
@@ -42,11 +43,11 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
             onClick={(e) => { e.stopPropagation(); onClear(); }}
             style={{
               marginLeft: "auto", fontSize: 9, padding: "1px 5px",
-              color: "#7a6858", border: "1px solid #1a2a1a80",
+              color: TERM_DIM, border: `1px solid ${TERM_BORDER_DIM}80`,
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#e04848"; e.currentTarget.style.borderColor = "#e0484880"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#7a6858"; e.currentTarget.style.borderColor = "#1a2a1a80"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; e.currentTarget.style.borderColor = `${TERM_SEM_RED}80`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; e.currentTarget.style.borderColor = `${TERM_BORDER_DIM}80`; }}
           >CLEAR</span>
         )}
       </div>

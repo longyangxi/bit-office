@@ -1,6 +1,6 @@
 import { useRef, useEffect, useLayoutEffect, memo } from "react";
-import { STATUS_CONFIG, BACKEND_OPTIONS } from "./office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_SURFACE } from "./termTheme";
+import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
 import type { ChatMessage } from "@/store/office-store";
@@ -107,12 +107,14 @@ export interface AgentPaneProps {
   onDismissReview?: () => void;
 }
 
-const PHASE_INFO: Record<string, { color: string; icon: string; hint: string }> = {
-  create: { color: "#5aacff", icon: "\uD83D\uDCAC", hint: "Chat with your team lead to define the project" },
-  design: { color: "#e8b040", icon: "\uD83D\uDCCB", hint: "Review the plan \u2014 approve it or give feedback" },
-  execute: { color: "#e89030", icon: "\u26A1", hint: "Team is building your project" },
-  complete: { color: "#48cc6a", icon: "\u2713", hint: "Review results \u2014 give feedback or end project" },
-};
+function getPhaseInfo(): Record<string, { color: string; icon: string; hint: string }> {
+  return {
+    create: { color: TERM_SEM_BLUE, icon: "\uD83D\uDCAC", hint: "Chat with your team lead to define the project" },
+    design: { color: TERM_SEM_YELLOW, icon: "\uD83D\uDCCB", hint: "Review the plan \u2014 approve it or give feedback" },
+    execute: { color: TERM_SEM_YELLOW, icon: "\u26A1", hint: "Team is building your project" },
+    complete: { color: TERM_SEM_GREEN, icon: "\u2713", hint: "Review results \u2014 give feedback or end project" },
+  };
+}
 
 const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const {
@@ -129,7 +131,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
   } = props;
 
-  const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
+  const statusConfig = getStatusConfig();
+  const cfg = statusConfig[status] ?? statusConfig.idle;
 
   // ── Scroll management ──
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -242,20 +245,17 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       <div style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "6px 14px",
-        background: "rgba(6,10,6,0.85)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-        boxShadow: `0 1px 0 ${TERM_GREEN}08, inset 0 1px 0 rgba(24,255,98,0.06)`,
-        borderBottom: `1px solid ${TERM_GREEN}08`,
+        background: TERM_PANEL,
+        borderBottom: `1px solid ${TERM_BORDER_DIM}`,
         fontSize: 12, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: "#c8a050", fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
+        <span style={{ color: TERM_SEM_CYAN, fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
           {role?.split("\u2014")[0]?.trim()}
-          {backend && <span style={{ color: "#8a7040", fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
+          {backend && <span style={{ color: TERM_DIM, fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
         </span>
         {(cwd || workDir) && (
-          <span className="term-path-scroll" style={{ fontSize: 11, color: "#7a6848", flexShrink: 1, minWidth: 0 }} title={cwd ?? workDir ?? undefined}>
+          <span className="term-path-scroll" style={{ fontSize: 11, color: TERM_DIM, flexShrink: 1, minWidth: 0 }} title={cwd ?? workDir ?? undefined}>
             {cwd ?? workDir}
           </span>
         )}
@@ -266,11 +266,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <span
             onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
             style={{
-              fontSize: 12, color: "#c04040", cursor: "pointer", lineHeight: 1,
-              padding: "4px", flexShrink: 0,
+              fontSize: 12, color: TERM_SEM_RED, cursor: "pointer", lineHeight: 1,
+              padding: "4px", flexShrink: 0, opacity: 0.7,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "#ff4040"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "#c04040"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; }}
           >{"\u2715"}</span>
         )}
       </div>
@@ -287,10 +287,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Compact info header */}
           <div style={{
             padding: "8px 12px",
-            boxShadow: "0 1px 0 rgba(26,42,26,0.5)",
-            background: "rgba(10,14,10,0.75)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
+            boxShadow: `0 1px 0 ${TERM_BORDER_DIM}`,
+            background: TERM_PANEL,
             flexShrink: 0,
           }}>
             <div style={{ fontSize: TERM_SIZE, color: TERM_GREEN, opacity: 0.6, marginBottom: 4, fontFamily: TERM_FONT, letterSpacing: "0.05em" }}>
@@ -312,7 +310,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0,
           }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 13 }}>
+              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
                 Waiting for output...
               </div>
             )}
@@ -342,31 +340,30 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           display: "flex", flexDirection: "column",
           backgroundColor: TERM_BG,
           animation: "review-overlay-in 0.3s ease-out",
-          borderLeft: "2px solid #c084fc40",
-          borderRight: "2px solid #c084fc40",
-          boxShadow: "0 0 20px rgba(192,132,252,0.1)",
+          borderLeft: `2px solid ${TERM_SEM_PURPLE}40`,
+          borderRight: `2px solid ${TERM_SEM_PURPLE}40`,
         }}>
           {/* Reviewer info bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
-            background: "linear-gradient(to right, #1a1030, #0a0e0a)",
-            borderBottom: "1px solid #c084fc30",
+            background: TERM_PANEL,
+            borderBottom: `1px solid ${TERM_SEM_PURPLE}30`,
             fontSize: 12, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
             <span style={{
               display: "inline-block", padding: "2px 8px",
-              backgroundColor: "#c084fc18", color: "#c084fc",
+              backgroundColor: `${TERM_SEM_PURPLE}18`, color: TERM_SEM_PURPLE,
               fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
-              border: "1px solid #c084fc40",
+              border: `1px solid ${TERM_SEM_PURPLE}40`,
             }}>
               {reviewerOverlay.status === "working" ? "REVIEWING..." : reviewerOverlay.status === "done" || reviewerOverlay.status === "idle" ? "REVIEW COMPLETE" : "REVIEW"}
             </span>
-            <span style={{ color: "#c084fc", fontWeight: 600, fontSize: 12 }}>
+            <span style={{ color: TERM_SEM_PURPLE, fontWeight: 600, fontSize: 12 }}>
               {reviewerOverlay.name}
             </span>
-            <span style={{ color: "#7a5aaa", fontSize: 11 }}>
+            <span style={{ color: TERM_DIM, fontSize: 11 }}>
               {reviewerOverlay.role?.split("\u2014")[0]?.trim()}
             </span>
             <span style={{ flex: 1 }} />
@@ -382,7 +379,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
             {reviewerOverlay.visibleMessages.length === 0 && (
-              <div style={{ textAlign: "center", color: "#7a5aaa", padding: 20, fontSize: 13 }}>
+              <div style={{ textAlign: "center", color: TERM_SEM_PURPLE, padding: 20, fontSize: 13, opacity: 0.6 }}>
                 Starting review...
               </div>
             )}
@@ -394,7 +391,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             ))}
             {reviewerOverlay.busy && reviewerOverlay.visibleMessages.length > 0 && reviewerOverlay.visibleMessages[reviewerOverlay.visibleMessages.length - 1]?.text && (
               <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: "#c084fc", opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+                <span style={{ color: TERM_SEM_PURPLE, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
                 {reviewerOverlay.lastLogLine && (
                   <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
                     {reviewerOverlay.lastLogLine.slice(0, 60)}
@@ -408,9 +405,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Reviewer footer — status or action buttons */}
           <div style={{
             padding: "8px 12px",
-            background: "linear-gradient(to right, #1a1030, #0a0e0a)",
-            borderTop: "1px solid #c084fc20",
-            fontSize: 11, color: "#7a5aaa", fontFamily: TERM_FONT,
+            background: TERM_PANEL,
+            borderTop: `1px solid ${TERM_SEM_PURPLE}30`,
+            fontSize: 11, color: TERM_SEM_PURPLE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
             {reviewerOverlay.reviewDone ? (
@@ -419,25 +416,25 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <button
                     onClick={onApplyReviewFixes}
                     style={{
-                      padding: "6px 18px", border: "1px solid #48cc6a60",
-                      backgroundColor: "#48cc6a10", color: "#48cc6a",
+                      padding: "6px 18px", border: `1px solid ${TERM_SEM_GREEN}60`,
+                      backgroundColor: `${TERM_SEM_GREEN}10`, color: TERM_SEM_GREEN,
                       fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
                       cursor: "pointer", transition: "all 0.15s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#48cc6a20"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#48cc6a10"; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}20`; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}10`; }}
                   >Apply Fixes</button>
                 )}
                 {onDismissReview && (
                   <button
                     onClick={onDismissReview}
                     style={{
-                      padding: "6px 18px", border: "1px solid #7a5aaa40",
-                      backgroundColor: "transparent", color: "#7a5aaa",
+                      padding: "6px 18px", border: `1px solid ${TERM_SEM_PURPLE}40`,
+                      backgroundColor: "transparent", color: TERM_SEM_PURPLE,
                       fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
                       cursor: "pointer", transition: "all 0.15s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#7a5aaa10"; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_PURPLE}10`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >Dismiss</button>
                 )}
@@ -453,7 +450,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       {!isExternal && (
         <div
           onPaste={onPasteImage}
-          onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); e.currentTarget.style.outline = "2px solid #e8b04060"; } }}
+          onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); e.currentTarget.style.outline = `2px solid ${TERM_SEM_YELLOW}60`; } }}
           onDragLeave={(e) => { e.currentTarget.style.outline = "none"; }}
           onDrop={(e) => { e.currentTarget.style.outline = "none"; onDropImage(e); }}
           className="crt-screen"
@@ -475,7 +472,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             {/* Phase banner for team leads */}
             {isTeamLead && (() => {
               if (!teamPhase) return null;
-              const info = PHASE_INFO[teamPhase];
+              const info = getPhaseInfo()[teamPhase];
               if (!info) return null;
               return (
                 <div style={{
@@ -489,13 +486,13 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 }}>
                   <span>{info.icon}</span>
                   <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.05em" }}>{teamPhase}</span>
-                  <span style={{ color: "#7a6858" }}>{info.hint}</span>
+                  <span style={{ color: TERM_DIM }}>{info.hint}</span>
                 </div>
               );
             })()}
 
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: "#5a4838", padding: 20, fontSize: 13 }}>
+              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
                 {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
               </div>
             )}
@@ -508,13 +505,13 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             {pendingApproval && (
               <div style={{
                 marginBottom: 8, padding: 12,
-                backgroundColor: "#261a00",
-                border: "1px solid #e89030",
+                backgroundColor: TERM_SURFACE,
+                border: `1px solid ${TERM_SEM_YELLOW}`,
               }}>
-                <div style={{ fontSize: 12, fontWeight: "bold", color: "#e89030", marginBottom: 6, fontFamily: "monospace" }}>
+                <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
                   {"\u25B2"} {pendingApproval.title}
                 </div>
-                <div style={{ fontSize: 13, color: "#b89868", marginBottom: 10, lineHeight: 1.5 }}>
+                <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
                   {pendingApproval.summary}
                 </div>
                 {isOwner && (
@@ -522,12 +519,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     <button
                       className="term-btn"
                       onClick={() => onApproval(pendingApproval.approvalId, "yes")}
-                      style={{ flex: 1, padding: "8px", border: "1px solid #48cc6a", backgroundColor: "#143a14", color: "#48cc6a", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
                     >{"\u25B6"} Approve</button>
                     <button
                       className="term-btn"
                       onClick={() => onApproval(pendingApproval.approvalId, "no")}
-                      style={{ flex: 1, padding: "8px", border: "1px solid #e04848", backgroundColor: "#3e1818", color: "#e04848", cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
                     >{"\u2715"} Reject</button>
                   </div>
                 )}
@@ -550,13 +547,13 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Suggestion feed (visible to owner and collaborator) */}
           {!isSpectator && suggestions.length > 0 && (
             <div style={{
-              padding: "6px 10px", borderTop: "1px solid #152515",
-              backgroundColor: "#0a0e0a", maxHeight: 120, overflowY: "auto",
+              padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+              backgroundColor: TERM_BG, maxHeight: 120, overflowY: "auto",
             }}>
-              <div style={{ fontSize: 10, color: "#a855f7", fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
+              <div style={{ fontSize: 10, color: TERM_SEM_PURPLE, fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
               {suggestions.slice(-10).map((s, i) => (
-                <div key={i} style={{ fontSize: 12, color: "#c084fc", marginBottom: 2, lineHeight: 1.4 }}>
-                  <span style={{ color: "#7c3aed", fontWeight: 600 }}>{s.author}:</span> {s.text}
+                <div key={i} style={{ fontSize: 12, color: TERM_TEXT, marginBottom: 2, lineHeight: 1.4 }}>
+                  <span style={{ color: TERM_SEM_PURPLE, fontWeight: 600 }}>{s.author}:</span> {s.text}
                 </div>
               ))}
             </div>
@@ -565,25 +562,25 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Pending image previews */}
           {pendingImages.length > 0 && (
             <div style={{
-              padding: "6px 10px", borderTop: "1px solid #152515",
-              backgroundColor: "#0a0e0a", display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
+              padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+              backgroundColor: TERM_BG, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
             }}>
               {pendingImages.map((img, i) => (
                 <div key={i} style={{ position: "relative", display: "inline-block" }}>
-                  <img src={img.dataUrl} alt={img.name} style={{ height: 48, borderRadius: 4, border: "1px solid #1a2a1a" }} />
+                  <img src={img.dataUrl} alt={img.name} style={{ height: 48, borderRadius: 4, border: `1px solid ${TERM_BORDER_DIM}` }} />
                   <button
                     onClick={() => onPendingImagesChange(pendingImages.filter((_, j) => j !== i))}
                     style={{
                       position: "absolute", top: -4, right: -4,
                       width: 16, height: 16, borderRadius: "50%",
-                      border: "none", backgroundColor: "#e04848", color: "#fff",
+                      border: "none", backgroundColor: TERM_SEM_RED, color: "#fff",
                       fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                       padding: 0, lineHeight: 1,
                     }}
                   >{"\u00d7"}</button>
                 </div>
               ))}
-              <span style={{ fontSize: 10, color: "#7a6858", fontFamily: "monospace" }}>
+              <span style={{ fontSize: 10, color: TERM_DIM, fontFamily: "monospace" }}>
                 {pendingImages.length} image{pendingImages.length > 1 ? "s" : ""} attached
               </span>
             </div>
@@ -597,9 +594,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             if (isSpectator) {
               return (
                 <div style={{
-                  padding: "8px 10px", borderTop: "1px solid #152515",
-                  backgroundColor: "#182844", flexShrink: 0,
-                  fontSize: 12, color: "#7ab8f5", fontFamily: "monospace", textAlign: "center",
+                  padding: "8px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+                  backgroundColor: TERM_SURFACE, flexShrink: 0,
+                  fontSize: 12, color: TERM_SEM_BLUE, fontFamily: "monospace", textAlign: "center",
                 }}>
                   Watching — read-only mode
                 </div>
@@ -610,10 +607,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             if (isCollaborator) {
               return (
                 <div style={{
-                  padding: "8px 10px", borderTop: "1px solid #152515",
-                  background: "rgba(10,14,10,0.8)",
-                  backdropFilter: "blur(8px)",
-                  WebkitBackdropFilter: "blur(8px)",
+                  padding: "8px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+                  background: TERM_PANEL,
                   flexShrink: 0,
                 }}>
                   <div style={{ display: "flex", gap: 6 }}>
@@ -625,8 +620,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       placeholder="Share an idea..."
                       maxLength={500}
                       style={{
-                        flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
-                        backgroundColor: "#16122a", color: "#c084fc", fontSize: 14, outline: "none",
+                        flex: 1, padding: "9px 12px", border: `1px solid ${TERM_SEM_PURPLE}40`,
+                        backgroundColor: TERM_BG, color: TERM_SEM_PURPLE, fontSize: 14, outline: "none",
                         resize: "none", lineHeight: "20px", fontFamily: "inherit",
                       }}
                     />
@@ -635,8 +630,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       disabled={!suggestText.trim()}
                       style={{
                         padding: "9px 14px", border: "none",
-                        backgroundColor: suggestText.trim() ? "#a855f7" : "#0e1a0e",
-                        color: suggestText.trim() ? "#fff" : "#5a4838",
+                        backgroundColor: suggestText.trim() ? TERM_SEM_PURPLE : TERM_SURFACE,
+                        color: suggestText.trim() ? "#fff" : TERM_DIM,
                         fontSize: 13, cursor: suggestText.trim() ? "pointer" : "default",
                         fontWeight: 700, fontFamily: "monospace",
                       }}
@@ -650,16 +645,13 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             return (
               <div style={{
                 padding: "8px 12px",
-                borderTop: `1px solid ${TERM_GREEN}10`,
-                background: "rgba(6,10,6,0.85)",
-                backdropFilter: "blur(16px)",
-                WebkitBackdropFilter: "blur(16px)",
-                boxShadow: `0 -1px 8px rgba(0,0,0,0.2), inset 0 1px 0 ${TERM_GREEN}06`,
+                borderTop: `1px solid ${TERM_BORDER_DIM}`,
+                background: TERM_PANEL,
                 flexShrink: 0,
               }}>
                 {isTeamMember ? (
                   <div style={{
-                    textAlign: "center", color: "#5a4838", fontSize: 12, padding: "8px 0", fontFamily: "monospace",
+                    textAlign: "center", color: TERM_DIM, fontSize: 12, padding: "8px 0", fontFamily: "monospace",
                   }}>
                     Tasks are assigned by the Team Lead
                   </div>
@@ -742,8 +734,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     <button
                       onClick={onEndProject}
                       style={{
-                        padding: "5px 14px", border: "1px solid #e8903040",
-                        backgroundColor: "transparent", color: "#e89030", fontSize: TERM_SIZE, cursor: "pointer",
+                        padding: "5px 14px", border: `1px solid ${TERM_SEM_YELLOW}40`,
+                        backgroundColor: "transparent", color: TERM_SEM_YELLOW, fontSize: TERM_SIZE, cursor: "pointer",
                         fontFamily: TERM_FONT, flexShrink: 0,
                       }}
                     >Close Project</button>

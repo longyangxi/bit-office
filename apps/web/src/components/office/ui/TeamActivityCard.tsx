@@ -4,11 +4,16 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-export const TEAM_MSG_COLORS: Record<string, { bg: string; border: string; label: string }> = {
-  delegation: { bg: "#182844", border: "#5aacff", label: "Delegated" },
-  result: { bg: "#143822", border: "#48cc6a", label: "Result" },
-  status: { bg: "#261a00", border: "#e8b040", label: "Status" },
-};
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
+
+export function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
+  return {
+    delegation: { bg: TERM_SURFACE, border: TERM_SEM_BLUE, label: "Delegated" },
+    result: { bg: TERM_SURFACE, border: TERM_SEM_GREEN, label: "Result" },
+    status: { bg: TERM_SURFACE, border: TERM_SEM_YELLOW, label: "Status" },
+  };
+}
+export const TEAM_MSG_COLORS = getTeamMsgColors();
 
 /** Shared card component for team activity messages (used by both toast and log) */
 function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow, expandable = false }: {

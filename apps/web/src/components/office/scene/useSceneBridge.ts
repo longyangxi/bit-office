@@ -4,12 +4,17 @@ import { useEffect, useRef } from "react";
 import { useOfficeStore } from "@/store/office-store";
 import type { SceneAdapter, BubbleType } from "./SceneAdapter";
 
+import { TERM_SEM_BLUE, TERM_SEM_YELLOW, TERM_DIM } from "../ui/termTheme";
+
 /** Agent type colors for name badges */
-const AGENT_TYPE_COLORS = {
-  external: "#5aacff",
-  team: "#d4a017",
-  normal: "#8a7a6a",
-};
+function getAgentTypeColors() {
+  return {
+    external: TERM_SEM_BLUE,
+    team: TERM_SEM_YELLOW,
+    normal: TERM_DIM,
+  };
+}
+const AGENT_TYPE_COLORS = getAgentTypeColors();
 
 function getAgentLabel(agent: {
   name: string;

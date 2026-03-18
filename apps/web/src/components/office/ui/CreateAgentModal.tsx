@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
 import { ROLE_PRESETS, SKILLS_MAP, AGENCY_CATALOG, AGENCY_AGENT_MAP, PERSONALITY_PRESETS } from "./office-constants";
-import { TERM_PANEL } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_SEM_BLUE } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import { isRealEnter } from "./office-utils";
 
@@ -303,14 +303,14 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                     key={skill}
                     style={{
                       padding: "4px 10px", fontSize: 13, fontFamily: "monospace",
-                      border: "1px solid #5aacff60", backgroundColor: "#182844",
-                      color: "#5aacff", display: "flex", alignItems: "center", gap: 4,
+                      border: `1px solid ${TERM_SEM_BLUE}60`, backgroundColor: TERM_SURFACE,
+                      color: TERM_SEM_BLUE, display: "flex", alignItems: "center", gap: 4,
                     }}
                   >
                     {skill}
                     <span
                       onClick={() => toggleSkill(skill)}
-                      style={{ cursor: "pointer", fontSize: 15, lineHeight: 1, color: "#5aacff80" }}
+                      style={{ cursor: "pointer", fontSize: 15, lineHeight: 1, color: `${TERM_SEM_BLUE}80` }}
                     >&times;</span>
                   </span>
                 ))}

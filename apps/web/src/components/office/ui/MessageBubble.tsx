@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -69,8 +69,8 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
   return (
     <span style={{
       fontSize: 9, padding: "1px 4px",
-      backgroundColor: "#48cc6a18", color: "#48cc6a",
-      border: "1px solid #48cc6a40", fontFamily: "monospace",
+      backgroundColor: `${TERM_SEM_GREEN}18`, color: TERM_SEM_GREEN,
+      border: `1px solid ${TERM_SEM_GREEN}40`, fontFamily: "monospace",
       whiteSpace: "nowrap",
     }} title={`Input: ${inputTokens.toLocaleString()} / Output: ${outputTokens.toLocaleString()}`}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
@@ -222,12 +222,12 @@ function ReviewButton({ result, onReview, detectedBackends }: {
                   color: available ? b.color : "#9a8a7a",
                   opacity: available ? 1 : 0.75,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc10"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_PURPLE}10`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 <span style={{
                   width: 6, height: 6, borderRadius: "50%",
-                  backgroundColor: available ? "#48cc6a" : "#e8a040",
+                  backgroundColor: available ? TERM_SEM_GREEN : TERM_SEM_YELLOW,
                   flexShrink: 0,
                 }} />
                 <span style={{ fontWeight: 600 }}>{b.name}</span>

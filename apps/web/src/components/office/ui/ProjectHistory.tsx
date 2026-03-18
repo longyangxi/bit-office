@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useOfficeStore, type ProjectSummary } from "@/store/office-store";
 import { sendCommand } from "@/lib/connection";
 import type { GatewayEvent } from "@office/shared";
+import { TERM_SURFACE, TERM_PANEL, TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_DIM } from "./termTheme";
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -97,10 +98,10 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
   }
 
   const typeStyles: Record<string, { bg: string; border: string; label: string; labelColor: string }> = {
-    delegation: { bg: "rgba(90, 172, 255, 0.06)", border: "rgba(90, 172, 255, 0.12)", label: "DELEGATE", labelColor: "#5aacff" },
-    result: { bg: "rgba(72, 204, 106, 0.06)", border: "rgba(72, 204, 106, 0.12)", label: "DONE", labelColor: "#48cc6a" },
-    phase: { bg: "rgba(232, 176, 64, 0.06)", border: "rgba(232, 176, 64, 0.12)", label: "PHASE", labelColor: "#e8b040" },
-    status: { bg: "rgba(255, 255, 255, 0.02)", border: "rgba(255, 255, 255, 0.06)", label: "STATUS", labelColor: "rgba(255,255,255,0.4)" },
+    delegation: { bg: `${TERM_SEM_BLUE}0a`, border: `${TERM_SEM_BLUE}20`, label: "DELEGATE", labelColor: TERM_SEM_BLUE },
+    result: { bg: `${TERM_SEM_GREEN}0a`, border: `${TERM_SEM_GREEN}20`, label: "DONE", labelColor: TERM_SEM_GREEN },
+    phase: { bg: `${TERM_SEM_YELLOW}0a`, border: `${TERM_SEM_YELLOW}20`, label: "PHASE", labelColor: TERM_SEM_YELLOW },
+    status: { bg: "rgba(255, 255, 255, 0.02)", border: "rgba(255, 255, 255, 0.06)", label: "STATUS", labelColor: TERM_DIM },
   };
 
   return (
@@ -127,7 +128,7 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
             onClick={() => onPreview(preview)}
                         style={{
               background: "rgba(72, 204, 106, 0.12)", border: "1px solid rgba(72, 204, 106, 0.25)",
-              color: "#48cc6a", padding: "5px 14px", cursor: "pointer",
+              color: TERM_SEM_GREEN, padding: "5px 14px", cursor: "pointer",
               fontSize: 11, letterSpacing: "0.03em",
             }}
           >
@@ -329,7 +330,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                           {p.tokenUsage && (p.tokenUsage.inputTokens > 0 || p.tokenUsage.outputTokens > 0) && (
                             <span style={{
                               fontSize: 10, fontFamily: "monospace",
-                              color: "#48cc6a", opacity: 0.6,
+                              color: TERM_SEM_GREEN, opacity: 0.6,
                             }}
                               title={`Input: ${p.tokenUsage.inputTokens.toLocaleString()} / Output: ${p.tokenUsage.outputTokens.toLocaleString()}`}
                             >
@@ -368,7 +369,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                           onClick={(e) => { e.stopPropagation(); handlePreview(p.preview!, p.ratings); }}
                                                     style={{
                             background: "rgba(72, 204, 106, 0.1)", border: "1px solid rgba(72, 204, 106, 0.25)",
-                            color: "#48cc6a", padding: "5px 12px", cursor: "pointer",
+                            color: TERM_SEM_GREEN, padding: "5px 12px", cursor: "pointer",
                             fontSize: 10, letterSpacing: "0.04em",
                             flexShrink: 0, marginTop: 2,
                           }}

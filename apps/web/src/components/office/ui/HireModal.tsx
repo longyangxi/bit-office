@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL } from "./termTheme";
+import { TERM_PANEL, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
 function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
@@ -49,7 +49,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         <div style={{ padding: "0 18px", flexShrink: 0 }}>
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
           <div style={{ display: "flex", gap: 4 }}>
             {BACKEND_OPTIONS.map((b) => {
               const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
@@ -70,7 +70,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 >
                   <span style={{
                     display: "inline-block", width: 5, height: 5, borderRadius: "50%",
-                    backgroundColor: available ? "#48cc6a" : "#e8a040",
+                    backgroundColor: available ? TERM_SEM_GREEN : TERM_SEM_YELLOW,
                     marginRight: 4, verticalAlign: "middle",
                   }} />
                   {b.name}
@@ -82,7 +82,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
 
         {/* Working directory picker */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <input
               type="text"
@@ -118,7 +118,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         </div>
         <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
         {/* Built-in agents */}
-        <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
           {builtinAgents.map((def) => (
             <button
@@ -137,11 +137,11 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
             >
               <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
               <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-              <div style={{ fontSize: 12, color: "#7a6858", marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+              <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
               {hoveredId === def.id && (
                 <span
                   onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-                  style={{ position: "absolute", top: 4, right: 4, fontSize: 15, color: "#7a6858", cursor: "pointer", padding: "2px 4px" }}
+                  style={{ position: "absolute", top: 4, right: 4, fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
                   title="Edit"
                 >&#9998;</span>
               )}
@@ -152,7 +152,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         {/* Custom agents */}
         {customAgents.length > 0 && (
           <>
-            <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>MY AGENTS</div>
+            <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>MY AGENTS</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
               {customAgents.map((def) => (
                 <button
@@ -171,17 +171,17 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 >
                   <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-                  <div style={{ fontSize: 12, color: "#7a6858", marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+                  <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
                   {hoveredId === def.id && (
                     <span style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2, alignItems: "center" }}>
                       <span
                         onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-                        style={{ fontSize: 15, color: "#7a6858", cursor: "pointer", padding: "2px 4px" }}
+                        style={{ fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
                         title="Edit"
                       >&#9998;</span>
                       <span
                         onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
-                        style={{ fontSize: 16, color: "#e04848", cursor: "pointer", padding: "2px 4px", fontWeight: 700 }}
+                        style={{ fontSize: 16, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 4px", fontWeight: 700 }}
                         title="Delete"
                       >&times;</span>
                     </span>

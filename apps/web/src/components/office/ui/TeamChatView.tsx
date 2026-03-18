@@ -5,11 +5,16 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-const TEAM_MSG_COLORS: Record<string, { bg: string; border: string; label: string }> = {
-  delegation: { bg: "#182844", border: "#5aacff", label: "Delegated" },
-  result: { bg: "#143822", border: "#48cc6a", label: "Result" },
-  status: { bg: "#261a00", border: "#e8b040", label: "Status" },
-};
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
+
+function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
+  return {
+    delegation: { bg: TERM_SURFACE, border: TERM_SEM_BLUE, label: "Delegated" },
+    result: { bg: TERM_SURFACE, border: TERM_SEM_GREEN, label: "Result" },
+    status: { bg: TERM_SURFACE, border: TERM_SEM_YELLOW, label: "Status" },
+  };
+}
+const TEAM_MSG_COLORS = getTeamMsgColors();
 
 function TeamChatView({ messages, agents, assetsReady }: {
   messages: TeamChatMessage[];

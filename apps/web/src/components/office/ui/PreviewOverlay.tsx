@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
 
@@ -83,9 +84,9 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
             }}
             disabled={!hasRatings}
             style={{
-              padding: "6px 16px", border: "1px solid rgba(72,204,106,0.3)",
-              background: hasRatings ? "rgba(72,204,106,0.12)" : "rgba(255,255,255,0.03)",
-              color: hasRatings ? "#48cc6a" : "rgba(255,255,255,0.2)",
+              padding: "6px 16px", border: `1px solid ${TERM_SEM_GREEN}30`,
+              background: hasRatings ? `${TERM_SEM_GREEN}20` : "rgba(255,255,255,0.03)",
+              color: hasRatings ? TERM_SEM_GREEN : "rgba(255,255,255,0.2)",
               fontSize: 11, fontFamily: "monospace", cursor: hasRatings ? "pointer" : "default",
             }}
           >Submit</button>
@@ -132,9 +133,9 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
         <button
           onClick={() => setShowRating(true)}
           style={{
-            background: submitted ? "rgba(72,204,106,0.1)" : "none",
-            border: submitted ? "1px solid rgba(72,204,106,0.3)" : "1px solid rgba(232,176,64,0.3)",
-            color: submitted ? "#48cc6a" : "#e8b040", fontSize: 11, cursor: "pointer",
+            background: submitted ? `${TERM_SEM_GREEN}18` : "none",
+            border: submitted ? `1px solid ${TERM_SEM_GREEN}30` : `1px solid ${TERM_SEM_YELLOW}30`,
+            color: submitted ? TERM_SEM_GREEN : TERM_SEM_YELLOW, fontSize: 11, cursor: "pointer",
             padding: "2px 10px", fontFamily: "monospace",
           }}
         >{submitted ? "Rated \u2713" : "\u2605 Rate"}</button>

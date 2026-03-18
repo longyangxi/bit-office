@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef, useEffect } from 'react'
+import { TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
 import type { OfficeLayout } from '../types'
 import { serializeLayout, deserializeLayout } from '../layout/layoutSerializer'
 import { loadRoomZip } from '../layout/roomZipLoader'
@@ -272,7 +273,7 @@ export default function SettingsModal({
           {agentsMessage && (
             <span style={{
               fontSize: 11,
-              color: agentsMessage.startsWith('Failed') ? '#e04848' : '#48cc6a',
+              color: agentsMessage.startsWith('Failed') ? TERM_SEM_RED : TERM_SEM_GREEN,
             }}>
               {agentsMessage.startsWith('Failed') ? 'X' : 'OK'}
             </span>

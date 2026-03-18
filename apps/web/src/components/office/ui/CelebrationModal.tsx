@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
-import { TERM_PANEL } from "./termTheme";
+import { TERM_PANEL, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
 import { computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 
 function ConfettiOverlay() {
@@ -111,8 +111,8 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
                 if (url) onPreview(url);
               }}
               style={{
-                padding: "9px 20px", border: "1px solid #48cc6a",
-                backgroundColor: "#143a14", color: "#48cc6a",
+                padding: "9px 20px", border: `1px solid ${TERM_SEM_GREEN}`,
+                backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN,
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
               }}
             >
@@ -127,8 +127,8 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
                 onDismiss();
               }}
               style={{
-                padding: "9px 20px", border: "1px solid #5aacff",
-                backgroundColor: "#0f1e3a", color: "#5aacff",
+                padding: "9px 20px", border: `1px solid ${TERM_SEM_BLUE}`,
+                backgroundColor: TERM_PANEL, color: TERM_SEM_BLUE,
                 fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
               }}
             >

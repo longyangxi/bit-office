@@ -3,13 +3,20 @@ export type AgencyCatalogAgent = { name: string; desc: string };
 export type AgencyCatalogSubcategory = { name: string; label: string; agents: AgencyCatalogAgent[] };
 export type AgencyCatalogCategory = { category: string; label: string; subcategories: AgencyCatalogSubcategory[] };
 
-export const STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  idle: { color: "#7a7060", label: "Idle" },
-  working: { color: "#5aacff", label: "Working..." },
-  waiting_approval: { color: "#e89030", label: "Needs Approval" },
-  done: { color: "#48cc6a", label: "Done" },
-  error: { color: "#e04848", label: "Error" },
-};
+import { TERM_DIM, TERM_SEM_BLUE, TERM_SEM_YELLOW, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme";
+
+/** Status colors are derived from the active theme's semantic palette */
+export function getStatusConfig(): Record<string, { color: string; label: string }> {
+  return {
+    idle: { color: TERM_DIM, label: "Idle" },
+    working: { color: TERM_SEM_BLUE, label: "Working..." },
+    waiting_approval: { color: TERM_SEM_YELLOW, label: "Needs Approval" },
+    done: { color: TERM_SEM_GREEN, label: "Done" },
+    error: { color: TERM_SEM_RED, label: "Error" },
+  };
+}
+// Keep a static default for backward compat (components should prefer getStatusConfig())
+export const STATUS_CONFIG = getStatusConfig();
 
 export const RATING_DIMENSIONS = [
   { key: "creativity", label: "Creativity", icon: "✦" },
