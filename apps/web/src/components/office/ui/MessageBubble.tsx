@@ -93,7 +93,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     const filePath = openMatch?.[1] ?? fileMatch?.[1];
     if (filePath) {
       return (
-        <pre
+        <span
           onClick={() => sendCommand({ type: "OPEN_FILE", path: filePath })}
           style={{
             backgroundColor: "#1a1830", padding: "8px 10px", borderRadius: 6,
@@ -104,13 +104,13 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
           title="Click to open"
         >
           <code {...props}>{text}</code>
-        </pre>
+        </span>
       );
     }
     return isBlock ? (
-      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
+      <span style={{ display: "block", whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
         <code {...props}>{children}</code>
-      </pre>
+      </span>
     ) : (
       <code {...props}>{children}</code>
     );
