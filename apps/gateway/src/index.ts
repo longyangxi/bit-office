@@ -838,6 +838,93 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       });
       break;
     }
+    case "REQUEST_REVIEW": {
+      const { reviewerAgentId, sourceAgentId, changedFiles, projectDir, entryFile, summary, backend: reviewBackend } = parsed;
+      const sourceAgent = orc.getAgent(sourceAgentId);
+      const cwd = agentWorkDirs.get(sourceAgentId) ?? projectDir ?? config.defaultWorkspace;
+      const reviewerBackendId = reviewBackend ?? sourceAgent?.backend ?? config.defaultBackend;
+
+      // Run git diff to get actual changes — much cheaper than reviewer reading entire files
+      let diff = "";
+      try {
+        // Try committed + staged + unstaged changes
+        diff = execSync("git diff HEAD", { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
+        if (!diff) {
+          // Fallback: unstaged only
+          diff = execSync("git diff", { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
+        }
+        if (!diff && changedFiles.length > 0) {
+          // No diff but files reported — try showing new untracked files
+          const untrackedFiles = changedFiles.slice(0, 5);
+          const snippets: string[] = [];
+          for (const f of untrackedFiles) {
+            try {
+              const absPath = path.isAbsolute(f) ? f : path.join(cwd, f);
+              const content = readFileSync(absPath, "utf-8");
+              // Cap each file at 80 lines to avoid huge prompts
+              const lines = content.split("\n");
+              const truncated = lines.length > 80 ? lines.slice(0, 80).join("\n") + `\n... (${lines.length - 80} more lines)` : content;
+              snippets.push(`=== NEW FILE: ${f} ===\n${truncated}`);
+            } catch { /* skip unreadable */ }
+          }
+          if (snippets.length > 0) diff = snippets.join("\n\n");
+        }
+      } catch {
+        // Not a git repo or git not available — reviewer will Read files manually
+      }
+
+      // Cap diff to avoid excessive token usage (~4000 chars ≈ ~1600 tokens)
+      const MAX_DIFF_CHARS = 6000;
+      let diffSection: string;
+      if (diff.length > MAX_DIFF_CHARS) {
+        diffSection = `\n\n===== DIFF (truncated — ${diff.length} chars total, showing first ${MAX_DIFF_CHARS}) =====\n${diff.slice(0, MAX_DIFF_CHARS)}\n... (truncated — use Read tool to see full files if needed)`;
+      } else if (diff) {
+        diffSection = `\n\n===== DIFF =====\n${diff}`;
+      } else {
+        diffSection = `\n\n(No diff available — read the files to review)`;
+      }
+
+      const fileList = changedFiles.map(f => `- ${f}`).join("\n");
+      const reviewPrompt = [
+        `Review the code changes below. Focus on the DIFF — it shows exactly what was changed.`,
+        ``,
+        `Severity classification:`,
+        `- CRITICAL: Bugs, crashes, security vulnerabilities, logic errors — must fix`,
+        `- SUGGESTION: Style, naming, refactoring — optional, non-blocking`,
+        ``,
+        `Rules:`,
+        `- Base your review primarily on the diff. Only Read files if you need surrounding context to understand the change.`,
+        `- Do NOT suggest renaming, refactoring, or style changes unless they cause actual bugs.`,
+        `- Be concise. For each issue: file, line, severity, what's wrong, how to fix.`,
+        ``,
+        `Project: ${cwd}`,
+        `Files changed:\n${fileList}`,
+        entryFile ? `Entry: ${entryFile}` : "",
+        summary ? `Summary: ${summary}` : "",
+        diffSection,
+        ``,
+        `Output format:`,
+        `VERDICT: PASS | FAIL`,
+        `ISSUES: (numbered list with severity, file:line, description)`,
+        `SUMMARY: (one sentence)`,
+      ].filter(Boolean).join("\n");
+
+      // Create reviewer agent
+      orc.createAgent({
+        agentId: reviewerAgentId,
+        name: "Sophie",
+        role: "Code Reviewer — Code review, bugs, security, quality",
+        personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what.",
+        backend: reviewerBackendId,
+      });
+
+      // Run review task
+      const taskId = `review-${nanoid(6)}`;
+      orc.runTask(reviewerAgentId, taskId, reviewPrompt, { repoPath: cwd });
+
+      console.log(`[Gateway] Review requested: ${reviewerAgentId} reviewing ${sourceAgentId} (${changedFiles.length} files, diff=${diff.length}ch)`);
+      break;
+    }
   }
 }
 

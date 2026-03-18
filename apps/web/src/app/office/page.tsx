@@ -939,28 +939,21 @@ export default function OfficePage() {
     if (reviewOverlay) return;
     const sourceAgent = agents.get(sourceAgentId);
     const reviewerAgentId = `reviewer-${nanoid(6)}`;
-    const reviewerBackend = backend ?? sourceAgent?.backend ?? "claude";
-    sendCommand({
-      type: "CREATE_AGENT",
-      agentId: reviewerAgentId,
-      name: "Sophie",
-      role: "Code Reviewer — Code review, bugs, security, quality",
-      palette: 3,
-      personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what.",
-      backend: reviewerBackend,
-    });
     tempReviewerIds.add(reviewerAgentId);
-    const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? result.projectDir ?? "";
-    const fileList = result.changedFiles.map(f => `- ${f}`).join("\n");
-    const reviewPrompt = `Review the following code changes. Read each file, check for bugs, security issues, and code quality.\n\nFor each issue found, classify its severity:\n- CRITICAL: Bugs, crashes, security vulnerabilities — must fix\n- SUGGESTION: Style improvements, refactoring ideas — optional\n\nOnly recommend changes for CRITICAL issues. Do NOT suggest renaming variables, refactoring, or style changes unless they cause actual bugs.\n\nProject: ${cwd}\nFiles changed:\n${fileList}\n${result.entryFile ? `Entry: ${result.entryFile}\n` : ""}${result.summary ? `Summary: ${result.summary}` : ""}`;
     // Set overlay immediately — reviewer pane appears on top of source agent
     setReviewOverlay({ reviewerAgentId, sourceAgentId });
-    setTimeout(() => {
-      const taskId = `review-${nanoid(6)}`;
-      addUserMessage(reviewerAgentId, taskId, reviewPrompt);
-      sendCommand({ type: "RUN_TASK", agentId: reviewerAgentId, taskId, prompt: reviewPrompt, repoPath: cwd || undefined });
-    }, 500);
-  }, [agents, addUserMessage, reviewOverlay]);
+    // Gateway handles everything: git diff, reviewer creation, prompt construction, task run
+    sendCommand({
+      type: "REQUEST_REVIEW",
+      reviewerAgentId,
+      sourceAgentId,
+      changedFiles: result.changedFiles,
+      projectDir: result.projectDir,
+      entryFile: result.entryFile,
+      summary: result.summary,
+      backend: backend ?? sourceAgent?.backend ?? "claude",
+    });
+  }, [agents, reviewOverlay]);
 
   // When reviewer finishes, extract review text and wait for user confirmation
   useEffect(() => {
@@ -982,14 +975,31 @@ export default function OfficePage() {
     const sourceAgent = agents.get(sourceAgentId);
     const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? "";
     const fixTaskId = `fix-${nanoid(6)}`;
+    // Extract structured section (VERDICT...ISSUES...SUMMARY) from reviewer output
+    // to avoid sending the reviewer's full analysis/reasoning as fix context
+    const extractStructured = (text: string): string => {
+      // Try to extract from VERDICT onwards
+      const verdictMatch = text.match(/VERDICT[\s:].*/i);
+      if (verdictMatch) {
+        const startIdx = text.indexOf(verdictMatch[0]);
+        return text.slice(startIdx).trim();
+      }
+      // Try ISSUES section
+      const issuesMatch = text.match(/ISSUES[\s:].*/i);
+      if (issuesMatch) {
+        const startIdx = text.indexOf(issuesMatch[0]);
+        return text.slice(startIdx).trim();
+      }
+      // Fallback: use last 1000 chars (likely the conclusion)
+      return text.length > 1000 ? text.slice(-1000).trim() : text;
+    };
+    const structuredFeedback = extractStructured(reviewResultText);
     const fixPrompt = [
-      `A code review found the following issues. Fix ONLY the items marked CRITICAL (bugs, crashes, security).`,
-      `IGNORE all SUGGESTION items — do NOT rename variables, refactor, or change code style.`,
-      `IMPORTANT: Make the minimum possible change to fix each bug. Do NOT rewrite functions or restructure code.`,
-      `If the code works correctly despite a suggestion, leave it alone.`,
+      `A code review found issues. Fix ONLY CRITICAL items (bugs, crashes, security).`,
+      `IGNORE SUGGESTION items. Make minimum changes — do NOT rewrite or restructure.`,
       ``,
       `Review findings:`,
-      reviewResultText,
+      structuredFeedback,
     ].join("\n");
     addUserMessage(sourceAgentId, fixTaskId, `[Review] Apply critical fixes`);
     sendCommand({ type: "RUN_TASK", agentId: sourceAgentId, taskId: fixTaskId, prompt: fixPrompt, repoPath: cwd || undefined });

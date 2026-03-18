@@ -153,6 +153,18 @@ export const UpdateAgencyAgentsCommand = z.object({
   type: z.literal("UPDATE_AGENCY_AGENTS"),
 });
 
+export const RequestReviewCommand = z.object({
+  type: z.literal("REQUEST_REVIEW"),
+  /** Frontend-generated reviewer agent ID (so frontend can set up overlay immediately) */
+  reviewerAgentId: z.string(),
+  sourceAgentId: z.string(),
+  changedFiles: z.array(z.string()),
+  projectDir: z.string().optional(),
+  entryFile: z.string().optional(),
+  summary: z.string().optional(),
+  backend: z.string().optional(),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -177,6 +189,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
   ListProjectsCommand,
   LoadProjectCommand,
   UpdateAgencyAgentsCommand,
+  RequestReviewCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -202,4 +215,5 @@ export type RateProjectCommand = z.infer<typeof RateProjectCommand>;
 export type ListProjectsCommand = z.infer<typeof ListProjectsCommand>;
 export type LoadProjectCommand = z.infer<typeof LoadProjectCommand>;
 export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand>;
+export type RequestReviewCommand = z.infer<typeof RequestReviewCommand>;
 export type Command = z.infer<typeof CommandSchema>;
