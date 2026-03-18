@@ -146,6 +146,8 @@ export class AgentSession {
   private lastUsageSignature = "";
   private hasHistory: boolean;
   private sessionId: string | null;
+  /** Consecutive resume failures (0-output exits). Clear session only after 2+ consecutive failures. */
+  private resumeFailCount = 0;
   private taskQueue: QueuedTask[] = [];
   private onEvent: (event: OrchestratorEvent) => void;
   private _renderPrompt: (templateName: TemplateName, vars: Record<string, string | undefined>) => string;
@@ -271,7 +273,7 @@ export class AgentSession {
         prompt,
         memory: this._memoryContext || getMemoryContext(),
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
-- WORKSPACE: Your working directory is ${this.workspace}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
+- WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
 - PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
 - Before making large changes, wrap your plan in a [PLAN] tag and ask the user to approve. For dangerous operations (chmod, rm -rf, git reset, etc.), also ask for approval. Always end approval requests with a question mark.`,
       };
@@ -462,9 +464,12 @@ export class AgentSession {
             try {
               const msg = JSON.parse(line);
               seenFirstJson = true;
-              // Capture session ID for --resume on next run
+              // Capture session ID for --resume on next run.
+              // Save to disk immediately — if the app crashes mid-task, we need
+              // this ID to resume the conversation on restart.
               if (msg.type === "system" && msg.session_id) {
                 this.sessionId = msg.session_id;
+                saveSessionId(this.agentId, msg.session_id);
                 console.log(`[Agent ${this.name}] Session ID: ${msg.session_id}`);
               }
               if (msg.type === "assistant" && msg.message?.content) {
@@ -617,6 +622,7 @@ export class AgentSession {
             return;
           } else if (code === 0) {
             this.hasHistory = true;
+            this.resumeFailCount = 0; // Reset on success
             saveSessionId(this.agentId, this.sessionId);
 
             const { summary, fullOutput, changedFiles, entryFile, projectDir, previewCmd, previewPort } = this.extractResult();
@@ -646,13 +652,22 @@ export class AgentSession {
             this.onTaskComplete?.(this.agentId, completedTaskId, summary, true, fullOutput);
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleDoneDelayMs);
           } else {
-            // If resume failed (0 output, immediate error), clear the corrupted session
-            // so retries start fresh instead of hitting the same bad session repeatedly.
+            // If resume produced 0 output, the session MAY be corrupted — but don't
+            // clear immediately. Transient errors (API rate limit, balance exhaustion,
+            // network timeout) also produce 0 output. Clearing the session on the first
+            // failure causes total context loss when the user retries.
+            // Strategy: only clear after 2+ consecutive 0-output failures.
             if (this.sessionId && this.stdoutBuffer.length === 0) {
-              console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} appears corrupted (0ch output), clearing`);
-              this.sessionId = null;
-              this.hasHistory = false;
-              saveSessionId(this.agentId, null);
+              this.resumeFailCount++;
+              if (this.resumeFailCount >= 2) {
+                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed ${this.resumeFailCount}x consecutively (0ch output), clearing corrupted session`);
+                this.sessionId = null;
+                this.hasHistory = false;
+                this.resumeFailCount = 0;
+                saveSessionId(this.agentId, null);
+              } else {
+                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/2 — preserving session for retry`);
+              }
             }
             // Extract meaningful error lines from stderr (e.g. "ERROR: You've hit your usage limit...")
             const stderrErrorLines = this.stderrBuffer

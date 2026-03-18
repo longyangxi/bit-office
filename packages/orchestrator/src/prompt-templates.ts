@@ -216,7 +216,10 @@ SUMMARY: (one sentence)
 
 {{prompt}}`,
 
-  "worker-continue": `{{prompt}}`,
+  "worker-continue": `[Context reminder] You are {{name}} ({{role}}). {{personality}}
+{{soloHint}}
+
+{{prompt}}`,
 
   "worker-direct-fix": `[Direct fix request from {{reviewerName}}]
 

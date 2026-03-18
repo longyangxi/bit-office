@@ -102,7 +102,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       name: opts.name,
       role: opts.role,
       personality: opts.personality,
-      workspace: this.workspace,
+      workspace: opts.workDir ?? this.workspace,
       resumeHistory: opts.resumeHistory,
       backend,
       sandboxMode: this.sandboxMode,

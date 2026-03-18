@@ -281,6 +281,8 @@ export interface CreateAgentOpts {
   palette?: number;
   resumeHistory?: boolean;
   teamId?: string;
+  /** Agent-specific working directory (overrides orchestrator-level workspace) */
+  workDir?: string;
 }
 
 export interface CreateTeamOpts {

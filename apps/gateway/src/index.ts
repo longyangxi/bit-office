@@ -349,6 +349,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         backend: backendId,
         palette: parsed.palette,
         teamId: parsed.teamId,
+        workDir,
       });
       persistTeamState();
       break;
@@ -901,11 +902,12 @@ async function main() {
         palette: agent.palette,
         teamId: agent.teamId,
         resumeHistory: true,
+        workDir: agent.workDir,
       });
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
       }
-      // Restore custom workDir for solo agents
+      // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {
         agentWorkDirs.set(agent.agentId, agent.workDir);
       }
