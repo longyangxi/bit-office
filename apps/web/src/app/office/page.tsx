@@ -1604,7 +1604,11 @@ export default function OfficePage() {
                   // Upload images first, collect paths
                   const imagePaths = await uploadImages(paneImages);
 
+                  // Expand pasted text labels back to full content
                   let finalPrompt = p;
+                  for (const [label, fullText] of pasteMapRef.current) {
+                    finalPrompt = finalPrompt.replace(label, fullText);
+                  }
                   if (imagePaths.length > 0) {
                     finalPrompt += (finalPrompt ? "\n\n" : "") + imagePaths.map((ip) => `[Attached image: ${ip}]`).join("\n");
                   }
@@ -1616,6 +1620,7 @@ export default function OfficePage() {
                   sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: finalPrompt, repoPath: agentWorkDirMap.get(agentId) });
                   setPanePrompts(prev => { const m = new Map(prev); m.set(agentId, ''); return m; });
                   setPanePendingImages(prev => { const m = new Map(prev); m.delete(agentId); return m; });
+                  pasteMapRef.current.clear();
                 }}
                 onCancel={(agentId) => sendCommand({ type: "CANCEL_TASK", agentId, taskId: "" })}
                 onFire={handleFire}
