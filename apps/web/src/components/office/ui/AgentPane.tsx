@@ -261,6 +261,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     return () => { observer.disconnect(); cancelAnimationFrame(raf); };
   }, [agentId, scrollFrozen]);
 
+  // Reset textarea height when prompt is cleared (e.g. after sending a message)
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!prompt && inputRef.current) {
+      inputRef.current.style.height = "auto";
+    }
+  }, [prompt]);
+
   // ── Reviewer overlay scroll management ──
   const reviewChatEndRef = useRef<HTMLDivElement>(null);
   const reviewWasAtBottomRef = useRef(true);
@@ -711,6 +719,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
                       <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
                       <textarea
+                        ref={inputRef}
                         rows={1}
                         className="term-input"
                         value={prompt}
@@ -749,6 +758,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     >approve</button>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
                     <textarea
+                      ref={inputRef}
                       rows={1}
                       className="term-input"
                       value={prompt}
@@ -768,6 +778,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
                     <textarea
+                      ref={inputRef}
                       rows={1}
                       className="term-input"
                       value={prompt}
@@ -804,6 +815,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     >approve</button>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
                     <textarea
+                      ref={inputRef}
                       rows={1}
                       className="term-input"
                       value={prompt}
@@ -823,6 +835,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
                     <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
                     <textarea
+                      ref={inputRef}
                       rows={1}
                       className="term-input"
                       value={prompt}
