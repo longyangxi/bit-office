@@ -772,6 +772,16 @@ export default function OfficePage() {
   const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
 
+  // Auto-populate openPanes in console mode: show all agents from current tab
+  const activeAgentIds = (expandedSection === "agents" ? soloAgents
+    : expandedSection === "team" ? teamAgents
+    : externalAgents).map(a => a.agentId).join(",");
+  useEffect(() => {
+    if (!consoleMode) return;
+    setOpenPanes(activeAgentIds ? activeAgentIds.split(",") : []);
+    setPaneOffset(0);
+  }, [consoleMode, expandedSection, activeAgentIds]);
+
   // Scroll to bottom when console mode toggles (width change causes content reflow)
   const prevConsoleModeRef = useRef(consoleMode);
   useEffect(() => {
