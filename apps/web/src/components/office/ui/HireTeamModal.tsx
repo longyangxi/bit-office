@@ -9,11 +9,12 @@ import { BACKEND_OPTIONS } from "./office-constants";
 import { TERM_PANEL } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
-function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady }: {
+function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends }: {
   agentDefs: AgentDefinition[];
   onCreateTeam: (leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => void;
   onClose: () => void;
   assetsReady?: boolean;
+  detectedBackends?: string[];
 }) {
   const leader = agentDefs.find((a) => a.teamRole === "leader");
   const reviewer = agentDefs.find((a) => a.teamRole === "reviewer");
@@ -121,7 +122,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady }: {
                 }}
               >
                 {BACKEND_OPTIONS.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}</option>
+                  <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
                 ))}
               </select>
             </div>
@@ -160,7 +161,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady }: {
                     }}
                   >
                     {BACKEND_OPTIONS.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}</option>
+                      <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
                     ))}
                   </select>
                 </button>

@@ -722,6 +722,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         });
       }
       publishEvent({ type: "AGENT_DEFS", agents: agentDefs });
+      publishEvent({ type: "BACKENDS_AVAILABLE", backends: config.detectedBackends });
       break;
     }
     case "SAVE_AGENT_DEF": {
@@ -850,8 +851,8 @@ async function main() {
     reloadConfig();
   }
 
-  // Auto-detect AI backends if not already detected
-  if (config.detectedBackends.length === 0) {
+  // Always re-detect AI backends on startup (CLIs may be installed/removed between runs)
+  {
     const detected = detectBackends();
     if (detected.length > 0) {
       config.detectedBackends = detected;

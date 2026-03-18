@@ -338,6 +338,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             from { opacity: 1; }
             to { opacity: 0; visibility: hidden; }
           }
+          @keyframes review-overlay-in {
+            from { opacity: 0; transform: translateY(-8px); }
+            to { opacity: 1; transform: translateY(0); }
+          }
           /* ── Chat area vignette ── */
           .term-chat-area {
             background-image: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40px, transparent 100%);

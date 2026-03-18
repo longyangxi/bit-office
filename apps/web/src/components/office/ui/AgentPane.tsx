@@ -23,6 +23,23 @@ function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
   return <div ref={ref} style={{ height: 1, flexShrink: 0 }} />;
 }
 
+/** Data needed to render a reviewer overlay on top of an agent pane */
+export interface ReviewerOverlayData {
+  agentId: string;
+  name: string;
+  role?: string;
+  backend?: string;
+  status: string;
+  messages: ChatMessage[];
+  visibleMessages: ChatMessage[];
+  hasMoreMessages: boolean;
+  tokenUsage: { inputTokens: number; outputTokens: number };
+  lastLogLine: string | null;
+  busy: boolean;
+  /** Set when review is complete — null means still working */
+  reviewDone: boolean;
+}
+
 export interface AgentPaneProps {
   agentId: string;
   name: string;
@@ -71,7 +88,13 @@ export interface AgentPaneProps {
   onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   onDropImage: (e: React.DragEvent) => void;
   onQuickApprove?: () => void;
-  onReview?: (result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => void;
+  onReview?: (result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => void;
+  detectedBackends?: string[];
+  // Review overlay — reviewer pane rendered on top of this agent
+  reviewerOverlay?: ReviewerOverlayData | null;
+  onReviewerLoadMore?: () => void;
+  onApplyReviewFixes?: () => void;
+  onDismissReview?: () => void;
 }
 
 const PHASE_INFO: Record<string, { color: string; icon: string; hint: string }> = {
@@ -92,7 +115,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     suggestions, suggestText, onSuggestTextChange,
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
-    onQuickApprove, onReview,
+    onQuickApprove, onReview, detectedBackends,
+    reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
   } = props;
 
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
@@ -145,10 +169,36 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     return () => { observer.disconnect(); cancelAnimationFrame(raf); };
   }, [agentId]);
 
+  // ── Reviewer overlay scroll management ──
+  const reviewChatEndRef = useRef<HTMLDivElement>(null);
+  const reviewWasAtBottomRef = useRef(true);
+  const reviewMsgCount = reviewerOverlay?.messages.length ?? 0;
+
+  useEffect(() => {
+    const el = reviewChatEndRef.current;
+    if (!el) return;
+    const container = el.parentElement;
+    if (!container) return;
+    const onScroll = () => {
+      reviewWasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
+    };
+    container.addEventListener("scroll", onScroll, { passive: true });
+    return () => container.removeEventListener("scroll", onScroll);
+  }, [reviewerOverlay?.agentId]);
+
+  useLayoutEffect(() => {
+    const el = reviewChatEndRef.current;
+    const container = el?.parentElement;
+    if (container && reviewWasAtBottomRef.current) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [reviewerOverlay?.agentId, reviewMsgCount]);
+
   return (
     <div style={{
       display: "flex", flexDirection: "column",
       flex: 1, minHeight: 0,
+      position: "relative",
     }}>
       {/* ── Info bar ── */}
       <div style={{
@@ -247,6 +297,120 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         </div>
       )}
 
+      {/* ── Review overlay — floats on top of this agent's pane ── */}
+      {reviewerOverlay && (
+        <div style={{
+          position: "absolute", inset: 0, zIndex: 20,
+          display: "flex", flexDirection: "column",
+          backgroundColor: TERM_BG,
+          animation: "review-overlay-in 0.3s ease-out",
+          borderLeft: "2px solid #c084fc40",
+          borderRight: "2px solid #c084fc40",
+          boxShadow: "0 0 20px rgba(192,132,252,0.1)",
+        }}>
+          {/* Reviewer info bar */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "6px 14px",
+            background: "linear-gradient(to right, #1a1030, #0a0e0a)",
+            borderBottom: "1px solid #c084fc30",
+            fontSize: 12, fontFamily: TERM_FONT,
+            flexShrink: 0,
+          }}>
+            <span style={{
+              display: "inline-block", padding: "2px 8px",
+              backgroundColor: "#c084fc18", color: "#c084fc",
+              fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
+              border: "1px solid #c084fc40",
+            }}>
+              {reviewerOverlay.status === "working" ? "REVIEWING..." : reviewerOverlay.status === "done" || reviewerOverlay.status === "idle" ? "REVIEW COMPLETE" : "REVIEW"}
+            </span>
+            <span style={{ color: "#c084fc", fontWeight: 600, fontSize: 12 }}>
+              {reviewerOverlay.name}
+            </span>
+            <span style={{ color: "#7a5aaa", fontSize: 11 }}>
+              {reviewerOverlay.role?.split("\u2014")[0]?.trim()}
+            </span>
+            <span style={{ flex: 1 }} />
+            {reviewerOverlay.tokenUsage.inputTokens > 0 && (
+              <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
+            )}
+          </div>
+
+          {/* Reviewer messages */}
+          <div className="crt-screen term-dotgrid term-chat-area" style={{
+            flex: 1, overflowY: "auto", padding: "10px 14px",
+            display: "flex", flexDirection: "column",
+            minHeight: 0, backgroundColor: TERM_BG,
+          }}>
+            {reviewerOverlay.visibleMessages.length === 0 && (
+              <div style={{ textAlign: "center", color: "#7a5aaa", padding: 20, fontSize: 13 }}>
+                Starting review...
+              </div>
+            )}
+            {reviewerOverlay.hasMoreMessages && onReviewerLoadMore && (
+              <LoadMoreSentinel onLoadMore={onReviewerLoadMore} />
+            )}
+            {reviewerOverlay.visibleMessages.map((msg) => (
+              <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
+            ))}
+            {reviewerOverlay.busy && reviewerOverlay.visibleMessages.length > 0 && reviewerOverlay.visibleMessages[reviewerOverlay.visibleMessages.length - 1]?.text && (
+              <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
+                <span style={{ color: "#c084fc", opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+                {reviewerOverlay.lastLogLine && (
+                  <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
+                    {reviewerOverlay.lastLogLine.slice(0, 60)}
+                  </span>
+                )}
+              </div>
+            )}
+            <div ref={reviewChatEndRef} />
+          </div>
+
+          {/* Reviewer footer — status or action buttons */}
+          <div style={{
+            padding: "8px 12px",
+            background: "linear-gradient(to right, #1a1030, #0a0e0a)",
+            borderTop: "1px solid #c084fc20",
+            fontSize: 11, color: "#7a5aaa", fontFamily: TERM_FONT,
+            flexShrink: 0,
+          }}>
+            {reviewerOverlay.reviewDone ? (
+              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                {onApplyReviewFixes && (
+                  <button
+                    onClick={onApplyReviewFixes}
+                    style={{
+                      padding: "6px 18px", border: "1px solid #48cc6a60",
+                      backgroundColor: "#48cc6a10", color: "#48cc6a",
+                      fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#48cc6a20"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#48cc6a10"; }}
+                  >Apply Fixes</button>
+                )}
+                {onDismissReview && (
+                  <button
+                    onClick={onDismissReview}
+                    style={{
+                      padding: "6px 18px", border: "1px solid #7a5aaa40",
+                      backgroundColor: "transparent", color: "#7a5aaa",
+                      fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
+                      cursor: "pointer", transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#7a5aaa10"; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+                  >Dismiss</button>
+                )}
+              </div>
+            ) : (
+              <div style={{ textAlign: "center" }}>Reviewing code changes...</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Normal agent panel ── */}
       {!isExternal && (
         <div
@@ -300,7 +464,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
             {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
             {visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} onReview={onReview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} />
+              <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} onReview={onReview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} detectedBackends={detectedBackends} />
             ))}
 
             {pendingApproval && (

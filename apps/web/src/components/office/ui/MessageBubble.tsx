@@ -7,6 +7,7 @@ import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
+import { BACKEND_OPTIONS } from "./office-constants";
 
 /** Typewriter reveal — adaptive speed: slow for small chunks, faster for large backlogs. */
 function TypewriterText({ text }: { text: string }) {
@@ -163,7 +164,83 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
   );
 }
 
-function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null }) {
+/** Inline backend picker for review button */
+function ReviewButton({ result, onReview, detectedBackends }: {
+  result: NonNullable<ChatMessage["result"]>;
+  onReview: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void;
+  detectedBackends: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  const btnStyle: React.CSSProperties = {
+    color: "#c084fc", cursor: "pointer", border: "1px solid #c084fc40",
+    padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT,
+    fontWeight: 600, backgroundColor: "#c084fc08", transition: "all 0.15s",
+    boxShadow: "none", display: "inline-block", verticalAlign: "middle",
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
+      <button
+        className="term-btn"
+        onClick={() => setOpen(!open)}
+        style={btnStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc18"; e.currentTarget.style.boxShadow = "0 0 8px #c084fc15"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#c084fc08"; e.currentTarget.style.boxShadow = "none"; }}
+      >review {open ? "\u25B4" : "\u25BE"}</button>
+      {open && (
+        <div style={{
+          position: "absolute", bottom: "100%", left: 0, marginBottom: 4, zIndex: 50,
+          backgroundColor: "#1a1030", border: "1px solid #c084fc40",
+          borderRadius: 4, minWidth: 150, boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+        }}>
+          <div style={{ padding: "4px 8px", fontSize: 10, color: "#7a5aaa", fontFamily: TERM_FONT, letterSpacing: "0.05em", borderBottom: "1px solid #c084fc20" }}>
+            SELECT AI
+          </div>
+          {BACKEND_OPTIONS.map((b) => {
+            const available = detectedBackends.length === 0 || detectedBackends.includes(b.id);
+            return (
+              <button
+                key={b.id}
+                onClick={() => { setOpen(false); onReview(result, b.id); }}
+                style={{
+                  display: "flex", alignItems: "center", gap: 8, width: "100%",
+                  padding: "6px 10px", border: "none", cursor: "pointer",
+                  backgroundColor: "transparent", textAlign: "left",
+                  fontFamily: TERM_FONT, fontSize: 12,
+                  color: available ? b.color : "#9a8a7a",
+                  opacity: available ? 1 : 0.75,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc10"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+              >
+                <span style={{
+                  width: 6, height: 6, borderRadius: "50%",
+                  backgroundColor: available ? "#48cc6a" : "#e8a040",
+                  flexShrink: 0,
+                }} />
+                <span style={{ fontWeight: 600 }}>{b.name}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.6 };
 
@@ -296,12 +373,12 @@ function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeam
           <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
         {msg.result && !isTeamMember && !isTeamLead && (hasWebPreview(msg.result) || (onReview && msg.result.changedFiles.length > 0)) && (
-          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
             {hasWebPreview(msg.result) && onPreview && (
-              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
+              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={{ ...btnStyle, marginTop: 0 }} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
             )}
             {onReview && msg.result.changedFiles.length > 0 && (
-              <button className="term-btn" onClick={() => onReview(msg.result!)} style={{ ...btnStyle, color: "#c084fc", borderColor: "#c084fc40", backgroundColor: "#c084fc08" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc18"; e.currentTarget.style.boxShadow = "0 0 8px #c084fc15"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#c084fc08"; e.currentTarget.style.boxShadow = "none"; }}>review</button>
+              <ReviewButton result={msg.result} onReview={onReview} detectedBackends={detectedBackends ?? []} />
             )}
           </div>
         )}

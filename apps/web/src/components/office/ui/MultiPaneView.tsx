@@ -1,6 +1,6 @@
 import { memo } from "react";
 import dynamic from "next/dynamic";
-import type { AgentPaneProps } from "./AgentPane";
+import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL } from "./termTheme";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
@@ -54,11 +54,18 @@ export interface MultiPaneViewProps {
   onEndProject: (agentId: string) => void;
   onSuggest: () => void;
   onPreview: (url: string) => void;
-  onReview?: (agentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => void;
+  onReview?: (agentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => void;
+  detectedBackends?: string[];
   onLoadMore: (agentId: string) => void;
   onPasteImage: (e: React.ClipboardEvent) => void;
   onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   onDropImage: (e: React.DragEvent) => void;
+  // Review overlay support
+  reviewOverlay?: { reviewerAgentId: string; sourceAgentId: string } | null;
+  getReviewerData?: (reviewerAgentId: string) => ReviewerOverlayData | null;
+  onReviewerLoadMore?: (agentId: string) => void;
+  onApplyReviewFixes?: () => void;
+  onDismissReview?: () => void;
 }
 
 const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
@@ -90,6 +97,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onPasteImage,
     onPasteText,
     onDropImage,
+    reviewOverlay,
+    getReviewerData,
+    onReviewerLoadMore,
+    onApplyReviewFixes,
+    onDismissReview,
+    detectedBackends,
   } = props;
 
   const visiblePanes = openPanes.slice(paneOffset, paneOffset + MAX_VISIBLE);
@@ -174,11 +187,16 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onEndProject={() => onEndProject(agentId)}
                 onSuggest={onSuggest}
                 onPreview={onPreview}
-                onReview={onReview ? (result) => onReview(agentId, result) : undefined}
+                onReview={onReview ? (result, backend) => onReview(agentId, result, backend) : undefined}
+                detectedBackends={detectedBackends}
                 onLoadMore={() => onLoadMore(agentId)}
                 onPasteImage={onPasteImage}
                 onPasteText={onPasteText}
                 onDropImage={onDropImage}
+                reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
+                onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
+                onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
+                onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
               />
             </div>
           );

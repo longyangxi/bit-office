@@ -162,7 +162,7 @@ const agentWorkDirMap = new Map<string, string>();
 
 export default function OfficePage() {
   const router = useRouter();
-  const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole, getVisibleMessages, loadMoreMessages } = useOfficeStore();
+  const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole, getVisibleMessages, loadMoreMessages, detectedBackends } = useOfficeStore();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRatings, setPreviewRatings] = useState<Ratings>({});
@@ -774,22 +774,28 @@ export default function OfficePage() {
   const [paneOffset, setPaneOffset] = useState(0);
   const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
+  // Review overlay: reviewer floats on top of source agent's pane
+  const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
+  // When review is done, store the result text for user confirmation (null = still working or no overlay)
+  const [reviewResultText, setReviewResultText] = useState<string | null>(null);
 
-  // Auto-populate openPanes in console mode: show all agents from current tab
+  // Auto-populate openPanes in console mode: show all agents from current tab (exclude temp reviewers)
   const activeAgentIds = (expandedSection === "agents" ? soloAgents
     : expandedSection === "team" ? teamAgents
-    : externalAgents).map(a => a.agentId).join(",");
+    : externalAgents).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
   useEffect(() => {
     if (!consoleMode) return;
     setOpenPanes(activeAgentIds ? activeAgentIds.split(",") : []);
     setPaneOffset(0);
   }, [consoleMode, expandedSection, activeAgentIds]);
 
-  // One-click review: spin up a temporary Code Reviewer, auto-fire when done
-  const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => {
+  // One-click review: spin up a temporary Code Reviewer as overlay on source agent
+  const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
+    // Don't allow review if one is already in progress
+    if (reviewOverlay) return;
     const sourceAgent = agents.get(sourceAgentId);
     const reviewerAgentId = `reviewer-${nanoid(6)}`;
-    const reviewerBackend = sourceAgent?.backend ?? "claude";
+    const reviewerBackend = backend ?? sourceAgent?.backend ?? "claude";
     sendCommand({
       type: "CREATE_AGENT",
       agentId: reviewerAgentId,
@@ -802,24 +808,68 @@ export default function OfficePage() {
     tempReviewerIds.add(reviewerAgentId);
     const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? result.projectDir ?? "";
     const fileList = result.changedFiles.map(f => `- ${f}`).join("\n");
-    const reviewPrompt = `Review the following code changes. Read each file, check for bugs, security issues, and code quality.\n\nProject: ${cwd}\nFiles changed:\n${fileList}\n${result.entryFile ? `Entry: ${result.entryFile}\n` : ""}${result.summary ? `Summary: ${result.summary}` : ""}`;
+    const reviewPrompt = `Review the following code changes. Read each file, check for bugs, security issues, and code quality.\n\nFor each issue found, classify its severity:\n- CRITICAL: Bugs, crashes, security vulnerabilities — must fix\n- SUGGESTION: Style improvements, refactoring ideas — optional\n\nOnly recommend changes for CRITICAL issues. Do NOT suggest renaming variables, refactoring, or style changes unless they cause actual bugs.\n\nProject: ${cwd}\nFiles changed:\n${fileList}\n${result.entryFile ? `Entry: ${result.entryFile}\n` : ""}${result.summary ? `Summary: ${result.summary}` : ""}`;
+    // Set overlay immediately — reviewer pane appears on top of source agent
+    setReviewOverlay({ reviewerAgentId, sourceAgentId });
     setTimeout(() => {
       const taskId = `review-${nanoid(6)}`;
       addUserMessage(reviewerAgentId, taskId, reviewPrompt);
       sendCommand({ type: "RUN_TASK", agentId: reviewerAgentId, taskId, prompt: reviewPrompt, repoPath: cwd || undefined });
-      if (consoleMode) {
-        setOpenPanes(prev => prev.includes(reviewerAgentId) ? prev : [...prev, reviewerAgentId]);
-      } else {
-        setSelectedAgent(reviewerAgentId);
-        setChatOpen(true);
-      }
     }, 500);
-  }, [agents, addUserMessage, consoleMode]);
+  }, [agents, addUserMessage, reviewOverlay]);
 
-  // Auto-fire temporary reviewers when they finish
+  // When reviewer finishes, extract review text and wait for user confirmation
+  useEffect(() => {
+    if (!reviewOverlay || reviewResultText !== null) return;
+    const { reviewerAgentId } = reviewOverlay;
+    const reviewer = agents.get(reviewerAgentId);
+    if (!reviewer) return;
+    if ((reviewer.status === "done" || reviewer.status === "idle") && reviewer.messages.length > 1) {
+      const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
+      const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
+      setReviewResultText(text || "(No issues found)");
+    }
+  }, [agents, reviewOverlay, reviewResultText]);
+
+  // User actions on review completion
+  const handleApplyReviewFixes = useCallback(() => {
+    if (!reviewOverlay || !reviewResultText) return;
+    const { reviewerAgentId, sourceAgentId } = reviewOverlay;
+    const sourceAgent = agents.get(sourceAgentId);
+    const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? "";
+    const fixTaskId = `fix-${nanoid(6)}`;
+    const fixPrompt = [
+      `A code review found the following issues. Fix ONLY the items marked CRITICAL (bugs, crashes, security).`,
+      `IGNORE all SUGGESTION items — do NOT rename variables, refactor, or change code style.`,
+      `IMPORTANT: Make the minimum possible change to fix each bug. Do NOT rewrite functions or restructure code.`,
+      `If the code works correctly despite a suggestion, leave it alone.`,
+      ``,
+      `Review findings:`,
+      reviewResultText,
+    ].join("\n");
+    addUserMessage(sourceAgentId, fixTaskId, `[Review] Apply critical fixes`);
+    sendCommand({ type: "RUN_TASK", agentId: sourceAgentId, taskId: fixTaskId, prompt: fixPrompt, repoPath: cwd || undefined });
+    // Cleanup
+    sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
+    tempReviewerIds.delete(reviewerAgentId);
+    setReviewOverlay(null);
+    setReviewResultText(null);
+  }, [reviewOverlay, reviewResultText, agents, addUserMessage]);
+
+  const handleDismissReview = useCallback(() => {
+    if (!reviewOverlay) return;
+    const { reviewerAgentId } = reviewOverlay;
+    sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
+    tempReviewerIds.delete(reviewerAgentId);
+    setReviewOverlay(null);
+    setReviewResultText(null);
+  }, [reviewOverlay]);
+
+  // Fallback: auto-fire orphaned temp reviewers (non-overlay, e.g. if overlay was cleared manually)
   useEffect(() => {
     if (tempReviewerIds.size === 0) return;
     for (const rid of tempReviewerIds) {
+      if (reviewOverlay?.reviewerAgentId === rid) continue; // handled by overlay effect above
       const ag = agents.get(rid);
       if (ag && (ag.status === "done" || ag.status === "idle") && ag.messages.length > 1) {
         const timer = setTimeout(() => {
@@ -829,7 +879,28 @@ export default function OfficePage() {
         return () => clearTimeout(timer);
       }
     }
-  }, [agents]);
+  }, [agents, reviewOverlay]);
+
+  // Helper to get reviewer overlay data for rendering
+  const getReviewerData = useCallback((reviewerAgentId: string) => {
+    const ag = agents.get(reviewerAgentId);
+    if (!ag) return null;
+    const visible = getVisibleMessages(reviewerAgentId);
+    return {
+      agentId: reviewerAgentId,
+      name: ag.name,
+      role: ag.role,
+      backend: ag.backend,
+      status: ag.status,
+      messages: ag.messages,
+      visibleMessages: visible,
+      hasMoreMessages: visible.length < ag.messages.length,
+      tokenUsage: ag.tokenUsage,
+      lastLogLine: ag.lastLogLine ?? null,
+      busy: ag.status === "working" || ag.status === "waiting_approval",
+      reviewDone: reviewResultText !== null,
+    };
+  }, [agents, getVisibleMessages, reviewResultText]);
 
   // Scroll to bottom when console mode toggles (width change causes content reflow)
   const prevConsoleModeRef = useRef(consoleMode);
@@ -1198,10 +1269,10 @@ export default function OfficePage() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, paddingLeft: consoleMode ? 36 : undefined, border: consoleMode ? `1px solid ${TERM_GREEN}20` : undefined, borderRadius: consoleMode ? 8 : undefined }}>
 
           {(() => {
-            // Get the active agent list based on current tab
-            const activeAgentList = expandedSection === "agents" ? soloAgents
+            // Get the active agent list based on current tab (exclude temp reviewers)
+            const activeAgentList = (expandedSection === "agents" ? soloAgents
               : expandedSection === "team" ? teamAgents
-              : externalAgents;
+              : externalAgents).filter(a => !tempReviewerIds.has(a.agentId));
 
             // Auto-select first agent if none selected or selected is not in current tab
             const selectedInTab = activeAgentList.some((a) => a.agentId === selectedAgent);
@@ -1394,11 +1465,17 @@ export default function OfficePage() {
                 }}
                 onSuggest={handleSuggest}
                 onPreview={setPreviewUrl}
-                onReview={(agentId, result) => handleReview(agentId, result)}
+                onReview={(agentId, result, backend) => handleReview(agentId, result, backend)}
+                detectedBackends={detectedBackends}
                 onLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onPasteImage={handlePasteImage}
                 onPasteText={handlePasteText}
                 onDropImage={handleDropImage}
+                reviewOverlay={reviewOverlay}
+                getReviewerData={getReviewerData}
+                onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
+                onApplyReviewFixes={handleApplyReviewFixes}
+                onDismissReview={handleDismissReview}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -1448,11 +1525,16 @@ export default function OfficePage() {
                   onEndProject={handleEndProject}
                   onSuggest={handleSuggest}
                   onPreview={setPreviewUrl}
-                  onReview={(result) => handleReview(selectedAgent, result)}
+                  onReview={(result, backend) => handleReview(selectedAgent, result, backend)}
+                  detectedBackends={detectedBackends}
                   onLoadMore={() => loadMoreMessages(selectedAgent)}
                   onPasteImage={handlePasteImage}
                   onPasteText={handlePasteText}
                   onDropImage={handleDropImage}
+                  reviewerOverlay={reviewOverlay?.sourceAgentId === selectedAgent ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
+                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === selectedAgent ? () => loadMoreMessages(reviewOverlay.reviewerAgentId) : undefined}
+                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === selectedAgent ? handleApplyReviewFixes : undefined}
+                  onDismissReview={reviewOverlay?.sourceAgentId === selectedAgent ? handleDismissReview : undefined}
                 />
               );
             })() : (
@@ -1927,11 +2009,12 @@ export default function OfficePage() {
           onDelete={handleDeleteAgentDef}
           onClose={() => setShowHireModal(false)}
           assetsReady={assetsReady}
+          detectedBackends={detectedBackends}
         />
       )}
 
       {showHireTeamModal && (
-        <HireTeamModal agentDefs={agentDefs} onCreateTeam={handleCreateTeam} onClose={() => setShowHireTeamModal(false)} assetsReady={assetsReady} />
+        <HireTeamModal agentDefs={agentDefs} onCreateTeam={handleCreateTeam} onClose={() => setShowHireTeamModal(false)} assetsReady={assetsReady} detectedBackends={detectedBackends} />
       )}
 
       {showCreateAgent && (

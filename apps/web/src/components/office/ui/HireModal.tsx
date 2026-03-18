@@ -9,7 +9,7 @@ import { BACKEND_OPTIONS } from "./office-constants";
 import { TERM_PANEL } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
-function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady }: {
+function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
   agentDefs: AgentDefinition[];
   onHire: (def: AgentDefinition, backend: string, workDir?: string) => void;
   onCreate: () => void;
@@ -17,6 +17,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   onDelete: (id: string) => void;
   onClose: () => void;
   assetsReady?: boolean;
+  detectedBackends?: string[];
 }) {
   const [selectedBackend, setSelectedBackend] = useState("claude");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -50,19 +51,32 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
           <div style={{ display: "flex", gap: 4 }}>
-            {BACKEND_OPTIONS.map((b) => (
-              <button
-                key={b.id}
-                onClick={() => setSelectedBackend(b.id)}
-                style={{
-                  flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
-                  border: selectedBackend === b.id ? `1px solid ${b.color}` : "1px solid #1a2a1a",
-                  backgroundColor: selectedBackend === b.id ? b.color + "20" : "transparent",
-                  color: selectedBackend === b.id ? b.color : "#6a5848",
-                  cursor: "pointer", fontFamily: "monospace",
-                }}
-              >{b.name}</button>
-            ))}
+            {BACKEND_OPTIONS.map((b) => {
+              const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
+              const isSelected = selectedBackend === b.id;
+              return (
+                <button
+                  key={b.id}
+                  onClick={() => setSelectedBackend(b.id)}
+                  style={{
+                    flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
+                    border: isSelected ? `1px solid ${b.color}` : "1px solid #1a2a1a",
+                    backgroundColor: isSelected ? b.color + "20" : "transparent",
+                    color: isSelected ? b.color : available ? "#6a5848" : "#8a6a6a",
+                    cursor: "pointer", fontFamily: "monospace",
+                    opacity: available ? 1 : 0.7,
+                    position: "relative",
+                  }}
+                >
+                  <span style={{
+                    display: "inline-block", width: 5, height: 5, borderRadius: "50%",
+                    backgroundColor: available ? "#48cc6a" : "#e8a040",
+                    marginRight: 4, verticalAlign: "middle",
+                  }} />
+                  {b.name}
+                </button>
+              );
+            })}
           </div>
         </div>
 

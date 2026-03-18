@@ -128,6 +128,7 @@ interface OfficeStore {
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
+  detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
   /** Per-agent visible message count for lazy loading (default: 50) */
@@ -308,6 +309,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   viewingProjectName: null,
   pendingPreviewUrl: null,
   agencyAgentsResult: null,
+  detectedBackends: [],
   connected: false,
   hydrated: false,
   visibleMessageCount: new Map(),
@@ -845,6 +847,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "AGENCY_AGENTS_UPDATED": {
           return { agents, agencyAgentsResult: { success: event.success, message: event.message, count: event.count } };
+        }
+        case "BACKENDS_AVAILABLE": {
+          return { agents, detectedBackends: event.backends };
         }
         case "PROJECT_LIST": {
           return { agents, projectList: event.projects };
