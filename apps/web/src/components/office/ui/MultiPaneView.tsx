@@ -54,6 +54,7 @@ export interface MultiPaneViewProps {
   onEndProject: (agentId: string) => void;
   onSuggest: () => void;
   onPreview: (url: string) => void;
+  onReview?: (agentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => void;
   onLoadMore: (agentId: string) => void;
   onPasteImage: (e: React.ClipboardEvent) => void;
   onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
@@ -84,6 +85,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onEndProject,
     onSuggest,
     onPreview,
+    onReview,
     onLoadMore,
     onPasteImage,
     onPasteText,
@@ -172,6 +174,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onEndProject={() => onEndProject(agentId)}
                 onSuggest={onSuggest}
                 onPreview={onPreview}
+                onReview={onReview ? (result) => onReview(agentId, result) : undefined}
                 onLoadMore={() => onLoadMore(agentId)}
                 onPasteImage={onPasteImage}
                 onPasteText={onPasteText}

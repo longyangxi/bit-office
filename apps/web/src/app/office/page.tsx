@@ -154,6 +154,9 @@ function runDemoScript(onDone: () => void) {
   });
 }
 
+// Temporary reviewer agents — auto-fired when they finish
+const tempReviewerIds = new Set<string>();
+
 // Per-agent working directory map (persists across renders, not in state to avoid re-renders)
 const agentWorkDirMap = new Map<string, string>();
 
@@ -519,6 +522,57 @@ export default function OfficePage() {
     setChatOpen(true);
     setExpandedSection("agents");
     setShowHireModal(false);
+  }, [agents]);
+
+  // One-click review: spin up a temporary Code Reviewer, auto-fire when done
+  const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => {
+    const sourceAgent = agents.get(sourceAgentId);
+    const reviewerAgentId = `reviewer-${nanoid(6)}`;
+    const reviewerBackend = sourceAgent?.backend ?? "claude";
+    // Create the reviewer
+    sendCommand({
+      type: "CREATE_AGENT",
+      agentId: reviewerAgentId,
+      name: "Sophie",
+      role: "Code Reviewer — Code review, bugs, security, quality",
+      palette: 3,
+      personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what.",
+      backend: reviewerBackend,
+    });
+    tempReviewerIds.add(reviewerAgentId);
+    // Build review prompt
+    const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? result.projectDir ?? "";
+    const fileList = result.changedFiles.map(f => `- ${f}`).join("\n");
+    const reviewPrompt = `Review the following code changes. Read each file, check for bugs, security issues, and code quality.\n\nProject: ${cwd}\nFiles changed:\n${fileList}\n${result.entryFile ? `Entry: ${result.entryFile}\n` : ""}${result.summary ? `Summary: ${result.summary}` : ""}`;
+    // Send review task after a short delay to let agent creation propagate
+    setTimeout(() => {
+      const taskId = `review-${nanoid(6)}`;
+      addUserMessage(reviewerAgentId, taskId, reviewPrompt);
+      sendCommand({ type: "RUN_TASK", agentId: reviewerAgentId, taskId, prompt: reviewPrompt, repoPath: cwd || undefined });
+      // Select the reviewer pane
+      if (consoleMode) {
+        setOpenPanes(prev => prev.includes(reviewerAgentId) ? prev : [...prev, reviewerAgentId]);
+      } else {
+        setSelectedAgent(reviewerAgentId);
+        setChatOpen(true);
+      }
+    }, 500);
+  }, [agents, addUserMessage, consoleMode]);
+
+  // Auto-fire temporary reviewers when they finish
+  useEffect(() => {
+    if (tempReviewerIds.size === 0) return;
+    for (const rid of tempReviewerIds) {
+      const ag = agents.get(rid);
+      if (ag && (ag.status === "done" || ag.status === "idle") && ag.messages.length > 1) {
+        // Reviewer is done — schedule cleanup after user has time to read
+        const timer = setTimeout(() => {
+          sendCommand({ type: "FIRE_AGENT", agentId: rid });
+          tempReviewerIds.delete(rid);
+        }, 120_000); // 2 min to read, then auto-fire
+        return () => clearTimeout(timer);
+      }
+    }
   }, [agents]);
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
@@ -1345,6 +1399,7 @@ export default function OfficePage() {
                 }}
                 onSuggest={handleSuggest}
                 onPreview={setPreviewUrl}
+                onReview={(agentId, result) => handleReview(agentId, result)}
                 onLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onPasteImage={handlePasteImage}
                 onPasteText={handlePasteText}
@@ -1398,6 +1453,7 @@ export default function OfficePage() {
                   onEndProject={handleEndProject}
                   onSuggest={handleSuggest}
                   onPreview={setPreviewUrl}
+                  onReview={(result) => handleReview(selectedAgent, result)}
                   onLoadMore={() => loadMoreMessages(selectedAgent)}
                   onPasteImage={handlePasteImage}
                   onPasteText={handlePasteText}

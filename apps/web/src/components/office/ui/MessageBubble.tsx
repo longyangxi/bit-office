@@ -163,7 +163,7 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
   );
 }
 
-function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, teamPhase }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null }) {
+function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.6 };
 
@@ -295,8 +295,15 @@ function MessageBubble({ msg, agentName, onPreview, isTeamLead, isTeamMember, te
         {msg.result && msg.result.changedFiles.length > 0 && !planContent && (
           <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
-        {msg.result && hasWebPreview(msg.result) && onPreview && !isTeamMember && !isTeamLead && (
-          <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
+        {msg.result && !isTeamMember && !isTeamLead && (hasWebPreview(msg.result) || (onReview && msg.result.changedFiles.length > 0)) && (
+          <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+            {hasWebPreview(msg.result) && onPreview && (
+              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
+            )}
+            {onReview && msg.result.changedFiles.length > 0 && (
+              <button className="term-btn" onClick={() => onReview(msg.result!)} style={{ ...btnStyle, color: "#c084fc", borderColor: "#c084fc40", backgroundColor: "#c084fc08" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc18"; e.currentTarget.style.boxShadow = "0 0 8px #c084fc15"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#c084fc08"; e.currentTarget.style.boxShadow = "none"; }}>review</button>
+            )}
+          </div>
         )}
         {msg.durationMs && msg.durationMs > 1000 && (
           <div style={{ color: TERM_DIM, marginTop: 4, fontSize: 10, fontFamily: TERM_FONT }}>

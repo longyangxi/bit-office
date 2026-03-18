@@ -71,6 +71,7 @@ export interface AgentPaneProps {
   onPasteText: (e: React.ClipboardEvent<HTMLInputElement>) => void;
   onDropImage: (e: React.DragEvent) => void;
   onQuickApprove?: () => void;
+  onReview?: (result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }) => void;
 }
 
 const PHASE_INFO: Record<string, { color: string; icon: string; hint: string }> = {
@@ -91,7 +92,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     suggestions, suggestText, onSuggestTextChange,
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
-    onQuickApprove,
+    onQuickApprove, onReview,
   } = props;
 
   const cfg = STATUS_CONFIG[status] ?? STATUS_CONFIG.idle;
@@ -299,7 +300,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
             {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
             {visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} />
+              <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} onReview={onReview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} />
             ))}
 
             {pendingApproval && (
