@@ -270,18 +270,9 @@ export class AgentSession {
         originalTask,
         prompt,
         memory: this._memoryContext || getMemoryContext(),
-        soloHint: this.teamId ? "" : (() => {
-          const isCustomDir = repoPath && repoPath !== this.workspace;
-          const lines = [
-            `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.`,
-            `- WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.`,
-          ];
-          if (!isCustomDir) {
-            // Default workspace — create a project subdirectory to keep things organized
-            lines.push(`- PROJECT DIRECTORY: When creating NEW projects, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is asking questions, fixing bugs, or working on existing files, skip this — just work in the current directory.`);
-          }
-          return lines.join("\n");
-        })(),
+        soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
+- WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
+- PROJECT DIRECTORY: Work directly in your workspace by default. Only create a new subdirectory (short kebab-case name) when the user explicitly asks you to build a brand new standalone project from scratch. Report it as PROJECT_DIR: <directory-name>. For everything else — bug fixes, feature additions, questions, existing codebases — just work in the current directory.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
