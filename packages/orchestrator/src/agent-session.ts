@@ -270,18 +270,10 @@ export class AgentSession {
         originalTask,
         prompt,
         memory: this._memoryContext || getMemoryContext(),
-        soloHint: this.teamId ? "" : (() => {
-          const isCustomDir = repoPath && repoPath !== this.workspace;
-          const lines = [
-            `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.`,
-            `- WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.`,
-          ];
-          if (!isCustomDir) {
-            // Default workspace — create a project subdirectory to keep things organized
-            lines.push(`- PROJECT DIRECTORY: When creating NEW projects, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is asking questions, fixing bugs, or working on existing files, skip this — just work in the current directory.`);
-          }
-          return lines.join("\n");
-        })(),
+        soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
+- WORKSPACE: Your working directory is ${this.workspace}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
+- PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
+- Before making large changes, wrap your plan in a [PLAN] tag and ask the user to approve. For dangerous operations (chmod, rm -rf, git reset, etc.), also ask for approval. Always end approval requests with a question mark.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
