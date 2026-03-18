@@ -141,12 +141,16 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const resizingRef = useRef(false);
+  const programmaticScrollRef = useRef(false);
   const msgCount = messages.length;
 
-  /** Safely scroll container to bottom, clamping to valid range */
+  /** Safely scroll container to bottom, clamping to valid range.
+   *  Suppresses the resulting scroll event so wasAtBottomRef isn't
+   *  corrupted by stale layout dimensions (e.g. 3-pane flex, background tab). */
   const scrollToBottom = (container: HTMLElement) => {
     const maxScroll = container.scrollHeight - container.clientHeight;
     if (maxScroll > 0) {
+      programmaticScrollRef.current = true;
       container.scrollTop = maxScroll;
     }
   };
@@ -185,6 +189,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     const onScroll = () => {
       if (resizingRef.current || scrollFrozen) return;
+      if (programmaticScrollRef.current) { programmaticScrollRef.current = false; return; }
       wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
     };
     container.addEventListener("scroll", onScroll, { passive: true });
