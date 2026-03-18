@@ -486,6 +486,7 @@ export default function OfficePage() {
   const isAgentBusy = selectedAgentState?.status === "working" || selectedAgentState?.status === "waiting_approval";
   const selectedMsgCount = selectedAgentState?.messages.length ?? 0;
   const wasAtBottomRef = useRef(true);
+  const resizingRef = useRef(false);
 
   // When prompt clears (user submitted), force next auto-scroll
   const prevPromptRef = useRef(prompt);
@@ -496,13 +497,14 @@ export default function OfficePage() {
     prevPromptRef.current = prompt;
   }, [prompt]);
 
-  // Track scroll position via scroll events (captures "before new content" state)
+  // Track scroll position via scroll events (skip during resize to avoid false negatives)
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
     const container = el.parentElement;
     if (!container) return;
     const onScroll = () => {
+      if (resizingRef.current) return;
       wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
     };
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -516,9 +518,11 @@ export default function OfficePage() {
     const container = el.parentElement;
     if (!container) return;
     const ro = new ResizeObserver(() => {
+      resizingRef.current = true;
       if (wasAtBottomRef.current) {
         container.scrollTop = container.scrollHeight;
       }
+      requestAnimationFrame(() => { resizingRef.current = false; });
     });
     ro.observe(container);
     return () => ro.disconnect();

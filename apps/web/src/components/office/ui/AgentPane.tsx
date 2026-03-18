@@ -134,6 +134,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   // ── Scroll management ──
   const chatEndRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
+  const resizingRef = useRef(false);
   const msgCount = messages.length;
 
   // When prompt clears (user submitted), force next auto-scroll
@@ -145,13 +146,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     prevPromptRef.current = prompt;
   }, [prompt]);
 
-  // Track scroll position via scroll events
+  // Track scroll position via scroll events (skip during resize to avoid false negatives)
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
     const container = el.parentElement;
     if (!container) return;
     const onScroll = () => {
+      if (resizingRef.current) return;
       wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
     };
     container.addEventListener("scroll", onScroll, { passive: true });
@@ -165,9 +167,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     const container = el.parentElement;
     if (!container) return;
     const ro = new ResizeObserver(() => {
+      resizingRef.current = true;
       if (wasAtBottomRef.current) {
         container.scrollTop = container.scrollHeight;
       }
+      requestAnimationFrame(() => { resizingRef.current = false; });
     });
     ro.observe(container);
     return () => ro.disconnect();
