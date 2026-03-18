@@ -37,7 +37,28 @@ function summarizeToolUse(name: string, input: Record<string, unknown> | undefin
   }
 }
 
-/* ── Persist session IDs across restarts ────────────────────────── */
+/* ── Persist session IDs + recovery context across restarts ───────── */
+
+/**
+ * Recovery context: minimal summary saved on task success so that if the
+ * session is lost (app restart, session corruption), the agent can be
+ * given a brief reminder of what it was doing — without full history.
+ * Cost: ~150-300 tokens, injected only when session cannot be resumed.
+ */
+export interface RecoveryContext {
+  originalTask?: string;
+  phase?: string;
+  lastResult?: string;
+  changedFiles?: string[];
+}
+
+/** Disk format: value is either a legacy string (sessionId) or the new object */
+interface SessionEntry {
+  sessionId: string;
+  recovery?: RecoveryContext;
+}
+
+type SessionMap = Record<string, string | SessionEntry>;
 
 /**
  * Session file path is instance-scoped to prevent cross-instance contamination.
@@ -54,12 +75,40 @@ function getSessionFile(): string {
   return path.join(_sessionDir, "agent-sessions.json");
 }
 
-export function loadSessionMap(): Record<string, string> {
+function loadRawMap(): SessionMap {
   try {
     const f = getSessionFile();
     if (existsSync(f)) return JSON.parse(readFileSync(f, "utf-8"));
   } catch { /* corrupt file, start fresh */ }
   return {};
+}
+
+/** Resolve a raw entry (legacy string | new object) into sessionId */
+function resolveSessionId(entry: string | SessionEntry | undefined): string | null {
+  if (!entry) return null;
+  if (typeof entry === "string") return entry;
+  return entry.sessionId ?? null;
+}
+
+/** Resolve recovery context from a raw entry */
+function resolveRecovery(entry: string | SessionEntry | undefined): RecoveryContext | null {
+  if (!entry || typeof entry === "string") return null;
+  return entry.recovery ?? null;
+}
+
+export function loadSessionMap(): Record<string, string> {
+  const raw = loadRawMap();
+  const result: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    const sid = resolveSessionId(v);
+    if (sid) result[k] = sid;
+  }
+  return result;
+}
+
+/** Load recovery context for a specific agent (returns null if none) */
+export function loadRecoveryContext(agentId: string): RecoveryContext | null {
+  return resolveRecovery(loadRawMap()[agentId]);
 }
 
 export function clearAllSessionIds() {
@@ -75,13 +124,35 @@ export function clearSessionId(agentId: string) {
 function saveSessionId(agentId: string, sessionId: string | null) {
   const dir = path.dirname(getSessionFile());
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-  const map = loadSessionMap();
+  const raw = loadRawMap();
   if (sessionId) {
-    map[agentId] = sessionId;
+    // Preserve existing recovery context when updating sessionId
+    const existing = raw[agentId];
+    const recovery = resolveRecovery(existing);
+    raw[agentId] = recovery ? { sessionId, recovery } : { sessionId };
   } else {
-    delete map[agentId];
+    // Keep recovery context even when clearing sessionId (that's the point —
+    // recovery is most useful precisely when the session is gone)
+    const existing = raw[agentId];
+    const recovery = resolveRecovery(existing);
+    if (recovery) {
+      raw[agentId] = { sessionId: "", recovery };
+    } else {
+      delete raw[agentId];
+    }
   }
-  writeFileSync(getSessionFile(), JSON.stringify(map), "utf-8");
+  writeFileSync(getSessionFile(), JSON.stringify(raw), "utf-8");
+}
+
+/** Save recovery context for an agent (called on task success) */
+export function saveRecoveryContext(agentId: string, recovery: RecoveryContext) {
+  const dir = path.dirname(getSessionFile());
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  const raw = loadRawMap();
+  const existing = raw[agentId];
+  const sessionId = resolveSessionId(existing) ?? "";
+  raw[agentId] = { sessionId, recovery };
+  writeFileSync(getSessionFile(), JSON.stringify(raw), "utf-8");
 }
 
 interface PendingApproval {
@@ -267,6 +338,24 @@ export class AgentSession {
       // Cap originalTask to avoid exceeding CLI argument limits (especially for non-Claude backends)
       const rawOriginalTask = this._isTeamLead ? (this.originalTask ?? prompt) : "";
       const originalTask = rawOriginalTask.length > 1500 ? rawOriginalTask.slice(0, 1500) + "\n...(truncated)" : rawOriginalTask;
+      // Build recovery context string if session cannot be resumed
+      let recoveryContextStr = "";
+      if (!this._isTeamLead) {
+        const canResumeCheck = this.hasHistory && !!this.sessionId;
+        if (!canResumeCheck) {
+          const recovery = loadRecoveryContext(this.agentId);
+          if (recovery && (recovery.originalTask || recovery.lastResult)) {
+            const lines: string[] = ["[Session recovered] Your previous session was lost. Here's what you were doing:"];
+            if (recovery.originalTask) lines.push(`- Task: ${recovery.originalTask}`);
+            if (recovery.phase) lines.push(`- Phase: ${recovery.phase}`);
+            if (recovery.lastResult) lines.push(`- Last result: ${recovery.lastResult}`);
+            if (recovery.changedFiles?.length) lines.push(`- Files changed: ${recovery.changedFiles.join(", ")}`);
+            lines.push("Note: You don't have full conversation history. Ask the user if unsure about details.");
+            recoveryContextStr = lines.join("\n");
+          }
+        }
+      }
+
       const templateVars = {
         name: this.name,
         role: this._isTeamLead ? "Team Lead" : this.role,
@@ -275,6 +364,7 @@ export class AgentSession {
         originalTask,
         prompt,
         memory: this._memoryContext || getMemoryContext(),
+        recoveryContext: recoveryContextStr,
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
 - WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
 - PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
@@ -637,6 +727,14 @@ export class AgentSession {
             const { summary, fullOutput, changedFiles, entryFile, projectDir, previewCmd, previewPort } = this.extractResult();
             this._lastFullOutput = fullOutput;
 
+            // Save recovery context so agent can be briefed if session is lost later
+            saveRecoveryContext(this.agentId, {
+              originalTask: this.originalTask?.slice(0, 300) ?? undefined,
+              phase: this.currentPhase ?? undefined,
+              lastResult: summary?.slice(0, 200) ?? undefined,
+              changedFiles: changedFiles.length > 0 ? changedFiles.slice(0, 15) : undefined,
+            });
+
             // Preview detection: skip for team leads (they don't create files).
             // Leader preview is handled by the orchestrator when isFinalResult is set.
             // Also skip when no work was done (no changed files and no structured preview fields)
@@ -677,6 +775,11 @@ export class AgentSession {
               } else {
                 console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/2 — preserving session for retry`);
               }
+            } else if (this.stdoutBuffer.length > 0) {
+              // Non-zero output on a failed run proves the session is alive —
+              // reset the counter so only truly consecutive 0-output failures
+              // trigger session reset.
+              this.resumeFailCount = 0;
             }
             // Extract meaningful error lines from stderr (e.g. "ERROR: You've hit your usage limit...")
             const stderrErrorLines = this.stderrBuffer
@@ -852,7 +955,12 @@ export class AgentSession {
     this._lastResultText = null;
     this._lastFullOutput = null;
     this.setStatus("idle");
-    saveSessionId(this.agentId, null);
+    // Full clear: remove both session ID and recovery context (project ended)
+    const dir = path.dirname(getSessionFile());
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    const raw = loadRawMap();
+    delete raw[this.agentId];
+    writeFileSync(getSessionFile(), JSON.stringify(raw), "utf-8");
   }
 
   resolveApproval(approvalId: string, decision: "yes" | "no") {

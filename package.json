@@ -13,7 +13,7 @@
     "lint": "pnpm -r lint",
     "start:local": "bash scripts/start-local.sh",
     "dev:desktop": "pnpm --filter bit-office-desktop dev",
-    "build:desktop": "pnpm --filter bit-office-desktop build",
+    "build:desktop": "pnpm --filter bit-office-desktop build && APP=\"apps/desktop/src-tauri/target/release/bundle/macos/Bit Office.app\" && [ -d \"$APP\" ] && rm -rf \"/Applications/Bit Office.app\" && cp -R \"$APP\" /Applications/ && echo '✅ Installed to /Applications/Bit Office.app'",
     "postinstall": "bash scripts/install-agents.sh || true",
     "agents:install": "bash scripts/install-agents.sh",
     "agents:update": "bash scripts/install-agents.sh --update"

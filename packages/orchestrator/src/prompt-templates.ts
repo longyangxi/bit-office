@@ -143,6 +143,7 @@ RULES:
   "worker-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
 {{soloHint}}
 {{memory}}
+{{recoveryContext}}
 
 SYSTEM CONSTRAINTS:
 - NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
@@ -195,12 +196,14 @@ SUMMARY: (one sentence)
   "worker-subagent-initial": `Your name is {{name}}. {{personality}}
 {{soloHint}}
 {{memory}}
+{{recoveryContext}}
 
 {{prompt}}`,
 
   "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
 {{soloHint}}
 {{memory}}
+{{recoveryContext}}
 
 When you produce a deliverable, follow these rules:
 - NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
