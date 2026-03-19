@@ -41,8 +41,18 @@ That's it. This will:
 
 ### Multi-Agent Teams
 
-A **Team Leader** coordinates specialists like Developer and Code
-Reviewer to plan, implement, and validate tasks automatically.
+A **Team Leader** coordinates specialists to plan, implement, review,
+and deliver — automatically. The built-in **Code Review loop** catches
+bugs before you see them: Reviewer flags issues → Developer fixes →
+re-review, up to 3 cycles until the code is clean.
+
+### 150+ Specialist Roles
+
+Ships with **[agency-agents](vendor/agency-agents)** — a curated library
+of 150+ agent personas spanning engineering, design, product, marketing,
+sales, game dev, spatial computing, and more. Assign the right expert
+to every task, from Backend Architect to UX Researcher to Solidity
+Auditor.
 
 ### Multi-Model Workflows
 
@@ -93,8 +103,8 @@ results and build on previous work.
 |---|---|---|
 | **Create** | Team Lead gathers intent and scope | Describe what to build |
 | **Design** | Team Lead proposes implementation plan | Approve or request changes |
-| **Execute** | Developer implements, Reviewer validates | Monitor or cancel |
-| **Complete** | Preview and summary delivered | Rate, give feedback, or end project |
+| **Execute** | Developer builds → Reviewer audits → fix loop (up to 3 rounds) | Monitor or cancel |
+| **Complete** | Preview and summary delivered | Rate, give feedback, or iterate |
 
 Ratings persist as agent memory. The next project starts with lessons from the last one.
 

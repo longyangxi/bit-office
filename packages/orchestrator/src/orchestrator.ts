@@ -245,7 +245,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Agents with hasHistory would break on --resume in a different CWD.
     // Team dev worktrees are created by delegation.ts (fresh delegated tasks, no resume).
     const isLeader = this.agentManager.isTeamLead(agentId);
-    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !session.hasSessionHistory && (
+    const isReviewerRole = session.role.toLowerCase().includes("review");
+    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !session.hasSessionHistory && (
       // Solo agents: isolate when another solo agent shares the same repoPath
       (!session.teamId && effectiveRepo && this.hasSoloNeighbor(agentId, effectiveRepo))
     );

@@ -3,6 +3,7 @@ import path from "path";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
 import { CONFIG } from "./config.js";
+import { removeWorktree } from "./worktree.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
@@ -368,7 +369,7 @@ export class AgentSession {
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
 - WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
 - PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
-- Before making large changes, wrap your plan in a [PLAN] tag and ask the user to approve. For dangerous operations (chmod, rm -rf, git reset, etc.), also ask for approval. Always end approval requests with a question mark.`,
+- Before destructive operations (rm -rf, git reset, chmod), ask for approval first.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
@@ -808,6 +809,15 @@ export class AgentSession {
               error: errorMsg,
             });
             this.onTaskComplete?.(this.agentId, completedTaskId, errorMsg, false);
+            // Auto-cleanup orphaned worktree + branch on failure (prevents leftover branches)
+            if (this.worktreePath && this.worktreeBranch) {
+              try {
+                removeWorktree(this.worktreePath, this.worktreeBranch);
+                console.log(`[Agent ${this.name}] Cleaned up worktree branch on failure: ${this.worktreeBranch}`);
+              } catch (e) { console.error(`[Agent ${this.name}] Worktree cleanup failed:`, e); }
+              this.worktreePath = null;
+              this.worktreeBranch = null;
+            }
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleErrorDelayMs);
           }
           this.dequeueNext();
