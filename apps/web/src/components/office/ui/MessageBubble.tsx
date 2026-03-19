@@ -69,8 +69,8 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
   return (
     <span style={{
       fontSize: 9, padding: "1px 4px",
-      backgroundColor: `${TERM_SEM_GREEN}18`, color: TERM_SEM_GREEN,
-      border: `1px solid ${TERM_SEM_GREEN}40`, fontFamily: "monospace",
+      backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN,
+      border: `1px solid ${TERM_GREEN}40`, fontFamily: "monospace",
       whiteSpace: "nowrap",
     }} title={`Input: ${inputTokens.toLocaleString()} / Output: ${outputTokens.toLocaleString()}`}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
