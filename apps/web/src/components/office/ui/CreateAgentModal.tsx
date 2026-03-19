@@ -50,7 +50,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
         style={inputStyle}
       />
       {open && (
-        <div style={{
+        <div data-scrollbar style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
           maxHeight: 250, overflowY: "auto", backgroundColor: "#14112a",
           border: "1px solid #1a2a1a", borderTop: "none",
@@ -205,6 +205,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
           maxHeight: "90vh", overflowY: "auto",
         }}
+        data-scrollbar
       >
         <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 12px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>
           {editAgent ? "Edit Agent" : "Create Agent"}

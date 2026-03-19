@@ -53,6 +53,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
           maxHeight: "90vh", overflowY: "auto",
         }}
+        data-scrollbar
       >
         <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 14px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>Hire Team</h2>
 

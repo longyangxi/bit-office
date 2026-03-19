@@ -76,7 +76,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
   }
 
   return (
-    <div ref={containerRef} style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
+    <div ref={containerRef} data-scrollbar style={{ flex: 1, overflowY: "auto", padding: "10px 12px", display: "flex", flexDirection: "column", gap: 6 }}>
       {messages.map((msg, i) => {
         if (!msg || !msg.fromAgentId) return null;
         const cfg = TEAM_MSG_COLORS[msg.messageType] ?? TEAM_MSG_COLORS.status;

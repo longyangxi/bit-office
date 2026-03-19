@@ -49,6 +49,8 @@ export class OfficeState {
   hoveredCharId: number | null = null
   /** Scale factor for characters relative to default map size */
   characterScale = 1
+  /** Dirty flag — set to true when scene changes and needs re-render */
+  dirty = true
 
   // ── Agent ID mapping ──────────────────────────────────────────
   private agentIdToCharId = new Map<string, number>()
@@ -75,6 +77,7 @@ export class OfficeState {
   /** Set background image (from room ZIP import) */
   setBackgroundImage(img: HTMLImageElement | null): void {
     this.backgroundImage = img
+    this.dirty = true
   }
 
   /** Hot-replace layout: rebuild tileMap, seats, furniture, reassign characters */
@@ -122,6 +125,7 @@ export class OfficeState {
       ch.moveProgress = 0
     }
     this.rebuildFurnitureInstances()
+    this.dirty = true
   }
 
   // ── Public API (string agentId) ───────────────────────────────
@@ -365,6 +369,8 @@ export class OfficeState {
   // ── Update loop ───────────────────────────────────────────────
 
   update(dt: number): void {
+    // If there are characters, scene is potentially animating → mark dirty
+    if (this.characters.size > 0) this.dirty = true
     const toDelete: number[] = []
     for (const ch of this.characters.values()) {
       // Handle matrix effect animation

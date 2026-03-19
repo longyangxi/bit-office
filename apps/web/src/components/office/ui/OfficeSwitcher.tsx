@@ -170,6 +170,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
 
         {/* Office grid — outer scroll wrapper, inner grid */}
         <div
+          data-scrollbar
           style={{
             overflowY: 'auto',
             flex: 1,

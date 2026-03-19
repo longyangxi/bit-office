@@ -258,7 +258,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           </div>
 
           {/* Scrollable messages */}
-          <div className="crt-screen" style={{
+          <div data-scrollbar className="crt-screen" style={{
             flex: 1, overflowY: "auto", padding: "8px 10px",
             display: "flex", flexDirection: "column",
             minHeight: 0,
@@ -327,7 +327,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           </div>
 
           {/* Reviewer messages */}
-          <div className="crt-screen term-dotgrid term-chat-area" style={{
+          <div data-scrollbar className="crt-screen term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
             minHeight: 0, backgroundColor: TERM_BG,
@@ -418,7 +418,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           }}
         >
           {/* Messages */}
-          <div className="term-dotgrid term-chat-area" style={{
+          <div data-scrollbar className="term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
             minHeight: 0,
@@ -500,7 +500,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
           {/* Suggestion feed (visible to owner and collaborator) */}
           {!isSpectator && suggestions.length > 0 && (
-            <div style={{
+            <div data-scrollbar style={{
               padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
               backgroundColor: TERM_BG, maxHeight: 120, overflowY: "auto",
             }}>

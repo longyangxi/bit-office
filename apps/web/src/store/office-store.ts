@@ -174,8 +174,15 @@ function filterRecentMessages(messages: ChatMessage[]): ChatMessage[] {
   return messages.filter((m) => m.timestamp >= cutoff);
 }
 
-function saveToStorage(agents: Map<string, AgentState>) {
-  if (!isBrowser()) return;
+// Throttled save — writes at most once per 2 seconds to avoid blocking main thread
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+let _pendingSave: Map<string, AgentState> | null = null;
+
+function _flushSave() {
+  _saveTimer = null;
+  const agents = _pendingSave;
+  _pendingSave = null;
+  if (!agents) return;
   try {
     const data: PersistedAgent[] = [];
     for (const [, agent] of agents) {
@@ -203,6 +210,14 @@ function saveToStorage(agents: Map<string, AgentState>) {
   }
 }
 
+function saveToStorage(agents: Map<string, AgentState>) {
+  if (!isBrowser()) return;
+  _pendingSave = agents;
+  if (!_saveTimer) {
+    _saveTimer = setTimeout(_flushSave, 2000);
+  }
+}
+
 function loadFromStorage(): Map<string, PersistedAgent> {
   if (!isBrowser()) return new Map();
   try {
@@ -218,6 +233,11 @@ function loadFromStorage(): Map<string, PersistedAgent> {
   } catch {
     return new Map();
   }
+}
+
+// Flush pending save on page unload to avoid data loss
+if (isBrowser()) {
+  window.addEventListener("beforeunload", _flushSave);
 }
 
 function removeFromStorage(agentId: string) {

@@ -52,7 +52,7 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
         )}
       </div>
       {!collapsed && (
-        <div style={{ overflowY: "auto", maxHeight: "30vh", padding: "0 8px", display: "flex", flexDirection: "column", gap: 4 }}>
+        <div data-scrollbar style={{ overflowY: "auto", maxHeight: "30vh", padding: "0 8px", display: "flex", flexDirection: "column", gap: 4 }}>
           {messages.map((msg, i) => {
             if (!msg || !msg.fromAgentId) return null;
             return (

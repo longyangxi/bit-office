@@ -116,7 +116,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         </div>
 
         </div>
-        <div style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
+        <div data-scrollbar style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
         {/* Built-in agents */}
         <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
