@@ -347,62 +347,60 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         )}
       </div>
 
-      {/* Pagination bar */}
-      {openPanes.length > MAX_VISIBLE && (
-        <div
+      {/* Pagination bar — always visible so layout stays stable */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          gap: 12,
+          padding: "4px 0",
+          fontFamily: TERM_FONT,
+          fontSize: TERM_SIZE - 1,
+          color: TERM_DIM,
+          background: TERM_PANEL,
+          borderTop: `1px solid rgba(24,255,98,0.08)`,
+          flexShrink: 0,
+        }}
+      >
+        <button
+          onClick={() => onPaneOffsetChange(Math.max(0, paneOffset - 1))}
+          disabled={paneOffset === 0}
+          aria-label="Previous panes"
           style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: 12,
-            padding: "4px 0",
+            background: "none",
+            border: "none",
+            color: paneOffset === 0 ? TERM_DIM : TERM_GREEN,
+            cursor: paneOffset === 0 ? "default" : "pointer",
             fontFamily: TERM_FONT,
-            fontSize: TERM_SIZE - 1,
-            color: TERM_DIM,
-            background: TERM_PANEL,
-            borderTop: `1px solid rgba(24,255,98,0.08)`,
-            flexShrink: 0,
+            fontSize: TERM_SIZE,
+            padding: "2px 6px",
+            opacity: paneOffset === 0 ? 0.4 : 1,
           }}
         >
-          <button
-            onClick={() => onPaneOffsetChange(Math.max(0, paneOffset - 1))}
-            disabled={paneOffset === 0}
-            aria-label="Previous panes"
-            style={{
-              background: "none",
-              border: "none",
-              color: paneOffset === 0 ? TERM_DIM : TERM_GREEN,
-              cursor: paneOffset === 0 ? "default" : "pointer",
-              fontFamily: TERM_FONT,
-              fontSize: TERM_SIZE,
-              padding: "2px 6px",
-              opacity: paneOffset === 0 ? 0.4 : 1,
-            }}
-          >
-            ◀
-          </button>
-          <span>
-            {currentPage} / {totalPages}
-          </span>
-          <button
-            onClick={() => onPaneOffsetChange(Math.min(maxOffset, paneOffset + 1))}
-            disabled={paneOffset >= maxOffset}
-            aria-label="Next panes"
-            style={{
-              background: "none",
-              border: "none",
-              color: paneOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
-              cursor: paneOffset >= maxOffset ? "default" : "pointer",
-              fontFamily: TERM_FONT,
-              fontSize: TERM_SIZE,
-              padding: "2px 6px",
-              opacity: paneOffset >= maxOffset ? 0.4 : 1,
-            }}
-          >
-            ▶
-          </button>
-        </div>
-      )}
+          ◀
+        </button>
+        <span>
+          {currentPage} / {totalPages}
+        </span>
+        <button
+          onClick={() => onPaneOffsetChange(Math.min(maxOffset, paneOffset + 1))}
+          disabled={paneOffset >= maxOffset}
+          aria-label="Next panes"
+          style={{
+            background: "none",
+            border: "none",
+            color: paneOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
+            cursor: paneOffset >= maxOffset ? "default" : "pointer",
+            fontFamily: TERM_FONT,
+            fontSize: TERM_SIZE,
+            padding: "2px 6px",
+            opacity: paneOffset >= maxOffset ? 0.4 : 1,
+          }}
+        >
+          ▶
+        </button>
+      </div>
     </div>
   );
 });
