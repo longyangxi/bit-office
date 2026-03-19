@@ -153,7 +153,7 @@ const ChatMessageList = memo(function ChatMessageList({
   busy: boolean;
   pendingApproval: { approvalId: string; title: string; summary: string } | null;
   lastLogLine: string | null;
-  chatEndRef: React.RefObject<HTMLDivElement>;
+  chatEndRef: React.RefObject<HTMLDivElement | null>;
   isOwner: boolean;
   onApproval: (approvalId: string, decision: "yes" | "no") => void;
 }) {
