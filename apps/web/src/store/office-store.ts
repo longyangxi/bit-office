@@ -179,8 +179,9 @@ function saveToStorage(agents: Map<string, AgentState>) {
   try {
     const data: PersistedAgent[] = [];
     for (const [, agent] of agents) {
-      // Skip external agents — they are transient
+      // Skip external agents and temporary reviewers — they are transient
       if (agent.isExternal) continue;
+      if (agent.agentId.startsWith("reviewer-")) continue;
       const recentMessages = filterRecentMessages(agent.messages);
       if (recentMessages.length > 0 || agent.name !== agent.agentId) {
         data.push({
@@ -459,8 +460,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             }
             agents.set(event.agentId, agent);
           }
-          // Skip localStorage persistence for external agents
-          if (!event.isExternal) {
+          // Skip localStorage persistence for external agents and temporary reviewers
+          if (!event.isExternal && !event.agentId.startsWith("reviewer-")) {
             // Debug: detect isTeamLead loss
             const updated = agents.get(event.agentId);
             if (existing?.isTeamLead && !updated?.isTeamLead) {

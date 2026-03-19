@@ -21,7 +21,7 @@ import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
-import { isRealEnter, computePreviewUrl } from "@/components/office/ui/office-utils";
+import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
 
 // Extracted components — regular imports for hooks and inline-rendered components
 import { useConfirm } from "@/components/office/ui/ConfirmModal";
@@ -325,9 +325,15 @@ export default function OfficePage() {
         // Team leader → only celebrate when isFinalResult is explicitly true
         if (agentState.isTeamLead && !msg.isFinalResult) continue;
         // Solo agent or leader with isFinalResult → celebrate
-        setCelebration({ previewUrl: r.previewUrl, previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile });
-        setPreviewRatings({});
-        setPreviewRated(false);
+        const celebData = { previewUrl: r.previewUrl, previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile };
+        // Only show modal if there's something to preview/launch
+        const canPreview = hasWebPreview({ previewUrl: r.previewUrl, previewCmd: r.previewCmd, previewPort: r.previewPort, previewPath: r.previewPath, entryFile: r.entryFile });
+        const canLaunch = !canPreview && buildPreviewCommand({ previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile });
+        if (canPreview || canLaunch) {
+          setCelebration(celebData);
+          setPreviewRatings({});
+          setPreviewRated(false);
+        }
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 3000);
       }
@@ -884,7 +890,7 @@ export default function OfficePage() {
 
   const agentList = Array.from(agents.values());
   const teamAgents = agentList.filter((a) => !!a.teamId);
-  const soloAgents = agentList.filter((a) => !a.teamId && !a.isExternal);
+  const soloAgents = agentList.filter((a) => !a.teamId && !a.isExternal && !a.agentId.startsWith("reviewer-"));
   const externalAgents = agentList.filter((a) => !!a.isExternal);
   const editor = editorRef.current;
 
@@ -963,7 +969,14 @@ export default function OfficePage() {
     const { reviewerAgentId } = reviewOverlay;
     const reviewer = agents.get(reviewerAgentId);
     if (!reviewer) return;
-    if ((reviewer.status === "done" || reviewer.status === "idle") && reviewer.messages.length > 0) {
+    const isTerminal = reviewer.status === "done" || reviewer.status === "idle" || reviewer.status === "error";
+    if (!isTerminal) return;
+    if (reviewer.status === "error") {
+      // Reviewer errored — set fallback text so overlay can be dismissed
+      const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
+      const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
+      setReviewResultText(text || "(Review failed — reviewer encountered an error)");
+    } else if (reviewer.messages.length > 0) {
       const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(No issues found)");
@@ -1031,7 +1044,7 @@ export default function OfficePage() {
     for (const rid of tempReviewerIds) {
       if (reviewOverlay?.reviewerAgentId === rid) continue; // handled by overlay effect above
       const ag = agents.get(rid);
-      if (ag && (ag.status === "done" || ag.status === "idle") && ag.messages.length > 1) {
+      if (ag && (ag.status === "done" || ag.status === "idle" || ag.status === "error") && ag.messages.length > 1) {
         const timer = setTimeout(() => {
           sendCommand({ type: "FIRE_AGENT", agentId: rid });
           tempReviewerIds.delete(rid);
@@ -1441,7 +1454,8 @@ export default function OfficePage() {
 
             return (<>
 
-            {/* -- Horizontal Agent Bar -- */}
+            {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}
+            {!consoleMode && (
             <div style={{
               display: "flex", alignItems: "center", gap: 10,
               padding: "10px 14px", minHeight: 56,
@@ -1456,14 +1470,14 @@ export default function OfficePage() {
                 </div>
               )}
               {activeAgentList.map((agent, idx) => {
-                const isActive = consoleMode ? openPanes.includes(agent.agentId) : selectedAgent === agent.agentId;
+                const isActive = selectedAgent === agent.agentId;
                 const agentState = agents.get(agent.agentId);
                 const agentBusy = agentState?.status === "working";
                 const isLead = !!agentState?.isTeamLead;
                 return (
                   <button
                     key={agent.agentId}
-                    onClick={() => { if (consoleMode) { setOpenPanes(prev => prev.includes(agent.agentId) ? prev.filter(id => id !== agent.agentId) : [...prev, agent.agentId]); } else { setSelectedAgent(agent.agentId); setChatOpen(true); } }}
+                    onClick={() => { setSelectedAgent(agent.agentId); setChatOpen(true); }}
                     title={`${agent.name}\n${agent.role}\n${(getStatusConfig()[agent.status] ?? getStatusConfig().idle).label}`}
                     style={{
                       display: "flex", flexDirection: "column", alignItems: "center",
@@ -1502,7 +1516,6 @@ export default function OfficePage() {
                   </button>
                 );
               })}
-              {/* Hire button inline with agents */}
               {/* Hire button inline with agents */}
               {isOwner && expandedSection === "agents" && (
                 <button onClick={() => setShowHireModal(true)} title="Hire Agent"
@@ -1559,6 +1572,7 @@ export default function OfficePage() {
                 >fire</button>
               )}
             </div>
+            )}
 
             {/* -- Chat content: single pane (sidebar) or multi pane (console) -- */}
             {/* Auto-select first agent if none selected in current tab (sidebar mode only) */}
@@ -1653,6 +1667,14 @@ export default function OfficePage() {
                 onApplyReviewFixes={handleApplyReviewFixes}
                 onDismissReview={handleDismissReview}
                 scrollFrozen={scrollFrozen}
+                agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
+                assetsReady={assetsReady}
+                showHireButton={isOwner && (expandedSection === "agents" || (expandedSection === "team" && !hasTeam))}
+                onHire={() => expandedSection === "team" ? setShowHireTeamModal(true) : setShowHireModal(true)}
+                showTeamControls={isOwner && expandedSection === "team" && hasTeam}
+                teamBusy={teamBusy}
+                onStopTeam={handleStopTeam}
+                onFireTeam={handleFireTeam}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);

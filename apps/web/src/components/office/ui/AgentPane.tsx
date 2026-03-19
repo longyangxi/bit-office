@@ -417,7 +417,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
               border: `1px solid ${TERM_SEM_PURPLE}40`,
             }}>
-              {reviewerOverlay.status === "working" ? "REVIEWING..." : reviewerOverlay.status === "done" || reviewerOverlay.status === "idle" ? "REVIEW COMPLETE" : "REVIEW"}
+              {reviewerOverlay.busy ? "REVIEWING..." : "REVIEW COMPLETE"}
             </span>
             <span style={{ color: TERM_SEM_PURPLE, fontWeight: 600, fontSize: 12 }}>
               {reviewerOverlay.name}
@@ -469,7 +469,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             fontSize: 11, color: TERM_SEM_PURPLE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            {(reviewerOverlay.status === "done" || reviewerOverlay.status === "idle") ? (
+            {!reviewerOverlay.busy ? (
               <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
                 {onApplyReviewFixes && (
                   <button

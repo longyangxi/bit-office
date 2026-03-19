@@ -1,9 +1,10 @@
 import { memo } from "react";
 import dynamic from "next/dynamic";
 import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_BG } from "./termTheme";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
+const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
 
 const MAX_VISIBLE = 3;
 
@@ -68,6 +69,17 @@ export interface MultiPaneViewProps {
   onDismissReview?: () => void;
   /** Freeze scroll management during CSS width transitions */
   scrollFrozen?: boolean;
+  /** Agent metadata for inline avatar headers (console mode) */
+  agentMeta?: { agentId: string; name: string; palette: number; isTeamLead: boolean }[];
+  assetsReady?: boolean;
+  /** Show hire/create button after last pane */
+  showHireButton?: boolean;
+  onHire?: () => void;
+  /** Team controls (stop/fire) shown after last pane */
+  showTeamControls?: boolean;
+  teamBusy?: boolean;
+  onStopTeam?: () => void;
+  onFireTeam?: () => void;
 }
 
 const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
@@ -106,12 +118,27 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onDismissReview,
     detectedBackends,
     scrollFrozen,
+    agentMeta,
+    assetsReady,
+    showHireButton,
+    onHire,
+    showTeamControls,
+    teamBusy,
+    onStopTeam,
+    onFireTeam,
   } = props;
 
   const visiblePanes = openPanes.slice(paneOffset, paneOffset + MAX_VISIBLE);
   const maxOffset = Math.max(0, openPanes.length - MAX_VISIBLE);
   const totalPages = Math.ceil(openPanes.length / MAX_VISIBLE);
   const currentPage = Math.floor(paneOffset / MAX_VISIBLE) + 1;
+
+  // Check if trailing controls should show (hire button or team controls)
+  // Only show in last page of pagination (or when no pagination)
+  const isLastPage = paneOffset + MAX_VISIBLE >= openPanes.length;
+  const hasTrailingControls = isLastPage && (showHireButton || showTeamControls);
+  // How many visible panes + trailing slot
+  const slotsUsed = visiblePanes.length + (hasTrailingControls ? 0 : 0);
 
   if (openPanes.length === 0) {
     return (
@@ -127,7 +154,27 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           minHeight: 0,
         }}
       >
-        Click agents to open chat panes
+        {showHireButton && onHire ? (
+          <button
+            onClick={onHire}
+            title="Hire Agent"
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+              gap: 8, padding: "24px 40px",
+              border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
+              backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+              fontSize: 14, fontFamily: TERM_FONT,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
+          >
+            <span style={{ fontSize: 24 }}>+</span>
+            <span>Hire Agent</span>
+          </button>
+        ) : (
+          "No agents active"
+        )}
       </div>
     );
   }
@@ -139,6 +186,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         {visiblePanes.map((agentId, i) => {
           const data = getAgentData(agentId);
           if (!data) return null;
+          const meta = agentMeta?.find(m => m.agentId === agentId);
           return (
             <div
               key={agentId}
@@ -150,6 +198,38 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 borderLeft: i > 0 ? `1px solid rgba(24,255,98,0.1)` : undefined,
               }}
             >
+              {/* Inline avatar header for this pane */}
+              {meta && (
+                <div style={{
+                  display: "flex", alignItems: "center", gap: 8,
+                  padding: "6px 12px",
+                  background: TERM_PANEL,
+                  borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+                  flexShrink: 0,
+                }}>
+                  <div style={{ position: "relative", width: 24, height: 28, overflow: "hidden", borderRadius: 2, flexShrink: 0 }}>
+                    <div style={{ marginTop: -1 }}>
+                      <SpriteAvatar palette={meta.palette} zoom={1.5} ready={assetsReady ?? false} />
+                    </div>
+                    {data.busy && (
+                      <span style={{
+                        position: "absolute", top: 0, right: 0,
+                        width: 5, height: 5, borderRadius: "50%",
+                        backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}`,
+                        animation: "px-pulse-gold 1.5s ease infinite",
+                      }} />
+                    )}
+                    {meta.isTeamLead && (
+                      <span style={{ position: "absolute", top: -2, left: -1, fontSize: 7, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
+                    )}
+                  </div>
+                  <span style={{
+                    fontSize: 11, color: TERM_TEXT_BRIGHT,
+                    fontFamily: TERM_FONT, fontWeight: 600,
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}>{meta.name}</span>
+                </div>
+              )}
               <AgentPane
                 agentId={agentId}
                 name={data.name}
@@ -205,6 +285,63 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             </div>
           );
         })}
+
+        {/* Trailing hire/team controls after last pane */}
+        {hasTrailingControls && (
+          <div
+            style={{
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 8, padding: "0 16px",
+              borderLeft: visiblePanes.length > 0 ? `1px solid rgba(24,255,98,0.1)` : undefined,
+              minWidth: 60, flexShrink: 0,
+            }}
+          >
+            {showHireButton && onHire && (
+              <button
+                onClick={onHire}
+                title="Hire Agent"
+                style={{
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 44, height: 44,
+                  border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+                  fontSize: 20, fontFamily: TERM_FONT,
+                  transition: "all 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
+                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
+              >+</button>
+            )}
+            {showTeamControls && teamBusy && onStopTeam && (
+              <button
+                onClick={onStopTeam}
+                title="Stop Team Work"
+                style={{
+                  padding: "6px 12px",
+                  border: `1px solid ${TERM_SEM_YELLOW}60`, cursor: "pointer",
+                  backgroundColor: `${TERM_SEM_YELLOW}15`, color: TERM_SEM_YELLOW,
+                  fontSize: 10, fontFamily: TERM_FONT,
+                }}
+              >stop</button>
+            )}
+            {showTeamControls && onFireTeam && (
+              <button
+                onClick={onFireTeam}
+                title="Fire Team"
+                style={{
+                  padding: "6px 12px",
+                  border: `1px solid ${TERM_SEM_RED}30`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_SEM_RED,
+                  fontSize: 10, fontFamily: TERM_FONT,
+                  transition: "all 0.15s", opacity: 0.7,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}15`; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.backgroundColor = "transparent"; }}
+              >fire</button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Pagination bar */}

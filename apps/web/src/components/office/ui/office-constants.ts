@@ -72,7 +72,6 @@ export const AGENCY_CATALOG: AgencyCatalogCategory[] = [
       { name: "AI Engineer", desc: "Expert AI/ML engineer in machine learning model development, deployment, integration" },
       { name: "Autonomous Optimization Architect", desc: "Intelligent system governor that shadow-tests APIs for performance optimization" },
       { name: "Backend Architect", desc: "Senior backend architect in scalable system design, database architecture, APIs" },
-      { name: "Code Reviewer", desc: "Expert code reviewer providing constructive feedback on correctness, maintainability" },
       { name: "Data Engineer", desc: "Expert data engineer building reliable data pipelines, lakehouse architectures" },
       { name: "Database Optimizer", desc: "Expert database specialist in schema design, query optimization, indexing strategies" },
       { name: "DevOps Automator", desc: "Expert DevOps engineer in infrastructure automation, CI/CD pipeline development" },
