@@ -236,21 +236,25 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // 1. Team members: created by DelegationRouter in delegation.ts (not here)
     // 2. Solo agents sharing the same workDir: auto-isolate via worktree
     const teamProjectDir = this.delegationRouter.getTeamProjectDir();
-    const effectiveRepo = opts?.repoPath;
-    // Worktree only for agents without existing session (new tasks only).
-    // Agents with hasHistory would break on --resume in a different CWD.
-    // Team dev worktrees are created by delegation.ts (fresh delegated tasks, no resume).
+    const effectiveRepo = opts?.repoPath ?? session.workspaceDir;
+    // Worktree isolation for solo agents sharing the same repoPath/workspace.
+    // Team dev worktrees are created by delegation.ts (not here).
     const isLeader = this.agentManager.isTeamLead(agentId);
     const isReviewerRole = session.role.toLowerCase().includes("review");
-    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !session.hasSessionHistory && (
+    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && (
       // Solo agents: isolate when another solo agent shares the same repoPath
-      (!session.teamId && effectiveRepo && this.hasSoloNeighbor(agentId, effectiveRepo))
+      (!session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo))
     );
     if (needsWorktree) {
-      const base = session.teamId ? teamProjectDir! : effectiveRepo!;
+      const base = session.teamId ? teamProjectDir! : effectiveRepo;
       const wt = createWorktree(base, agentId, taskId, session.name);
       if (wt) {
         const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+        // Worktree changes the CWD — old session can't --resume in a different directory.
+        // Clear history so the agent starts fresh in the new worktree.
+        if (session.hasSessionHistory) {
+          session.clearHistory();
+        }
         session.worktreePath = wt;
         session.worktreeBranch = branch;
         this.emitEvent({
