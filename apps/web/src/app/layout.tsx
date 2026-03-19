@@ -359,8 +359,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           .term-clean .term-dotgrid { background-image: none !important; }
           .term-clean .term-chat-area { background-image: none !important; }
           .term-clean .term-input:focus { animation: none !important; box-shadow: none !important; outline: none; }
+          /* ── Pause animations when page hidden (saves GPU) ── */
+          .term-paused .crt-screen,
+          .term-paused .crt-scanline-bar,
+          .term-paused .term-cursor,
+          .term-paused .working-dots,
+          .term-paused .working-dots::before,
+          .term-paused .working-dots::after,
+          .term-paused .working-dots-mid {
+            animation-play-state: paused !important;
+          }
         `}} />
         {children}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              document.addEventListener('visibilitychange', function() {
+                document.body.classList.toggle('term-paused', document.hidden);
+              });
+            `,
+          }}
+        />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -409,13 +428,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   update();
                 }
                 function scan() {
-                  document.querySelectorAll('*').forEach(function(el) {
-                    var cs = getComputedStyle(el);
-                    if (cs.overflowY === 'auto' || cs.overflowY === 'scroll') addScrollbar(el);
+                  document.querySelectorAll('[data-scrollbar]').forEach(function(el) {
+                    addScrollbar(el);
                   });
                 }
-                var mo = new MutationObserver(function() { requestAnimationFrame(scan); });
-                mo.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
+                var scanTimer = 0;
+                var mo = new MutationObserver(function() {
+                  if (scanTimer) return;
+                  scanTimer = setTimeout(function() { scanTimer = 0; scan(); }, 300);
+                });
+                mo.observe(document.body, { childList: true, subtree: true });
                 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', scan);
                 else scan();
               })();

@@ -141,6 +141,26 @@ export default function PixelOfficeScene({
       update: (dt) => {
         officeState.update(dt);
       },
+      isDirty: (() => {
+        let prevZoom = 0;
+        let prevPanX = 0;
+        let prevPanY = 0;
+        return () => {
+          // Check if camera changed (pan/zoom)
+          const z = zoomRef.current;
+          const px = panRef.current.x;
+          const py = panRef.current.y;
+          const cameraMoved = z !== prevZoom || px !== prevPanX || py !== prevPanY;
+          prevZoom = z; prevPanX = px; prevPanY = py;
+
+          if (officeState.dirty || cameraMoved) {
+            officeState.dirty = false;
+            return true;
+          }
+          // Edit mode always needs re-render (ghost cursor, grid, etc.)
+          return editModeRef.current;
+        };
+      })(),
       render: (ctx) => {
         const cw = canvas.width / dpr;
         const ch = canvas.height / dpr;

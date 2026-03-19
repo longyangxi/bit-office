@@ -1880,7 +1880,7 @@ export default function OfficePage() {
             </div>
 
             {/* Messages */}
-            <div style={{
+            <div data-scrollbar style={{
               flex: 1, overflowY: "auto", padding: "8px 10px",
               display: "flex", flexDirection: "column",
             }}>
@@ -1960,7 +1960,7 @@ export default function OfficePage() {
 
             {/* Suggestion feed (mobile) */}
             {!isSpectator && suggestions.length > 0 && (
-              <div style={{
+              <div data-scrollbar style={{
                 padding: "6px 10px", borderTop: "1px solid #152515",
                 backgroundColor: "#0a0e0a", maxHeight: 80, overflowY: "auto",
               }}>
