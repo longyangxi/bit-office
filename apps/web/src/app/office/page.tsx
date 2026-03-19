@@ -1524,13 +1524,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 40, height: "80%", flexShrink: 0,
-                    border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
-                    backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+                    border: `1px dashed ${TERM_GREEN}50`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_GREEN,
                     fontSize: 16, fontFamily: TERM_FONT,
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; }}
                 >+</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}
@@ -1539,13 +1539,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 40, height: "80%", flexShrink: 0,
-                    border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
-                    backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+                    border: `1px dashed ${TERM_GREEN}50`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_GREEN,
                     fontSize: 16, fontFamily: TERM_FONT,
                     transition: "all 0.15s",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; }}
                 >+</button>
               )}
               {isOwner && expandedSection === "team" && hasTeam && teamBusy && (
