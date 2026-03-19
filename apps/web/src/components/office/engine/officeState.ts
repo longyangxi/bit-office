@@ -478,11 +478,13 @@ export class OfficeState {
         this.dirty = true
       }
 
-      // Keep the loop alive (but skip rendering) while timers are counting down.
-      // Without this the loop sleeps and wanderTimer / seatTimer never decrement.
+      // Keep the loop alive (but skip rendering) while any timer is counting down.
+      // Without this the loop sleeps and timers never decrement.
       if (!this.needsTick) {
         if ((ch.state === CharacterState.IDLE && (ch.wanderTimer > 0 || ch.seatTimer > 0)) ||
-            (ch.state === CharacterState.TYPE && !ch.isActive && ch.seatTimer > 0)) {
+            (ch.state === CharacterState.TYPE && !ch.isActive && ch.seatTimer > 0) ||
+            (ch.bubbleType === 'waiting' && ch.bubbleTimer > 0) ||
+            (ch.speechText && ch.speechTimer > 0)) {
           this.needsTick = true
         }
       }
