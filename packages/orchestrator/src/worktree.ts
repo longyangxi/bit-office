@@ -101,8 +101,9 @@ export function mergeWorktree(
         timeout: TIMEOUT,
       }).trim();
       conflictFiles = output ? output.split("\n") : [];
-      // Abort the failed merge
-      execSync("git merge --abort", { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
+      // Discard the failed merge — use reset instead of merge --abort
+      // because --abort requires MERGE_HEAD which squash merges don't create
+      execSync("git reset --hard HEAD", { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
     } catch { /* ignore */ }
 
     return { success: false, conflictFiles };
