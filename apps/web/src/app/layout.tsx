@@ -110,8 +110,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             border-radius: 3px;
           }
           select option {
-            background: #14112a;
-            color: #eddcb8;
+            background: var(--term-panel);
+            color: var(--term-text);
           }
           .px-font {
             font-family: 'Press Start 2P', monospace;

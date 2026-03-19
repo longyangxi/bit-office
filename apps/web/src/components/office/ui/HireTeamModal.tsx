@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
 function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends }: {
@@ -49,17 +49,17 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: TERM_PANEL, padding: "18px 18px 14px",
-          width: "90%", maxWidth: 440, border: "2px solid #1a2a1a",
+          width: "90%", maxWidth: 440, border: `2px solid ${TERM_BORDER}`,
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
           maxHeight: "90vh", overflowY: "auto",
         }}
         data-scrollbar
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 14px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>Hire Team</h2>
+        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 14px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em" }}>Hire Team</h2>
 
         {/* Working directory picker */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>PROJECT DIRECTORY</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>PROJECT DIRECTORY</div>
           <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
             <input
               type="text"
@@ -68,7 +68,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
               placeholder="Paste path or click Browse"
               style={{
                 flex: 1, padding: "6px 8px", fontSize: 12,
-                border: "1px solid #1a2a1a", backgroundColor: "#0a0e0a",
+                border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG,
                 color: "#eddcb8", fontFamily: "monospace",
                 outline: "none",
               }}
@@ -80,8 +80,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 sendCommand({ type: "PICK_FOLDER", requestId: rid });
               }}
               style={{
-                padding: "6px 10px", border: "1px solid #1a2a1a",
-                backgroundColor: "#0a0e0a", color: "#9a8a68",
+                padding: "6px 10px", border: `1px solid ${TERM_BORDER}`,
+                backgroundColor: TERM_BG, color: TERM_DIM,
                 fontSize: 12, cursor: "pointer", fontFamily: "monospace",
                 whiteSpace: "nowrap",
               }}
@@ -92,7 +92,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           </div>
         </div>
 
-        <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
           {/* Fixed rows: leader and reviewer */}
           {fixedRows.map(({ def, label }) => (
@@ -118,8 +118,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 onClick={(e) => e.stopPropagation()}
                 onChange={(e) => setBackends((prev) => ({ ...prev, [def.id]: e.target.value }))}
                 style={{
-                  padding: "3px 6px", border: "1px solid #1a2a1a",
-                  backgroundColor: "#0a0e0a", color: "#9a8a68", fontSize: 12, cursor: "pointer", fontFamily: "monospace",
+                  padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
+                  backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "monospace",
                 }}
               >
                 {BACKEND_OPTIONS.map((b) => (
@@ -130,7 +130,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           ))}
 
           {/* Dev cards — single select grid */}
-          <div style={{ fontSize: 12, color: "#7a6858", marginTop: 4, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 4, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
             {devAgents.map((def) => {
               const selected = selectedDevId === def.id;
@@ -142,7 +142,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
                     padding: "12px 6px 10px",
-                    border: selected ? "1px solid #e8b04060" : "1px solid #1a2a1a",
+                    border: selected ? `1px solid ${TERM_GREEN}60` : `1px solid ${TERM_BORDER}`,
                     backgroundColor: selected ? "#2a2200" : "transparent",
                     cursor: "pointer", textAlign: "center",
                     opacity: selected ? 1 : 0.5,
@@ -151,14 +151,14 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 >
                   <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
                   <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-                  <div style={{ fontSize: 12, color: "#7a6858", marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+                  <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
                   <select
                     value={backends[def.id] ?? "claude"}
                     onClick={(e) => { e.stopPropagation(); setSelectedDevId(def.id); }}
                     onChange={(e) => { setSelectedDevId(def.id); setBackends((prev) => ({ ...prev, [def.id]: e.target.value })); }}
                     style={{
-                      marginTop: 6, padding: "3px 6px", border: "1px solid #1a2a1a",
-                      backgroundColor: "#0a0e0a", color: "#9a8a68", fontSize: 12, cursor: "pointer", fontFamily: "monospace",
+                      marginTop: 6, padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
+                      backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "monospace",
                     }}
                   >
                     {BACKEND_OPTIONS.map((b) => (
@@ -175,8 +175,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           <button
             onClick={handleCreate}
             style={{
-              flex: 1, padding: "9px", border: "1px solid #e8b04060",
-              backgroundColor: "#382800", color: "#e8b040", fontSize: 14,
+              flex: 1, padding: "9px", border: `1px solid ${TERM_GREEN}60`,
+              backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN, fontSize: 14,
               fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
               opacity: leader ? 1 : 0.4,
             }}
@@ -186,7 +186,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
             onClick={onClose}
             style={{
               padding: "9px 16px",
-              border: "1px solid #1a2a1a", backgroundColor: "transparent",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
               color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >Cancel</button>

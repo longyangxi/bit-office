@@ -1154,7 +1154,7 @@ export default function OfficePage() {
         <div style={{
           position: "absolute", top: 0, left: 0, right: 0, zIndex: 10,
           padding: "10px 16px", display: "flex", alignItems: "center", gap: 12,
-          background: "linear-gradient(to bottom, rgba(22,18,42,0.90) 0%, rgba(22,18,42,0) 100%)",
+          background: "linear-gradient(to bottom, var(--term-bg) 0%, transparent 100%)",
           pointerEvents: "none",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "auto" }}>
@@ -1216,7 +1216,7 @@ export default function OfficePage() {
                 {showShareMenu && (
                   <div style={{
                     position: "absolute", top: "100%", left: 0, marginTop: 4, zIndex: 50,
-                    backgroundColor: TERM_PANEL, border: "1px solid #1a2a1a",
+                    backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
                     display: "flex", flexDirection: "column", minWidth: 160,
                   }}>
                     <button
@@ -1776,7 +1776,7 @@ export default function OfficePage() {
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
           padding: "8px 12px",
           display: "flex", alignItems: "center", gap: 8,
-          background: "linear-gradient(to top, rgba(22,18,42,0.95) 0%, rgba(22,18,42,0.7) 80%, transparent 100%)",
+          background: "linear-gradient(to top, var(--term-bg) 0%, color-mix(in srgb, var(--term-bg) 70%, transparent) 80%, transparent 100%)",
           overflowX: "auto",
         }}>
           {/* Hire button (owner only) */}
@@ -1785,8 +1785,8 @@ export default function OfficePage() {
               onClick={() => setShowHireModal(true)}
               style={{
                 width: 44, height: 44, flexShrink: 0,
-                border: "1px solid #e8b04060", backgroundColor: "rgba(200,155,48,0.12)",
-                color: "#e8b040", fontSize: 22, cursor: "pointer",
+                border: `1px solid ${TERM_GREEN}60`, backgroundColor: `${TERM_GREEN}1e`,
+                color: TERM_GREEN, fontSize: 22, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >+</button>
@@ -1822,7 +1822,7 @@ export default function OfficePage() {
                 <span style={{
                   position: "absolute", bottom: 2, right: 2,
                   width: 6, height: 6,
-                  backgroundColor: cfg.color, border: "1px solid #0c1210",
+                  backgroundColor: cfg.color, border: `1px solid ${TERM_PANEL}`,
                 }} />
               </button>
             );
@@ -1855,7 +1855,7 @@ export default function OfficePage() {
                 cursor: "pointer",
               }}
             >
-              <span style={{ fontSize: 15, color: "#7a6858", marginRight: 4 }}>&larr;</span>
+              <span style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
               <SpriteAvatar palette={agentState.palette ?? 0} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
@@ -1868,7 +1868,7 @@ export default function OfficePage() {
                   )}
                   {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
                 </div>
-                <div style={{ fontSize: 11, color: "#7a6858" }}>{agentState.role}</div>
+                <div style={{ fontSize: 11, color: TERM_DIM }}>{agentState.role}</div>
               </div>
               <span style={{
                 fontSize: 10, padding: "2px 6px",
@@ -1963,7 +1963,7 @@ export default function OfficePage() {
             {!isSpectator && suggestions.length > 0 && (
               <div data-scrollbar style={{
                 padding: "6px 10px", borderTop: "1px solid #152515",
-                backgroundColor: "#0a0e0a", maxHeight: 80, overflowY: "auto",
+                backgroundColor: TERM_BG, maxHeight: 80, overflowY: "auto",
               }}>
                 <div style={{ fontSize: 10, color: "#a855f7", fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
                 {suggestions.slice(-5).map((s, i) => (
@@ -2015,7 +2015,7 @@ export default function OfficePage() {
                         disabled={!suggestText.trim()}
                         style={{
                           padding: "9px 14px", border: "none",
-                          backgroundColor: suggestText.trim() ? "#a855f7" : "#0e1a0e",
+                          backgroundColor: suggestText.trim() ? "#a855f7" : TERM_PANEL,
                           color: suggestText.trim() ? "#fff" : "#5a4838",
                           fontSize: 13, cursor: suggestText.trim() ? "pointer" : "default",
                           fontWeight: 700, fontFamily: "monospace",
@@ -2098,7 +2098,7 @@ export default function OfficePage() {
                           onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Or give feedback..."
                           style={{
-                            flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
+                            flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
                             backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
                           }}
                         />
@@ -2107,8 +2107,8 @@ export default function OfficePage() {
                           disabled={!prompt.trim() && pendingImages.length === 0}
                           style={{
                             padding: "9px 14px", border: "none",
-                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#0e1a0e",
-                            color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
+                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_GREEN : TERM_PANEL,
+                            color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                             fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
@@ -2125,7 +2125,7 @@ export default function OfficePage() {
                           onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                           placeholder="Request changes..."
                           style={{
-                            flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
+                            flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
                             backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
                           }}
                         />
@@ -2167,7 +2167,7 @@ export default function OfficePage() {
                         onKeyDown={(e) => isRealEnter(e) && handleRunTask()}
                         placeholder="Send a message..."
                         style={{
-                          flex: 1, padding: "9px 12px", border: "1px solid #1a2a1a",
+                          flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
                           backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
                         }}
                         autoFocus
@@ -2177,8 +2177,8 @@ export default function OfficePage() {
                         disabled={!prompt.trim() && pendingImages.length === 0}
                         style={{
                           padding: "9px 14px", border: "none",
-                          backgroundColor: (prompt.trim() || pendingImages.length > 0) ? "#e8b040" : "#0e1a0e",
-                          color: (prompt.trim() || pendingImages.length > 0) ? "#16122a" : "#5a4838",
+                          backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_GREEN : TERM_PANEL,
+                          color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                           fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
@@ -2196,7 +2196,7 @@ export default function OfficePage() {
       {isMobile && mobileTeamOpen && (
         <div style={{
           position: "absolute", inset: 0, zIndex: 30,
-          backgroundColor: "#0a0e0a",
+          backgroundColor: TERM_BG,
           display: "flex", flexDirection: "column",
         }}>
           <div
@@ -2207,9 +2207,9 @@ export default function OfficePage() {
               backgroundColor: TERM_PANEL, cursor: "pointer",
             }}
           >
-            <span style={{ fontSize: 15, color: "#7a6858", marginRight: 4 }}>&larr;</span>
+            <span style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#eddcb8" }}>Team Chat</div>
-            <span style={{ fontSize: 11, color: "#7a6858", fontFamily: "monospace" }}>{teamMessages.length} messages</span>
+            <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "monospace" }}>{teamMessages.length} messages</span>
           </div>
           <TeamChatView messages={teamMessages} agents={agents} assetsReady={assetsReady} />
         </div>
@@ -2314,16 +2314,16 @@ export default function OfficePage() {
           display: "flex", alignItems: "center", justifyContent: "center",
         }} onClick={() => setShareUrl(null)}>
           <div style={{
-            backgroundColor: TERM_PANEL, border: "1px solid #1a2a1a",
+            backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
             padding: 24, maxWidth: 420, width: "90%",
           }} onClick={(e) => e.stopPropagation()}>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#eddcb8", marginBottom: 12 }}>Share Link Created</div>
-            <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 8 }}>Link copied to clipboard!</div>
+            <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 8 }}>Link copied to clipboard!</div>
             <input
               readOnly
               value={shareUrl}
               style={{
-                width: "100%", padding: "8px 10px", border: "1px solid #1a2a1a",
+                width: "100%", padding: "8px 10px", border: `1px solid ${TERM_BORDER}`,
                 backgroundColor: "#16122a", color: "#eddcb8", fontSize: 12,
                 fontFamily: "monospace", outline: "none",
               }}
@@ -2333,7 +2333,7 @@ export default function OfficePage() {
               onClick={() => setShareUrl(null)}
               style={{
                 marginTop: 12, padding: "8px 20px", border: "none",
-                backgroundColor: "#e8b040", color: "#16122a", fontSize: 13,
+                backgroundColor: TERM_GREEN, color: TERM_BG, fontSize: 13,
                 cursor: "pointer", fontWeight: 700, fontFamily: "monospace",
               }}
             >OK</button>
@@ -2352,8 +2352,8 @@ export default function OfficePage() {
           }}
           style={{
             position: "fixed", bottom: 16, left: 16, zIndex: 50,
-            background: "rgba(232, 176, 64, 0.15)", border: "1px solid rgba(232, 176, 64, 0.4)",
-            color: "#e8b040", padding: "6px 14px", cursor: "pointer",
+            background: `${TERM_GREEN}26`, border: `1px solid ${TERM_GREEN}66`,
+            color: TERM_GREEN, padding: "6px 14px", cursor: "pointer",
             fontSize: 11, fontFamily: "monospace", fontWeight: 600,
           }}
         >

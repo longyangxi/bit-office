@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
+import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_TEXT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
 function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
@@ -39,12 +39,12 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: TERM_PANEL,
-          width: "90%", maxWidth: 420, border: "2px solid #1a2a1a",
+          width: "90%", maxWidth: 420, border: `2px solid ${TERM_BORDER}`,
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
           maxHeight: "90vh", display: "flex", flexDirection: "column",
         }}
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em", flexShrink: 0 }}>Hire Agent</h2>
+        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em", flexShrink: 0 }}>Hire Agent</h2>
 
         <div style={{ padding: "0 18px", flexShrink: 0 }}>
         {/* Backend selector */}
@@ -60,7 +60,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   onClick={() => setSelectedBackend(b.id)}
                   style={{
                     flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
-                    border: isSelected ? `1px solid ${b.color}` : "1px solid #1a2a1a",
+                    border: isSelected ? `1px solid ${b.color}` : `1px solid ${TERM_BORDER}`,
                     backgroundColor: isSelected ? b.color + "20" : "transparent",
                     color: isSelected ? b.color : available ? "#6a5848" : "#8a6a6a",
                     cursor: "pointer", fontFamily: "monospace",
@@ -91,7 +91,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               placeholder="Paste path or click Browse"
               style={{
                 flex: 1, padding: "6px 8px", fontSize: 12,
-                border: "1px solid #1a2a1a", backgroundColor: "#0a0e0a",
+                border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG,
                 color: "#eddcb8", fontFamily: "monospace",
                 outline: "none",
               }}
@@ -103,8 +103,8 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 sendCommand({ type: "PICK_FOLDER", requestId: rid });
               }}
               style={{
-                padding: "6px 10px", border: "1px solid #1a2a1a",
-                backgroundColor: "#0a0e0a", color: "#9a8a68",
+                padding: "6px 10px", border: `1px solid ${TERM_BORDER}`,
+                backgroundColor: TERM_BG, color: TERM_DIM,
                 fontSize: 12, cursor: "pointer", fontFamily: "monospace",
                 whiteSpace: "nowrap",
               }}
@@ -124,13 +124,13 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
             <button
               key={def.id}
               onClick={() => onHire(def, selectedBackend, workDir || undefined)}
-              onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = "#e8b04040"; }}
-              onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = "#1a2a1a"; }}
+              onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = TERM_GREEN + "40"; }}
+              onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = TERM_BORDER; }}
               title={def.skills ? `Skills: ${def.skills}` : undefined}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center",
                 padding: "12px 6px 10px", position: "relative",
-                border: "1px solid #1a2a1a", backgroundColor: "transparent",
+                border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
                 cursor: "pointer", textAlign: "center",
                 transition: "border-color 0.15s",
               }}
@@ -158,13 +158,13 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 <button
                   key={def.id}
                   onClick={() => onHire(def, selectedBackend, workDir || undefined)}
-                  onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = "#e8b04040"; }}
-                  onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = "#1a2a1a"; }}
+                  onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = TERM_GREEN + "40"; }}
+                  onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = TERM_BORDER; }}
                   title={def.skills ? `Skills: ${def.skills}` : undefined}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center",
                     padding: "12px 6px 10px", position: "relative",
-                    border: "1px solid #1a2a1a", backgroundColor: "transparent",
+                    border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
                     cursor: "pointer", textAlign: "center",
                     transition: "border-color 0.15s",
                   }}
@@ -193,20 +193,20 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         )}
 
         </div>
-        <div style={{ display: "flex", gap: 6, padding: "10px 18px 14px", flexShrink: 0, borderTop: "1px solid #1a2a1a" }}>
+        <div style={{ display: "flex", gap: 6, padding: "10px 18px 14px", flexShrink: 0, borderTop: `1px solid ${TERM_BORDER}` }}>
           <button
             onClick={onCreate}
             style={{
               flex: 1, padding: "9px",
-              border: "1px solid #e8b04060", backgroundColor: "transparent",
-              color: "#e8b040", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
+              border: `1px solid ${TERM_GREEN}60`, backgroundColor: "transparent",
+              color: TERM_GREEN, fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >+ Create New</button>
           <button
             onClick={onClose}
             style={{
               padding: "9px 16px",
-              border: "1px solid #1a2a1a", backgroundColor: "transparent",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
               color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >Cancel</button>

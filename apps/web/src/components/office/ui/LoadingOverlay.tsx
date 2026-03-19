@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { TERM_DIM } from "./termTheme";
 
 function LoadingDots() {
   const [dots, setDots] = useState("");
@@ -96,7 +97,7 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
       <div style={{
         fontFamily: "monospace",
         fontSize: 13,
-        color: "#7a6858",
+        color: TERM_DIM,
         letterSpacing: "0.05em",
       }}>
         Loading office<span style={{ display: "inline-block", width: "1.5em", textAlign: "left" }}>
