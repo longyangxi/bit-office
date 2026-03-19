@@ -16,7 +16,7 @@ export type { ParsedResult } from "./output-parser.js";
 export { CONFIG } from "./config.js";
 export { getMemoryContext, getMemoryStore, clearMemory, recordReviewFeedback, recordProjectCompletion, recordProjectRatings, recordTechPreference } from "./memory.js";
 export type { ReviewPattern, ProjectRecord } from "./memory.js";
-export { createWorktree, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts } from "./worktree.js";
+export { createWorktree, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts, cleanupStaleWorktrees } from "./worktree.js";
 
 export type { AIBackend, BuildArgsOpts } from "./ai-backend.js";
 export type { TeamPhaseInfo } from "./phase-machine.js";

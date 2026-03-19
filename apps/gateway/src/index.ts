@@ -5,7 +5,7 @@ import { telegramChannel } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -1046,6 +1046,40 @@ async function main() {
 
       const restoredPhase = orc.getTeamPhase(t.leadAgentId);
       console.log(`[Gateway] Restored team ${t.teamId}: phase=${t.phase}→${restoredPhase}, lead=${t.leadAgentId}, projectDir=${t.projectDir}`);
+    }
+  }
+
+  // GC: clean up stale agent/* branches and orphaned worktrees from previous ungraceful shutdowns.
+  // Agents may work in different repos (via workDir), so GC each unique repo separately.
+  {
+    // Group active branches by their workspace/repo
+    const repoActiveBranches = new Map<string, Set<string>>();
+    const addRepo = (repo: string, branch?: string | null) => {
+      if (!repoActiveBranches.has(repo)) repoActiveBranches.set(repo, new Set());
+      if (branch) repoActiveBranches.get(repo)!.add(branch);
+    };
+
+    // Always include defaultWorkspace and process.cwd()
+    // (process.cwd() catches branches from fired agents whose workDir is no longer in team-state)
+    addRepo(config.defaultWorkspace);
+    const cwd = process.cwd();
+    if (cwd !== "/" && cwd !== config.defaultWorkspace) addRepo(cwd);
+
+    // Include team projectDir (where team worktrees are created)
+    if (savedState.team?.projectDir && existsSync(savedState.team.projectDir)) {
+      addRepo(savedState.team.projectDir);
+    }
+
+    // Include each agent's workDir
+    for (const agent of savedState.agents) {
+      const repo = agent.workDir ?? config.defaultWorkspace;
+      addRepo(repo, agent.worktreeBranch);
+    }
+
+    for (const [repo, activeBranches] of repoActiveBranches) {
+      if (existsSync(repo)) {
+        cleanupStaleWorktrees(repo, activeBranches);
+      }
     }
   }
 

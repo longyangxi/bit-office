@@ -294,27 +294,27 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           display: "flex", flexDirection: "column",
           backgroundColor: TERM_BG,
           animation: "review-overlay-in 0.3s ease-out",
-          borderLeft: `2px solid ${TERM_SEM_PURPLE}40`,
-          borderRight: `2px solid ${TERM_SEM_PURPLE}40`,
+          borderLeft: `2px solid ${TERM_GREEN}40`,
+          borderRight: `2px solid ${TERM_GREEN}40`,
         }}>
           {/* Reviewer info bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
             background: TERM_PANEL,
-            borderBottom: `1px solid ${TERM_SEM_PURPLE}30`,
+            borderBottom: `1px solid ${TERM_GREEN}30`,
             fontSize: 12, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
             <span style={{
               display: "inline-block", padding: "2px 8px",
-              backgroundColor: `${TERM_SEM_PURPLE}18`, color: TERM_SEM_PURPLE,
+              backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN,
               fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
-              border: `1px solid ${TERM_SEM_PURPLE}40`,
+              border: `1px solid ${TERM_GREEN}40`,
             }}>
               {reviewerOverlay.busy ? "REVIEWING..." : "REVIEW COMPLETE"}
             </span>
-            <span style={{ color: TERM_SEM_PURPLE, fontWeight: 600, fontSize: 12 }}>
+            <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
               {reviewerOverlay.name}
             </span>
             <span style={{ color: TERM_DIM, fontSize: 11 }}>
@@ -333,7 +333,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
             {reviewerOverlay.visibleMessages.length === 0 && (
-              <div style={{ textAlign: "center", color: TERM_SEM_PURPLE, padding: 20, fontSize: 13, opacity: 0.6 }}>
+              <div style={{ textAlign: "center", color: TERM_GREEN, padding: 20, fontSize: 13, opacity: 0.6 }}>
                 Starting review...
               </div>
             )}
@@ -345,7 +345,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             ))}
             {reviewerOverlay.busy && reviewerOverlay.visibleMessages.length > 0 && reviewerOverlay.visibleMessages[reviewerOverlay.visibleMessages.length - 1]?.text && (
               <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: TERM_SEM_PURPLE, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+                <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
                 {reviewerOverlay.lastLogLine && (
                   <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
                     {reviewerOverlay.lastLogLine.slice(0, 60)}
@@ -360,8 +360,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div style={{
             padding: "8px 12px",
             background: TERM_PANEL,
-            borderTop: `1px solid ${TERM_SEM_PURPLE}30`,
-            fontSize: 11, color: TERM_SEM_PURPLE, fontFamily: TERM_FONT,
+            borderTop: `1px solid ${TERM_GREEN}30`,
+            fontSize: 11, color: TERM_GREEN, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
             {!reviewerOverlay.busy ? (
@@ -383,12 +383,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <button
                     onClick={onDismissReview}
                     style={{
-                      padding: "6px 18px", border: `1px solid ${TERM_SEM_PURPLE}40`,
-                      backgroundColor: "transparent", color: TERM_SEM_PURPLE,
+                      padding: "6px 18px", border: `1px solid ${TERM_GREEN}40`,
+                      backgroundColor: "transparent", color: TERM_GREEN,
                       fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
                       cursor: "pointer", transition: "all 0.15s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_PURPLE}10`; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
                   >Dismiss</button>
                 )}

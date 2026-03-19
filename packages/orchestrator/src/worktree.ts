@@ -144,3 +144,98 @@ export function removeWorktree(worktreePath: string, branch: string, workspace?:
     execSync(`git branch -D "${branch}"`, { cwd, stdio: "pipe", timeout: TIMEOUT });
   } catch { /* branch not found */ }
 }
+
+/**
+ * Clean up stale agent worktrees and branches left over from ungraceful shutdowns.
+ *
+ * 1. Prunes dead worktree entries (directory deleted but git still tracks them).
+ * 2. Removes any remaining `.worktrees/` directories that have no lock file.
+ * 3. Deletes orphaned `agent/*` branches that no longer have an associated worktree.
+ *
+ * @param activeBranches - Branches currently in use by live sessions (skip these).
+ */
+export function cleanupStaleWorktrees(
+  workspace: string,
+  activeBranches: Set<string> = new Set(),
+): { removedBranches: string[]; removedWorktrees: string[] } {
+  const removed = { removedBranches: [] as string[], removedWorktrees: [] as string[] };
+
+  if (!isGitRepo(workspace)) return removed;
+
+  // 1. Prune dead worktree metadata
+  try {
+    execSync("git worktree prune", { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
+  } catch { /* ignore */ }
+
+  // 2. Remove stale .worktrees/* directories (unlocked only)
+  const worktreeDir = path.join(workspace, ".worktrees");
+  try {
+    const { readdirSync, existsSync } = require("fs");
+    if (existsSync(worktreeDir)) {
+      const entries: string[] = readdirSync(worktreeDir);
+      for (const entry of entries) {
+        const wtPath = path.join(worktreeDir, entry);
+        // If it's still a live worktree registered with git, skip it
+        try {
+          execSync(`git worktree list --porcelain`, { cwd: workspace, encoding: "utf-8", timeout: TIMEOUT });
+        } catch { /* ignore */ }
+
+        try {
+          execSync(`git worktree remove --force "${wtPath}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
+          removed.removedWorktrees.push(entry);
+        } catch { /* still in use or already gone */ }
+      }
+
+      // Remove the .worktrees dir itself if empty
+      try {
+        const remaining: string[] = readdirSync(worktreeDir);
+        if (remaining.length === 0) {
+          require("fs").rmdirSync(worktreeDir);
+        }
+      } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+
+  // 3. Delete orphaned agent/* branches (not associated with any worktree)
+  try {
+    const branchOutput = execSync('git branch --list "agent/*"', {
+      cwd: workspace,
+      encoding: "utf-8",
+      timeout: TIMEOUT,
+    }).trim();
+
+    if (!branchOutput) return removed;
+
+    // Get worktree-associated branches
+    const wtListOutput = execSync("git worktree list --porcelain", {
+      cwd: workspace,
+      encoding: "utf-8",
+      timeout: TIMEOUT,
+    });
+    const wtBranches = new Set<string>();
+    for (const line of wtListOutput.split("\n")) {
+      const m = line.match(/^branch refs\/heads\/(.+)/);
+      if (m) wtBranches.add(m[1]);
+    }
+
+    const branches = branchOutput.split("\n").map(b => b.trim().replace(/^\*\s*/, "")).filter(Boolean);
+    for (const branch of branches) {
+      // Skip branches that are active in current sessions or have a live worktree
+      if (activeBranches.has(branch) || wtBranches.has(branch)) continue;
+
+      try {
+        execSync(`git branch -D "${branch}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
+        removed.removedBranches.push(branch);
+      } catch { /* ignore */ }
+    }
+  } catch { /* ignore */ }
+
+  if (removed.removedBranches.length || removed.removedWorktrees.length) {
+    console.log(
+      `[Worktree GC] Cleaned up ${removed.removedWorktrees.length} worktrees, ${removed.removedBranches.length} branches`,
+      removed.removedBranches.length ? `: ${removed.removedBranches.join(", ")}` : "",
+    );
+  }
+
+  return removed;
+}

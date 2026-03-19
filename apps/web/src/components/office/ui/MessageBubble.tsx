@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -217,9 +217,9 @@ function ReviewButton({ result, onReview, detectedBackends }: {
   }, [open]);
 
   const btnStyle: React.CSSProperties = {
-    color: "#c084fc", cursor: "pointer", border: "1px solid #c084fc40",
+    color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`,
     padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT,
-    fontWeight: 600, backgroundColor: "#c084fc08", transition: "all 0.15s",
+    fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s",
     boxShadow: "none", display: "inline-block", verticalAlign: "middle",
   };
 
@@ -229,16 +229,16 @@ function ReviewButton({ result, onReview, detectedBackends }: {
         className="term-btn"
         onClick={() => setOpen(!open)}
         style={btnStyle}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#c084fc18"; e.currentTarget.style.boxShadow = "0 0 8px #c084fc15"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#c084fc08"; e.currentTarget.style.boxShadow = "none"; }}
+        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; }}
+        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; }}
       >review {open ? "\u25B4" : "\u25BE"}</button>
       {open && (
         <div style={{
           position: "absolute", bottom: "100%", left: 0, marginBottom: 4, zIndex: 50,
-          backgroundColor: "#1a1030", border: "1px solid #c084fc40",
+          backgroundColor: TERM_PANEL, border: `1px solid ${TERM_GREEN}40`,
           borderRadius: 4, minWidth: 150, boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
         }}>
-          <div style={{ padding: "4px 8px", fontSize: 10, color: "#7a5aaa", fontFamily: TERM_FONT, letterSpacing: "0.05em", borderBottom: "1px solid #c084fc20" }}>
+          <div style={{ padding: "4px 8px", fontSize: 10, color: TERM_DIM, fontFamily: TERM_FONT, letterSpacing: "0.05em", borderBottom: `1px solid ${TERM_GREEN}20` }}>
             SELECT AI
           </div>
           {BACKEND_OPTIONS.map((b) => {
@@ -255,7 +255,7 @@ function ReviewButton({ result, onReview, detectedBackends }: {
                   color: available ? b.color : "#9a8a7a",
                   opacity: available ? 1 : 0.75,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_PURPLE}10`; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 <span style={{
