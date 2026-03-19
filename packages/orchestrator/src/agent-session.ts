@@ -330,19 +330,17 @@ export class AgentSession {
       // Cap originalTask to avoid exceeding CLI argument limits (especially for non-Claude backends)
       const rawOriginalTask = this._isTeamLead ? (this.originalTask ?? prompt) : "";
       const originalTask = rawOriginalTask.length > 1500 ? rawOriginalTask.slice(0, 1500) + "\n...(truncated)" : rawOriginalTask;
-      // Build recovery context string if session cannot be resumed.
+      // Build recovery context string for ALL non-leader agents.
+      // Always inject so that resume and app-restart scenarios retain prior-session context.
       // Uses @bit-office/memory's structured SessionSummary instead of raw message fragments.
       let recoveryContextStr = "";
       if (!this._isTeamLead) {
-        const canResumeCheck = this.hasHistory && !!this.sessionId;
-        if (!canResumeCheck) {
-          const recovery = buildRecoveryContext(this.agentId, {
-            originalTask: this.originalTask?.slice(0, 300),
-            phase: this.currentPhase ?? undefined,
-          });
-          if (recovery.sessionSummary || recovery.originalTask) {
-            recoveryContextStr = getRecoveryString(recovery);
-          }
+        const recovery = buildRecoveryContext(this.agentId, {
+          originalTask: this.originalTask?.slice(0, 300),
+          phase: this.currentPhase ?? undefined,
+        });
+        if (recovery.sessionSummary || recovery.originalTask) {
+          recoveryContextStr = getRecoveryString(recovery);
         }
       }
 
