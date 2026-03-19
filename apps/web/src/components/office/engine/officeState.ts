@@ -164,6 +164,7 @@ export class OfficeState {
     ch.matrixEffectSeeds = matrixEffectSeeds()
 
     this.characters.set(charId, ch)
+    this.dirty = true
   }
 
   removeCharacter(agentId: string): void {
@@ -187,6 +188,7 @@ export class OfficeState {
     ch.matrixEffectTimer = 0
     ch.matrixEffectSeeds = matrixEffectSeeds()
     ch.bubbleType = null
+    this.dirty = true
   }
 
   updateCharacterStatus(agentId: string, status: AgentStatus, keepSeat?: boolean): void {
@@ -194,6 +196,7 @@ export class OfficeState {
     if (charId === undefined) return
     const ch = this.characters.get(charId)
     if (!ch) return
+    this.dirty = true
 
     const wasActive = ch.isActive
     const isNowActive = status === 'working' || status === 'waiting_approval'
@@ -256,12 +259,14 @@ export class OfficeState {
   }
 
   selectCharacter(agentId: string | null): void {
+    const prev = this.selectedCharId
     if (agentId === null) {
       this.selectedCharId = null
-      return
+    } else {
+      const charId = this.agentIdToCharId.get(agentId)
+      this.selectedCharId = charId ?? null
     }
-    const charId = this.agentIdToCharId.get(agentId)
-    this.selectedCharId = charId ?? null
+    if (this.selectedCharId !== prev) this.dirty = true
   }
 
   showBubble(agentId: string, type: 'permission' | 'working' | 'waiting'): void {
@@ -277,6 +282,7 @@ export class OfficeState {
       ch.bubbleType = 'waiting'
       ch.bubbleTimer = WAITING_BUBBLE_DURATION_SEC
     }
+    this.dirty = true
   }
 
   clearBubble(agentId: string): void {
@@ -290,6 +296,7 @@ export class OfficeState {
     } else if (ch.bubbleType === 'waiting') {
       ch.bubbleTimer = Math.min(ch.bubbleTimer, DISMISS_BUBBLE_FAST_FADE_SEC)
     }
+    this.dirty = true
   }
 
   showSpeechBubble(agentId: string, text: string): void {
@@ -302,6 +309,7 @@ export class OfficeState {
       : text
     ch.speechText = truncated
     ch.speechTimer = SPEECH_BUBBLE_DURATION_SEC
+    this.dirty = true
   }
 
   // ── Getters for renderer ──────────────────────────────────────
@@ -348,6 +356,7 @@ export class OfficeState {
 
   /** Set hovered character by numeric id (for outline rendering) */
   setHoveredCharAtPixel(worldX: number, worldY: number): void {
+    const prev = this.hoveredCharId
     const s = this.characterScale
     const chars = this.getCharacters().sort((a, b) => b.y - a.y)
     for (const ch of chars) {
@@ -360,19 +369,30 @@ export class OfficeState {
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
         this.hoveredCharId = ch.id
+        if (this.hoveredCharId !== prev) this.dirty = true
         return
       }
     }
     this.hoveredCharId = null
+    if (this.hoveredCharId !== prev) this.dirty = true
   }
 
   // ── Update loop ───────────────────────────────────────────────
 
   update(dt: number): void {
-    // If there are characters, scene is potentially animating → mark dirty
-    if (this.characters.size > 0) this.dirty = true
     const toDelete: number[] = []
     for (const ch of this.characters.values()) {
+      // Snapshot visual state before update
+      const prevX = ch.x
+      const prevY = ch.y
+      const prevState = ch.state
+      const prevFrame = ch.frame
+      const prevDir = ch.dir
+      const prevBubble = ch.bubbleType
+      const prevSpeech = ch.speechText
+      const prevMatrix = ch.matrixEffect
+      const prevMatrixTimer = ch.matrixEffectTimer
+
       // Handle matrix effect animation
       if (ch.matrixEffect) {
         ch.matrixEffectTimer += dt
@@ -385,6 +405,8 @@ export class OfficeState {
             toDelete.push(ch.id)
           }
         }
+        // Matrix effect always animates
+        this.dirty = true
         continue
       }
 
@@ -420,9 +442,18 @@ export class OfficeState {
           ch.speechTimer = 0
         }
       }
+
+      // Mark dirty if anything visual changed
+      if (ch.x !== prevX || ch.y !== prevY ||
+          ch.state !== prevState || ch.frame !== prevFrame || ch.dir !== prevDir ||
+          ch.bubbleType !== prevBubble || ch.speechText !== prevSpeech ||
+          ch.matrixEffect !== prevMatrix || ch.matrixEffectTimer !== prevMatrixTimer) {
+        this.dirty = true
+      }
     }
 
     // Remove characters that finished despawn
+    if (toDelete.length > 0) this.dirty = true
     for (const id of toDelete) {
       const agentId = this.charIdToAgentId.get(id)
       this.characters.delete(id)
