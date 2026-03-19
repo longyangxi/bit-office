@@ -317,13 +317,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             style={{
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               gap: 10, padding: "28px 48px",
-              border: `1px solid ${TERM_SEM_YELLOW}30`, borderRadius: 6, cursor: "pointer",
-              backgroundColor: `${TERM_SEM_YELLOW}06`, color: TERM_SEM_YELLOW,
+              border: `1px solid ${TERM_GREEN}30`, borderRadius: 6, cursor: "pointer",
+              backgroundColor: `${TERM_GREEN}06`, color: TERM_GREEN,
               fontSize: 13, fontFamily: TERM_FONT,
               transition: "all 0.2s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}12`; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}60`; e.currentTarget.style.transform = "scale(1.02)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}06`; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}30`; e.currentTarget.style.transform = "scale(1)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}60`; e.currentTarget.style.transform = "scale(1.02)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}06`; e.currentTarget.style.borderColor = `${TERM_GREEN}30`; e.currentTarget.style.transform = "scale(1)"; }}
           >
             <span style={{ fontSize: 22, opacity: 0.8 }}>+</span>
             <span style={{ letterSpacing: "0.5px" }}>Hire Team</span>
@@ -538,17 +538,17 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
               display: "flex", alignItems: "center", gap: 5,
               padding: "4px 10px",
               height: 26,
-              border: `1px solid ${TERM_SEM_YELLOW}35`,
+              border: `1px solid ${TERM_GREEN}35`,
               borderRadius: 4,
               cursor: "pointer",
-              backgroundColor: `${TERM_SEM_YELLOW}08`,
-              color: TERM_SEM_YELLOW,
+              backgroundColor: `${TERM_GREEN}08`,
+              color: TERM_GREEN,
               fontSize: 11, fontFamily: TERM_FONT,
               transition: "all 0.15s",
               whiteSpace: "nowrap" as const,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}18`; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}70`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}08`; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}35`; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.borderColor = `${TERM_GREEN}70`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.borderColor = `${TERM_GREEN}35`; }}
           >
             <span style={{ fontSize: 13, lineHeight: 1 }}>+</span>
             <span style={{ opacity: 0.85 }}>hire</span>
