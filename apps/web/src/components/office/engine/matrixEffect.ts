@@ -14,6 +14,44 @@ import {
   MATRIX_TRAIL_DIM_THRESHOLD,
 } from '../constants'
 
+// ── Pre-cached RGBA strings ────────────────────────────────────
+// Avoids creating `rgba(...)` strings on every pixel every frame.
+
+const RGBA_CACHE_SIZE = 101 // 0..100 (alpha in %)
+
+/** Bright green trail: rgba(0, 255, 65, alpha) */
+const greenBrightCache: string[] = new Array(RGBA_CACHE_SIZE)
+/** Mid green trail: rgba(0, 170, 40, alpha) */
+const greenMidCache: string[] = new Array(RGBA_CACHE_SIZE)
+/** Dim green trail: rgba(0, 85, 20, alpha) */
+const greenDimCache: string[] = new Array(RGBA_CACHE_SIZE)
+
+for (let i = 0; i < RGBA_CACHE_SIZE; i++) {
+  const a = (i / 100).toFixed(2)
+  greenBrightCache[i] = `rgba(0,255,65,${a})`
+  greenMidCache[i] = `rgba(0,170,40,${a})`
+  greenDimCache[i] = `rgba(0,85,20,${a})`
+}
+
+function greenBright(alpha: number): string {
+  return greenBrightCache[Math.round(Math.min(1, Math.max(0, alpha)) * 100)]
+}
+function greenMid(alpha: number): string {
+  return greenMidCache[Math.round(Math.min(1, Math.max(0, alpha)) * 100)]
+}
+function greenDim(alpha: number): string {
+  return greenDimCache[Math.round(Math.min(1, Math.max(0, alpha)) * 100)]
+}
+
+/** Pick trail color based on trailPos threshold */
+function trailColor(trailPos: number, alpha: number): string {
+  if (trailPos < MATRIX_TRAIL_MID_THRESHOLD) return greenBright(alpha)
+  if (trailPos < MATRIX_TRAIL_DIM_THRESHOLD) return greenMid(alpha)
+  return greenDim(alpha)
+}
+
+// ── Flicker ────────────────────────────────────────────────────
+
 /** Hash-based flicker: ~70% visible for shimmer effect */
 function flickerVisible(col: number, row: number, time: number): boolean {
   const t = Math.floor(time * MATRIX_FLICKER_FPS)
@@ -72,15 +110,13 @@ export function renderMatrixEffect(
             ctx.fillRect(px, py, zoom, zoom)
             const greenAlpha = (1 - trailPos) * MATRIX_TRAIL_OVERLAY_ALPHA
             if (flickerVisible(col, row, time)) {
-              ctx.fillStyle = `rgba(0, 255, 65, ${greenAlpha})`
+              ctx.fillStyle = greenBright(greenAlpha)
               ctx.fillRect(px, py, zoom, zoom)
             }
           } else {
             if (flickerVisible(col, row, time)) {
               const alpha = (1 - trailPos) * MATRIX_TRAIL_EMPTY_ALPHA
-              ctx.fillStyle = trailPos < MATRIX_TRAIL_MID_THRESHOLD ? `rgba(0, 255, 65, ${alpha})`
-                : trailPos < MATRIX_TRAIL_DIM_THRESHOLD ? `rgba(0, 170, 40, ${alpha})`
-                  : `rgba(0, 85, 20, ${alpha})`
+              ctx.fillStyle = trailColor(trailPos, alpha)
               ctx.fillRect(px, py, zoom, zoom)
             }
           }
@@ -103,9 +139,7 @@ export function renderMatrixEffect(
           if (flickerVisible(col, row, time)) {
             const trailPos = distFromHead / MATRIX_TRAIL_LENGTH
             const alpha = (1 - trailPos) * MATRIX_TRAIL_EMPTY_ALPHA
-            ctx.fillStyle = trailPos < MATRIX_TRAIL_MID_THRESHOLD ? `rgba(0, 255, 65, ${alpha})`
-              : trailPos < MATRIX_TRAIL_DIM_THRESHOLD ? `rgba(0, 170, 40, ${alpha})`
-                : `rgba(0, 85, 20, ${alpha})`
+            ctx.fillStyle = trailColor(trailPos, alpha)
             ctx.fillRect(px, py, zoom, zoom)
           }
         }

@@ -6,11 +6,17 @@ let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let currentUrl: string | null = null;
 let currentSessionToken: string | null = null;
 
+// Exponential backoff state
+const RECONNECT_BASE_MS = 2000;
+const RECONNECT_MAX_MS = 30000;
+let reconnectDelay = RECONNECT_BASE_MS;
+
 export function connectToWs(wsUrl: string, sessionToken?: string) {
   // Clean up any existing connection first
   cleanup();
   currentUrl = wsUrl;
   currentSessionToken = sessionToken ?? null;
+  reconnectDelay = RECONNECT_BASE_MS; // reset backoff on fresh connect
   doConnect();
 }
 
@@ -37,6 +43,8 @@ function doConnect() {
 
   socket.onopen = () => {
     console.log("[WS] Connected");
+    // Reset backoff on successful connection
+    reconnectDelay = RECONNECT_BASE_MS;
     // Send AUTH handshake first
     if (socket.readyState === WebSocket.OPEN && currentSessionToken) {
       socket.send(JSON.stringify({ type: "AUTH", sessionToken: currentSessionToken }));
@@ -74,7 +82,10 @@ function doConnect() {
     // Only reconnect if this is still the active socket
     if (ws === socket && currentUrl) {
       ws = null;
-      reconnectTimer = setTimeout(doConnect, 2000);
+      console.log(`[WS] Reconnecting in ${reconnectDelay}ms...`);
+      reconnectTimer = setTimeout(doConnect, reconnectDelay);
+      // Exponential backoff: 2s → 3s → 4.5s → ... → 30s max
+      reconnectDelay = Math.min(reconnectDelay * 1.5, RECONNECT_MAX_MS);
     }
   };
 

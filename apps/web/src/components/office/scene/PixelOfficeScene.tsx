@@ -65,6 +65,8 @@ export default function PixelOfficeScene({
   const panStartRef = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
   const lastOffsetsRef = useRef({ offsetX: 0, offsetY: 0 });
   const editorRenderRef = useRef<EditorRenderState | null>(null);
+  /** Wake the game loop from sleep on user interaction */
+  const wakeRef = useRef<(() => void) | null>(null);
 
   /** Calculate zoom so the map fills the viewport (contain fit) */
   const calcFitZoom = useCallback((viewW: number, viewH: number) => {
@@ -137,7 +139,7 @@ export default function PixelOfficeScene({
 
     // Start game loop
     const dpr = window.devicePixelRatio || 1;
-    const stop = startGameLoop(canvas, {
+    const { stop, wake } = startGameLoop(canvas, {
       update: (dt) => {
         officeState.update(dt);
       },
@@ -145,6 +147,9 @@ export default function PixelOfficeScene({
         let prevZoom = 0;
         let prevPanX = 0;
         let prevPanY = 0;
+        let prevGhostCol = -1;
+        let prevGhostRow = -1;
+        let prevSelectedUid: string | null = null;
         return () => {
           // Check if camera changed (pan/zoom)
           const z = zoomRef.current;
@@ -157,8 +162,17 @@ export default function PixelOfficeScene({
             officeState.dirty = false;
             return true;
           }
-          // Edit mode always needs re-render (ghost cursor, grid, etc.)
-          return editModeRef.current;
+          // Edit mode: only dirty when ghost/selection actually changed
+          if (editModeRef.current) {
+            const editor = editorRef.current;
+            const ghostMoved = editor.ghostCol !== prevGhostCol || editor.ghostRow !== prevGhostRow;
+            const selChanged = editor.selectedFurnitureUid !== prevSelectedUid;
+            prevGhostCol = editor.ghostCol;
+            prevGhostRow = editor.ghostRow;
+            prevSelectedUid = editor.selectedFurnitureUid;
+            return ghostMoved || selChanged;
+          }
+          return false;
         };
       })(),
       render: (ctx) => {
@@ -249,8 +263,12 @@ export default function PixelOfficeScene({
       },
     });
 
+    // Store wake for mouse/pointer handlers and officeState notifications
+    wakeRef.current = wake;
+    officeState.onDirty = wake;
+
     // Create adapter and notify parent
-    const adapter = new PixelSceneAdapter(officeState, stop);
+    const adapter = new PixelSceneAdapter(officeState, stop, wake);
     onAdapterReady(adapter);
 
     return () => {
@@ -317,6 +335,7 @@ export default function PixelOfficeScene({
     if (officeState && !editModeRef.current) {
       const world = screenToWorld(e.clientX, e.clientY);
       officeState.setHoveredCharAtPixel(world.x, world.y);
+      if (officeState.dirty) wakeRef.current?.();
     }
 
     // Editor: ghost preview + drag
@@ -339,6 +358,7 @@ export default function PixelOfficeScene({
       x: panStartRef.current.panX + dx,
       y: panStartRef.current.panY + dy,
     };
+    wakeRef.current?.();
   }, [screenToWorld, screenToTile, officeStateRef, panRef, editorRef, onDragMove, onGhostMove]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
@@ -442,6 +462,7 @@ export default function PixelOfficeScene({
         const direction = delta > 0 ? 1 : -1;
         zoomRef.current = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoomRef.current + direction));
         pinchDistRef.current = dist;
+        wakeRef.current?.();
       }
     } else if (e.touches.length === 1 && isPanningRef.current && PAN_ENABLED) {
       const dx = e.touches[0].clientX - panStartRef.current.x;
@@ -450,6 +471,7 @@ export default function PixelOfficeScene({
         x: panStartRef.current.panX + dx,
         y: panStartRef.current.panY + dy,
       };
+      wakeRef.current?.();
     }
   }, [zoomRef, panRef]);
 

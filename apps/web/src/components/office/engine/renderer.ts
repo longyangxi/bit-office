@@ -38,6 +38,23 @@ import {
   SPEECH_BUBBLE_FADE_SEC,
 } from '../constants'
 
+// ── Text measurement cache ──────────────────────────────────────
+// Avoids calling ctx.measureText() every frame for the same text+font combo.
+const textWidthCache = new Map<string, number>()
+const TEXT_CACHE_MAX = 200
+
+function measureTextCached(ctx: CanvasRenderingContext2D, text: string, font: string): number {
+  const key = `${font}|${text}`
+  let w = textWidthCache.get(key)
+  if (w !== undefined) return w
+  ctx.font = font
+  w = Math.ceil(ctx.measureText(text).width)
+  // Evict when cache gets too large
+  if (textWidthCache.size >= TEXT_CACHE_MAX) textWidthCache.clear()
+  textWidthCache.set(key, w)
+  return w
+}
+
 // ── Render functions ────────────────────────────────────────────
 
 export function renderTileGrid(
@@ -447,12 +464,12 @@ export function renderSpeechBubbles(
     if (alpha <= 0) continue
 
     const fontSize = Math.max(7, Math.round(4.5 * charZoom))
+    const font = `${fontSize}px monospace`
+    const textW = measureTextCached(ctx, ch.speechText, font)
+    const textH = fontSize
     ctx.save()
     ctx.imageSmoothingEnabled = false
-    ctx.font = `${fontSize}px monospace`
-    const metrics = ctx.measureText(ch.speechText)
-    const textW = Math.ceil(metrics.width)
-    const textH = fontSize
+    ctx.font = font
 
     const padX = 3 * px
     const padY = 2 * px
@@ -516,12 +533,12 @@ export function renderNameBadges(
     if (ch.matrixEffect === 'despawn') continue
 
     const fontSize = Math.max(6, Math.round(3.5 * charZoom))
+    const font = `bold ${fontSize}px monospace`
+    const textW = measureTextCached(ctx, ch.label, font)
+    const textH = fontSize
     ctx.save()
     ctx.imageSmoothingEnabled = false
-    ctx.font = `bold ${fontSize}px monospace`
-    const metrics = ctx.measureText(ch.label)
-    const textW = Math.ceil(metrics.width)
-    const textH = fontSize
+    ctx.font = font
 
     const padX = 2 * px
     const padY = 1 * px

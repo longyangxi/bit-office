@@ -1,5 +1,11 @@
 import { TileType } from '../types'
 
+/** Encode (col, row) as a single number for fast Set/Map lookups */
+function tileKey(col: number, row: number): number {
+  // Supports maps up to 1024 columns wide
+  return (row << 10) | col
+}
+
 /** Check if a tile is walkable (floor, carpet, or doorway, and not blocked by furniture) */
 export function isWalkable(
   col: number,
@@ -34,6 +40,13 @@ export function getWalkableTiles(
   return tiles
 }
 
+const DIRS = [
+  { dc: 0, dr: -1 },
+  { dc: 0, dr: 1 },
+  { dc: -1, dr: 0 },
+  { dc: 1, dr: 0 },
+] as const
+
 /** BFS pathfinding on 4-connected grid (no diagonals). Returns path excluding start, including end. */
 export function findPath(
   startCol: number,
@@ -45,54 +58,49 @@ export function findPath(
 ): Array<{ col: number; row: number }> {
   if (startCol === endCol && startRow === endRow) return []
 
-  const key = (c: number, r: number) => `${c},${r}`
-  const startKey = key(startCol, startRow)
-  const endKey = key(endCol, endRow)
-
   const endWalkable = isWalkable(endCol, endRow, tileMap, blockedTiles)
-  if (!endWalkable) {
-    return []
-  }
+  if (!endWalkable) return []
 
-  const visited = new Set<string>()
+  const startKey = tileKey(startCol, startRow)
+  const endKey = tileKey(endCol, endRow)
+
+  // Use numeric keys for visited set and parent map — much faster than string keys
+  const visited = new Set<number>()
   visited.add(startKey)
 
-  const parent = new Map<string, string>()
-  const queue: Array<{ col: number; row: number }> = [{ col: startCol, row: startRow }]
+  const parent = new Map<number, number>()
+  // BFS queue using a flat array with head pointer (avoids shift() O(n) cost)
+  const queue: number[] = [startCol, startRow]
+  let head = 0
 
-  const dirs = [
-    { dc: 0, dr: -1 },
-    { dc: 0, dr: 1 },
-    { dc: -1, dr: 0 },
-    { dc: 1, dr: 0 },
-  ]
-
-  while (queue.length > 0) {
-    const curr = queue.shift()!
-    const currKey = key(curr.col, curr.row)
+  while (head < queue.length) {
+    const currCol = queue[head++]
+    const currRow = queue[head++]
+    const currKey = tileKey(currCol, currRow)
 
     if (currKey === endKey) {
+      // Reconstruct path
       const path: Array<{ col: number; row: number }> = []
       let k = endKey
       while (k !== startKey) {
-        const [c, r] = k.split(',').map(Number)
-        path.unshift({ col: c, row: r })
+        path.push({ col: k & 0x3ff, row: k >> 10 })
         k = parent.get(k)!
       }
+      path.reverse()
       return path
     }
 
-    for (const d of dirs) {
-      const nc = curr.col + d.dc
-      const nr = curr.row + d.dr
-      const nk = key(nc, nr)
+    for (const d of DIRS) {
+      const nc = currCol + d.dc
+      const nr = currRow + d.dr
+      const nk = tileKey(nc, nr)
 
       if (visited.has(nk)) continue
       if (!isWalkable(nc, nr, tileMap, blockedTiles)) continue
 
       visited.add(nk)
       parent.set(nk, currKey)
-      queue.push({ col: nc, row: nr })
+      queue.push(nc, nr)
     }
   }
 

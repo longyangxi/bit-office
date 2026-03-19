@@ -51,6 +51,18 @@ export class OfficeState {
   characterScale = 1
   /** Dirty flag — set to true when scene changes and needs re-render */
   dirty = true
+  /** Optional callback to wake the game loop from sleep */
+  onDirty: (() => void) | null = null
+
+  // ── Cached character list (avoid Array.from each frame) ─────
+  private _cachedChars: Character[] = []
+  private _charListDirty = true
+
+  /** Mark scene as dirty and wake the render loop if sleeping */
+  private markDirty(): void {
+    this.dirty = true
+    this.onDirty?.()
+  }
 
   // ── Agent ID mapping ──────────────────────────────────────────
   private agentIdToCharId = new Map<string, number>()
@@ -77,7 +89,7 @@ export class OfficeState {
   /** Set background image (from room ZIP import) */
   setBackgroundImage(img: HTMLImageElement | null): void {
     this.backgroundImage = img
-    this.dirty = true
+    this.markDirty()
   }
 
   /** Hot-replace layout: rebuild tileMap, seats, furniture, reassign characters */
@@ -125,7 +137,7 @@ export class OfficeState {
       ch.moveProgress = 0
     }
     this.rebuildFurnitureInstances()
-    this.dirty = true
+    this.markDirty()
   }
 
   // ── Public API (string agentId) ───────────────────────────────
@@ -164,7 +176,8 @@ export class OfficeState {
     ch.matrixEffectSeeds = matrixEffectSeeds()
 
     this.characters.set(charId, ch)
-    this.dirty = true
+    this._charListDirty = true
+    this.markDirty()
   }
 
   removeCharacter(agentId: string): void {
@@ -188,7 +201,7 @@ export class OfficeState {
     ch.matrixEffectTimer = 0
     ch.matrixEffectSeeds = matrixEffectSeeds()
     ch.bubbleType = null
-    this.dirty = true
+    this.markDirty()
   }
 
   updateCharacterStatus(agentId: string, status: AgentStatus, keepSeat?: boolean): void {
@@ -196,7 +209,7 @@ export class OfficeState {
     if (charId === undefined) return
     const ch = this.characters.get(charId)
     if (!ch) return
-    this.dirty = true
+    this.markDirty()
 
     const wasActive = ch.isActive
     const isNowActive = status === 'working' || status === 'waiting_approval'
@@ -266,7 +279,7 @@ export class OfficeState {
       const charId = this.agentIdToCharId.get(agentId)
       this.selectedCharId = charId ?? null
     }
-    if (this.selectedCharId !== prev) this.dirty = true
+    if (this.selectedCharId !== prev) this.markDirty()
   }
 
   showBubble(agentId: string, type: 'permission' | 'working' | 'waiting'): void {
@@ -282,7 +295,7 @@ export class OfficeState {
       ch.bubbleType = 'waiting'
       ch.bubbleTimer = WAITING_BUBBLE_DURATION_SEC
     }
-    this.dirty = true
+    this.markDirty()
   }
 
   clearBubble(agentId: string): void {
@@ -296,7 +309,7 @@ export class OfficeState {
     } else if (ch.bubbleType === 'waiting') {
       ch.bubbleTimer = Math.min(ch.bubbleTimer, DISMISS_BUBBLE_FAST_FADE_SEC)
     }
-    this.dirty = true
+    this.markDirty()
   }
 
   showSpeechBubble(agentId: string, text: string): void {
@@ -309,13 +322,17 @@ export class OfficeState {
       : text
     ch.speechText = truncated
     ch.speechTimer = SPEECH_BUBBLE_DURATION_SEC
-    this.dirty = true
+    this.markDirty()
   }
 
   // ── Getters for renderer ──────────────────────────────────────
 
   getCharacters(): Character[] {
-    return Array.from(this.characters.values())
+    if (this._charListDirty) {
+      this._cachedChars = Array.from(this.characters.values())
+      this._charListDirty = false
+    }
+    return this._cachedChars
   }
 
   getLayout(): OfficeLayout {
@@ -338,7 +355,10 @@ export class OfficeState {
   /** Get character at pixel position (for hit testing). Returns agentId or null. */
   getAgentAtPixel(worldX: number, worldY: number): string | null {
     const s = this.characterScale
-    const chars = this.getCharacters().sort((a, b) => b.y - a.y)
+    // Iterate characters sorted by descending Y (frontmost first) without allocating a new array
+    const chars = this.getCharacters()
+    let hitId: string | null = null
+    let hitY = -Infinity
     for (const ch of chars) {
       if (ch.matrixEffect === 'despawn') continue
       const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
@@ -348,17 +368,23 @@ export class OfficeState {
       const top = anchorY - CHARACTER_HIT_HEIGHT * s
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
-        return this.charIdToAgentId.get(ch.id) ?? null
+        // Pick the frontmost (highest Y) hit
+        if (ch.y > hitY) {
+          hitY = ch.y
+          hitId = this.charIdToAgentId.get(ch.id) ?? null
+        }
       }
     }
-    return null
+    return hitId
   }
 
   /** Set hovered character by numeric id (for outline rendering) */
   setHoveredCharAtPixel(worldX: number, worldY: number): void {
     const prev = this.hoveredCharId
     const s = this.characterScale
-    const chars = this.getCharacters().sort((a, b) => b.y - a.y)
+    const chars = this.getCharacters()
+    let bestId: number | null = null
+    let bestY = -Infinity
     for (const ch of chars) {
       if (ch.matrixEffect === 'despawn') continue
       const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
@@ -368,13 +394,11 @@ export class OfficeState {
       const top = anchorY - CHARACTER_HIT_HEIGHT * s
       const bottom = anchorY
       if (worldX >= left && worldX <= right && worldY >= top && worldY <= bottom) {
-        this.hoveredCharId = ch.id
-        if (this.hoveredCharId !== prev) this.dirty = true
-        return
+        if (ch.y > bestY) { bestY = ch.y; bestId = ch.id }
       }
     }
-    this.hoveredCharId = null
-    if (this.hoveredCharId !== prev) this.dirty = true
+    this.hoveredCharId = bestId
+    if (this.hoveredCharId !== prev) this.markDirty()
   }
 
   // ── Update loop ───────────────────────────────────────────────
@@ -453,7 +477,10 @@ export class OfficeState {
     }
 
     // Remove characters that finished despawn
-    if (toDelete.length > 0) this.dirty = true
+    if (toDelete.length > 0) {
+      this.dirty = true
+      this._charListDirty = true
+    }
     for (const id of toDelete) {
       const agentId = this.charIdToAgentId.get(id)
       this.characters.delete(id)
@@ -486,6 +513,7 @@ export class OfficeState {
       this.characters.set(charId, ch)
       idx++
     }
+    this._charListDirty = true
     this.rebuildFurnitureInstances()
   }
 
@@ -504,7 +532,10 @@ export class OfficeState {
       toRemove.push(agentId)
     }
     for (const id of toRemove) this.agentIdToCharId.delete(id)
-    if (toRemove.length > 0) this.rebuildFurnitureInstances()
+    if (toRemove.length > 0) {
+      this._charListDirty = true
+      this.rebuildFurnitureInstances()
+    }
   }
 
   /** Check if test characters are active */
