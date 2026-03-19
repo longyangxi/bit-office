@@ -359,6 +359,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           .term-clean .term-dotgrid { background-image: none !important; }
           .term-clean .term-chat-area { background-image: none !important; }
           .term-clean .term-input:focus { animation: none !important; box-shadow: none !important; outline: none; }
+          /* ── Kill child transitions during console expand/collapse (prevents layout thrash) ── */
+          .console-transitioning * { transition: none !important; }
           /* ── Pause animations when page hidden (saves GPU) ── */
           .term-paused .crt-screen,
           .term-paused .crt-scanline-bar,

@@ -1308,7 +1308,7 @@ export default function OfficePage() {
       {/* ── Right Sidebar (desktop only) — takes remaining space after game scene ── */}
       {!isMobile && <>
 
-        <div className="term-dotgrid" style={{
+        <div className={`term-dotgrid${scrollFrozen ? " console-transitioning" : ""}`} style={{
           position: "fixed",
           right: 0,
           top: 0,
@@ -1323,6 +1323,7 @@ export default function OfficePage() {
           flexDirection: "row",
           overflow: "visible",
           transition: "width 0.3s ease",
+          willChange: "width",
           zIndex: 10,
         }}>
 
