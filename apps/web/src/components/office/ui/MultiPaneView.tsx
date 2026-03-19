@@ -313,7 +313,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         {showHireButton && onHire ? (
           <button
             onClick={onHire}
-            title="Hire Agent"
+            title="Hire Team"
             style={{
               display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
               gap: 10, padding: "28px 48px",
@@ -326,7 +326,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}06`; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}30`; e.currentTarget.style.transform = "scale(1)"; }}
           >
             <span style={{ fontSize: 22, opacity: 0.8 }}>+</span>
-            <span style={{ letterSpacing: "0.5px" }}>Hire Agent</span>
+            <span style={{ letterSpacing: "0.5px" }}>Hire Team</span>
           </button>
         ) : (
           "No agents active"
@@ -526,12 +526,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           </button>
         </div>
 
-        {/* Right: hire agent button */}
+        {/* Right: hire team button */}
         {showHireButton && onHire && (
           <button
             onClick={onHire}
-            title="Hire Agent"
-            aria-label="Hire Agent"
+            title="Hire Team"
+            aria-label="Hire Team"
             style={{
               position: "absolute",
               right: 10,

@@ -44,7 +44,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           maxHeight: "90vh", display: "flex", flexDirection: "column",
         }}
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em", flexShrink: 0 }}>Hire Agent</h2>
+        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em", flexShrink: 0 }}>Hire Team</h2>
 
         <div style={{ padding: "0 18px", flexShrink: 0 }}>
         {/* Backend selector */}
