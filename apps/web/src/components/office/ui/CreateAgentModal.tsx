@@ -59,7 +59,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
             cat.subcategories.map((sub) => (
               <div key={`${cat.category}/${sub.name}`}>
                 <div style={{
-                  padding: "4px 10px", fontSize: 10, color: "#5a4838",
+                  padding: "4px 10px", fontSize: 10, color: TERM_DIM,
                   fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em",
                   backgroundColor: TERM_BG, position: "sticky", top: 0,
                 }}>
@@ -74,7 +74,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
                       color: a.name === value ? TERM_GREEN : TERM_TEXT,
                       cursor: "pointer", backgroundColor: a.name === value ? `${TERM_GREEN}18` : "transparent",
                     }}
-                    onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "#1a1a2a"; }}
+                    onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
                     onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
                   >
                     {a.name}
@@ -263,7 +263,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
             }}
           />
           {AGENCY_AGENT_MAP.get(currentRole) && (
-            <div style={{ fontSize: 11, color: "#5a4838", marginTop: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
+            <div style={{ fontSize: 11, color: TERM_DIM, marginTop: 4, fontFamily: "monospace", lineHeight: 1.4 }}>
               {AGENCY_AGENT_MAP.get(currentRole)}
             </div>
           )}
@@ -416,7 +416,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
             style={{
               padding: "9px 16px",
               border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-              color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
+              color: TERM_DIM, fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >Cancel</button>
         </div>
