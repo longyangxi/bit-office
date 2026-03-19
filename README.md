@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/bit-office/pulls)
 
-**Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project.**
+**Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project. 🚀**
 
 [Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
 
