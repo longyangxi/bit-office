@@ -138,21 +138,26 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const cfg = statusConfig[status] ?? statusConfig.idle;
 
   // ── Scroll management ──
+  // Root cause of blank-screen bugs: the old programmaticScrollRef flag was a
+  // single-use boolean consumed by the first scroll event. In 3-pane flex layouts,
+  // cross-pane layout reflows fire spurious scroll events that consume the flag
+  // before the intended event arrives. The second event then reads stale dimensions,
+  // incorrectly sets wasAtBottomRef=false, and all future auto-scroll stops.
+  //
+  // Fix: remove the flag entirely. scrollToBottom always marks wasAtBottom=true
+  // (that's the intent). The scroll handler debounces its position check to the
+  // next frame so layout is fully settled before reading dimensions.
   const chatEndRef = useRef<HTMLDivElement>(null);
   const wasAtBottomRef = useRef(true);
   const resizingRef = useRef(false);
-  const programmaticScrollRef = useRef(false);
+  const scrollCheckRafRef = useRef(0);
   const msgCount = messages.length;
 
-  /** Safely scroll container to bottom, clamping to valid range.
-   *  Suppresses the resulting scroll event so wasAtBottomRef isn't
-   *  corrupted by stale layout dimensions (e.g. 3-pane flex, background tab). */
+  /** Scroll container to bottom. Always marks wasAtBottomRef=true (caller intent).
+   *  Uses scrollTop=scrollHeight — browser auto-clamps to valid range. */
   const scrollToBottom = (container: HTMLElement) => {
-    const maxScroll = container.scrollHeight - container.clientHeight;
-    if (maxScroll > 0) {
-      programmaticScrollRef.current = true;
-      container.scrollTop = maxScroll;
-    }
+    container.scrollTop = container.scrollHeight;
+    wasAtBottomRef.current = true;
   };
 
   // When prompt clears (user submitted), force next auto-scroll
@@ -164,14 +169,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     prevPromptRef.current = prompt;
   }, [prompt]);
 
-  // When scrollFrozen transitions false→true, just wait.
-  // When it transitions true→false (transition ended), force scroll to bottom.
+  // When scrollFrozen transitions true→false (transition ended), force scroll to bottom.
   const prevFrozenRef = useRef(scrollFrozen);
   useEffect(() => {
     const wasFrozen = prevFrozenRef.current;
     prevFrozenRef.current = scrollFrozen;
     if (wasFrozen && !scrollFrozen) {
-      // Transition just ended — force scroll to bottom
       const el = chatEndRef.current;
       const container = el?.parentElement;
       if (container) {
@@ -181,7 +184,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     }
   }, [scrollFrozen]);
 
-  // Track scroll position via scroll events (skip during resize/frozen to avoid false negatives)
+  // Track scroll position via scroll events.
+  // Debounced to next frame so we only read dimensions after layout settles —
+  // prevents false negatives from stale scrollHeight during flex reflows.
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
@@ -189,17 +194,22 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     const onScroll = () => {
       if (resizingRef.current || scrollFrozen) return;
-      if (programmaticScrollRef.current) { programmaticScrollRef.current = false; return; }
-      wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
+      cancelAnimationFrame(scrollCheckRafRef.current);
+      scrollCheckRafRef.current = requestAnimationFrame(() => {
+        wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
+      });
     };
     container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
+    return () => {
+      container.removeEventListener("scroll", onScroll);
+      cancelAnimationFrame(scrollCheckRafRef.current);
+    };
   }, [agentId, scrollFrozen]);
 
-  // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink)
-  // IMPORTANT: Defer scroll to double-rAF to ensure flex layout is fully settled
-  // before reading scrollHeight. Synchronous scroll during ResizeObserver caused
-  // "blank screen" issues in 3-pane fullscreen layout due to stale scrollHeight.
+  // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink).
+  // Single rAF is now safe because scrollToBottom always sets wasAtBottom=true,
+  // so even if the first attempt uses slightly stale dimensions, subsequent
+  // MutationObserver/useLayoutEffect calls will correct it.
   useEffect(() => {
     const el = chatEndRef.current;
     if (!el) return;
@@ -207,31 +217,28 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     let rafId = 0;
     const ro = new ResizeObserver(() => {
-      if (scrollFrozen) return; // Don't touch scroll during CSS transition
+      if (scrollFrozen) return;
       resizingRef.current = true;
       if (rafId) cancelAnimationFrame(rafId);
-      // Double-rAF: first rAF lets the browser finish layout, second rAF scrolls safely
       rafId = requestAnimationFrame(() => {
-        rafId = requestAnimationFrame(() => {
-          rafId = 0;
-          if (wasAtBottomRef.current) {
-            scrollToBottom(container);
-          }
-          resizingRef.current = false;
-        });
+        rafId = 0;
+        if (wasAtBottomRef.current) {
+          scrollToBottom(container);
+        }
+        resizingRef.current = false;
       });
     });
     ro.observe(container);
     return () => {
       ro.disconnect();
       if (rafId) cancelAnimationFrame(rafId);
-      resizingRef.current = false; // Ensure flag resets when effect cleans up
+      resizingRef.current = false;
     };
   }, [agentId, scrollFrozen]);
 
   // Scroll to bottom synchronously after DOM commit when messages change
   useLayoutEffect(() => {
-    if (scrollFrozen) return; // Don't touch scroll during CSS transition
+    if (scrollFrozen) return;
     const el = chatEndRef.current;
     const container = el?.parentElement;
     if (container && wasAtBottomRef.current) {
@@ -247,7 +254,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     if (!container) return;
     let raf = 0;
     const observer = new MutationObserver(() => {
-      if (scrollFrozen) return; // Don't touch scroll during CSS transition
+      if (scrollFrozen) return;
       if (!raf) {
         raf = requestAnimationFrame(() => {
           raf = 0;

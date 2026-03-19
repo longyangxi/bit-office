@@ -52,6 +52,7 @@ export interface MultiPaneViewProps {
   onFire: (agentId: string) => void;
   onApproval: (approvalId: string, decision: "yes" | "no") => void;
   onApprovePlan: (agentId: string) => void;
+  onQuickApprove: (agentId: string) => void;
   onEndProject: (agentId: string) => void;
   onSuggest: () => void;
   onPreview: (url: string) => void;
@@ -103,6 +104,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onFire,
     onApproval,
     onApprovePlan,
+    onQuickApprove,
     onEndProject,
     onSuggest,
     onPreview,
@@ -267,6 +269,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onFire={(id) => onFire(id)}
                 onApproval={(approvalId, decision) => onApproval(approvalId, decision)}
                 onApprovePlan={() => onApprovePlan(agentId)}
+                onQuickApprove={() => onQuickApprove(agentId)}
                 onEndProject={() => onEndProject(agentId)}
                 onSuggest={onSuggest}
                 onPreview={onPreview}

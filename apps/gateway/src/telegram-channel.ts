@@ -9,7 +9,6 @@ const PRESETS = [
   { name: "Alex",   role: "Frontend Developer",  palette: 0, personality: "Detail-oriented and user-centric. Focuses on performance, accessibility, and pixel-perfect implementation." },
   { name: "Mia",    role: "Backend Architect",   palette: 1, personality: "Strategic and security-focused. Designs for scale, reliability, and maintainability." },
   { name: "Leo",    role: "Rapid Prototyper",    palette: 2, personality: "Speed-focused and pragmatic. Ships working prototypes fast, iterates based on feedback." },
-  { name: "Sophie", role: "Code Reviewer",       palette: 3, personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what." },
   { name: "Marcus", role: "Team Lead",           palette: 5, personality: "Strong product intuition, communicates with clarity and vision. Focuses on the big picture and keeps the team aligned." },
 ];
 

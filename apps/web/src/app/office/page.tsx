@@ -1648,6 +1648,13 @@ export default function OfficePage() {
                 onFire={handleFire}
                 onApproval={handleApproval}
                 onApprovePlan={(agentId) => sendCommand({ type: "APPROVE_PLAN", agentId })}
+                onQuickApprove={(agentId) => {
+                  const ag = agents.get(agentId);
+                  if (!ag) return;
+                  const taskId = 'task-' + Date.now().toString(36);
+                  addUserMessage(agentId, taskId, "yes");
+                  sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: "yes", repoPath: agentWorkDirMap.get(agentId) });
+                }}
                 onEndProject={(agentId) => {
                   const ag = agents.get(agentId);
                   sendCommand({ type: "END_PROJECT", agentId, name: ag?.name, role: ag?.role, personality: ag?.personality, backend: ag?.backend });
@@ -1721,6 +1728,12 @@ export default function OfficePage() {
                   onFire={handleFire}
                   onApproval={handleApproval}
                   onApprovePlan={handleApprovePlan}
+                  onQuickApprove={() => {
+                    if (!selectedAgent) return;
+                    const taskId = 'task-' + Date.now().toString(36);
+                    addUserMessage(selectedAgent, taskId, "yes");
+                    sendCommand({ type: "RUN_TASK", agentId: selectedAgent, taskId, prompt: "yes" });
+                  }}
                   onEndProject={handleEndProject}
                   onSuggest={handleSuggest}
                   onPreview={setPreviewUrl}
