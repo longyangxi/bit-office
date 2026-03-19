@@ -135,12 +135,10 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const totalPages = Math.ceil(openPanes.length / MAX_VISIBLE);
   const currentPage = Math.floor(paneOffset / MAX_VISIBLE) + 1;
 
-  // Check if trailing controls should show (hire button or team controls)
+  // Check if trailing controls should show (team controls only — hire button moved to pagination bar)
   // Only show in last page of pagination (or when no pagination)
   const isLastPage = paneOffset + MAX_VISIBLE >= openPanes.length;
-  const hasTrailingControls = isLastPage && (showHireButton || showTeamControls);
-  // How many visible panes + trailing slot
-  const slotsUsed = visiblePanes.length + (hasTrailingControls ? 0 : 0);
+  const hasTrailingControls = isLastPage && showTeamControls;
 
   if (openPanes.length === 0) {
     return (
@@ -289,7 +287,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           );
         })}
 
-        {/* Trailing hire/team controls after last pane */}
+        {/* Trailing team controls (stop/fire) after last pane */}
         {hasTrailingControls && (
           <div
             style={{
@@ -300,22 +298,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
               minWidth: 60, flexShrink: 0,
             }}
           >
-            {showHireButton && onHire && (
-              <button
-                onClick={onHire}
-                title="Hire Agent"
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  width: 44, height: 44,
-                  border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
-                  backgroundColor: "transparent", color: TERM_SEM_YELLOW,
-                  fontSize: 20, fontFamily: TERM_FONT,
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
-              >+</button>
-            )}
             {showTeamControls && teamBusy && onStopTeam && (
               <button
                 onClick={onStopTeam}
@@ -353,53 +335,77 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          gap: 12,
-          padding: "4px 0",
+          padding: "4px 8px",
           fontFamily: TERM_FONT,
           fontSize: TERM_SIZE - 1,
           color: TERM_DIM,
           background: TERM_PANEL,
           borderTop: `1px solid rgba(24,255,98,0.08)`,
           flexShrink: 0,
+          position: "relative",
         }}
       >
-        <button
-          onClick={() => onPaneOffsetChange(Math.max(0, paneOffset - 1))}
-          disabled={paneOffset === 0}
-          aria-label="Previous panes"
-          style={{
-            background: "none",
-            border: "none",
-            color: paneOffset === 0 ? TERM_DIM : TERM_GREEN,
-            cursor: paneOffset === 0 ? "default" : "pointer",
-            fontFamily: TERM_FONT,
-            fontSize: TERM_SIZE,
-            padding: "2px 6px",
-            opacity: paneOffset === 0 ? 0.4 : 1,
-          }}
-        >
-          ◀
-        </button>
-        <span>
-          {currentPage} / {totalPages}
-        </span>
-        <button
-          onClick={() => onPaneOffsetChange(Math.min(maxOffset, paneOffset + 1))}
-          disabled={paneOffset >= maxOffset}
-          aria-label="Next panes"
-          style={{
-            background: "none",
-            border: "none",
-            color: paneOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
-            cursor: paneOffset >= maxOffset ? "default" : "pointer",
-            fontFamily: TERM_FONT,
-            fontSize: TERM_SIZE,
-            padding: "2px 6px",
-            opacity: paneOffset >= maxOffset ? 0.4 : 1,
-          }}
-        >
-          ▶
-        </button>
+        {/* Center: pagination controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          <button
+            onClick={() => onPaneOffsetChange(Math.max(0, paneOffset - 1))}
+            disabled={paneOffset === 0}
+            aria-label="Previous panes"
+            style={{
+              background: "none",
+              border: "none",
+              color: paneOffset === 0 ? TERM_DIM : TERM_GREEN,
+              cursor: paneOffset === 0 ? "default" : "pointer",
+              fontFamily: TERM_FONT,
+              fontSize: TERM_SIZE,
+              padding: "2px 6px",
+              opacity: paneOffset === 0 ? 0.4 : 1,
+            }}
+          >
+            ◀
+          </button>
+          <span>
+            {currentPage} / {totalPages}
+          </span>
+          <button
+            onClick={() => onPaneOffsetChange(Math.min(maxOffset, paneOffset + 1))}
+            disabled={paneOffset >= maxOffset}
+            aria-label="Next panes"
+            style={{
+              background: "none",
+              border: "none",
+              color: paneOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
+              cursor: paneOffset >= maxOffset ? "default" : "pointer",
+              fontFamily: TERM_FONT,
+              fontSize: TERM_SIZE,
+              padding: "2px 6px",
+              opacity: paneOffset >= maxOffset ? 0.4 : 1,
+            }}
+          >
+            ▶
+          </button>
+        </div>
+
+        {/* Right: hire agent button */}
+        {showHireButton && onHire && (
+          <button
+            onClick={onHire}
+            title="Hire Agent"
+            aria-label="Hire Agent"
+            style={{
+              position: "absolute",
+              right: 8,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              width: 22, height: 22,
+              border: `1px dashed ${TERM_SEM_YELLOW}50`, cursor: "pointer",
+              backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+              fontSize: 14, fontFamily: TERM_FONT, lineHeight: 1,
+              transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}15`; e.currentTarget.style.borderColor = TERM_SEM_YELLOW; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_SEM_YELLOW}50`; }}
+          >+</button>
+        )}
       </div>
     </div>
   );
