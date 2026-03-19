@@ -286,14 +286,16 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onFireTeam,
   } = props;
 
-  const visiblePanes = openPanes.slice(paneOffset, paneOffset + MAX_VISIBLE);
-  const maxOffset = Math.max(0, openPanes.length - MAX_VISIBLE);
+  // Snap paneOffset to page boundaries so indicator and arrows stay in sync
   const totalPages = Math.ceil(openPanes.length / MAX_VISIBLE);
-  const currentPage = Math.floor(paneOffset / MAX_VISIBLE) + 1;
+  const currentPage = Math.min(Math.floor(paneOffset / MAX_VISIBLE) + 1, totalPages);
+  const snappedOffset = (currentPage - 1) * MAX_VISIBLE;
+  const visiblePanes = openPanes.slice(snappedOffset, snappedOffset + MAX_VISIBLE);
+  const maxOffset = (totalPages - 1) * MAX_VISIBLE;
 
   // Check if trailing controls should show (team controls only — hire button moved to pagination bar)
   // Only show in last page of pagination (or when no pagination)
-  const isLastPage = paneOffset + MAX_VISIBLE >= openPanes.length;
+  const isLastPage = snappedOffset + MAX_VISIBLE >= openPanes.length;
   const hasTrailingControls = isLastPage && showTeamControls;
 
   if (openPanes.length === 0) {
@@ -456,25 +458,25 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         {/* Center: pagination controls */}
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <button
-            onClick={() => onPaneOffsetChange(Math.max(0, paneOffset - 1))}
-            disabled={paneOffset === 0}
+            onClick={() => onPaneOffsetChange(Math.max(0, snappedOffset - MAX_VISIBLE))}
+            disabled={snappedOffset === 0}
             aria-label="Previous panes"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 26, height: 26,
-              background: paneOffset === 0 ? "transparent" : TERM_SURFACE,
-              border: `1px solid ${paneOffset === 0 ? "transparent" : TERM_BORDER_DIM}`,
+              background: snappedOffset === 0 ? "transparent" : TERM_SURFACE,
+              border: `1px solid ${snappedOffset === 0 ? "transparent" : TERM_BORDER_DIM}`,
               borderRadius: 4,
-              color: paneOffset === 0 ? TERM_DIM : TERM_GREEN,
-              cursor: paneOffset === 0 ? "default" : "pointer",
+              color: snappedOffset === 0 ? TERM_DIM : TERM_GREEN,
+              cursor: snappedOffset === 0 ? "default" : "pointer",
               fontFamily: TERM_FONT,
               fontSize: 10,
               padding: 0,
-              opacity: paneOffset === 0 ? 0.35 : 1,
+              opacity: snappedOffset === 0 ? 0.35 : 1,
               transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { if (paneOffset > 0) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
-            onMouseLeave={(e) => { if (paneOffset > 0) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
+            onMouseEnter={(e) => { if (snappedOffset > 0) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
+            onMouseLeave={(e) => { if (snappedOffset > 0) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
           >
             ◀
           </button>
@@ -502,25 +504,25 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           </div>
 
           <button
-            onClick={() => onPaneOffsetChange(Math.min(maxOffset, paneOffset + 1))}
-            disabled={paneOffset >= maxOffset}
+            onClick={() => onPaneOffsetChange(Math.min(maxOffset, snappedOffset + MAX_VISIBLE))}
+            disabled={snappedOffset >= maxOffset}
             aria-label="Next panes"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 26, height: 26,
-              background: paneOffset >= maxOffset ? "transparent" : TERM_SURFACE,
-              border: `1px solid ${paneOffset >= maxOffset ? "transparent" : TERM_BORDER_DIM}`,
+              background: snappedOffset >= maxOffset ? "transparent" : TERM_SURFACE,
+              border: `1px solid ${snappedOffset >= maxOffset ? "transparent" : TERM_BORDER_DIM}`,
               borderRadius: 4,
-              color: paneOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
-              cursor: paneOffset >= maxOffset ? "default" : "pointer",
+              color: snappedOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
+              cursor: snappedOffset >= maxOffset ? "default" : "pointer",
               fontFamily: TERM_FONT,
               fontSize: 10,
               padding: 0,
-              opacity: paneOffset >= maxOffset ? 0.35 : 1,
+              opacity: snappedOffset >= maxOffset ? 0.35 : 1,
               transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { if (paneOffset < maxOffset) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
-            onMouseLeave={(e) => { if (paneOffset < maxOffset) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
+            onMouseEnter={(e) => { if (snappedOffset < maxOffset) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
+            onMouseLeave={(e) => { if (snappedOffset < maxOffset) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
           >
             ▶
           </button>
