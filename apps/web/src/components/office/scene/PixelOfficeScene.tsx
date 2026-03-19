@@ -175,6 +175,7 @@ export default function PixelOfficeScene({
           return false;
         };
       })(),
+      needsTick: () => officeState.needsTick,
       render: (ctx) => {
         const cw = canvas.width / dpr;
         const ch = canvas.height / dpr;
