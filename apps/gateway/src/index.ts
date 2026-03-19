@@ -289,7 +289,7 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       console.log(`[Worktree] Created ${e.worktreePath} for agent ${e.agentId}`);
       return null;
     case "worktree:merged":
-      console.log(`[Worktree] Merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""})`);
+      console.log(`[Worktree] Squash-merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""}${e.stagedFiles?.length ? ` staged=${e.stagedFiles.length} files` : ""})`);
       return null;
     case "agent:activity":
       console.log(`[Activity] ${e.agentName} [${e.phase}]: ${e.intent.slice(0, 80)}`);

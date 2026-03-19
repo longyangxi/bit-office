@@ -388,7 +388,7 @@ export class DelegationRouter {
               this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: false, conflictFiles: conflicts });
             } else {
               const result = mergeWorktree(this.teamProjectDir, fromSession.worktreePath, fromSession.worktreeBranch);
-              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: result.success, conflictFiles: result.conflictFiles });
+              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: result.success, conflictFiles: result.conflictFiles, stagedFiles: result.stagedFiles });
             }
           } else {
             removeWorktree(fromSession.worktreePath, fromSession.worktreeBranch, this.teamProjectDir);

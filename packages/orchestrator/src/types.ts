@@ -133,6 +133,8 @@ export interface WorktreeMergedEvent {
   branch: string;
   success: boolean;
   conflictFiles?: string[];
+  /** Files staged in the working tree (not yet committed — user reviews). */
+  stagedFiles?: string[];
 }
 
 export interface AgentActivityEvent {

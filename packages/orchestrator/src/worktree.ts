@@ -48,10 +48,13 @@ export function createWorktree(
 export interface MergeResult {
   success: boolean;
   conflictFiles?: string[];
+  /** Files staged in the working tree (not yet committed — user decides). */
+  stagedFiles?: string[];
 }
 
 /**
- * Merge a worktree branch back to the current branch and clean up.
+ * Merge a worktree branch back to the current branch as staged changes (no commit).
+ * The user can review `git status` / `git diff --cached` and commit manually.
  */
 export function mergeWorktree(
   workspace: string,
@@ -59,20 +62,35 @@ export function mergeWorktree(
   branch: string,
 ): MergeResult {
   try {
-    execSync(`git merge --no-ff "${branch}"`, {
+    // --squash brings all changes into the index without committing.
+    // The user sees them as staged changes and decides whether to commit.
+    execSync(`git merge --squash "${branch}"`, {
       cwd: workspace,
       stdio: "pipe",
       timeout: TIMEOUT,
     });
-    // Clean up worktree and branch
+
+    // Collect the list of staged files so the UI / log can display them
+    let stagedFiles: string[] = [];
+    try {
+      const output = execSync("git diff --cached --name-only", {
+        cwd: workspace,
+        encoding: "utf-8",
+        timeout: TIMEOUT,
+      }).trim();
+      stagedFiles = output ? output.split("\n") : [];
+    } catch { /* ignore */ }
+
+    // Clean up worktree
     try {
       execSync(`git worktree remove "${worktreePath}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
     } catch { /* already removed */ }
+    // --squash doesn't mark the branch as merged, so -d would fail — use -D
     try {
-      execSync(`git branch -d "${branch}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
-    } catch { /* branch not found or not fully merged */ }
+      execSync(`git branch -D "${branch}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT });
+    } catch { /* branch not found */ }
 
-    return { success: true };
+    return { success: true, stagedFiles };
   } catch (err) {
     // Merge conflict — extract conflicting files
     let conflictFiles: string[] = [];
