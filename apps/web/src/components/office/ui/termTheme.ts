@@ -246,30 +246,31 @@ export const TERM_THEMES: Record<string, TermTheme> = {
 };
 
 // Mutable theme variables — reassigned by applyTermTheme()
-export let TERM_GREEN = "#89b4fa";
-export let TERM_DIM = "#6c7086";
-export let TERM_TEXT = "#bac2de";
-export let TERM_TEXT_BRIGHT = "#cdd6f4";
-export let TERM_ERROR = "#f38ba8";
+// Defaults match "tokyo-night" theme
+export let TERM_GREEN = "#7aa2f7";
+export let TERM_DIM = "#565f89";
+export let TERM_TEXT = "#a9b1d6";
+export let TERM_TEXT_BRIGHT = "#c0caf5";
+export let TERM_ERROR = "#f7768e";
 export let TERM_GLOW = "none";
-export let TERM_BG = "#1e1e2e";
-export let TERM_PANEL = "#181825";
-export let TERM_SURFACE = "#313244";
-export let TERM_HOVER = "#45475a";
-export let TERM_BORDER = "#45475a";
-export let TERM_BORDER_DIM = "#313244";
+export let TERM_BG = "#0f111a";
+export let TERM_PANEL = "#0b0d14";
+export let TERM_SURFACE = "#16161e";
+export let TERM_HOVER = "#1a1b26";
+export let TERM_BORDER = "#2a2f3a";
+export let TERM_BORDER_DIM = "#1a1b26";
 export let TERM_GLOW_BORDER = "none";
 export let TERM_GLOW_FOCUS = "none";
 // Semantic color exports
-export let TERM_SEM_GREEN = "#a6e3a1";
-export let TERM_SEM_YELLOW = "#f9e2af";
-export let TERM_SEM_RED = "#f38ba8";
-export let TERM_SEM_BLUE = "#89b4fa";
-export let TERM_SEM_PURPLE = "#cba6f7";
-export let TERM_SEM_CYAN = "#94e2d5";
+export let TERM_SEM_GREEN = "#9ece6a";
+export let TERM_SEM_YELLOW = "#e0af68";
+export let TERM_SEM_RED = "#f7768e";
+export let TERM_SEM_BLUE = "#7aa2f7";
+export let TERM_SEM_PURPLE = "#bb9af7";
+export let TERM_SEM_CYAN = "#7dcfff";
 
 export function applyTermTheme(key: string) {
-  const t = TERM_THEMES[key] ?? TERM_THEMES.catppuccin;
+  const t = TERM_THEMES[key] ?? TERM_THEMES["tokyo-night"];
   TERM_GREEN = t.accent;
   TERM_DIM = t.dim;
   TERM_TEXT = t.text;

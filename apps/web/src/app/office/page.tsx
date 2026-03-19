@@ -209,11 +209,11 @@ export default function OfficePage() {
   // ── Theme ──
   // Always start with default to avoid SSR/client hydration mismatch,
   // then restore saved theme in useEffect (client-only).
-  const [termTheme, setTermTheme] = useState("catppuccin");
+  const [termTheme, setTermTheme] = useState("tokyo-night");
   applyTermTheme(termTheme);
   useEffect(() => {
     const saved = localStorage.getItem("bit-office-theme");
-    if (saved && saved !== "catppuccin" && TERM_THEMES[saved]) {
+    if (saved && saved !== "tokyo-night" && TERM_THEMES[saved]) {
       setTermTheme(saved);
     }
   }, []);
@@ -1420,7 +1420,7 @@ export default function OfficePage() {
 
           {/* Theme picker */}
           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 8, alignItems: "center", marginLeft: consoleMode ? 6 : 0 }}>
-            {Object.entries(TERM_THEMES).map(([key, theme]) => (
+            {Object.entries(TERM_THEMES).filter(([key]) => !["gruvbox", "nord", "dracula", "slate"].includes(key)).map(([key, theme]) => (
               <button
                 key={key}
                 onClick={() => setTermTheme(key)}
