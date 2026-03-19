@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_TEXT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
+import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 
 function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
@@ -60,9 +60,9 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   onClick={() => setSelectedBackend(b.id)}
                   style={{
                     flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
-                    border: isSelected ? `1px solid ${b.color}` : `1px solid ${TERM_BORDER}`,
-                    backgroundColor: isSelected ? b.color + "20" : "transparent",
-                    color: isSelected ? b.color : available ? "#6a5848" : "#8a6a6a",
+                    border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}`,
+                    backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
+                    color: isSelected ? TERM_GREEN : available ? TERM_DIM : TERM_DIM,
                     cursor: "pointer", fontFamily: "monospace",
                     opacity: available ? 1 : 0.7,
                     position: "relative",
@@ -92,7 +92,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               style={{
                 flex: 1, padding: "6px 8px", fontSize: 12,
                 border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG,
-                color: "#eddcb8", fontFamily: "monospace",
+                color: TERM_TEXT_BRIGHT, fontFamily: "monospace",
                 outline: "none",
               }}
             />
@@ -110,7 +110,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               }}
             >Browse</button>
           </div>
-          <div style={{ fontSize: 10, color: "#5a4a38", marginTop: 3, fontFamily: "monospace" }}>
+          <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "monospace", opacity: 0.7 }}>
             Empty = default workspace
           </div>
         </div>
@@ -136,7 +136,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               }}
             >
               <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
               <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
               {hoveredId === def.id && (
                 <span
@@ -170,7 +170,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   }}
                 >
                   <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
                   <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
                   {hoveredId === def.id && (
                     <span style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2, alignItems: "center" }}>
@@ -207,7 +207,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
             style={{
               padding: "9px 16px",
               border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-              color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
+              color: TERM_DIM, fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >Cancel</button>
         </div>
