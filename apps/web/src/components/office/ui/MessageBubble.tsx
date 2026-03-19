@@ -78,6 +78,26 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
   );
 }
 
+/** Render diff-highlighted lines for code blocks with language "diff" */
+function DiffHighlightedCode({ text }: { text: string }) {
+  return (
+    <>
+      {text.split("\n").map((line, i) => {
+        let color = "inherit";
+        let bg = "transparent";
+        if (line.startsWith("+")) { color = "#4ade80"; bg = "rgba(74,222,128,0.08)"; }
+        else if (line.startsWith("-")) { color = "#f87171"; bg = "rgba(248,113,113,0.08)"; }
+        else if (line.startsWith("@@")) { color = "#60a5fa"; }
+        return (
+          <span key={i} style={{ display: "block", color, backgroundColor: bg, padding: "0 4px", margin: "0 -4px" }}>
+            {line}
+          </span>
+        );
+      })}
+    </>
+  );
+}
+
 const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   // Use <div> instead of <p> to avoid hydration errors when block elements
   // (like <pre>) appear inside paragraphs — HTML forbids <pre> inside <p>.
@@ -93,7 +113,9 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   },
   code({ className, children, ...props }) {
     const text = String(children).replace(/\n$/, "");
+    const lang = className?.replace("language-", "") ?? "";
     const isBlock = className?.includes("language-") || text.includes("\n");
+    const isDiff = lang === "diff";
     const openMatch = text.match(/^open\s+(\/\S+)/);
     const fileMatch = !openMatch ? text.match(/^(\/[\w./-]+\.\w+)$/) : null;
     const filePath = openMatch?.[1] ?? fileMatch?.[1];
@@ -113,13 +135,24 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
         </pre>
       );
     }
-    return isBlock ? (
-      <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all" }}>
-        <code {...props}>{children}</code>
-      </pre>
-    ) : (
-      <code {...props}>{children}</code>
-    );
+    if (isBlock) {
+      return (
+        <pre style={{ whiteSpace: "pre-wrap", wordBreak: "break-all", position: "relative" }}>
+          {lang && (
+            <span style={{
+              position: "absolute", top: -1, right: 6,
+              fontSize: 9, color: "#5a6a5a", opacity: 0.6,
+              fontFamily: "inherit", letterSpacing: "0.04em",
+              userSelect: "none", pointerEvents: "none",
+            }}>{lang}</span>
+          )}
+          <code {...props}>
+            {isDiff ? <DiffHighlightedCode text={text} /> : children}
+          </code>
+        </pre>
+      );
+    }
+    return <code {...props}>{children}</code>;
   },
   table({ children }) {
     return (
@@ -285,7 +318,7 @@ function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeam
   const textWithoutPlan = planContent ? msg.text.replace(/\[PLAN\][\s\S]*?\[\/PLAN\]/i, "").trim() : null;
   const displayText = hasFullOutput ? (msg.result?.fullOutput ?? msg.text) : msg.text;
 
-  // Streaming message — raw typewriter output
+  // Streaming message — markdown rendered
   if (isStreaming) {
     if (!msg.text) {
       return (
@@ -300,8 +333,8 @@ function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeam
       <div style={{ ...base, padding: "2px 0" }}>
         <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
         <span style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10 }}>{agentName ?? "agent"}</span>
-        <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word", whiteSpace: "pre-wrap" }}>
-          <TypewriterText text={msg.text} />
+        <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
+          <MdContent text={msg.text} />
         </div>
       </div>
     );

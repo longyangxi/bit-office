@@ -8,7 +8,7 @@ import { PromptEngine } from "./prompt-templates.js";
 import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
-import { createWorktree, mergeWorktree, removeWorktree } from "./worktree.js";
+import { createWorktree, removeWorktree } from "./worktree.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
@@ -137,18 +137,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   removeAgent(agentId: string): void {
     const session = this.agentManager.get(agentId);
-    // Merge worktree back before removing (solo agents keep worktree alive during their lifetime)
-    if (session?.worktreePath && session.worktreeBranch && !session.teamId) {
-      try {
-        const { execSync } = require("child_process");
-        // Commit any uncommitted changes first
-        try { execSync("git add -A && git diff --cached --quiet || git commit -m 'final-save'", { cwd: session.worktreePath, stdio: "pipe", timeout: 5000 }); } catch { /* ignore */ }
-        // Merge back to main
-        const base = session.currentWorkingDir ? require("path").dirname(require("path").dirname(session.worktreePath)) : this.workspace;
-        mergeWorktree(base, session.worktreePath, session.worktreeBranch);
-      } catch (err) {
-        console.error(`[Orchestrator] Worktree merge on fire failed:`, err);
-      }
+    // Force-clean worktree + branch on fire (user sees changes in main git)
+    if (session?.worktreePath && session.worktreeBranch) {
+      const base = session.currentWorkingDir
+        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        : this.workspace;
+      removeWorktree(session.worktreePath, session.worktreeBranch, base);
+      session.worktreePath = null;
+      session.worktreeBranch = null;
     }
     this.cancelTask(agentId);
     this.delegationRouter.clearAgent(agentId);
@@ -294,7 +290,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
     // Clean up worktree on cancel
     if (session.worktreePath && session.worktreeBranch) {
-      removeWorktree(session.worktreePath, session.worktreeBranch, this.workspace);
+      const base = session.currentWorkingDir
+        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        : this.workspace;
+      removeWorktree(session.worktreePath, session.worktreeBranch, base);
       session.worktreePath = null;
       session.worktreeBranch = null;
     }
