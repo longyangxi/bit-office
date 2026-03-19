@@ -1,4 +1,4 @@
-import { useRef, useEffect, memo } from "react";
+import { useRef, useEffect, memo, useCallback } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
@@ -130,6 +130,111 @@ export interface AgentPaneProps {
   /** When true, all scroll management is frozen (e.g. during CSS width transition) */
   scrollFrozen?: boolean;
 }
+
+/** Memoized message list — decoupled from input state so typing doesn't re-render messages */
+const ChatMessageList = memo(function ChatMessageList({
+  visibleMessages, hasMoreMessages, messages, name, agentId,
+  onPreview, onReview, isTeamLead, isTeamMember, teamPhase,
+  detectedBackends, onLoadMore, busy, pendingApproval, lastLogLine,
+  chatEndRef, isOwner, onApproval,
+}: {
+  visibleMessages: ChatMessage[];
+  hasMoreMessages: boolean;
+  messages: ChatMessage[];
+  name: string;
+  agentId: string;
+  onPreview?: (url: string) => void;
+  onReview?: (result: any, backend?: string) => void;
+  isTeamLead?: boolean;
+  isTeamMember: boolean;
+  teamPhase: string | null;
+  detectedBackends?: string[];
+  onLoadMore: () => void;
+  busy: boolean;
+  pendingApproval: { approvalId: string; title: string; summary: string } | null;
+  lastLogLine: string | null;
+  chatEndRef: React.RefObject<HTMLDivElement>;
+  isOwner: boolean;
+  onApproval: (approvalId: string, decision: "yes" | "no") => void;
+}) {
+  return (
+    <>
+      {/* Phase banner for team leads */}
+      {isTeamLead && (() => {
+        if (!teamPhase) return null;
+        const info = getPhaseInfo()[teamPhase];
+        if (!info) return null;
+        return (
+          <div style={{
+            padding: "6px 10px", marginBottom: 8,
+            backgroundColor: info.color + "10",
+            backdropFilter: "blur(6px)",
+            WebkitBackdropFilter: "blur(6px)",
+            border: `1px solid ${info.color}30`,
+            display: "flex", alignItems: "center", gap: 6,
+            fontSize: 12, fontFamily: "monospace",
+          }}>
+            <span>{info.icon}</span>
+            <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.05em" }}>{teamPhase}</span>
+            <span style={{ color: TERM_DIM }}>{info.hint}</span>
+          </div>
+        );
+      })()}
+
+      {messages.length === 0 && (
+        <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
+          {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
+        </div>
+      )}
+
+      {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
+      {visibleMessages.map((msg) => (
+        <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} onReview={onReview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} detectedBackends={detectedBackends} />
+      ))}
+
+      {pendingApproval && (
+        <div style={{
+          marginBottom: 8, padding: 12,
+          backgroundColor: TERM_SURFACE,
+          border: `1px solid ${TERM_SEM_YELLOW}`,
+        }}>
+          <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
+            {"\u25B2"} {pendingApproval.title}
+          </div>
+          <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
+            {pendingApproval.summary}
+          </div>
+          {isOwner && (
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                className="term-btn"
+                onClick={() => onApproval(pendingApproval.approvalId, "yes")}
+                style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+              >{"\u25B6"} Approve</button>
+              <button
+                className="term-btn"
+                onClick={() => onApproval(pendingApproval.approvalId, "no")}
+                style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+              >{"\u2715"} Reject</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {busy && !pendingApproval && messages.length > 0 && messages[messages.length - 1]?.text && (
+        <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
+          <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+          {lastLogLine && (
+            <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
+              {lastLogLine.slice(0, 60)}
+            </span>
+          )}
+        </div>
+      )}
+      <div ref={chatEndRef} />
+    </>
+  );
+});
 
 function getPhaseInfo(): Record<string, { color: string; icon: string; hint: string }> {
   return {
@@ -423,79 +528,26 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             display: "flex", flexDirection: "column",
             minHeight: 0,
           }}>
-            {/* Phase banner for team leads */}
-            {isTeamLead && (() => {
-              if (!teamPhase) return null;
-              const info = getPhaseInfo()[teamPhase];
-              if (!info) return null;
-              return (
-                <div style={{
-                  padding: "6px 10px", marginBottom: 8,
-                  backgroundColor: info.color + "10",
-                  backdropFilter: "blur(6px)",
-                  WebkitBackdropFilter: "blur(6px)",
-                  border: `1px solid ${info.color}30`,
-                  display: "flex", alignItems: "center", gap: 6,
-                  fontSize: 12, fontFamily: "monospace",
-                }}>
-                  <span>{info.icon}</span>
-                  <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.05em" }}>{teamPhase}</span>
-                  <span style={{ color: TERM_DIM }}>{info.hint}</span>
-                </div>
-              );
-            })()}
-
-            {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
-                {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
-              </div>
-            )}
-
-            {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
-            {visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={name} onPreview={onPreview} onReview={onReview} isTeamLead={isTeamLead} isTeamMember={isTeamMember} teamPhase={isTeamLead ? teamPhase : null} detectedBackends={detectedBackends} />
-            ))}
-
-            {pendingApproval && (
-              <div style={{
-                marginBottom: 8, padding: 12,
-                backgroundColor: TERM_SURFACE,
-                border: `1px solid ${TERM_SEM_YELLOW}`,
-              }}>
-                <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
-                  {"\u25B2"} {pendingApproval.title}
-                </div>
-                <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
-                  {pendingApproval.summary}
-                </div>
-                {isOwner && (
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button
-                      className="term-btn"
-                      onClick={() => onApproval(pendingApproval.approvalId, "yes")}
-                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-                    >{"\u25B6"} Approve</button>
-                    <button
-                      className="term-btn"
-                      onClick={() => onApproval(pendingApproval.approvalId, "no")}
-                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-                    >{"\u2715"} Reject</button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {busy && !pendingApproval && messages.length > 0 && messages[messages.length - 1]?.text && (
-              <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
-                {lastLogLine && (
-                  <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
-                    {lastLogLine.slice(0, 60)}
-                  </span>
-                )}
-              </div>
-            )}
-            <div ref={chatEndRef} />
+            <ChatMessageList
+              visibleMessages={visibleMessages}
+              hasMoreMessages={hasMoreMessages}
+              messages={messages}
+              name={name}
+              agentId={agentId}
+              onPreview={onPreview}
+              onReview={onReview}
+              isTeamLead={isTeamLead}
+              isTeamMember={isTeamMember}
+              teamPhase={teamPhase}
+              detectedBackends={detectedBackends}
+              onLoadMore={onLoadMore}
+              busy={busy}
+              pendingApproval={pendingApproval}
+              lastLogLine={lastLogLine}
+              chatEndRef={chatEndRef}
+              isOwner={isOwner}
+              onApproval={onApproval}
+            />
           </div>
 
           {/* Suggestion feed (visible to owner and collaborator) */}

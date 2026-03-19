@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_BG, TERM_SURFACE, TERM_HOVER } from "./termTheme";
@@ -7,6 +7,162 @@ const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
 
 const MAX_VISIBLE = 3;
+
+/** Per-pane wrapper that stabilizes callback references via useRef so AgentPane memo is effective */
+const StableAgentPane = memo(function StableAgentPane({
+  agentId, data, meta, assetsReady,
+  panePrompts, onPanePromptChange,
+  isOwner, isCollaborator, isSpectator,
+  panePendingImages, onPanePendingImagesChange,
+  suggestions, suggestText, onSuggestTextChange,
+  onSubmit, onCancel, onFire, onApproval, onApprovePlan, onQuickApprove,
+  onEndProject, onSuggest, onPreview, onReview, detectedBackends,
+  onLoadMore, onPasteImage, onPasteText, onDropImage,
+  reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
+  scrollFrozen,
+}: {
+  agentId: string;
+  data: AgentData;
+  meta?: { agentId: string; name: string; palette: number; isTeamLead: boolean };
+  assetsReady?: boolean;
+  panePrompts: Map<string, string>;
+  onPanePromptChange: (agentId: string, value: string) => void;
+  isOwner: boolean;
+  isCollaborator: boolean;
+  isSpectator: boolean;
+  panePendingImages: Map<string, { name: string; dataUrl: string; base64: string }[]>;
+  onPanePendingImagesChange: (agentId: string, imgs: { name: string; dataUrl: string; base64: string }[]) => void;
+  suggestions: { text: string; author: string; timestamp: number }[];
+  suggestText: string;
+  onSuggestTextChange: (val: string) => void;
+  onSubmit: (agentId: string) => void;
+  onCancel: (agentId: string) => void;
+  onFire: (agentId: string) => void;
+  onApproval: (approvalId: string, decision: "yes" | "no") => void;
+  onApprovePlan: (agentId: string) => void;
+  onQuickApprove: (agentId: string) => void;
+  onEndProject: (agentId: string) => void;
+  onSuggest: () => void;
+  onPreview: (url: string) => void;
+  onReview?: (agentId: string, result: any, backend?: string) => void;
+  detectedBackends?: string[];
+  onLoadMore: (agentId: string) => void;
+  onPasteImage: (agentId: string, e: React.ClipboardEvent) => void;
+  onPasteText: (agentId: string, e: React.ClipboardEvent<HTMLElement>) => void;
+  onDropImage: (agentId: string, e: React.DragEvent) => void;
+  reviewerOverlay?: any;
+  onReviewerLoadMore?: () => void;
+  onApplyReviewFixes?: () => void;
+  onDismissReview?: () => void;
+  scrollFrozen?: boolean;
+}) {
+  // Stable callbacks — useRef + useCallback pattern avoids creating new references
+  const idRef = useRef(agentId);
+  idRef.current = agentId;
+
+  const handlePromptChange = useCallback((val: string) => onPanePromptChange(idRef.current, val), [onPanePromptChange]);
+  const handlePendingImagesChange = useCallback((imgs: { name: string; dataUrl: string; base64: string }[]) => onPanePendingImagesChange(idRef.current, imgs), [onPanePendingImagesChange]);
+  const handleSubmit = useCallback(() => onSubmit(idRef.current), [onSubmit]);
+  const handleCancel = useCallback(() => onCancel(idRef.current), [onCancel]);
+  const handleApprovePlan = useCallback(() => onApprovePlan(idRef.current), [onApprovePlan]);
+  const handleQuickApprove = useCallback(() => onQuickApprove(idRef.current), [onQuickApprove]);
+  const handleEndProject = useCallback(() => onEndProject(idRef.current), [onEndProject]);
+  const handleLoadMore = useCallback(() => onLoadMore(idRef.current), [onLoadMore]);
+  const handlePasteImage = useCallback((e: React.ClipboardEvent) => onPasteImage(idRef.current, e), [onPasteImage]);
+  const handlePasteText = useCallback((e: React.ClipboardEvent<HTMLElement>) => onPasteText(idRef.current, e), [onPasteText]);
+  const handleDropImage = useCallback((e: React.DragEvent) => onDropImage(idRef.current, e), [onDropImage]);
+  const handleReview = useCallback(onReview ? (result: any, backend?: string) => onReview(idRef.current, result, backend) : undefined as any, [onReview]);
+
+  return (
+    <>
+      {/* Inline avatar header for this pane */}
+      {meta && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 8,
+          padding: "6px 12px",
+          background: TERM_PANEL,
+          borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+          flexShrink: 0,
+        }}>
+          <div style={{ position: "relative", width: 24, height: 28, overflow: "hidden", borderRadius: 2, flexShrink: 0 }}>
+            <div style={{ marginTop: -1 }}>
+              <SpriteAvatar palette={meta.palette} zoom={1.5} ready={assetsReady ?? false} />
+            </div>
+            {data.busy && (
+              <span style={{
+                position: "absolute", top: 0, right: 0,
+                width: 5, height: 5, borderRadius: "50%",
+                backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}`,
+                animation: "px-pulse-gold 1.5s ease infinite",
+              }} />
+            )}
+            {meta.isTeamLead && (
+              <span style={{ position: "absolute", top: -2, left: -1, fontSize: 7, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
+            )}
+          </div>
+          <span style={{
+            fontSize: 11, color: TERM_TEXT_BRIGHT,
+            fontFamily: TERM_FONT, fontWeight: 600,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}>{meta.name}</span>
+        </div>
+      )}
+      <AgentPane
+        agentId={agentId}
+        name={data.name}
+        role={data.role}
+        backend={data.backend}
+        status={data.status}
+        cwd={data.cwd}
+        workDir={data.workDir}
+        messages={data.messages}
+        visibleMessages={data.visibleMessages}
+        hasMoreMessages={data.hasMoreMessages}
+        tokenUsage={data.tokenUsage}
+        isTeamLead={data.isTeamLead}
+        isTeamMember={data.isTeamMember}
+        isExternal={data.isExternal}
+        teamId={data.teamId}
+        teamPhase={data.teamPhase}
+        pendingApproval={data.pendingApproval}
+        awaitingApproval={data.awaitingApproval}
+        lastLogLine={data.lastLogLine}
+        busy={data.busy}
+        pid={data.pid}
+        isOwner={isOwner}
+        isCollaborator={isCollaborator}
+        isSpectator={isSpectator}
+        prompt={panePrompts.get(agentId) || ""}
+        onPromptChange={handlePromptChange}
+        pendingImages={panePendingImages.get(agentId) || []}
+        onPendingImagesChange={handlePendingImagesChange}
+        suggestions={suggestions}
+        suggestText={suggestText}
+        onSuggestTextChange={onSuggestTextChange}
+        onSubmit={handleSubmit}
+        onCancel={handleCancel}
+        onFire={onFire}
+        onApproval={onApproval}
+        onApprovePlan={handleApprovePlan}
+        onQuickApprove={handleQuickApprove}
+        onEndProject={handleEndProject}
+        onSuggest={onSuggest}
+        onPreview={onPreview}
+        onReview={handleReview}
+        detectedBackends={detectedBackends}
+        onLoadMore={handleLoadMore}
+        onPasteImage={handlePasteImage}
+        onPasteText={handlePasteText}
+        onDropImage={handleDropImage}
+        reviewerOverlay={reviewerOverlay}
+        onReviewerLoadMore={onReviewerLoadMore}
+        onApplyReviewFixes={onApplyReviewFixes}
+        onDismissReview={onDismissReview}
+        scrollFrozen={scrollFrozen}
+      />
+    </>
+  );
+});
 
 interface AgentData {
   agentId: string;
@@ -198,85 +354,36 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 borderLeft: i > 0 ? `1px solid rgba(24,255,98,0.1)` : undefined,
               }}
             >
-              {/* Inline avatar header for this pane */}
-              {meta && (
-                <div style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "6px 12px",
-                  background: TERM_PANEL,
-                  borderBottom: `1px solid ${TERM_BORDER_DIM}`,
-                  flexShrink: 0,
-                }}>
-                  <div style={{ position: "relative", width: 24, height: 28, overflow: "hidden", borderRadius: 2, flexShrink: 0 }}>
-                    <div style={{ marginTop: -1 }}>
-                      <SpriteAvatar palette={meta.palette} zoom={1.5} ready={assetsReady ?? false} />
-                    </div>
-                    {data.busy && (
-                      <span style={{
-                        position: "absolute", top: 0, right: 0,
-                        width: 5, height: 5, borderRadius: "50%",
-                        backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}`,
-                        animation: "px-pulse-gold 1.5s ease infinite",
-                      }} />
-                    )}
-                    {meta.isTeamLead && (
-                      <span style={{ position: "absolute", top: -2, left: -1, fontSize: 7, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
-                    )}
-                  </div>
-                  <span style={{
-                    fontSize: 11, color: TERM_TEXT_BRIGHT,
-                    fontFamily: TERM_FONT, fontWeight: 600,
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}>{meta.name}</span>
-                </div>
-              )}
-              <AgentPane
+              <StableAgentPane
                 agentId={agentId}
-                name={data.name}
-                role={data.role}
-                backend={data.backend}
-                status={data.status}
-                cwd={data.cwd}
-                workDir={data.workDir}
-                messages={data.messages}
-                visibleMessages={data.visibleMessages}
-                hasMoreMessages={data.hasMoreMessages}
-                tokenUsage={data.tokenUsage}
-                isTeamLead={data.isTeamLead}
-                isTeamMember={data.isTeamMember}
-                isExternal={data.isExternal}
-                teamId={data.teamId}
-                teamPhase={data.teamPhase}
-                pendingApproval={data.pendingApproval}
-                awaitingApproval={data.awaitingApproval}
-                lastLogLine={data.lastLogLine}
-                busy={data.busy}
-                pid={data.pid}
+                data={data}
+                meta={meta}
+                assetsReady={assetsReady}
+                panePrompts={panePrompts}
+                onPanePromptChange={onPanePromptChange}
                 isOwner={isOwner}
                 isCollaborator={isCollaborator}
                 isSpectator={isSpectator}
-                prompt={panePrompts.get(agentId) || ""}
-                onPromptChange={(val) => onPanePromptChange(agentId, val)}
-                pendingImages={panePendingImages.get(agentId) || []}
-                onPendingImagesChange={(imgs) => onPanePendingImagesChange(agentId, imgs)}
+                panePendingImages={panePendingImages}
+                onPanePendingImagesChange={onPanePendingImagesChange}
                 suggestions={suggestions}
                 suggestText={suggestText}
                 onSuggestTextChange={onSuggestTextChange}
-                onSubmit={() => onSubmit(agentId)}
-                onCancel={() => onCancel(agentId)}
-                onFire={(id) => onFire(id)}
-                onApproval={(approvalId, decision) => onApproval(approvalId, decision)}
-                onApprovePlan={() => onApprovePlan(agentId)}
-                onQuickApprove={() => onQuickApprove(agentId)}
-                onEndProject={() => onEndProject(agentId)}
+                onSubmit={onSubmit}
+                onCancel={onCancel}
+                onFire={onFire}
+                onApproval={onApproval}
+                onApprovePlan={onApprovePlan}
+                onQuickApprove={onQuickApprove}
+                onEndProject={onEndProject}
                 onSuggest={onSuggest}
                 onPreview={onPreview}
-                onReview={onReview ? (result, backend) => onReview(agentId, result, backend) : undefined}
+                onReview={onReview}
                 detectedBackends={detectedBackends}
-                onLoadMore={() => onLoadMore(agentId)}
-                onPasteImage={(e) => onPasteImage(agentId, e)}
-                onPasteText={(e) => onPasteText(agentId, e)}
-                onDropImage={(e) => onDropImage(agentId, e)}
+                onLoadMore={onLoadMore}
+                onPasteImage={onPasteImage}
+                onPasteText={onPasteText}
+                onDropImage={onDropImage}
                 reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
                 onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                 onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
