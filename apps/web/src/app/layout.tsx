@@ -333,6 +333,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             50% { box-shadow: 0 0 10px rgba(var(--term-accent-rgb),0.25); }
           }
           .term-input:focus { animation: input-glow 2s ease-in-out infinite; outline: none; }
+          .term-input::placeholder { color: var(--term-green-dim); opacity: 0.6; }
+          textarea::placeholder { color: var(--term-green-dim); opacity: 0.6; }
           /* ── Button click feedback ── */
           .term-btn { transition: all 0.15s ease; }
           .term-btn:active { transform: scale(0.97); }
