@@ -44,13 +44,14 @@ function summarizeToolUse(name: string, input: Record<string, unknown> | undefin
  * Recovery context: minimal summary saved on task success so that if the
  * session is lost (app restart, session corruption), the agent can be
  * given a brief reminder of what it was doing — without full history.
- * Cost: ~150-300 tokens, injected only when session cannot be resumed.
+ * Cost: ~400-800 tokens, injected only when session cannot be resumed.
  */
 export interface RecoveryContext {
   originalTask?: string;
   phase?: string;
   lastResult?: string;
-  changedFiles?: string[];
+  /** Recent conversation messages (last 5, tail-truncated to 400 chars each) for context recovery */
+  recentMessages?: Array<{ role: "user" | "assistant"; text: string }>;
 }
 
 /** Disk format: value is either a legacy string (sessionId) or the new object */
@@ -216,6 +217,8 @@ export class AgentSession {
   private taskOutputTokens = 0;
   /** Files actually written/edited during the current task (tracked from tool_use events) */
   private taskChangedFiles = new Set<string>();
+  /** Rolling buffer of recent conversation messages for recovery context (max 5, survives across tasks) */
+  private conversationLog: Array<{ role: "user" | "assistant"; text: string }> = [];
   /** Dedup same-turn repeated usage in assistant messages */
   private lastUsageSignature = "";
   private hasHistory: boolean;
@@ -320,6 +323,21 @@ export class AgentSession {
     this.taskChangedFiles.clear();
     this.lastUsageSignature = "";
 
+    // For solo agents without an active session, restore previous conversation
+    // from recovery context so the sliding window isn't wiped on app restart.
+    // (Team agents have explicit task boundaries; solo agents don't.)
+    if (!this.teamId && this.conversationLog.length === 0 && !this.hasHistory) {
+      const prevRecovery = loadRecoveryContext(this.agentId);
+      if (prevRecovery?.recentMessages?.length) {
+        this.conversationLog.push(...prevRecovery.recentMessages);
+      }
+    }
+
+    // Collect user message for recovery context (tail-truncated, last 6 messages)
+    const userText = prompt.length > 400 ? prompt.slice(-400) : prompt;
+    this.conversationLog.push({ role: "user", text: userText });
+    if (this.conversationLog.length > 6) this.conversationLog.shift();
+
     this.onEvent({
       type: "task:started",
       agentId: this.agentId,
@@ -345,12 +363,18 @@ export class AgentSession {
         const canResumeCheck = this.hasHistory && !!this.sessionId;
         if (!canResumeCheck) {
           const recovery = loadRecoveryContext(this.agentId);
-          if (recovery && (recovery.originalTask || recovery.lastResult)) {
+          if (recovery && (recovery.originalTask || recovery.lastResult || recovery.recentMessages?.length)) {
             const lines: string[] = ["[Session recovered] Your previous session was lost. Here's what you were doing:"];
             if (recovery.originalTask) lines.push(`- Task: ${recovery.originalTask}`);
             if (recovery.phase) lines.push(`- Phase: ${recovery.phase}`);
             if (recovery.lastResult) lines.push(`- Last result: ${recovery.lastResult}`);
-            if (recovery.changedFiles?.length) lines.push(`- Files changed: ${recovery.changedFiles.join(", ")}`);
+            if (recovery.recentMessages?.length) {
+              lines.push("- Recent conversation:");
+              for (const msg of recovery.recentMessages) {
+                const label = msg.role === "user" ? "User" : "You";
+                lines.push(`  [${label}]: ${msg.text}`);
+              }
+            }
             lines.push("Note: You don't have full conversation history. Ask the user if unsure about details.");
             recoveryContextStr = lines.join("\n");
           }
@@ -622,6 +646,17 @@ export class AgentSession {
                     }
                   }
                 }
+                // Collect assistant text for recovery context (tail-truncated, last 5 messages)
+                const assistantTexts: string[] = [];
+                for (const block of msg.message.content) {
+                  if (block.type === "text" && block.text) assistantTexts.push(block.text);
+                }
+                if (assistantTexts.length > 0) {
+                  const full = assistantTexts.join("\n");
+                  const truncated = full.length > 400 ? full.slice(-400) : full;
+                  this.conversationLog.push({ role: "assistant", text: truncated });
+                  if (this.conversationLog.length > 6) this.conversationLog.shift();
+                }
               } else if (msg.type === "result") {
                 // Result message: authoritative session total from msg.usage
                 if (msg.usage) {
@@ -744,7 +779,7 @@ export class AgentSession {
               originalTask: this.originalTask?.slice(0, 300) ?? undefined,
               phase: this.currentPhase ?? undefined,
               lastResult: summary?.slice(0, 200) ?? undefined,
-              changedFiles: changedFiles.length > 0 ? changedFiles.slice(0, 15) : undefined,
+              recentMessages: this.conversationLog.length > 0 ? [...this.conversationLog] : undefined,
             });
 
             // Preview detection: skip for team leads (they don't create files).
@@ -975,6 +1010,7 @@ export class AgentSession {
     this._lastResult = null;
     this._lastResultText = null;
     this._lastFullOutput = null;
+    this.conversationLog = [];
     this.setStatus("idle");
     // Full clear: remove both session ID and recovery context (project ended)
     const dir = path.dirname(getSessionFile());
