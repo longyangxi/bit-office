@@ -12,10 +12,14 @@ const MessageBubble = dynamic(() => import("./MessageBubble"), { ssr: false });
 function autoResize(el: HTMLTextAreaElement | null, maxRows = 5) {
   if (!el) return;
   el.style.height = "auto";
-  const lineHeight = parseInt(getComputedStyle(el).lineHeight) || 20;
+  const cs = getComputedStyle(el);
+  const lineHeight = parseInt(cs.lineHeight) || 20;
   const maxHeight = lineHeight * maxRows;
-  el.style.height = Math.min(el.scrollHeight, maxHeight) + "px";
-  el.style.overflowY = el.scrollHeight > maxHeight ? "auto" : "hidden";
+  // scrollHeight includes padding; subtract it for content-box textareas
+  const padY = parseInt(cs.paddingTop) + parseInt(cs.paddingBottom);
+  const contentH = el.scrollHeight - padY;
+  el.style.height = Math.min(contentH, maxHeight) + "px";
+  el.style.overflowY = contentH > maxHeight ? "auto" : "hidden";
 }
 
 /** Sentinel that triggers loadMore when scrolled into view */
