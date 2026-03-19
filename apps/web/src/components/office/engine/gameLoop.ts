@@ -8,6 +8,10 @@ export interface GameLoopCallbacks {
   render: (ctx: CanvasRenderingContext2D) => void
   /** Optional: return true if the scene needs re-rendering this frame */
   isDirty?: () => boolean
+  /** Optional: return true if update() must keep running even when nothing is dirty
+   *  (e.g. timers counting down). Prevents the loop from sleeping without
+   *  forcing a full render each frame. */
+  needsTick?: () => boolean
 }
 
 export function startGameLoop(
@@ -55,6 +59,12 @@ export function startGameLoop(
 
     // Sleep when idle — events will wake us via wake()
     if (idleFrames >= IDLE_THRESHOLD) {
+      // Don't sleep if update() still needs ticking (e.g. wander timers)
+      if (callbacks.needsTick?.()) {
+        // Keep the loop alive for update() but don't render
+        rafId = requestAnimationFrame(frame)
+        return
+      }
       sleeping = true
       lastTime = 0 // reset so next wake doesn't produce a huge dt
       return

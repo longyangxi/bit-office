@@ -51,6 +51,8 @@ export class OfficeState {
   characterScale = 1
   /** Dirty flag — set to true when scene changes and needs re-render */
   dirty = true
+  /** Keep the game loop alive (timers ticking) without forcing a render */
+  needsTick = false
   /** Optional callback to wake the game loop from sleep */
   onDirty: (() => void) | null = null
 
@@ -404,6 +406,7 @@ export class OfficeState {
   // ── Update loop ───────────────────────────────────────────────
 
   update(dt: number): void {
+    this.needsTick = false
     const toDelete: number[] = []
     for (const ch of this.characters.values()) {
       // Snapshot visual state before update
@@ -473,6 +476,15 @@ export class OfficeState {
           ch.bubbleType !== prevBubble || ch.speechText !== prevSpeech ||
           ch.matrixEffect !== prevMatrix || ch.matrixEffectTimer !== prevMatrixTimer) {
         this.dirty = true
+      }
+
+      // Keep the loop alive (but skip rendering) while timers are counting down.
+      // Without this the loop sleeps and wanderTimer / seatTimer never decrement.
+      if (!this.needsTick) {
+        if ((ch.state === CharacterState.IDLE && (ch.wanderTimer > 0 || ch.seatTimer > 0)) ||
+            (ch.state === CharacterState.TYPE && !ch.isActive && ch.seatTimer > 0)) {
+          this.needsTick = true
+        }
       }
     }
 
