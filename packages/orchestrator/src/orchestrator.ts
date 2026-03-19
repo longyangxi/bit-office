@@ -93,9 +93,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       ?? this.backends.get(this.defaultBackendId)!;
 
     // Inject memory context for dev workers and leaders (not reviewers)
+    // Pass agentId so @bit-office/memory can include per-agent L2 facts + L3 shared knowledge
     const roleLower = opts.role.toLowerCase();
     const isReviewer = roleLower.includes("review");
-    const memoryContext = !isReviewer ? getMemoryContext() : "";
+    const memoryContext = !isReviewer ? getMemoryContext(opts.agentId) : "";
 
     const session = new AgentSession({
       agentId: opts.agentId,

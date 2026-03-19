@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bit-office/memory": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {

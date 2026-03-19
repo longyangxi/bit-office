@@ -10,7 +10,7 @@ import { nanoid } from "nanoid";
 import type { AIBackend } from "./ai-backend.js";
 import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
 import type { TemplateName } from "./prompt-templates.js";
-import { getMemoryContext } from "./memory.js";
+import { getMemoryContext, commitSession, buildRecoveryContext, getRecoveryString, saveSessionHistory } from "./memory.js";
 
 /* ── Tool activity summarizer ──────────────────────────────────── */
 
@@ -40,19 +40,9 @@ function summarizeToolUse(name: string, input: Record<string, unknown> | undefin
 
 /* ── Persist session IDs + recovery context across restarts ───────── */
 
-/**
- * Recovery context: minimal summary saved on task success so that if the
- * session is lost (app restart, session corruption), the agent can be
- * given a brief reminder of what it was doing — without full history.
- * Cost: ~400-800 tokens, injected only when session cannot be resumed.
- */
-export interface RecoveryContext {
-  originalTask?: string;
-  phase?: string;
-  lastResult?: string;
-  /** Recent conversation messages (last 5, tail-truncated to 400 chars each) for context recovery */
-  recentMessages?: Array<{ role: "user" | "assistant"; text: string }>;
-}
+// RecoveryContext is now defined in @bit-office/memory (packages/memory/src/types.ts).
+// It includes structured SessionSummary instead of raw recentMessages.
+import type { RecoveryContext } from "@bit-office/memory";
 
 /** Disk format: value is either a legacy string (sessionId) or the new object */
 interface SessionEntry {
@@ -217,8 +207,6 @@ export class AgentSession {
   private taskOutputTokens = 0;
   /** Files actually written/edited during the current task (tracked from tool_use events) */
   private taskChangedFiles = new Set<string>();
-  /** Rolling buffer of recent conversation messages for recovery context (max 5, survives across tasks) */
-  private conversationLog: Array<{ role: "user" | "assistant"; text: string }> = [];
   /** Dedup same-turn repeated usage in assistant messages */
   private lastUsageSignature = "";
   private hasHistory: boolean;
@@ -323,21 +311,6 @@ export class AgentSession {
     this.taskChangedFiles.clear();
     this.lastUsageSignature = "";
 
-    // For solo agents without an active session, restore previous conversation
-    // from recovery context so the sliding window isn't wiped on app restart.
-    // (Team agents have explicit task boundaries; solo agents don't.)
-    if (!this.teamId && this.conversationLog.length === 0 && !this.hasHistory) {
-      const prevRecovery = loadRecoveryContext(this.agentId);
-      if (prevRecovery?.recentMessages?.length) {
-        this.conversationLog.push(...prevRecovery.recentMessages);
-      }
-    }
-
-    // Collect user message for recovery context (tail-truncated, last 6 messages)
-    const userText = prompt.length > 400 ? prompt.slice(-400) : prompt;
-    this.conversationLog.push({ role: "user", text: userText });
-    if (this.conversationLog.length > 6) this.conversationLog.shift();
-
     this.onEvent({
       type: "task:started",
       agentId: this.agentId,
@@ -357,26 +330,18 @@ export class AgentSession {
       // Cap originalTask to avoid exceeding CLI argument limits (especially for non-Claude backends)
       const rawOriginalTask = this._isTeamLead ? (this.originalTask ?? prompt) : "";
       const originalTask = rawOriginalTask.length > 1500 ? rawOriginalTask.slice(0, 1500) + "\n...(truncated)" : rawOriginalTask;
-      // Build recovery context string if session cannot be resumed
+      // Build recovery context string if session cannot be resumed.
+      // Uses @bit-office/memory's structured SessionSummary instead of raw message fragments.
       let recoveryContextStr = "";
       if (!this._isTeamLead) {
         const canResumeCheck = this.hasHistory && !!this.sessionId;
         if (!canResumeCheck) {
-          const recovery = loadRecoveryContext(this.agentId);
-          if (recovery && (recovery.originalTask || recovery.lastResult || recovery.recentMessages?.length)) {
-            const lines: string[] = ["[Session recovered] Your previous session was lost. Here's what you were doing:"];
-            if (recovery.originalTask) lines.push(`- Task: ${recovery.originalTask}`);
-            if (recovery.phase) lines.push(`- Phase: ${recovery.phase}`);
-            if (recovery.lastResult) lines.push(`- Last result: ${recovery.lastResult}`);
-            if (recovery.recentMessages?.length) {
-              lines.push("- Recent conversation:");
-              for (const msg of recovery.recentMessages) {
-                const label = msg.role === "user" ? "User" : "You";
-                lines.push(`  [${label}]: ${msg.text}`);
-              }
-            }
-            lines.push("Note: You don't have full conversation history. Ask the user if unsure about details.");
-            recoveryContextStr = lines.join("\n");
+          const recovery = buildRecoveryContext(this.agentId, {
+            originalTask: this.originalTask?.slice(0, 300),
+            phase: this.currentPhase ?? undefined,
+          });
+          if (recovery.sessionSummary || recovery.originalTask) {
+            recoveryContextStr = getRecoveryString(recovery);
           }
         }
       }
@@ -646,17 +611,8 @@ export class AgentSession {
                     }
                   }
                 }
-                // Collect assistant text for recovery context (tail-truncated, last 5 messages)
-                const assistantTexts: string[] = [];
-                for (const block of msg.message.content) {
-                  if (block.type === "text" && block.text) assistantTexts.push(block.text);
-                }
-                if (assistantTexts.length > 0) {
-                  const full = assistantTexts.join("\n");
-                  const truncated = full.length > 400 ? full.slice(-400) : full;
-                  this.conversationLog.push({ role: "assistant", text: truncated });
-                  if (this.conversationLog.length > 6) this.conversationLog.shift();
-                }
+                // (conversationLog removed — recovery context now uses @bit-office/memory's
+                //  structured SessionSummary instead of raw message fragments)
               } else if (msg.type === "result") {
                 // Result message: authoritative session total from msg.usage
                 if (msg.usage) {
@@ -774,12 +730,16 @@ export class AgentSession {
             const { summary, fullOutput, changedFiles, entryFile, projectDir, previewCmd, previewPort } = this.extractResult();
             this._lastFullOutput = fullOutput;
 
-            // Save recovery context so agent can be briefed if session is lost later
-            saveRecoveryContext(this.agentId, {
-              originalTask: this.originalTask?.slice(0, 300) ?? undefined,
-              phase: this.currentPhase ?? undefined,
-              lastResult: summary?.slice(0, 200) ?? undefined,
-              recentMessages: this.conversationLog.length > 0 ? [...this.conversationLog] : undefined,
+            // Commit session to @bit-office/memory: extracts structured summary,
+            // saves session history, and extracts reusable agent facts.
+            // This replaces the old saveRecoveryContext + raw recentMessages approach.
+            commitSession({
+              agentId: this.agentId,
+              agentName: this.name,
+              stdout: this.stdoutBuffer,
+              summary: summary ?? undefined,
+              changedFiles: [...this.taskChangedFiles],
+              tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
             });
 
             // Preview detection: skip for team leads (they don't create files).
@@ -1010,7 +970,6 @@ export class AgentSession {
     this._lastResult = null;
     this._lastResultText = null;
     this._lastFullOutput = null;
-    this.conversationLog = [];
     this.setStatus("idle");
     // Full clear: remove both session ID and recovery context (project ended)
     const dir = path.dirname(getSessionFile());
@@ -1018,6 +977,9 @@ export class AgentSession {
     const raw = loadRawMap();
     delete raw[this.agentId];
     writeFileSync(getSessionFile(), JSON.stringify(raw), "utf-8");
+    // Also clear new memory store's session history for this agent
+    // to prevent stale L1 summaries from leaking into the next project.
+    saveSessionHistory(this.agentId, { latest: null, history: [] });
   }
 
   resolveApproval(approvalId: string, decision: "yes" | "no") {

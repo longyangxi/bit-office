@@ -43,7 +43,7 @@ export {
 } from "./memory.js";
 
 // Storage configuration
-export { setStorageRoot, getStorageRoot } from "./storage.js";
+export { setStorageRoot, getStorageRoot, saveSessionHistory } from "./storage.js";
 
 // Types (for consumers who need to type-check)
 export type {
