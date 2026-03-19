@@ -137,7 +137,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   removeAgent(agentId: string): void {
     const session = this.agentManager.get(agentId);
-    // Force-clean worktree + branch on fire (user sees changes in main git)
+    // Force-clean worktree + branch on fire
     if (session?.worktreePath && session.worktreeBranch) {
       const base = session.currentWorkingDir
         ? require("path").dirname(require("path").dirname(session.worktreePath))
@@ -327,11 +327,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.delegationRouter.stop();
     const teamAgents = this.agentManager.getAll().filter(a => !!a.teamId);
     for (const agent of teamAgents) {
-      this.cancelTask(agent.agentId);
-    }
-    for (const agent of teamAgents) {
-      this.agentManager.delete(agent.agentId);
-      this.emitEvent({ type: "agent:fired", agentId: agent.agentId });
+      this.removeAgent(agent.agentId);
     }
   }
 
