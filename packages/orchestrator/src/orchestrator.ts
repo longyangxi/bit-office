@@ -235,19 +235,20 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
     // Worktree setup:
     // 1. Team members: created by DelegationRouter in delegation.ts (not here)
-    // 2. Solo agents sharing the same workDir: auto-isolate via worktree
+    // 2. Solo agents: always isolate via worktree for consistent merge behavior
     const teamProjectDir = this.delegationRouter.getTeamProjectDir();
     const effectiveRepo = opts?.repoPath ?? session.workspaceDir;
-    // Worktree isolation for solo agents sharing the same repoPath/workspace.
+    // Every solo dev agent gets its own worktree so task:done always follows the same
+    // auto-save → merge --no-ff path. Without this, the first solo agent to start
+    // works directly on main (no neighbor yet) while later agents get worktrees,
+    // causing inconsistent git history and potential merge conflicts.
+    // Reviewers are excluded — they only read code, never produce file changes.
     // Team dev worktrees are created by delegation.ts (not here).
     const isLeader = this.agentManager.isTeamLead(agentId);
     const isReviewerRole = session.role.toLowerCase().includes("review");
-    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && (
-      // Solo agents: isolate when another solo agent shares the same repoPath
-      (!session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo))
-    );
+    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !session.teamId;
     if (needsWorktree) {
-      const base = session.teamId ? teamProjectDir! : effectiveRepo;
+      const base = effectiveRepo;
       const wt = createWorktree(base, agentId, taskId, session.name);
       if (wt) {
         const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
@@ -283,17 +284,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   /**
-   * Check if another solo agent (no teamId) is currently working in the same repoPath.
-   */
-  private hasSoloNeighbor(agentId: string, repoPath: string): boolean {
-    for (const other of this.agentManager.getAll()) {
-      if (other.agentId === agentId || other.teamId) continue;
-      if (other.currentWorkingDir === repoPath) return true;
-    }
-    return false;
-  }
-
-  /**
    * Build lightweight peer context for solo agents sharing the same workspace.
    * Helps avoid file conflicts and provides awareness of concurrent work.
    * Returns empty string if no peers exist (~30 tokens per peer).
@@ -305,8 +295,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const other of this.agentManager.getAll()) {
       if (other.agentId === agentId) continue;
       if (other.teamId) continue; // skip team members — different workflow
-      // Only show peers working in the same workspace
-      if (other.currentWorkingDir !== session.currentWorkingDir && other.currentWorkingDir !== session.workspaceDir) continue;
+      // Compare base workspace (not currentWorkingDir which may be a worktree path)
+      if (other.workspaceDir !== session.workspaceDir) continue;
       const status = other.status === "working" ? "working" : other.status;
       const lastResult = other.lastResult;
       const brief = lastResult ? ` — ${lastResult.length > 80 ? lastResult.slice(0, 80) + "…" : lastResult}` : "";
