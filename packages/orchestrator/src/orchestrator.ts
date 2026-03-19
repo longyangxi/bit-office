@@ -375,12 +375,23 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     return { agentId: s.agentId, name: s.name, role: s.role, status: s.status, palette: s.palette, backend: s.backend.id, pid: s.pid, teamId: s.teamId };
   }
 
+  /** Restore worktree state on the live session (used during startup restore). */
+  restoreWorktree(agentId: string, worktreePath: string, worktreeBranch: string): void {
+    const s = this.agentManager.get(agentId);
+    if (s) {
+      s.worktreePath = worktreePath;
+      s.worktreeBranch = worktreeBranch;
+    }
+  }
+
   getAllAgents() {
     return this.agentManager.getAll().map(s => ({
       agentId: s.agentId, name: s.name, role: s.role, status: s.status,
       palette: s.palette, personality: s.personality, backend: s.backend.id, pid: s.pid,
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
       teamId: s.teamId,
+      worktreePath: s.worktreePath,
+      worktreeBranch: s.worktreeBranch,
     }));
   }
 

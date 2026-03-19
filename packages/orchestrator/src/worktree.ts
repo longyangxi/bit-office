@@ -1,4 +1,5 @@
 import { execSync } from "child_process";
+import { existsSync } from "fs";
 import path from "path";
 
 const TIMEOUT = 5000;
@@ -32,6 +33,22 @@ export function createWorktree(
   const worktreePath = path.join(worktreeDir, worktreeName);
   const branch = `agent/${agentName.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
 
+  // Reuse existing worktree if the directory exists and is on the expected branch
+  // (happens after app restart when worktree state was lost from team-state.json)
+  try {
+    if (existsSync(worktreePath) && isGitRepo(worktreePath)) {
+      const currentBranch = execSync("git branch --show-current", {
+        cwd: worktreePath, encoding: "utf-8", stdio: "pipe", timeout: TIMEOUT,
+      }).trim();
+      if (currentBranch === branch) {
+        console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
+        return worktreePath;
+      }
+      console.log(`[Worktree] Existing worktree on wrong branch (${currentBranch} != ${branch}), recreating`);
+      try { execSync(`git worktree remove --force "${worktreePath}"`, { cwd: workspace, stdio: "pipe", timeout: TIMEOUT }); } catch { /* ignore */ }
+    }
+  } catch { /* fall through to create */ }
+
   try {
     execSync(`git worktree add "${worktreePath}" -b "${branch}"`, {
       cwd: workspace,
@@ -40,8 +57,19 @@ export function createWorktree(
     });
     return worktreePath;
   } catch (err) {
-    console.error(`[Worktree] Failed to create worktree: ${(err as Error).message}`);
-    return null;
+    // Branch may already exist (e.g. after unclean shutdown) — try attaching to it
+    try {
+      execSync(`git worktree add "${worktreePath}" "${branch}"`, {
+        cwd: workspace,
+        stdio: "pipe",
+        timeout: TIMEOUT,
+      });
+      console.log(`[Worktree] Attached to existing branch: ${branch}`);
+      return worktreePath;
+    } catch {
+      console.error(`[Worktree] Failed to create worktree: ${(err as Error).message}`);
+      return null;
+    }
   }
 }
 

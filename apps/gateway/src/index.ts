@@ -997,13 +997,9 @@ async function main() {
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
       }
-      // Restore worktree info so fire can clean up after restart
+      // Restore worktree info on the live session (not the snapshot from getAgent)
       if (agent.worktreePath && agent.worktreeBranch) {
-        const session = orc.getAgent(agent.agentId);
-        if (session) {
-          session.worktreePath = agent.worktreePath;
-          session.worktreeBranch = agent.worktreeBranch;
-        }
+        orc.restoreWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
       }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {
