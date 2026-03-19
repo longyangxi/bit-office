@@ -269,11 +269,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     const repoPath = session.worktreePath ?? opts?.repoPath;
-    // Only the team lead gets the full roster (to decide delegation).
-    // Workers don't need it — they just do their assigned task.
-    const teamContext = this.agentManager.isTeamLead(agentId)
-      ? this.agentManager.getTeamRoster()
-      : undefined;
+    // Team lead gets full roster (to decide delegation).
+    // Solo agents sharing a workspace get lightweight peer awareness.
+    // Team workers get context via delegation.ts (buildWorkerTeamContext).
+    let teamContext: string | undefined;
+    if (this.agentManager.isTeamLead(agentId)) {
+      teamContext = this.agentManager.getTeamRoster();
+    } else if (!session.teamId) {
+      teamContext = this.buildSoloPeerContext(agentId);
+    }
 
     session.runTask(taskId, prompt, repoPath, teamContext, true /* isUserInitiated */, opts?.phaseOverride);
   }
@@ -287,6 +291,29 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       if (other.currentWorkingDir === repoPath) return true;
     }
     return false;
+  }
+
+  /**
+   * Build lightweight peer context for solo agents sharing the same workspace.
+   * Helps avoid file conflicts and provides awareness of concurrent work.
+   * Returns empty string if no peers exist (~30 tokens per peer).
+   */
+  private buildSoloPeerContext(agentId: string): string | undefined {
+    const session = this.agentManager.get(agentId);
+    if (!session) return undefined;
+    const lines: string[] = [];
+    for (const other of this.agentManager.getAll()) {
+      if (other.agentId === agentId) continue;
+      if (other.teamId) continue; // skip team members — different workflow
+      // Only show peers working in the same workspace
+      if (other.currentWorkingDir !== session.currentWorkingDir && other.currentWorkingDir !== session.workspaceDir) continue;
+      const status = other.status === "working" ? "working" : other.status;
+      const lastResult = other.lastResult;
+      const brief = lastResult ? ` — ${lastResult.length > 80 ? lastResult.slice(0, 80) + "…" : lastResult}` : "";
+      lines.push(`- ${other.name} (${other.role}) [${status}]${brief}`);
+    }
+    if (lines.length === 0) return undefined;
+    return `===== WORKSPACE PEERS =====\nOther agents working in the same project (for awareness — coordinate to avoid file conflicts):\n${lines.join("\n")}`;
   }
 
   cancelTask(agentId: string): void {

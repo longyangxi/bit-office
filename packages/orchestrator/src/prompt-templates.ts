@@ -144,6 +144,7 @@ RULES:
 {{soloHint}}
 {{memory}}
 {{recoveryContext}}
+{{teamRoster}}
 
 SYSTEM CONSTRAINTS:
 - NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
@@ -161,6 +162,7 @@ SUMMARY: (one sentence)
 {{prompt}}`,
 
   "worker-reviewer-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
+{{teamRoster}}
 
 SYSTEM CONSTRAINTS:
 - NEVER run servers or dev commands. You CANNOT see UI.
@@ -182,6 +184,7 @@ SUMMARY: (one sentence)
 
   "worker-subagent-reviewer-initial": `Your name is {{name}}. {{personality}}
 {{memory}}
+{{teamRoster}}
 
 After reviewing, output your verdict in this exact format (the system parses it):
 VERDICT: PASS | FAIL
@@ -196,6 +199,7 @@ SUMMARY: (one sentence)
   "worker-subagent-initial": `Your name is {{name}}. {{personality}}
 {{soloHint}}
 {{memory}}
+{{teamRoster}}
 {{recoveryContext}}
 
 {{prompt}}`,
@@ -203,6 +207,7 @@ SUMMARY: (one sentence)
   "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
 {{soloHint}}
 {{memory}}
+{{teamRoster}}
 {{recoveryContext}}
 
 When you produce a deliverable, follow these rules:
@@ -223,6 +228,7 @@ SUMMARY: (one sentence)
 {{soloHint}}
 {{memory}}
 {{recoveryContext}}
+{{teamRoster}}
 {{prompt}}`,
 
   "worker-direct-fix": `[Direct fix request from {{reviewerName}}]

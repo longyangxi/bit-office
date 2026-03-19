@@ -324,7 +324,9 @@ export class DelegationRouter {
         intent: cleanPrompt.slice(0, CONFIG.limits.intentChars),
         phase: "started",
       });
-      target.runTask(taskId, fullPrompt, effectiveRepoPath);
+      // Inject lightweight team context so workers are aware of peers
+      const workerTeamContext = this.buildWorkerTeamContext(target.agentId);
+      target.runTask(taskId, fullPrompt, effectiveRepoPath, workerTeamContext);
     };
   }
 
@@ -552,8 +554,33 @@ export class DelegationRouter {
       timestamp: Date.now(),
     });
 
-    devSession.runTask(fixTaskId, fixPrompt, repoPath);
+    const workerTeamContext = this.buildWorkerTeamContext(devAgentId);
+    devSession.runTask(fixTaskId, fixPrompt, repoPath, workerTeamContext);
     return true;
+  }
+
+  /**
+   * Build a lightweight team context string for a worker agent.
+   * Shows what other agents are working on (~30 tokens per peer).
+   * Workers don't get full roster — just enough awareness to avoid conflicts
+   * and understand decisions made by peers.
+   */
+  private buildWorkerTeamContext(excludeAgentId: string): string {
+    const caller = this.agentManager.get(excludeAgentId);
+    const callerTeamId = caller?.teamId;
+    if (!callerTeamId) return ""; // solo worker — no team context
+    const lines: string[] = [];
+    for (const session of this.agentManager.getAll()) {
+      if (session.agentId === excludeAgentId) continue;
+      if (session.teamId !== callerTeamId) continue; // same team only
+      if (this.agentManager.isTeamLead(session.agentId)) continue; // skip leader
+      const status = session.status === "working" ? "working" : session.status;
+      const lastResult = session.lastResult;
+      const brief = lastResult ? ` — ${lastResult.length > 80 ? lastResult.slice(0, 80) + "…" : lastResult}` : "";
+      lines.push(`- ${session.name} (${session.role}) [${status}]${brief}`);
+    }
+    if (lines.length === 0) return "";
+    return `===== TEAM AWARENESS =====\nYour teammates (for context — do NOT delegate or coordinate with them):\n${lines.join("\n")}`;
   }
 
   /**
