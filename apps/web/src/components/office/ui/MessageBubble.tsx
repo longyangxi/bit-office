@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
@@ -166,13 +166,13 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   },
 };
 
-function MdContent({ text }: { text: string }) {
+const MdContent = memo(function MdContent({ text }: { text: string }) {
   return (
     <ReactMarkdown urlTransform={(url) => url} remarkPlugins={[remarkGfm]} components={mdComponents}>
       {text.replace(/(https?:\/\/[^\s)>\]]+)/g, '[$1]($1)')}
     </ReactMarkdown>
   );
-}
+});
 
 export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: string; tag: string; text: string; firstLine: string; isLong: boolean; isError?: boolean }) {
   const [expanded, setExpanded] = useState(false);
@@ -273,7 +273,7 @@ function ReviewButton({ result, onReview, detectedBackends }: {
   );
 }
 
-function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
+const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
   const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.6 };
 
@@ -423,7 +423,7 @@ function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeam
       </div>
     </div>
   );
-}
+});
 
 export { TokenBadge };
 export default MessageBubble;
