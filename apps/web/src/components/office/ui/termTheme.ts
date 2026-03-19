@@ -198,27 +198,27 @@ export const TERM_THEMES: Record<string, TermTheme> = {
   },
   office: {
     name: "Office",
-    accent: "#d4a860",
-    accentRgb: "212,168,96",
-    dim: "#685848",
-    text: "#c8b8a8",
-    textBright: "#e0d4c8",
-    bg: "#141218",
-    panel: "#1a1820",
-    surface: "#201e28",
-    hover: "#282430",
-    border: "#302a38",
-    borderDim: "#262030",
-    codeBg: "#18161e",
-    codeText: "#a08858",
-    scrollThumb: "#383040",
+    accent: "#c8a464",
+    accentRgb: "200,164,100",
+    dim: "#6e6050",
+    text: "#b8ae9e",
+    textBright: "#dcd4c6",
+    bg: "#111010",
+    panel: "#171514",
+    surface: "#1e1b18",
+    hover: "#262220",
+    border: "#302b26",
+    borderDim: "#231f1a",
+    codeBg: "#13110e",
+    codeText: "#907850",
+    scrollThumb: "#342e26",
     clean: true,
-    green: "#48cc6a",
-    yellow: "#e8b040",
-    red: "#e04848",
-    blue: "#5aacff",
-    purple: "#c084fc",
-    cyan: "#94e2d5",
+    green: "#7ab87a",
+    yellow: "#d4a850",
+    red: "#c06050",
+    blue: "#6a9ec0",
+    purple: "#a888b8",
+    cyan: "#70b0a8",
   },
   "black-metal": {
     name: "Black Metal",
@@ -368,27 +368,27 @@ export const TERM_THEMES: Record<string, TermTheme> = {
 
 // Mutable theme variables — reassigned by applyTermTheme()
 // Defaults match "office" theme
-export let TERM_GREEN = "#d4a860";
-export let TERM_DIM = "#685848";
-export let TERM_TEXT = "#c8b8a8";
-export let TERM_TEXT_BRIGHT = "#e0d4c8";
-export let TERM_ERROR = "#e04848";
+export let TERM_GREEN = "#c8a464";
+export let TERM_DIM = "#6e6050";
+export let TERM_TEXT = "#b8ae9e";
+export let TERM_TEXT_BRIGHT = "#dcd4c6";
+export let TERM_ERROR = "#c06050";
 export let TERM_GLOW = "none";
-export let TERM_BG = "#141218";
-export let TERM_PANEL = "#1a1820";
-export let TERM_SURFACE = "#201e28";
-export let TERM_HOVER = "#282430";
-export let TERM_BORDER = "#302a38";
-export let TERM_BORDER_DIM = "#262030";
+export let TERM_BG = "#111010";
+export let TERM_PANEL = "#171514";
+export let TERM_SURFACE = "#1e1b18";
+export let TERM_HOVER = "#262220";
+export let TERM_BORDER = "#302b26";
+export let TERM_BORDER_DIM = "#231f1a";
 export let TERM_GLOW_BORDER = "none";
 export let TERM_GLOW_FOCUS = "none";
 // Semantic color exports
-export let TERM_SEM_GREEN = "#48cc6a";
-export let TERM_SEM_YELLOW = "#e8b040";
-export let TERM_SEM_RED = "#e04848";
-export let TERM_SEM_BLUE = "#5aacff";
-export let TERM_SEM_PURPLE = "#c084fc";
-export let TERM_SEM_CYAN = "#94e2d5";
+export let TERM_SEM_GREEN = "#7ab87a";
+export let TERM_SEM_YELLOW = "#d4a850";
+export let TERM_SEM_RED = "#c06050";
+export let TERM_SEM_BLUE = "#6a9ec0";
+export let TERM_SEM_PURPLE = "#a888b8";
+export let TERM_SEM_CYAN = "#70b0a8";
 
 export function applyTermTheme(key: string) {
   const t = TERM_THEMES[key] ?? TERM_THEMES["office"];
