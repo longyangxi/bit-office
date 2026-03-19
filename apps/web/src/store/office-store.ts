@@ -375,7 +375,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   getVisibleMessages: (agentId) => {
     const agent = get().agents.get(agentId);
     if (!agent) return [];
-    const limit = get().visibleMessageCount.get(agentId) ?? 50;
+    const limit = get().visibleMessageCount.get(agentId) ?? 20;
     const msgs = agent.messages;
     return msgs.length <= limit ? msgs : msgs.slice(-limit);
   },
@@ -383,8 +383,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   loadMoreMessages: (agentId) => {
     set((state) => {
       const vmc = new Map(state.visibleMessageCount);
-      const current = vmc.get(agentId) ?? 50;
-      vmc.set(agentId, current + 50);
+      const current = vmc.get(agentId) ?? 20;
+      vmc.set(agentId, current + 20);
       return { visibleMessageCount: vmc };
     });
   },
