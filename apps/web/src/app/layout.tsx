@@ -26,21 +26,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             --office-text: #eddcb8;
             --office-gold: #e8b040;
 
-            /* ── Console/chat (terminal, dark green-black) ── */
-            --term-bg: #050808;
-            --term-panel: #0c1210;
-            --term-card: #0e160e;
-            --term-surface: #0a0e0a;
-            --term-border: #1a2a1a;
-            --term-border-dim: #152515;
-            --term-green: #18ff62;
-            --term-green-dim: #3a5a3a;
-            --term-text: #7a9a7a;
-            --term-text-bright: #b8d0b0;
-            --term-accent-rgb: 24,255,98;
-            --term-code-bg: #060810;
-            --term-code-text: #6a8a6a;
-            --term-scroll-thumb: #1a3a1a;
+            /* ── Console/chat (terminal, office theme) ── */
+            --term-bg: #141218;
+            --term-panel: #1a1820;
+            --term-card: #201e28;
+            --term-surface: #201e28;
+            --term-border: #302a38;
+            --term-border-dim: #262030;
+            --term-green: #d4a860;
+            --term-green-dim: #685848;
+            --term-text: #c8b8a8;
+            --term-text-bright: #e0d4c8;
+            --term-accent-rgb: 212,168,96;
+            --term-code-bg: #18161e;
+            --term-code-text: #a08858;
+            --term-scroll-thumb: #383040;
+            --term-sem-green: #48cc6a;
+            --term-sem-yellow: #e8b040;
+            --term-sem-red: #e04848;
+            --term-sem-blue: #5aacff;
+            --term-sem-purple: #c084fc;
+            --term-sem-cyan: #94e2d5;
 
             /* ── Legacy aliases (for components not yet migrated) ── */
             --px-bg-deep: var(--office-bg);

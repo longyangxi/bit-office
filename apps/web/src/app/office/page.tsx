@@ -209,7 +209,7 @@ export default function OfficePage() {
   // ── Theme ──
   // Always start with default to avoid SSR/client hydration mismatch,
   // then restore saved theme in useEffect (client-only).
-  const [termTheme, setTermTheme] = useState("tokyo-night");
+  const [termTheme, setTermTheme] = useState("office");
   applyTermTheme(termTheme);
   useEffect(() => {
     const saved = localStorage.getItem("bit-office-theme");
@@ -1344,11 +1344,12 @@ export default function OfficePage() {
           }}>
           {/* Bookmark tabs */}
           {[
-            { key: "agents" as const, label: "Agents", color: TERM_SEM_CYAN },
-            { key: "team" as const, label: "Team", color: TERM_SEM_YELLOW },
-            { key: "external" as const, label: "Ext", color: TERM_SEM_BLUE },
+            { key: "agents" as const, label: "Agents" },
+            { key: "team" as const, label: "Team" },
+            { key: "external" as const, label: "Ext" },
           ].map((tab) => {
             const active = expandedSection === tab.key;
+            const accentColor = TERM_GREEN; // theme accent
             return (
               <button
                 key={tab.key}
@@ -1363,20 +1364,20 @@ export default function OfficePage() {
                   padding: "0 5px",
                   height: 72,
                   border: "none", cursor: "pointer",
-                  background: active ? tab.color + "20" : TERM_PANEL + "80",
+                  background: active ? accentColor + "20" : TERM_PANEL + "80",
                   borderRadius: consoleMode ? "0 6px 6px 0" : "6px 0 0 6px",
-                  borderTop: `1px solid ${active ? tab.color + "60" : tab.color + "40"}`,
-                  borderBottom: `1px solid ${active ? tab.color + "60" : tab.color + "40"}`,
-                  borderLeft: consoleMode ? "none" : `1px solid ${active ? tab.color + "60" : tab.color + "40"}`,
-                  borderRight: consoleMode ? `1px solid ${active ? tab.color + "60" : tab.color + "40"}` : "none",
-                  color: active ? tab.color : "#5a5a5a",
+                  borderTop: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
+                  borderBottom: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
+                  borderLeft: consoleMode ? "none" : `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
+                  borderRight: consoleMode ? `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}` : "none",
+                  color: active ? accentColor : TERM_DIM,
                   fontSize: 13, fontFamily: TERM_FONT, fontWeight: 600,
                   letterSpacing: "0.1em",
-                  boxShadow: active ? `0 2px 8px ${tab.color}15, inset 0 -4px 8px ${tab.color}08` : "2px 0 8px rgba(0,0,0,0.4)",
+                  boxShadow: active ? `0 2px 8px ${accentColor}15, inset 0 -4px 8px ${accentColor}08` : "2px 0 8px rgba(0,0,0,0.4)",
                   transition: "all 0.15s",
                 }}
-                onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = tab.color; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = "#5a5a5a"; }}
+                onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = accentColor; }}
+                onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = TERM_DIM; }}
               >
                 {tab.label}
               </button>
@@ -1402,15 +1403,15 @@ export default function OfficePage() {
               padding: 0, marginTop: 4,
               background: TERM_PANEL + "80",
               borderRadius: consoleMode ? "0 10px 10px 0" : "10px 0 0 10px",
-              borderTop: "1px solid #e8b04040",
-              borderBottom: "1px solid #e8b04040",
-              borderLeft: consoleMode ? "none" : "1px solid #e8b04040",
-              borderRight: consoleMode ? "1px solid #e8b04040" : "none",
+              borderTop: `1px solid ${TERM_GREEN}40`,
+              borderBottom: `1px solid ${TERM_GREEN}40`,
+              borderLeft: consoleMode ? "none" : `1px solid ${TERM_GREEN}40`,
+              borderRight: consoleMode ? `1px solid ${TERM_GREEN}40` : "none",
               boxShadow: "-2px 0 8px rgba(0,0,0,0.3)",
-              color: "#e8b040", fontSize: 14,
+              color: TERM_GREEN, fontSize: 14,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_SEM_YELLOW; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_SEM_YELLOW; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_GREEN; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_GREEN; }}
             title={consoleMode ? "Back to Office" : "Console Mode"}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: consoleMode ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}>

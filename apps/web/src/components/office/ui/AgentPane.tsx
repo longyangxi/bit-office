@@ -1,4 +1,5 @@
-import { useRef, useEffect, useLayoutEffect, memo } from "react";
+import { useRef, useEffect, memo } from "react";
+import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
@@ -158,136 +159,20 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const statusConfig = getStatusConfig();
   const cfg = statusConfig[status] ?? statusConfig.idle;
 
-  // ── Scroll management ──
-  // Root cause of blank-screen bugs: the old programmaticScrollRef flag was a
-  // single-use boolean consumed by the first scroll event. In 3-pane flex layouts,
-  // cross-pane layout reflows fire spurious scroll events that consume the flag
-  // before the intended event arrives. The second event then reads stale dimensions,
-  // incorrectly sets wasAtBottomRef=false, and all future auto-scroll stops.
-  //
-  // Fix: remove the flag entirely. scrollToBottom always marks wasAtBottom=true
-  // (that's the intent). The scroll handler debounces its position check to the
-  // next frame so layout is fully settled before reading dimensions.
-  const chatEndRef = useRef<HTMLDivElement>(null);
-  const wasAtBottomRef = useRef(true);
-  const resizingRef = useRef(false);
-  const scrollCheckRafRef = useRef(0);
-  const msgCount = messages.length;
-
-  /** Scroll container to bottom. Always marks wasAtBottomRef=true (caller intent).
-   *  Uses scrollTop=scrollHeight — browser auto-clamps to valid range. */
-  const scrollToBottom = (container: HTMLElement) => {
-    container.scrollTop = container.scrollHeight;
-    wasAtBottomRef.current = true;
-  };
-
-  // When prompt clears (user submitted), force next auto-scroll
+  // ── Scroll management (unified via useScrollAnchor) ──
+  // All scroll-to-bottom logic (new messages, streaming, resize, visibility
+  // restore, frozen thaw) is handled by one hook with a single rAF executor.
+  // forcePin: when prompt clears after send, re-pin to bottom.
   const prevPromptRef = useRef(prompt);
-  useEffect(() => {
-    if (prevPromptRef.current && !prompt) {
-      wasAtBottomRef.current = true;
-    }
-    prevPromptRef.current = prompt;
-  }, [prompt]);
+  const promptJustCleared = prevPromptRef.current !== "" && prompt === "";
+  prevPromptRef.current = prompt;
 
-  // When scrollFrozen transitions true→false (transition ended), force scroll to bottom.
-  const prevFrozenRef = useRef(scrollFrozen);
-  useEffect(() => {
-    const wasFrozen = prevFrozenRef.current;
-    prevFrozenRef.current = scrollFrozen;
-    if (wasFrozen && !scrollFrozen) {
-      const el = chatEndRef.current;
-      const container = el?.parentElement;
-      if (container) {
-        wasAtBottomRef.current = true;
-        requestAnimationFrame(() => scrollToBottom(container));
-      }
-    }
-  }, [scrollFrozen]);
-
-  // Track scroll position via scroll events.
-  // Debounced to next frame so we only read dimensions after layout settles —
-  // prevents false negatives from stale scrollHeight during flex reflows.
-  useEffect(() => {
-    const el = chatEndRef.current;
-    if (!el) return;
-    const container = el.parentElement;
-    if (!container) return;
-    const onScroll = () => {
-      if (resizingRef.current || scrollFrozen) return;
-      cancelAnimationFrame(scrollCheckRafRef.current);
-      scrollCheckRafRef.current = requestAnimationFrame(() => {
-        wasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
-      });
-    };
-    container.addEventListener("scroll", onScroll, { passive: true });
-    return () => {
-      container.removeEventListener("scroll", onScroll);
-      cancelAnimationFrame(scrollCheckRafRef.current);
-    };
-  }, [agentId, scrollFrozen]);
-
-  // Keep scroll pinned to bottom when container resizes (e.g. textarea grow/shrink).
-  // Single rAF is now safe because scrollToBottom always sets wasAtBottom=true,
-  // so even if the first attempt uses slightly stale dimensions, subsequent
-  // MutationObserver/useLayoutEffect calls will correct it.
-  useEffect(() => {
-    const el = chatEndRef.current;
-    if (!el) return;
-    const container = el.parentElement;
-    if (!container) return;
-    let rafId = 0;
-    const ro = new ResizeObserver(() => {
-      if (scrollFrozen) return;
-      resizingRef.current = true;
-      if (rafId) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(() => {
-        rafId = 0;
-        if (wasAtBottomRef.current) {
-          scrollToBottom(container);
-        }
-        resizingRef.current = false;
-      });
-    });
-    ro.observe(container);
-    return () => {
-      ro.disconnect();
-      if (rafId) cancelAnimationFrame(rafId);
-      resizingRef.current = false;
-    };
-  }, [agentId, scrollFrozen]);
-
-  // Scroll to bottom synchronously after DOM commit when messages change
-  useLayoutEffect(() => {
-    if (scrollFrozen) return;
-    const el = chatEndRef.current;
-    const container = el?.parentElement;
-    if (container && wasAtBottomRef.current) {
-      scrollToBottom(container);
-    }
-  }, [agentId, msgCount, scrollFrozen]);
-
-  // MutationObserver for streaming text updates
-  useEffect(() => {
-    const el = chatEndRef.current;
-    if (!el) return;
-    const container = el.parentElement;
-    if (!container) return;
-    let raf = 0;
-    const observer = new MutationObserver(() => {
-      if (scrollFrozen) return;
-      if (!raf) {
-        raf = requestAnimationFrame(() => {
-          raf = 0;
-          if (wasAtBottomRef.current) {
-            scrollToBottom(container);
-          }
-        });
-      }
-    });
-    observer.observe(container, { childList: true, subtree: true, characterData: true });
-    return () => { observer.disconnect(); cancelAnimationFrame(raf); };
-  }, [agentId, scrollFrozen]);
+  const chatEndRef = useScrollAnchor({
+    msgCount: messages.length,
+    frozen: scrollFrozen,
+    key: agentId,
+    forcePin: promptJustCleared,
+  });
 
   // Reset textarea height when prompt is cleared (e.g. after sending a message)
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -297,30 +182,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     }
   }, [prompt]);
 
-  // ── Reviewer overlay scroll management ──
-  const reviewChatEndRef = useRef<HTMLDivElement>(null);
-  const reviewWasAtBottomRef = useRef(true);
-  const reviewMsgCount = reviewerOverlay?.messages.length ?? 0;
-
-  useEffect(() => {
-    const el = reviewChatEndRef.current;
-    if (!el) return;
-    const container = el.parentElement;
-    if (!container) return;
-    const onScroll = () => {
-      reviewWasAtBottomRef.current = container.scrollHeight - container.scrollTop - container.clientHeight <= 80;
-    };
-    container.addEventListener("scroll", onScroll, { passive: true });
-    return () => container.removeEventListener("scroll", onScroll);
-  }, [reviewerOverlay?.agentId]);
-
-  useLayoutEffect(() => {
-    const el = reviewChatEndRef.current;
-    const container = el?.parentElement;
-    if (container && reviewWasAtBottomRef.current) {
-      scrollToBottom(container);
-    }
-  }, [reviewerOverlay?.agentId, reviewMsgCount]);
+  // ── Reviewer overlay scroll (same hook, separate instance) ──
+  const reviewChatEndRef = useScrollAnchor({
+    msgCount: reviewerOverlay?.messages.length ?? 0,
+    frozen: false,
+    key: reviewerOverlay?.agentId ?? "",
+  });
 
   return (
     <div style={{
@@ -337,7 +204,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         fontSize: 12, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: TERM_SEM_CYAN, fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
+        <span style={{ color: TERM_GREEN, fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
           {role?.split("\u2014")[0]?.trim()}
           {backend && <span style={{ color: TERM_DIM, fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
         </span>
