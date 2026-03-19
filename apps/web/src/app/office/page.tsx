@@ -1520,7 +1520,7 @@ export default function OfficePage() {
               })}
               {/* Hire button inline with agents */}
               {isOwner && expandedSection === "agents" && (
-                <button onClick={() => setShowHireModal(true)} title="Hire Agent"
+                <button onClick={() => setShowHireModal(true)} title="Hire Team"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     width: 40, height: "80%", flexShrink: 0,
