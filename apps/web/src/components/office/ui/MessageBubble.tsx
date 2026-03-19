@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -52,8 +52,8 @@ function ThinkingBubble({ logLine }: { logLine: string | null }) {
         padding: "8px 12px",
         backgroundColor: TERM_PANEL, color: "#7a8a6a", fontSize: 12,
         fontFamily: "monospace",
-        border: "1px solid #1a2a1a",
-        borderLeft: "2px solid #e8b04060",
+        border: `1px solid ${TERM_BORDER}`,
+        borderLeft: `2px solid ${TERM_GREEN}60`,
         maxWidth: "100%", overflow: "hidden",
         whiteSpace: "pre-wrap", wordBreak: "break-word",
       }}>

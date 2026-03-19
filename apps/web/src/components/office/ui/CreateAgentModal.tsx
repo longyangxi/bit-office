@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
 import { ROLE_PRESETS, SKILLS_MAP, AGENCY_CATALOG, AGENCY_AGENT_MAP, PERSONALITY_PRESETS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_GREEN, TERM_DIM, TERM_SEM_BLUE } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import { isRealEnter } from "./office-utils";
 
@@ -36,7 +36,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "7px 10px", fontSize: 14, fontFamily: "monospace",
-    border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
+    border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG, color: TERM_TEXT,
     boxSizing: "border-box",
   };
 
@@ -52,8 +52,8 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
       {open && (
         <div data-scrollbar style={{
           position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
-          maxHeight: 250, overflowY: "auto", backgroundColor: "#14112a",
-          border: "1px solid #1a2a1a", borderTop: "none",
+          maxHeight: 250, overflowY: "auto", backgroundColor: TERM_BG,
+          border: `1px solid ${TERM_BORDER}`, borderTop: "none",
         }}>
           {filtered.map((cat) =>
             cat.subcategories.map((sub) => (
@@ -61,7 +61,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
                 <div style={{
                   padding: "4px 10px", fontSize: 10, color: "#5a4838",
                   fontFamily: "monospace", textTransform: "uppercase", letterSpacing: "0.05em",
-                  backgroundColor: "#0a0e0a", position: "sticky", top: 0,
+                  backgroundColor: TERM_BG, position: "sticky", top: 0,
                 }}>
                   {cat.subcategories.length > 1 && sub.name !== "_root" ? `${cat.label} > ${sub.label}` : cat.label}
                 </div>
@@ -71,8 +71,8 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
                     onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
                     style={{
                       padding: "5px 10px", fontSize: 13, fontFamily: "monospace",
-                      color: a.name === value ? "#e8b040" : "#eddcb8",
-                      cursor: "pointer", backgroundColor: a.name === value ? "#382800" : "transparent",
+                      color: a.name === value ? TERM_GREEN : TERM_TEXT,
+                      cursor: "pointer", backgroundColor: a.name === value ? `${TERM_GREEN}18` : "transparent",
                     }}
                     onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "#1a1a2a"; }}
                     onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -86,7 +86,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
           {filtered.length === 0 && (
             <div
               onClick={() => { onSelect(search.trim()); setOpen(false); setSearch(""); }}
-              style={{ padding: "8px 10px", fontSize: 13, fontFamily: "monospace", color: "#7a6858", cursor: "pointer" }}
+              style={{ padding: "8px 10px", fontSize: 13, fontFamily: "monospace", color: TERM_DIM, cursor: "pointer" }}
             >
               Use custom: &quot;{search.trim()}&quot;
             </div>
@@ -201,27 +201,27 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
         onClick={(e) => e.stopPropagation()}
         style={{
           backgroundColor: TERM_PANEL, padding: "18px 18px 14px",
-          width: "90%", maxWidth: 400, border: "2px solid #1a2a1a",
+          width: "90%", maxWidth: 400, border: `2px solid ${TERM_BORDER}`,
           boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
           maxHeight: "90vh", overflowY: "auto",
         }}
         data-scrollbar
       >
-        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 12px", textAlign: "center", color: "#e8b040", letterSpacing: "0.05em" }}>
+        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 12px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em" }}>
           {editAgent ? "Edit Agent" : "Create Agent"}
         </h2>
 
         {/* Avatar palette selector */}
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>AVATAR</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>AVATAR</div>
           <div style={{ display: "flex", gap: 4 }}>
             {[0, 1, 2, 3, 4, 5].map((p) => (
               <button
                 key={p}
                 onClick={() => setPalette(p)}
                 style={{
-                  padding: 3, border: palette === p ? "2px solid #e8b040" : "2px solid #1a2a1a",
-                  backgroundColor: palette === p ? "#382800" : "transparent",
+                  padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
+                  backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
                   cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                 }}
               >
@@ -233,14 +233,14 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
 
         {/* Name */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>NAME</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>NAME</div>
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Agent name"
             style={{
               width: "100%", padding: "7px 10px", fontSize: 14, fontFamily: "monospace",
-              border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG, color: TERM_TEXT,
               boxSizing: "border-box",
             }}
           />
@@ -248,7 +248,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
 
         {/* Role — searchable dropdown */}
         <div style={{ marginBottom: 8, position: "relative" }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>ROLE</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>ROLE</div>
           <RoleSearchSelect
             value={currentRole}
             onSelect={(roleName) => {
@@ -271,7 +271,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
 
         {/* Skills */}
         <div style={{ marginBottom: 8 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>SKILLS</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>SKILLS</div>
           {/* Suggested skill chips */}
           {suggestedSkills.length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
@@ -283,9 +283,9 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                     onClick={() => toggleSkill(skill)}
                     style={{
                       padding: "4px 10px", fontSize: 13, fontFamily: "monospace",
-                      border: active ? "1px solid #e8b04080" : "1px solid #1a2a1a",
-                      backgroundColor: active ? "#382800" : "transparent",
-                      color: active ? "#e8b040" : "#7a6858",
+                      border: active ? `1px solid ${TERM_GREEN}80` : `1px solid ${TERM_BORDER}`,
+                      backgroundColor: active ? `${TERM_GREEN}18` : "transparent",
+                      color: active ? TERM_GREEN : TERM_DIM,
                       cursor: "pointer",
                     }}
                   >{skill}</button>
@@ -327,7 +327,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
               placeholder="Add custom skill..."
               style={{
                 flex: 1, padding: "6px 10px", fontSize: 13, fontFamily: "monospace",
-                border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
+                border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG, color: TERM_TEXT,
                 boxSizing: "border-box",
               }}
             />
@@ -335,8 +335,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
               onClick={addCustomSkill}
               style={{
                 padding: "5px 12px", fontSize: 15, fontWeight: 700,
-                border: "1px solid #1a2a1a", backgroundColor: "transparent",
-                color: "#7a6858", cursor: "pointer", fontFamily: "monospace",
+                border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
+                color: TERM_DIM, cursor: "pointer", fontFamily: "monospace",
               }}
             >+</button>
           </div>
@@ -344,14 +344,14 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
 
         {/* Personality */}
         <div style={{ marginBottom: 10 }}>
-          <div style={{ fontSize: 12, color: "#7a6858", marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>PERSONALITY</div>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>PERSONALITY</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
             {PERSONALITY_PRESETS.map((p, i) => (
               <label
                 key={i}
                 style={{
                   display: "flex", alignItems: "center", gap: 6, padding: "4px 6px",
-                  cursor: "pointer", fontSize: 13, color: personalityMode === i ? "#eddcb8" : "#7a6858",
+                  cursor: "pointer", fontSize: 13, color: personalityMode === i ? TERM_TEXT : TERM_DIM,
                   fontFamily: "monospace",
                 }}
               >
@@ -360,7 +360,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                   name="personality"
                   checked={personalityMode === i}
                   onChange={() => setPersonalityMode(i)}
-                  style={{ accentColor: "#e8b040", cursor: "pointer" }}
+                  style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
                 />
                 {p.label}
               </label>
@@ -368,7 +368,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
             <label
               style={{
                 display: "flex", alignItems: "center", gap: 6, padding: "4px 6px",
-                cursor: "pointer", fontSize: 13, color: personalityMode === 4 ? "#eddcb8" : "#7a6858",
+                cursor: "pointer", fontSize: 13, color: personalityMode === 4 ? TERM_TEXT : TERM_DIM,
                 fontFamily: "monospace",
               }}
             >
@@ -377,7 +377,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                 name="personality"
                 checked={personalityMode === 4}
                 onChange={() => setPersonalityMode(4)}
-                style={{ accentColor: "#e8b040", cursor: "pointer" }}
+                style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
               />
               Custom
             </label>
@@ -389,7 +389,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
                 rows={2}
                 style={{
                   width: "100%", padding: "7px 10px", fontSize: 13, fontFamily: "monospace",
-                  border: "1px solid #1a2a1a", backgroundColor: "#14112a", color: "#eddcb8",
+                  border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG, color: TERM_TEXT,
                   resize: "vertical", boxSizing: "border-box", marginTop: 2,
                 }}
               />
@@ -402,8 +402,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
           <button
             onClick={handleSave}
             style={{
-              flex: 1, padding: "9px", border: "1px solid #e8b04060",
-              backgroundColor: "#382800", color: "#e8b040", fontSize: 14,
+              flex: 1, padding: "9px", border: `1px solid ${TERM_GREEN}60`,
+              backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN, fontSize: 14,
               fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
               opacity: name.trim() ? 1 : 0.4,
             }}
@@ -415,7 +415,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent }: {
             onClick={onClose}
             style={{
               padding: "9px 16px",
-              border: "1px solid #1a2a1a", backgroundColor: "transparent",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
               color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
             }}
           >Cancel</button>

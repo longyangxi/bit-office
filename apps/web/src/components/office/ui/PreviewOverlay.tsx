@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_BG, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
 
@@ -46,7 +46,7 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
       display: "flex", alignItems: "center", justifyContent: "center",
     }} onClick={onSkip}>
       <div style={{
-        backgroundColor: "#0a0e0a", padding: "22px 20px",
+        backgroundColor: TERM_BG, padding: "22px 20px",
         border: "2px solid rgba(232,176,64,0.4)",
         boxShadow: "0 0 40px rgba(200,155,48,0.1)",
         width: 280,
@@ -123,7 +123,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
     }}>
       <div style={{
         height: 40, display: "flex", alignItems: "center",
-        padding: "0 12px", backgroundColor: "#0a0e0a", gap: 8,
+        padding: "0 12px", backgroundColor: TERM_BG, gap: 8,
       }}>
         <span style={{
           flex: 1, color: "#888", fontSize: 14,

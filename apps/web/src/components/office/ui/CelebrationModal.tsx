@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
-import { TERM_PANEL, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_PANEL, TERM_BORDER, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
 import { computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 
 function ConfettiOverlay() {
@@ -97,7 +97,7 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
           Mission Complete!
         </div>
         <div style={{
-          color: "#9a8a68", fontSize: 14, marginBottom: 20, lineHeight: 1.7, fontFamily: "monospace",
+          color: TERM_DIM, fontSize: 14, marginBottom: 20, lineHeight: 1.7, fontFamily: "monospace",
         }}>
           Your task has been completed successfully. Ready for the next mission whenever you are.
         </div>
@@ -139,8 +139,8 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
             onClick={onDismiss}
             style={{
               padding: "9px 20px",
-              border: "1px solid #1a2a1a", backgroundColor: TERM_PANEL,
-              color: "#9a8a68", fontSize: 13, cursor: "pointer", fontFamily: "monospace",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_PANEL,
+              color: TERM_DIM, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
             }}
           >
             OK
