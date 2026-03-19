@@ -425,6 +425,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   }
                   el.addEventListener('scroll', update, { passive: true });
                   new ResizeObserver(update).observe(el);
+                  // Observe subtree content changes (e.g. streaming chat messages)
+                  var contentTimer = 0;
+                  new MutationObserver(function() {
+                    if (contentTimer) return;
+                    contentTimer = setTimeout(function() { contentTimer = 0; update(); }, 150);
+                  }).observe(el, { childList: true, subtree: true, characterData: true });
                   update();
                 }
                 function scan() {
