@@ -11,6 +11,8 @@
 
 **Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project. 🚀**
 
+> _Last tested: 2026-03-18_
+
 [Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
 
 </div>
