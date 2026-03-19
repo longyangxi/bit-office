@@ -221,7 +221,8 @@ SUMMARY: (one sentence)
 
   "worker-continue": `[Context reminder] You are {{name}} ({{role}}). {{personality}}
 {{soloHint}}
-
+{{memory}}
+{{recoveryContext}}
 {{prompt}}`,
 
   "worker-direct-fix": `[Direct fix request from {{reviewerName}}]
