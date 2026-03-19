@@ -72,12 +72,29 @@ Every completed task generates an **auto preview**. Rate the result
 across five dimensions — your feedback becomes **persistent memory**
 that shapes how agents approach the next project.
 
-### Self-Improving Agents
+### Self-Improving Agents & Persistent Memory
 
-Review patterns, tech preferences, and project ratings are stored
-across sessions. Agents **learn what you value** and adapt — low
-visual scores lead to richer designs, recurring review failures get
-avoided automatically.
+Agents remember across sessions through a **four-layer memory system**
+(`@bit-office/memory`):
+
+| Layer | Scope | What it stores |
+|-------|-------|----------------|
+| **L0 — Ephemeral** | Current conversation | Sliding window (in-memory) |
+| **L1 — Session** | Per-task | Structured summary: what/why/files/decisions/commits |
+| **L2 — Agent** | Per-agent, long-term | Learned facts & preferences (up to 50, auto-deduped) |
+| **L3 — Shared** | Cross-agent | Project-wide knowledge promoted from L2 |
+
+After a session crash, agents recover with **structured context** (task
+summary, changed files, commits, decisions) instead of raw chat
+fragments. Facts are extracted rule-based (zero extra LLM cost) and
+deduplicated via Jaccard similarity. High-confidence agent facts auto-
+promote to shared project knowledge.
+
+Review patterns, tech preferences, and project ratings also persist.
+Agents **learn what you value** and adapt — low visual scores lead to
+richer designs, recurring review failures get avoided automatically.
+
+> Design details: [`packages/memory/MEMORY_REDESIGN.md`](packages/memory/MEMORY_REDESIGN.md)
 
 ### Token Cost Visibility
 
@@ -211,6 +228,7 @@ bit-office/
 │   ├── gateway/        # Runtime daemon: events, channels, policy, orchestration
 │   └── desktop/        # Tauri v2 native shell (macOS .app/.dmg)
 └── packages/
+    ├── memory/         # Four-layer persistent memory (L0–L3)
     ├── orchestrator/   # Multi-agent execution engine
     └── shared/         # Typed command/event contracts (Zod schemas)
 ```
@@ -222,6 +240,7 @@ bit-office/
 - **Frontend**: Next.js 15, React, PixiJS v8, Zustand
 - **Desktop**: Tauri v2 (Rust + system WebView)
 - **Backend**: Node.js daemon, WebSocket
+- **Memory**: Four-layer JSON store (session → agent → shared), Jaccard dedup
 - **Protocol**: Zod-validated event schemas
 - **Integrations**: Ably, Telegram, external process detection
 
