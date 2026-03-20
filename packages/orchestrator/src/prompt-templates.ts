@@ -26,6 +26,38 @@ export type TemplateName =
   | "leader-complete"
   | "leader-complete-continue";
 
+// Shared deliverable rules — injected into worker templates at definition time
+const DELIVERABLE_RULES = [
+  "**System constraints:**",
+  "- NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.",
+  "- Do NOT launch GUI apps or dev servers. You CANNOT see UI.",
+  "- For web servers, your app MUST read port from the PORT env variable (e.g. process.env.PORT || 3000).",
+  "",
+  "**Deliverable report format** (ONLY use when you created or modified files — for plain conversation, reply normally in text):",
+  "",
+  "```",
+  "STATUS: done | failed",
+  "FILES_CHANGED: (one per line)",
+  "ENTRY_FILE: (relative path for static web, e.g. index.html — NEVER absolute path)",
+  "PREVIEW_CMD: (for server/CLI apps)",
+  "PREVIEW_PORT: (for web servers)",
+  "SUMMARY: (one sentence)",
+  "```",
+].join("\n");
+
+const DELIVERABLE_RULES_FIX = [
+  "Report your result (ONLY if you modified files):",
+  "",
+  "```",
+  "STATUS: done | failed",
+  "FILES_CHANGED: (list all files modified)",
+  "ENTRY_FILE: (relative path, if applicable — NEVER absolute path)",
+  "PREVIEW_CMD: (if applicable)",
+  "PREVIEW_PORT: (if applicable)",
+  "SUMMARY: (one sentence: what you fixed)",
+  "```",
+].join("\n");
+
 const PROMPT_DEFAULTS: Record<TemplateName, string> = {
   "leader-initial": `You are {{name}}, the Team Lead. {{personality}}
 You CANNOT write code, run commands, or use any tools. You can ONLY delegate.
@@ -146,18 +178,7 @@ RULES:
 {{recoveryContext}}
 {{teamRoster}}
 
-SYSTEM CONSTRAINTS:
-- NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
-- Do NOT launch GUI apps or dev servers. You CANNOT see UI.
-- For web servers, your app MUST read port from the PORT env variable (e.g. process.env.PORT || 3000).
-
-When done, report results in this format:
-STATUS: done | failed
-FILES_CHANGED: (one per line)
-ENTRY_FILE: (for static web, e.g. index.html)
-PREVIEW_CMD: (for server/CLI apps)
-PREVIEW_PORT: (for web servers)
-SUMMARY: (one sentence)
+${DELIVERABLE_RULES}
 
 {{prompt}}`,
 
@@ -210,17 +231,7 @@ SUMMARY: (one sentence)
 {{teamRoster}}
 {{recoveryContext}}
 
-When you produce a deliverable, follow these rules:
-- NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.
-- Do NOT launch GUI apps or dev servers. You CANNOT see UI.
-- For web servers, your app MUST read port from the PORT env variable.
-- Report results in this format:
-STATUS: done | failed
-FILES_CHANGED: (one per line)
-ENTRY_FILE: (for static web, e.g. index.html)
-PREVIEW_CMD: (for server/CLI apps)
-PREVIEW_PORT: (for web servers)
-SUMMARY: (one sentence)
+${DELIVERABLE_RULES}
 
 {{prompt}}`,
 
@@ -241,14 +252,7 @@ The Code Reviewer found issues in your work. Fix them and re-verify.
 ===== INSTRUCTIONS =====
 1. Read each ISSUE carefully. Fix ALL of them.
 2. After fixing, rebuild/re-verify (run build, check file exists, syntax check — same as before).
-3. Report your result in the standard format:
-
-STATUS: done | failed
-FILES_CHANGED: (list all files modified)
-ENTRY_FILE: (if applicable)
-PREVIEW_CMD: (if applicable)
-PREVIEW_PORT: (if applicable)
-SUMMARY: (one sentence: what you fixed)
+3. ${DELIVERABLE_RULES_FIX}
 
 Do NOT introduce new features. Only fix the reported issues.`,
 
