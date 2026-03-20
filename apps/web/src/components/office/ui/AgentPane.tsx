@@ -475,67 +475,90 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         </div>
       )}
 
-      {/* ── Review overlay — two-phase: mini bar (working) → slide-up panel (done) ── */}
+      {/* ── Review overlay — two-phase: mini input-area overlay (working) → expanded panel (done) ── */}
       {reviewerOverlay && reviewerOverlay.busy && (
-        /* Phase 1: Mini review bar — replaces input area, doesn't cover chat */
+        /* Phase 1: Small window covering only the input area — shows role + "..." + streaming thoughts */
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-          display: "flex", alignItems: "center", gap: 10,
-          padding: "10px 14px",
+          maxHeight: "40%",
+          display: "flex", flexDirection: "column",
           background: TERM_PANEL,
           borderTop: `2px solid ${TERM_GREEN}40`,
           fontFamily: TERM_FONT, fontSize: 12,
           animation: "review-overlay-in 0.3s ease-out",
         }}>
-          {/* Reviewer avatar dot */}
+          {/* Header: avatar + name + dots + dismiss */}
           <div style={{
-            width: 28, height: 28, borderRadius: "50%",
-            background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 13, fontWeight: 700, color: TERM_BG, flexShrink: 0,
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "6px 12px",
+            borderBottom: `1px solid ${TERM_GREEN}20`,
+            flexShrink: 0,
           }}>
-            {reviewerOverlay.name.charAt(0).toUpperCase()}
-          </div>
-          {/* Name + status */}
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
-                {reviewerOverlay.name}
-              </span>
-              <span className="working-dots" style={{ color: TERM_GREEN, opacity: 0.5 }}>
-                <span className="working-dots-mid" />
-              </span>
-            </div>
             <div style={{
-              color: TERM_DIM, fontSize: 10, marginTop: 1,
-              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+              width: 22, height: 22, borderRadius: "50%",
+              background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, color: TERM_BG, flexShrink: 0,
             }}>
-              {reviewerOverlay.lastLogLine?.slice(0, 60) || "Reviewing code changes..."}
+              {reviewerOverlay.name.charAt(0).toUpperCase()}
             </div>
+            <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
+              {reviewerOverlay.role?.split("\u2014")[0]?.trim() || reviewerOverlay.name}
+            </span>
+            <span className="working-dots" style={{ color: TERM_GREEN, opacity: 0.5 }}>
+              <span className="working-dots-mid" />
+            </span>
+            <span style={{ flex: 1 }} />
+            {reviewerOverlay.tokenUsage.inputTokens > 0 && (
+              <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
+            )}
+            {onDismissReview && (
+              <button
+                onClick={onDismissReview}
+                style={{
+                  padding: "2px 8px", border: `1px solid ${TERM_GREEN}30`,
+                  backgroundColor: "transparent", color: TERM_DIM,
+                  fontSize: 10, fontFamily: TERM_FONT,
+                  cursor: "pointer", flexShrink: 0, lineHeight: 1,
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+              >{"\u00d7"}</button>
+            )}
           </div>
-          {/* Token usage */}
-          {reviewerOverlay.tokenUsage.inputTokens > 0 && (
-            <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
+          {/* Scrollable streaming thoughts — only shown when reviewer has messages */}
+          {reviewerOverlay.visibleMessages.length > 0 && (
+            <div data-scrollbar style={{
+              flex: 1, overflowY: "auto", padding: "6px 12px",
+              minHeight: 0, maxHeight: 120,
+              backgroundColor: TERM_BG,
+            }}>
+              {reviewerOverlay.visibleMessages.filter(m => m.role === "agent" && m.text).map((msg) => (
+                <div key={msg.id} style={{
+                  fontSize: 11, color: TERM_DIM, lineHeight: 1.5,
+                  fontFamily: TERM_FONT, marginBottom: 4,
+                  whiteSpace: "pre-wrap", wordBreak: "break-word",
+                }}>
+                  {msg.text.length > 300 ? msg.text.slice(-300) : msg.text}
+                </div>
+              ))}
+              <div ref={reviewChatEndRef} />
+            </div>
           )}
-          {/* Dismiss */}
-          {onDismissReview && (
-            <button
-              onClick={onDismissReview}
-              style={{
-                padding: "4px 10px", border: `1px solid ${TERM_GREEN}30`,
-                backgroundColor: "transparent", color: TERM_DIM,
-                fontSize: 10, fontFamily: TERM_FONT,
-                cursor: "pointer", flexShrink: 0,
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
-            >{"\u00d7"}</button>
+          {/* Fallback hint when no messages yet */}
+          {reviewerOverlay.visibleMessages.length === 0 && (
+            <div style={{
+              padding: "6px 12px", color: TERM_DIM, fontSize: 11,
+              fontFamily: TERM_FONT,
+            }}>
+              {reviewerOverlay.lastLogLine?.slice(0, 80) || "Reviewing code changes..."}
+            </div>
           )}
         </div>
       )}
 
       {reviewerOverlay && !reviewerOverlay.busy && (
-        /* Phase 2: Slide-up result panel — covers bottom 65% of agent pane */
+        /* Phase 2: Expanded result panel — covers bottom 65% of agent pane */
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
           height: "65%", minHeight: 200,
@@ -578,18 +601,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             )}
           </div>
 
-          {/* Review messages */}
+          {/* Final review result — all agent messages */}
           <div data-scrollbar className="term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
-            {reviewerOverlay.hasMoreMessages && onReviewerLoadMore && (
-              <LoadMoreSentinel onLoadMore={onReviewerLoadMore} />
-            )}
-            {reviewerOverlay.visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
-            ))}
+            {(() => {
+              const agentMsgs = reviewerOverlay.visibleMessages.filter(m => m.role === "agent" && m.text);
+              return agentMsgs.length > 0 ? (
+                agentMsgs.map(msg => (
+                  <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
+                ))
+              ) : (
+                <div style={{ color: TERM_DIM, fontSize: 12, fontFamily: TERM_FONT, padding: "10px 0" }}>
+                  (No review content)
+                </div>
+              );
+            })()}
             <div ref={reviewChatEndRef} />
           </div>
 

@@ -994,13 +994,15 @@ export default function OfficePage() {
     if (!reviewer) return;
     const isTerminal = reviewer.status === "done" || reviewer.status === "idle" || reviewer.status === "error";
     if (!isTerminal) return;
+    // Guard: don't treat idle/done as terminal if reviewer hasn't produced any agent messages yet
+    // (reviewer starts as "idle" before gateway assigns the task)
+    const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
+    if (reviewer.status !== "error" && reviewMessages.length === 0 && reviewer.messages.length <= 1) return;
     if (reviewer.status === "error") {
       // Reviewer errored — set fallback text so overlay can be dismissed
-      const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(Review failed — reviewer encountered an error)");
     } else {
-      const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(No issues found)");
     }
@@ -1097,7 +1099,7 @@ export default function OfficePage() {
       hasMoreMessages: visible.length < ag.messages.length,
       tokenUsage: ag.tokenUsage,
       lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
-      busy: reviewResultText === null && (ag.status === "working" || ag.status === "waiting_approval"),
+      busy: reviewResultText === null,
       reviewDone: reviewResultText !== null,
     };
   }, [agents, getVisibleMessages, reviewResultText]);
