@@ -221,16 +221,21 @@ const ChatMessageList = memo(function ChatMessageList({
         </div>
       )}
 
-      {busy && !pendingApproval && messages.length > 0 && messages[messages.length - 1]?.text && (
-        <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-          <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
-          {lastLogLine && (
-            <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
-              {lastLogLine.slice(0, 60)}
-            </span>
-          )}
-        </div>
-      )}
+      {busy && !pendingApproval && messages.length > 0 && messages[messages.length - 1]?.text && (() => {
+        const hint = lastLogLine
+          || messages[messages.length - 1]?.text?.split("\n").filter(Boolean).pop()?.slice(0, 60)
+          || null;
+        return (
+          <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+            {hint && (
+              <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
+                {hint.slice(0, 60)}
+              </span>
+            )}
+          </div>
+        );
+      })()}
       <div ref={chatEndRef} />
     </>
   );
