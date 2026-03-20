@@ -538,22 +538,24 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
               position: "absolute",
               right: 10,
               display: "flex", alignItems: "center", gap: 5,
-              padding: "4px 10px",
+              padding: "4px 12px",
               height: 26,
-              border: `1px solid ${TERM_GREEN}35`,
+              border: "none",
               borderRadius: 4,
               cursor: "pointer",
-              backgroundColor: `${TERM_GREEN}08`,
-              color: TERM_GREEN,
+              backgroundColor: TERM_GREEN,
+              color: "#0a0a0a",
               fontSize: 11, fontFamily: TERM_FONT,
+              fontWeight: 600,
               transition: "all 0.15s",
               whiteSpace: "nowrap" as const,
+              boxShadow: `0 0 8px ${TERM_GREEN}40`,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.borderColor = `${TERM_GREEN}70`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.borderColor = `${TERM_GREEN}35`; }}
+            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.boxShadow = `0 0 12px ${TERM_GREEN}60`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}40`; }}
           >
-            <span style={{ fontSize: 13, lineHeight: 1 }}>+</span>
-            <span style={{ opacity: 0.85 }}>hire</span>
+            <span style={{ fontSize: 13, lineHeight: 1, fontWeight: 700 }}>+</span>
+            <span>hire</span>
           </button>
         )}
       </div>
