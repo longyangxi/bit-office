@@ -556,9 +556,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
 
       // Capture preview fields from dev workers (not reviewer, not leader).
-      // These are the ground truth — the worker created the actual files.
-      // Always update — later fix iterations may produce a newer/fixed build.
       if (!this.agentManager.isTeamLead(agentId)) {
+        const session = this.agentManager.get(agentId);
         const role = session?.role?.toLowerCase() ?? "";
         const isDevWorker = !role.includes("review");
         if (isDevWorker && event.result && (event.result.previewUrl || event.result.entryFile || event.result.previewCmd)) {

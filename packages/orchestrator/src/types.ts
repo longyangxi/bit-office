@@ -118,25 +118,6 @@ export interface TaskQueuedEvent {
   position: number;
 }
 
-export interface WorktreeCreatedEvent {
-  type: "worktree:created";
-  agentId: string;
-  taskId: string;
-  worktreePath: string;
-  branch: string;
-}
-
-export interface WorktreeMergedEvent {
-  type: "worktree:merged";
-  agentId: string;
-  taskId: string;
-  branch: string;
-  success: boolean;
-  conflictFiles?: string[];
-  /** Files staged in the working tree (not yet committed — user reviews). */
-  stagedFiles?: string[];
-}
-
 export interface AgentActivityEvent {
   type: "agent:activity";
   agentId: string;
@@ -206,8 +187,6 @@ export type OrchestratorEvent =
   | LogActivityEvent
   | TeamChatEvent
   | TaskQueuedEvent
-  | WorktreeCreatedEvent
-  | WorktreeMergedEvent
   | AgentActivityEvent
   | AgentCreatedEvent
   | AgentFiredEvent
@@ -231,8 +210,6 @@ export interface OrchestratorEventMap {
   "log:activity": [LogActivityEvent];
   "team:chat": [TeamChatEvent];
   "task:queued": [TaskQueuedEvent];
-  "worktree:created": [WorktreeCreatedEvent];
-  "worktree:merged": [WorktreeMergedEvent];
   "agent:activity": [AgentActivityEvent];
   "agent:created": [AgentCreatedEvent];
   "agent:fired": [AgentFiredEvent];
@@ -244,11 +221,6 @@ export interface OrchestratorEventMap {
 // ---------------------------------------------------------------------------
 // Options
 // ---------------------------------------------------------------------------
-
-export interface WorktreeOptions {
-  /** Merge worktree branch back to parent on task success (default: true) */
-  mergeOnComplete?: boolean;
-}
 
 export interface RetryOptions {
   /** Maximum retries per task (default: 2) */
@@ -264,8 +236,6 @@ export interface OrchestratorOptions {
   backends: import("./ai-backend.js").AIBackend[];
   /** Default backend ID (defaults to first backend) */
   defaultBackend?: string;
-  /** Worktree isolation options. false to disable entirely. */
-  worktree?: WorktreeOptions | false;
   /** Auto-retry options. false to disable entirely. */
   retry?: RetryOptions | false;
   /** FS directory for prompt template overrides */

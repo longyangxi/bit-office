@@ -26,8 +26,6 @@ export interface PersistedAgent {
   teamId?: string;
   isTeamLead?: boolean;
   workDir?: string;
-  worktreePath?: string | null;
-  worktreeBranch?: string | null;
 }
 
 export interface PersistedTeam {

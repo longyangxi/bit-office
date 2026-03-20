@@ -3,7 +3,6 @@ import path from "path";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
 import { CONFIG } from "./config.js";
-import { removeWorktree } from "./worktree.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
@@ -241,7 +240,7 @@ export class AgentSession {
   /** Current phase override for team collaboration phases */
   currentPhase: string | null = null;
 
-  /** Current working directory of the running task (used by worktree logic) */
+  /** Current working directory of the running task */
   get currentWorkingDir(): string | null { return this.currentCwd; }
   /** Whether this agent has session history (used --resume before) */
   get hasSessionHistory(): boolean { return this.hasHistory; }
@@ -251,11 +250,6 @@ export class AgentSession {
   /** PID of the running child process (null if not running) */
   get pid(): number | null { return this.process?.pid ?? null; }
 
-  /** Worktree path if task is running in one (set externally by orchestrator) */
-  worktreePath: string | null = null;
-  worktreeBranch: string | null = null;
-  /** Use backend-native worktree isolation (e.g. Claude Code --worktree) */
-  useNativeWorktree = false;
   teamId?: string;
 
   constructor(opts: AgentSessionOpts) {
@@ -304,7 +298,7 @@ export class AgentSession {
 
     this.currentTaskId = taskId;
     this.currentPhase = phaseOverride ?? null;
-    const cwd = repoPath ?? this.worktreePath ?? this.workspace;
+    const cwd = repoPath ?? this.workspace;
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
@@ -421,7 +415,6 @@ export class AgentSession {
         // Only skip resume on first execute (to shed conversational create/design context).
         // On subsequent runs (result forwarding, user feedback), resume so leader keeps context.
         skipResume: isFirstExecute && this.hasHistory,
-        worktree: this.useNativeWorktree,
       });
 
       // Log which binary + env state
@@ -819,15 +812,6 @@ export class AgentSession {
               error: errorMsg,
             });
             this.onTaskComplete?.(this.agentId, completedTaskId, errorMsg, false);
-            // Auto-cleanup orphaned worktree + branch on failure (prevents leftover branches)
-            if (this.worktreePath && this.worktreeBranch) {
-              try {
-                removeWorktree(this.worktreePath, this.worktreeBranch);
-                console.log(`[Agent ${this.name}] Cleaned up worktree branch on failure: ${this.worktreeBranch}`);
-              } catch (e) { console.error(`[Agent ${this.name}] Worktree cleanup failed:`, e); }
-              this.worktreePath = null;
-              this.worktreeBranch = null;
-            }
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleErrorDelayMs);
           }
           this.dequeueNext();

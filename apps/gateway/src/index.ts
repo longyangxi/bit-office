@@ -5,7 +5,7 @@ import { telegramChannel } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -43,8 +43,6 @@ function persistTeamState() {
       teamId: a.teamId,
       isTeamLead: orc.isTeamLead(a.agentId),
       workDir: agentWorkDirs.get(a.agentId),
-      worktreePath: a.worktreePath,
-      worktreeBranch: a.worktreeBranch,
     }));
 
   let team: TeamState["team"] = null;
@@ -281,15 +279,9 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
     }
     case "token:update":
       return { type: "TOKEN_UPDATE", agentId: e.agentId, inputTokens: e.inputTokens, outputTokens: e.outputTokens };
-    // New events (worktree, retry) — log only, no wire protocol equivalent yet
+    // Log-only events — no wire protocol equivalent
     case "task:retrying":
       console.log(`[Retry] Agent ${e.agentId} retrying task ${e.taskId} (attempt ${e.attempt}/${e.maxRetries})`);
-      return null;
-    case "worktree:created":
-      console.log(`[Worktree] Created ${e.worktreePath} for agent ${e.agentId}`);
-      return null;
-    case "worktree:merged":
-      console.log(`[Worktree] Squash-merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""}${e.stagedFiles?.length ? ` staged=${e.stagedFiles.length} files` : ""})`);
       return null;
     case "agent:activity":
       console.log(`[Activity] ${e.agentName} [${e.phase}]: ${e.intent.slice(0, 80)}`);
@@ -610,14 +602,6 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       setProjectName(projectName);
       const workspace = teamWorkDir || config.defaultWorkspace;
       const projectDir = createUniqueProjectDir(workspace, projectName);
-      // Initialize git repo so worktrees can be created for each dev agent
-      try {
-        execSync("git init", { cwd: projectDir, stdio: "pipe" });
-        execSync("git commit --allow-empty -m 'init'", { cwd: projectDir, stdio: "pipe" });
-        console.log(`[Gateway] Initialized git repo in ${projectDir}`);
-      } catch (err) {
-        console.error(`[Gateway] Failed to init git: ${(err as Error).message}`);
-      }
       orc.setTeamProjectDir(projectDir);
       // Transition design → execute (orchestrator handles plan capture + phase event)
       const phaseResult = orc.approvePlan(agentId);
@@ -966,7 +950,6 @@ async function main() {
     workspace: config.defaultWorkspace,
     backends: backendsToUse,
     defaultBackend: config.defaultBackend,
-    worktree: { mergeOnComplete: true },
     retry: { maxRetries: 2, escalateToLeader: true },
     promptsDir: path.join(os.homedir(), ".bit-office", "prompts"),
     sandboxMode: config.sandboxMode,
@@ -996,10 +979,6 @@ async function main() {
       });
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
-      }
-      // Restore worktree info on the live session (not the snapshot from getAgent)
-      if (agent.worktreePath && agent.worktreeBranch) {
-        orc.restoreWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
       }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {
@@ -1046,40 +1025,6 @@ async function main() {
     }
   }
 
-  // GC: clean up stale agent/* branches and orphaned worktrees from previous ungraceful shutdowns.
-  // Agents may work in different repos (via workDir), so GC each unique repo separately.
-  {
-    // Group active branches by their workspace/repo
-    const repoActiveBranches = new Map<string, Set<string>>();
-    const addRepo = (repo: string, branch?: string | null) => {
-      if (!repoActiveBranches.has(repo)) repoActiveBranches.set(repo, new Set());
-      if (branch) repoActiveBranches.get(repo)!.add(branch);
-    };
-
-    // Always include defaultWorkspace and process.cwd()
-    // (process.cwd() catches branches from fired agents whose workDir is no longer in team-state)
-    addRepo(config.defaultWorkspace);
-    const cwd = process.cwd();
-    if (cwd !== "/" && cwd !== config.defaultWorkspace) addRepo(cwd);
-
-    // Include team projectDir (where team worktrees are created)
-    if (savedState.team?.projectDir && existsSync(savedState.team.projectDir)) {
-      addRepo(savedState.team.projectDir);
-    }
-
-    // Include each agent's workDir
-    for (const agent of savedState.agents) {
-      const repo = agent.workDir ?? config.defaultWorkspace;
-      addRepo(repo, agent.worktreeBranch);
-    }
-
-    for (const [repo, activeBranches] of repoActiveBranches) {
-      if (existsSync(repo)) {
-        cleanupStaleWorktrees(repo, activeBranches);
-      }
-    }
-  }
-
   // Events worth archiving in project history (skip noise like status/log/sync)
   const ARCHIVE_EVENT_TYPES = new Set([
     "TASK_STARTED", "TASK_DONE", "TASK_FAILED", "TASK_DELEGATED",
@@ -1107,8 +1052,6 @@ async function main() {
   orc.on("log:activity", forwardEvent);
   orc.on("team:chat", forwardEvent);
   orc.on("task:queued", forwardEvent);
-  orc.on("worktree:created", forwardEvent);
-  orc.on("worktree:merged", forwardEvent);
   orc.on("agent:activity", forwardEvent);
   orc.on("token:update", forwardEvent);
   orc.on("agent:created", forwardEvent);
