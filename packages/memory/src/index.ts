@@ -70,5 +70,6 @@ export {
   formatAgentL0,
   formatAgentFacts,
   formatSharedKnowledge,
+  formatSessionHistory,
   formatLegacyMemoryContext,
 } from "./format.js";

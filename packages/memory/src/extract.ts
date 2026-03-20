@@ -52,12 +52,22 @@ function extractWhat(stdout: string, parsedSummary?: string): string {
   const hereMatch = stdout.match(/[Hh]ere'?s what (?:I|we)\s+(?:did|changed|built|implemented|created)[:\s]*(.{10,200})/);
   if (hereMatch) return hereMatch[1].trim();
 
-  // Fall back to first substantial non-tool line (agent's opening statement)
+  // Filter to substantial non-tool lines
   const lines = stdout.split("\n").filter(l => {
     const t = l.trim();
-    return t.length > 20 && !t.startsWith("{") && !t.startsWith("Running") && !t.startsWith("Using ");
+    return t.length > 20
+      && !t.startsWith("{")
+      && !t.startsWith("Running")
+      && !t.startsWith("Using ")
+      && !/^\[Agent\s/.test(t);
   });
-  if (lines.length > 0) return lines[0].trim().slice(0, 200);
+
+  // Prefer the LAST substantial lines (agent conclusions are at the end).
+  // Take last 3 lines and join — gives much better context than the first line.
+  if (lines.length > 0) {
+    const tail = lines.slice(-3).map(l => l.trim());
+    return tail.join(" — ").slice(0, 200);
+  }
 
   return "Task completed";
 }

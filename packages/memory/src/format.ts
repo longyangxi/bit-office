@@ -69,8 +69,36 @@ export function formatRecoveryContext(recovery: RecoveryContext): string {
     }
   }
 
+  // Append older session history (one-liners only — ~15 tokens each)
+  if (recovery.recentHistory && recovery.recentHistory.length > 0) {
+    lines.push("- Previous sessions:");
+    for (const s of recovery.recentHistory) {
+      const timeAgo = formatTimeAgo(s.timestamp);
+      const files = s.filesChanged.length > 0 ? ` [${s.filesChanged.join(", ")}]` : "";
+      lines.push(`  - ${timeAgo}: ${s.what.split("\n")[0].slice(0, 100)}${files}`);
+    }
+  }
+
   lines.push("Note: You don't have full conversation history. Ask the user if unsure about details.");
   return lines.join("\n");
+}
+
+/* ── L1: Session history for prompt injection ──────────────────────────── */
+
+/**
+ * Format recent session history for prompt injection.
+ * Shows last 5 sessions as one-liners (~20 tokens each, ~100 tokens total).
+ */
+export function formatSessionHistory(store: SessionHistoryStore, maxItems = 5): string {
+  if (store.history.length === 0) return "";
+
+  const lines = store.history.slice(0, maxItems).map(s => {
+    const timeAgo = formatTimeAgo(s.timestamp);
+    const files = s.filesChanged.length > 0 ? ` [${s.filesChanged.slice(0, 3).join(", ")}]` : "";
+    return `- ${timeAgo}: ${s.what.split("\n")[0].slice(0, 80)}${files}`;
+  });
+
+  return `\n===== RECENT SESSIONS =====\n${lines.join("\n")}\n`;
 }
 
 /* ── L0: Cross-agent one-liner ──────────────────────────────────────────── */

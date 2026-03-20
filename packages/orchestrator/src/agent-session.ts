@@ -351,7 +351,7 @@ export class AgentSession {
         teamRoster: teamContext ?? "",
         originalTask,
         prompt,
-        memory: this._memoryContext || getMemoryContext(),
+        memory: this._memoryContext || getMemoryContext(this.agentId),
         recoveryContext: recoveryContextStr,
         soloHint: this.teamId ? "" : `- You are a SOLO developer. Do NOT delegate, assign tasks, or mention other team members. Do ALL the work yourself.
 - WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
@@ -786,6 +786,19 @@ export class AgentSession {
               // reset the counter so only truly consecutive 0-output failures
               // trigger session reset.
               this.resumeFailCount = 0;
+
+              // Commit session on error exit too — any conversation with output
+              // is worth preserving for recovery context on next restart.
+              try {
+                commitSession({
+                  agentId: this.agentId,
+                  agentName: this.name,
+                  stdout: this.stdoutBuffer,
+                  summary: undefined,
+                  changedFiles: [...this.taskChangedFiles],
+                  tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
+                });
+              } catch { /* best effort */ }
             }
             // Extract meaningful error lines from stderr (e.g. "ERROR: You've hit your usage limit...")
             const stderrErrorLines = this.stderrBuffer
@@ -947,6 +960,27 @@ export class AgentSession {
   destroy() {
     if (this.taskTimeout) { clearTimeout(this.taskTimeout); this.taskTimeout = null; }
     if (this.idleTimer) { clearTimeout(this.idleTimer); this.idleTimer = null; }
+
+    // Commit whatever we have before killing — this is the ONLY chance to
+    // persist the current conversation when the app exits mid-task.
+    // The AI backend's own session memory is lost on SIGKILL, so this
+    // session summary is what the agent sees as recovery context on restart.
+    if (this.stdoutBuffer.length > 0) {
+      try {
+        commitSession({
+          agentId: this.agentId,
+          agentName: this.name,
+          stdout: this.stdoutBuffer,
+          summary: undefined, // let extractSessionSummary derive from stdout
+          changedFiles: [...this.taskChangedFiles],
+          tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
+        });
+        console.log(`[Agent ${this.agentId}] Committed partial session on destroy (${this.stdoutBuffer.length}ch)`);
+      } catch (e) {
+        console.error(`[Agent ${this.agentId}] Failed to commit session on destroy:`, e);
+      }
+    }
+
     if (this.process?.pid) {
       const pgid = this.process.pid;
       // Use SIGKILL — CLI agents like codex/claude ignore SIGTERM

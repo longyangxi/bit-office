@@ -115,6 +115,8 @@ export interface RecoveryContext {
   phase?: string;
   /** L1 session summary (new — preferred) */
   sessionSummary?: SessionSummary;
+  /** Recent session history (older sessions, for broader context) */
+  recentHistory?: SessionSummary[];
   /** Legacy raw messages (fallback if no summary) */
   recentMessages?: Array<{ role: "user" | "assistant"; text: string }>;
   /** Last result text (legacy, kept for backward compat) */

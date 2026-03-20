@@ -38,6 +38,7 @@ import {
   formatAgentL0,
   formatAgentFacts,
   formatSharedKnowledge,
+  formatSessionHistory,
   formatLegacyMemoryContext,
 } from "./format.js";
 
@@ -133,10 +134,14 @@ export function buildRecoveryContext(
 ): RecoveryContext {
   const sessionStore = loadSessionHistory(agentId);
 
+  // Include up to 5 older sessions (skip index 0 = latest, already in sessionSummary)
+  const olderHistory = sessionStore.history.slice(1, 6);
+
   return {
     originalTask: opts?.originalTask,
     phase: opts?.phase,
     sessionSummary: sessionStore.latest ?? undefined,
+    recentHistory: olderHistory.length > 0 ? olderHistory : undefined,
     lastResult: opts?.lastResult,
     recentMessages: opts?.recentMessages,
   };
@@ -211,6 +216,13 @@ export function getMemoryContext(agentId?: string): string {
   // Shared knowledge (L3)
   const shared = formatSharedKnowledge(loadSharedKnowledge().items);
   if (shared) sections.push(shared);
+
+  // L1 session history (recent work summary — ~20 tokens per entry)
+  if (agentId) {
+    const sessionStore = loadSessionHistory(agentId);
+    const sessionCtx = formatSessionHistory(sessionStore);
+    if (sessionCtx) sections.push(sessionCtx);
+  }
 
   return sections.join("\n");
 }
