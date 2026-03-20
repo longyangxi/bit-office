@@ -950,6 +950,7 @@ export default function OfficePage() {
   const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
   // Review overlay: reviewer floats on top of source agent's pane
   const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
+  const reviewInProgress = useRef(false);
   // When review is done, store the result text for user confirmation (null = still working or no overlay)
   const [reviewResultText, setReviewResultText] = useState<string | null>(null);
 
@@ -965,8 +966,9 @@ export default function OfficePage() {
 
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
-    // Don't allow review if one is already in progress
-    if (reviewOverlay) return;
+    // Don't allow review if one is already in progress (ref for synchronous guard)
+    if (reviewInProgress.current || reviewOverlay) return;
+    reviewInProgress.current = true;
     const sourceAgent = agents.get(sourceAgentId);
     const reviewerAgentId = `reviewer-${nanoid(6)}`;
     tempReviewerIds.add(reviewerAgentId);
@@ -1051,6 +1053,7 @@ export default function OfficePage() {
     tempReviewerIds.delete(reviewerAgentId);
     setReviewOverlay(null);
     setReviewResultText(null);
+    reviewInProgress.current = false;
   }, [reviewOverlay, reviewResultText, agents, addUserMessage]);
 
   const handleDismissReview = useCallback(() => {
@@ -1060,6 +1063,7 @@ export default function OfficePage() {
     tempReviewerIds.delete(reviewerAgentId);
     setReviewOverlay(null);
     setReviewResultText(null);
+    reviewInProgress.current = false;
   }, [reviewOverlay]);
 
   // Fallback: auto-fire orphaned temp reviewers (non-overlay, e.g. if overlay was cleared manually)
