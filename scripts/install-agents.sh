@@ -34,7 +34,7 @@ err()  { printf "${RED}[ERR]${RESET} %s\n" "$*" >&2; }
 info() { printf "${DIM}     %s${RESET}\n" "$*"; }
 
 # ---------------------------------------------------------------------------
-# Map bit-office backend ID → agency-agents tool name
+# Map open-office backend ID → agency-agents tool name
 # ---------------------------------------------------------------------------
 map_backend_to_tool() {
   case "$1" in
@@ -113,7 +113,7 @@ main() {
   fi
 
   echo ""
-  echo "${BOLD}bit-office — Installing Agency Agents${RESET}"
+  echo "${BOLD}open-office — Installing Agency Agents${RESET}"
   echo ""
 
   local installed=0

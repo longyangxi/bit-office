@@ -60,7 +60,7 @@ interface RainDrop {
 const BOOT_LINES = [
   { text: "> SYSTEM INIT...", color: "#22c55e", delay: 0 },
   { text: "> LOADING NEURAL CORE", color: "#22c55e", delay: 600 },
-  { text: "> BIT OFFICE ENGINE V1.0", color: "#818cf8", delay: 1200 },
+  { text: "> OPEN OFFICE ENGINE V1.0", color: "#818cf8", delay: 1200 },
   { text: "> OFFICE MODE READY", color: "#f97316", delay: 1800 },
 ];
 
@@ -224,7 +224,7 @@ export default function OfficeSplash({ onComplete }: { onComplete: () => void })
         // Big pixel title
         const pixelScale = Math.min(4, width / 120);
         const titleColor = `rgba(255, 255, 255, ${titleAlpha})`;
-        drawPixelText(ctx, "BIT", width / 2, height / 2 - 40, pixelScale, titleColor);
+        drawPixelText(ctx, "OPEN", width / 2, height / 2 - 40, pixelScale, titleColor);
         drawPixelText(ctx, "OFFICE", width / 2, height / 2 + 10, pixelScale, `rgba(249, 115, 22, ${titleAlpha})`);
 
         // Decorative line

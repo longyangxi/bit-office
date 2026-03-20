@@ -1,4 +1,4 @@
-# Bit Office Memory Redesign
+# Open Office Memory Redesign
 
 > **Author**: Alex 3 | **Date**: 2026-03-18
 > **Status**: Implemented (Phase 1+2+3) — `packages/memory/`
@@ -11,7 +11,7 @@
 
 ### Current System Analysis
 
-Bit Office currently has **two disconnected memory mechanisms**:
+Open Office currently has **two disconnected memory mechanisms**:
 
 #### A. Recovery Context (`agent-session.ts`)
 ```typescript
@@ -99,7 +99,7 @@ Inspired by Mem0's tiered memory + OpenViking's L0/L1/L2 loading:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Bit Office Memory                        │
+│                    Open Office Memory                        │
 ├─────────────┬──────────────┬──────────────┬─────────────────┤
 │   Layer 0   │   Layer 1    │   Layer 2    │    Layer 3      │
 │  EPHEMERAL  │   SESSION    │    AGENT     │    SHARED       │
@@ -551,7 +551,7 @@ Alex 2 after recovery: "I was redesigning the pagination bar. I committed ad8ed5
 - **v2 LLM extraction**: Use a small local model (Ollama) to extract richer facts at session end
 - **Fact decay**: Auto-reduce `reinforceCount` over time for stale facts
 - **Semantic search**: If fact count grows large (>200), add simple TF-IDF for retrieval
-- **Memory dashboard**: UI in Bit Office web app to inspect/edit/delete agent memories
+- **Memory dashboard**: UI in Open Office web app to inspect/edit/delete agent memories
 - **Export/import**: Portable memory between machines (JSON export)
 
 ---

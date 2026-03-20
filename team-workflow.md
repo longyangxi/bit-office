@@ -1,6 +1,6 @@
 # Team Workflow
 
-This document contains all team-specific behavior used by Bit Office.
+This document contains all team-specific behavior used by Open Office.
 
 ## High-Level Flow
 
@@ -46,7 +46,7 @@ flowchart TD
 
 ## Preview Resolution
 
-When work is marked complete, Bit Office tries to make output immediately viewable:
+When work is marked complete, Open Office tries to make output immediately viewable:
 
 | Output type | Resolution behavior |
 |---|---|

@@ -58,7 +58,7 @@ function JoinContent() {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Bit Office</h1>
+      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Open Office</h1>
       {!error && <p style={{ color: "#666", fontSize: 14 }}>{status}</p>}
       {error && (
         <>
@@ -82,7 +82,7 @@ export default function JoinPage() {
   return (
     <Suspense fallback={
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "100vh", padding: 24 }}>
-        <h1 style={{ fontSize: 28, marginBottom: 8 }}>Bit Office</h1>
+        <h1 style={{ fontSize: 28, marginBottom: 8 }}>Open Office</h1>
         <p style={{ color: "#666", fontSize: 14 }}>Loading...</p>
       </div>
     }>

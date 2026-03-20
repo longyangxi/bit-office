@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "@/styles/global.css";
 
 export const metadata: Metadata = {
-  title: "Bit Office",
+  title: "Open Office",
   description: "Control your AI agents from anywhere",
   manifest: "/manifest.json",
 };

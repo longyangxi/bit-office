@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capabilities for Bit Office desktop",
+  "description": "Default capabilities for Open Office desktop",
   "windows": ["main"],
   "permissions": [
     "core:default",

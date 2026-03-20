@@ -1,13 +1,13 @@
 <div align="center">
 
-# Bit Office
+# Open Office
 
 ### Pixel office for AI agents and multi-agent collaboration
 
-[![npm version](https://img.shields.io/npm/v/bit-office?color=cb3837&logo=npm)](https://www.npmjs.com/package/bit-office)
+[![npm version](https://img.shields.io/npm/v/open-office?color=cb3837&logo=npm)](https://www.npmjs.com/package/open-office)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/bit-office/pulls)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/open-office/pulls)
 
 **Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project. 🚀**
 
@@ -20,9 +20,9 @@
 ---
 ![Image](https://github.com/user-attachments/assets/ecfcd88b-e72e-4b04-bdd7-87eea9f00b51)
 
-## What is Bit Office
+## What is Open Office
 
-Bit Office gives AI automation a **visible, controllable workspace**. Different AI models collaborate as one team under a Team Leader — planning, coding, reviewing, and delivering in a single flow, all rendered in a live pixel-art office you can watch, control, and share.
+Open Office gives AI automation a **visible, controllable workspace**. Different AI models collaborate as one team under a Team Leader — planning, coding, reviewing, and delivering in a single flow, all rendered in a live pixel-art office you can watch, control, and share.
 
 What makes it different: **agents get better over time**. Rate each project on creativity, visual quality, interaction, completeness, and engagement. Your ratings and review patterns are stored as persistent memory — the next time the team plans a project, they know what scored low and actively improve on it.
 
@@ -147,8 +147,8 @@ Full details in [team-workflow.md](team-workflow.md).
 ### Setup
 
 ```bash
-git clone https://github.com/longyangxi/bit-office.git
-cd bit-office
+git clone https://github.com/longyangxi/open-office.git
+cd open-office
 pnpm install
 pnpm dev
 ```
@@ -177,7 +177,7 @@ pnpm dev
 
 ## Desktop App (Tauri)
 
-Bit Office also ships as a native **macOS desktop app** powered by [Tauri](https://tauri.app). The app bundles the gateway as a sidecar — no terminal, no browser, just launch and go.
+Open Office also ships as a native **macOS desktop app** powered by [Tauri](https://tauri.app). The app bundles the gateway as a sidecar — no terminal, no browser, just launch and go.
 
 ### Prerequisites
 
@@ -198,10 +198,10 @@ This starts the gateway (port 9099), web dev server, and Tauri window in one com
 pnpm build:desktop
 ```
 
-Produces `Bit Office.app` and `.dmg` at:
+Produces `Open Office.app` and `.dmg` at:
 ```
-apps/desktop/src-tauri/target/release/bundle/macos/Bit Office.app
-apps/desktop/src-tauri/target/release/bundle/dmg/Bit Office_0.1.0_aarch64.dmg
+apps/desktop/src-tauri/target/release/bundle/macos/Open Office.app
+apps/desktop/src-tauri/target/release/bundle/dmg/Open Office_0.1.0_aarch64.dmg
 ```
 
 The release app:
@@ -222,7 +222,7 @@ The release app:
 ## Architecture
 
 ```
-bit-office/
+open-office/
 ├── apps/
 │   ├── web/            # Next.js PWA + PixiJS pixel office + control UI
 │   ├── gateway/        # Runtime daemon: events, channels, policy, orchestration
@@ -246,7 +246,7 @@ bit-office/
 
 ## Contributing
 
-Issues and PRs are welcome. If you're exploring AI-native dev tooling, workflows, or interfaces, Bit Office is a great playground for experiments.
+Issues and PRs are welcome. If you're exploring AI-native dev tooling, workflows, or interfaces, Open Office is a great playground for experiments.
 
 ## Acknowledgments
 
@@ -260,6 +260,6 @@ Pixel office art inspired by [pixel-agents](https://github.com/pablodelucca/pixe
 
 <div align="center">
 
-**If Bit Office helps your workflow, consider giving it a star!**
+**If Open Office helps your workflow, consider giving it a star!**
 
 </div>

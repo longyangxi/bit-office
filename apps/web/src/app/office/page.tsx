@@ -224,14 +224,14 @@ export default function OfficePage() {
   const [termTheme, setTermTheme] = useState("office");
   applyTermTheme(termTheme);
   useEffect(() => {
-    const saved = localStorage.getItem("bit-office-theme");
+    const saved = localStorage.getItem("open-office-theme");
     if (saved && TERM_THEMES[saved]) {
       setTermTheme(saved);
     }
   }, []);
   useEffect(() => {
     applyTermTheme(termTheme);
-    localStorage.setItem("bit-office-theme", termTheme);
+    localStorage.setItem("open-office-theme", termTheme);
   }, [termTheme]);
 
   // Bridge store → scene adapter
@@ -1188,7 +1188,7 @@ export default function OfficePage() {
           pointerEvents: "none",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "auto" }}>
-            <h1 className="px-font" style={{ fontSize: 12, margin: 0, color: "#e8b040", textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Bit Office</h1>
+            <h1 className="px-font" style={{ fontSize: 12, margin: 0, color: "#e8b040", textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Open Office</h1>
             <span style={{
               fontSize: 10, padding: "3px 7px",
               border: `1px solid ${connected ? `${TERM_SEM_GREEN}40` : `${TERM_SEM_RED}40`}`,

@@ -202,7 +202,7 @@ fn main() {
         })
         .invoke_handler(tauri::generate_handler![bounce_dock])
         .build(tauri::generate_context!())
-        .expect("error while building Bit Office")
+        .expect("error while building Open Office")
         .run(|app, event| {
             match event {
                 // Re-show window when Dock icon is clicked (macOS)

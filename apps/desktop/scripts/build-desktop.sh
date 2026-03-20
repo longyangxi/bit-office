@@ -5,7 +5,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 SIDECAR="$SCRIPT_DIR/../src-tauri/sidecar"
 
-echo "=== Building Bit Office Desktop ==="
+echo "=== Building Open Office Desktop ==="
 
 # 1. Build web static export
 echo "[1/3] Building web..."
