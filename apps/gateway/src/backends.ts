@@ -59,6 +59,7 @@ const backends: AIBackend[] = [
       if (opts.noTools) args.push("--tools", "");
       if (opts.model) args.push("--model", opts.model);
       if (opts.agentType) args.push("--agent", opts.agentType);
+      if (opts.worktree) args.push("--worktree");
       return args;
     },
     deleteEnv: ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT"],

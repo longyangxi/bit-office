@@ -6,6 +6,7 @@ import { CONFIG } from "./config.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
+import { removeWorktree, getIsolatedGitEnv } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
 import type { TemplateName } from "./prompt-templates.js";
@@ -244,6 +245,11 @@ export class AgentSession {
   /** Current phase override for team collaboration phases */
   currentPhase: string | null = null;
 
+  worktreePath: string | null = null;
+  worktreeBranch: string | null = null;
+  /** Use backend-native worktree isolation (e.g. Claude Code --worktree) */
+  useNativeWorktree = false;
+
   /** Current working directory of the running task */
   get currentWorkingDir(): string | null { return this.currentCwd; }
   /** Whether this agent has session history (used --resume before) */
@@ -253,6 +259,8 @@ export class AgentSession {
 
   /** PID of the running child process (null if not running) */
   get pid(): number | null { return this.process?.pid ?? null; }
+  /** Backend ID (e.g. "claude", "codex") */
+  get backendId(): string { return this.backend.id; }
 
   teamId?: string;
 
@@ -302,7 +310,7 @@ export class AgentSession {
 
     this.currentTaskId = taskId;
     this.currentPhase = phaseOverride ?? null;
-    const cwd = repoPath ?? this.workspace;
+    const cwd = repoPath ?? this.worktreePath ?? this.workspace;
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
@@ -326,7 +334,9 @@ export class AgentSession {
     this.persistWorkState("running", true);
 
     try {
-      const cleanEnv = { ...process.env };
+      // Start with git-isolated env (clears GIT_DIR, GIT_WORK_TREE etc.) to prevent
+      // worktree cross-contamination, then remove backend-specific vars.
+      const cleanEnv = getIsolatedGitEnv() as Record<string, string | undefined>;
       for (const key of this.backend.deleteEnv ?? []) {
         delete cleanEnv[key];
       }
@@ -424,6 +434,7 @@ export class AgentSession {
         noTools: this._isTeamLead,
         verbose,
         agentType,
+        worktree: this.useNativeWorktree,
         // Only skip resume on first execute (to shed conversational create/design context).
         // On subsequent runs (result forwarding, user feedback), resume so leader keeps context.
         skipResume: isFirstExecute && this.hasHistory,
@@ -823,6 +834,15 @@ export class AgentSession {
             const errorMsg = stderrError || this.stdoutBuffer.slice(0, 300) || this.stderrBuffer.slice(-300) || `Process exited with code ${code}`;
             this._lastResult = `failed: ${errorMsg.slice(0, 120)}`;
             this.setStatus("error");
+            // Auto-cleanup orphaned worktree + branch on failure
+            if (this.worktreePath && this.worktreeBranch) {
+              try {
+                removeWorktree(this.worktreePath, this.worktreeBranch);
+                console.log(`[Agent ${this.name}] Cleaned up worktree branch on failure: ${this.worktreeBranch}`);
+              } catch { /* ignore */ }
+              this.worktreePath = null;
+              this.worktreeBranch = null;
+            }
             this.onEvent({
               type: "task:failed",
               agentId: this.agentId,

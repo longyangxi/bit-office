@@ -9,6 +9,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
+import { createWorktree, mergeWorktree, removeWorktree } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -32,6 +33,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private defaultBackendId: string;
   private workspace: string;
   private sandboxMode: "full" | "safe";
+  private worktreeEnabled: boolean;
+  private worktreeMerge: boolean;
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
   /** Accumulated changedFiles from all workers in the current team session */
@@ -43,6 +46,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     super();
     this.workspace = opts.workspace;
     this.sandboxMode = opts.sandboxMode ?? "full";
+
+    // Worktree isolation
+    if (opts.worktree === false) {
+      this.worktreeEnabled = false;
+      this.worktreeMerge = false;
+    } else {
+      this.worktreeEnabled = true;
+      this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
+    }
 
     // Register backends
     for (const b of opts.backends) {
@@ -123,6 +135,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   removeAgent(agentId: string): void {
+    const session = this.agentManager.get(agentId);
+    // Force-clean worktree + branch on fire
+    if (session?.worktreePath && session.worktreeBranch) {
+      const base = session.worktreePath.includes(".worktrees")
+        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        : this.workspace;
+      removeWorktree(session.worktreePath, session.worktreeBranch, base);
+      session.worktreePath = null;
+      session.worktreeBranch = null;
+    }
     this.cancelTask(agentId);
     this.delegationRouter.clearAgent(agentId);
     this.agentManager.delete(agentId);
@@ -220,7 +242,45 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       teamContext = this.buildSoloPeerContext(agentId);
     }
 
+    // Worktree isolation for solo agents sharing the same workspace.
+    // Claude Code: use native --worktree flag (avoids absolute-path penetration bug).
+    // Other backends: use bit-office managed worktrees.
+    const isLeader = this.agentManager.isTeamLead(agentId);
+    const isReviewerRole = session.role.toLowerCase().includes("review");
+    const isClaudeBackend = session.backendId === "claude";
+    const hasSoloNeighbor = this.agentManager.getAll().some(
+      a => a.agentId !== agentId && !a.teamId && a.workspaceDir === session.workspaceDir,
+    );
+
+    if (this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && hasSoloNeighbor) {
+      if (isClaudeBackend) {
+        // Claude Code has native --worktree; skip manual worktree
+        session.useNativeWorktree = true;
+      } else {
+        const base = repoPath ?? session.workspaceDir;
+        const wt = createWorktree(base, agentId, taskId, session.name);
+        if (wt) {
+          const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+          session.worktreePath = wt;
+          session.worktreeBranch = branch;
+          // Clear history — can't --resume in a different directory
+          session.clearHistory();
+          this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
+        }
+      }
+    }
+
     session.runTask(taskId, prompt, repoPath, teamContext, true /* isUserInitiated */, opts?.phaseOverride);
+  }
+
+  /**
+   * Restore worktree info on a live session (after gateway restart).
+   */
+  restoreWorktree(agentId: string, worktreePath: string, branch: string): void {
+    const session = this.agentManager.get(agentId);
+    if (!session) return;
+    session.worktreePath = worktreePath;
+    session.worktreeBranch = branch;
   }
 
   /**
@@ -310,6 +370,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       palette: s.palette, personality: s.personality, backend: s.backend.id, pid: s.pid,
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
       teamId: s.teamId,
+      worktreePath: s.worktreePath,
+      worktreeBranch: s.worktreeBranch,
     }));
   }
 
@@ -551,6 +613,26 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
     if (event.type === "task:done") {
       this.retryTracker?.clear(event.taskId);
+
+      // Merge worktree back on successful task completion (non-leader workers only)
+      const doneSession = this.agentManager.get(agentId);
+      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch && !this.agentManager.isTeamLead(agentId)) {
+        const base = doneSession.worktreePath.includes(".worktrees")
+          ? require("path").dirname(require("path").dirname(doneSession.worktreePath))
+          : this.workspace;
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch);
+        this.emitEvent({
+          type: "worktree:merged",
+          agentId,
+          taskId: event.taskId,
+          branch: doneSession.worktreeBranch,
+          success: result.success,
+          conflictFiles: result.conflictFiles,
+          stagedFiles: result.stagedFiles,
+        });
+        doneSession.worktreePath = null;
+        doneSession.worktreeBranch = null;
+      }
 
       // Accumulate changedFiles from all workers (not leader, not QA/reviewer)
       if (!this.agentManager.isTeamLead(agentId) && event.result?.changedFiles) {
