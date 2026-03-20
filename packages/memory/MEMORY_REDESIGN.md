@@ -1,9 +1,9 @@
 # Open Office Memory Redesign
 
 > **Author**: Alex 3 | **Date**: 2026-03-18
-> **Status**: Implemented (Phase 1+2+3) — `packages/memory/`
+> **Status**: Implemented and in active use — `packages/memory/`
 > **Inspired by**: [Mem0](https://github.com/mem0ai/mem0) (fact extraction + dedup), [OpenViking](https://github.com/volcengine/OpenViking) (L0/L1/L2 layered loading)
-> **Package**: `@bit-office/memory` — 54 tests passing, zero TypeScript errors
+> **Package**: `@bit-office/memory` — implemented in `packages/memory/src/` with dedicated unit test coverage in `src/__tests__/`
 
 ---
 
@@ -87,7 +87,8 @@ What we HAVE:                    What we NEED:
 | G3 | Accumulate **agent-level** learning (not just project-level) | Facts like "user prefers solid borders" persist across sessions |
 | G4 | Zero external dependencies | No vector DB, no external LLM calls, no new services |
 | G5 | Backward compatible | Existing `memory.ts` and `RecoveryContext` continue to work |
-| G6 | Minimal token cost | Fact extraction only at session end (1 LLM call), not per-turn |
+| G6 | Minimal token cost | Fact extraction is rule-based at session end, with no extra model call |
+| G7 | Crash-safe recovery | Persist in-progress work state so interrupted sessions recover with actionable context |
 
 ---
 
@@ -112,7 +113,7 @@ Inspired by Mem0's tiered memory + OpenViking's L0/L1/L2 loading:
 │ In-memory   │ JSON file    │ JSON file    │ JSON file       │
 │ (volatile)  │ (persisted)  │ (persisted)  │ (persisted)     │
 ├─────────────┼──────────────┼──────────────┼─────────────────┤
-│ ~6 turns    │ Last 10      │ Up to 50     │ Up to 20        │
+│ ~6 turns    │ Last 30      │ Up to 50     │ Up to 20        │
 │ (~2400 tok) │ sessions     │ facts/agent  │ facts total     │
 │             │ (~200 tok ea)│ (~1000 tok)  │ (~500 tok)      │
 ├─────────────┼──────────────┼──────────────┼─────────────────┤
@@ -131,10 +132,16 @@ Inspired by Mem0's tiered memory + OpenViking's L0/L1/L2 loading:
                 │  L0: conversationLog │ ← sliding window (existing)
                 │  (raw messages, 6)   │
                 └──────────┬──────────┘
-                           │ task completes (exit code 0)
+                           │ periodic progress snapshots
                            ▼
                ┌───────────────────────┐
-               │  Fact Extraction      │ ← NEW: extract structured data
+               │  Work State Snapshot  │ ← persisted while task runs
+               │  (summary/next/files) │
+               └──────────┬───────────┘
+                          │ task completes / interrupts
+                          ▼
+               ┌───────────────────────┐
+               │  Fact Extraction      │ ← extract structured data
                │  (parse agent output) │   from stdoutBuffer, no LLM needed
                └──────────┬───────────┘
                           │
@@ -153,15 +160,13 @@ Inspired by Mem0's tiered memory + OpenViking's L0/L1/L2 loading:
 
 ```
 ~/.bit-office/memory/
-├── memory.json              # Existing: project history, review patterns, tech prefs
+├── memory.json              # Legacy project-level memory
 ├── sessions/
-│   ├── {agentId}/
-│   │   ├── latest.json      # L1: most recent session summary
-│   │   └── history.json     # L1: last 10 session summaries (ring buffer)
-│   └── ...
+│   └── {agentId}.json       # L1: latest + 30-item history ring buffer
 ├── agents/
-│   ├── {agentId}.json       # L2: per-agent learned facts
-│   └── ...
+│   └── {agentId}.json       # L2: per-agent learned facts
+├── work-state/
+│   └── {agentId}.json       # Crash-safe in-progress snapshot
 └── shared.json              # L3: cross-agent project knowledge
 ```
 
@@ -204,12 +209,39 @@ interface SessionSummary {
 
 | Field | Source |
 |-------|--------|
-| `what` | `extractResult().summary` — already parsed from agent output |
+| `what` | `extractResult().summary` or `SUMMARY:` line from stdout |
 | `filesChanged` | `taskChangedFiles` Set — already tracked from tool_use events |
 | `commits` | Parse from stdoutBuffer: lines matching `Committed \`[a-f0-9]+\`` |
 | `unfinished` | Parse from output: lines after "TODO" / "unfinished" / "remaining" |
 | `decisions` | Parse from output: lines with "changed from X to Y" / "chose X over Y" / "because" |
 | `tokens` | `taskInputTokens` / `taskOutputTokens` — already tracked |
+
+In the shipped implementation, file paths are shortened to the last 3 path segments to keep recovery prompts compact.
+
+### 4.1.1 Live Work State (implemented)
+
+The final implementation adds a persisted `WorkState` snapshot alongside session summaries so recovery still works when a task is interrupted before `commitSession()` runs.
+
+```typescript
+interface WorkState {
+  startedAt: string;
+  updatedAt: string;
+  status: "running" | "interrupted" | "failed" | "cancelled";
+  taskId?: string;
+  taskPrompt?: string;
+  cwd?: string;
+  summary: string;
+  nextSteps: string[];
+  unfinished: string[];
+  filesTouched: string[];
+  lastActivity?: string;
+}
+```
+
+Current behavior:
+- `updateWorkState()` persists snapshots during execution
+- `buildRecoveryContext()` prefers `workState` over the last completed `sessionSummary`
+- `clearAgentWorkState()` clears the snapshot after clean completion
 
 #### Recovery injection format
 
@@ -266,7 +298,7 @@ interface AgentFact {
 
 #### How facts are extracted
 
-**Phase 1 (v1 — rule-based, no LLM):**
+**Implemented now (v1 — rule-based, no LLM):**
 
 Parse agent output for patterns:
 
@@ -283,16 +315,10 @@ const FACT_PATTERNS: Array<{ regex: RegExp; category: AgentFact["category"] }> =
 ];
 ```
 
-**Phase 2 (v2 — optional LLM extraction):**
-
-At session end, send the conversation summary to a fast/cheap model (e.g. `gpt-4o-mini` or local `ollama`) with:
-
-```
-Extract 0-3 reusable facts from this work session.
-Output JSON array: [{"category": "...", "fact": "..."}]
-Only extract facts that would be useful in FUTURE sessions.
-Do NOT extract task-specific details (those go in session summary).
-```
+The shipped regex set also covers:
+- theme/token conventions such as `TERM_*`
+- workflow rules like "always/never/make sure to ... before committing"
+- pre-existing errors and known issues
 
 #### Dedup strategy (borrowed from Mem0)
 
@@ -353,7 +379,7 @@ interface SharedKnowledge {
 
 #### Promotion rule
 
-When an L2 fact reaches `reinforceCount >= 3` **or** is independently discovered by 2+ agents, it's promoted to L3.
+When an L2 fact reaches `reinforceCount >= 3`, it's promoted to L3. Independent confirmation by another agent is tracked through `crossConfirmShared()`, which appends that agent to `confirmedBy`.
 
 #### Injection format (for all agents)
 
@@ -384,56 +410,37 @@ function getAgentL0(agentId: string): string {
 
 ---
 
-## 5. Implementation Plan
+## 5. Current Implementation Status
 
-### Phase 1: Session Summary (replaces `recentMessages`) — LOW EFFORT
+Implemented in `packages/memory/src/`:
 
-**Files to change:**
-- `packages/orchestrator/src/agent-session.ts`
+- `index.ts`: public exports for commit/recovery/context/storage helpers
+- `memory.ts`: L1/L2/L3 orchestration, work-state APIs, legacy wrappers, manual fact injection
+- `extract.ts`: rule-based extraction for summaries, decisions, unfinished work, next steps, fact candidates
+- `storage.ts`: JSON persistence with atomic temp-file writes and configurable root
+- `format.ts`: prompt formatting for recovery, session history, agent knowledge, shared knowledge, legacy context
+- `dedup.ts`: Jaccard-based dedup and shared-promotion logic
+- `types.ts`: complete type surface including `WorkState` and `TaskCompletionData`
 
-**Changes:**
-1. Add `SessionSummary` interface
-2. In task completion handler (line ~777), replace raw `recentMessages` save with structured `SessionSummary`
-3. Add parser functions: `extractCommits()`, `extractDecisions()`, `extractUnfinished()`
-4. Update recovery context injection (line ~360-380) to use structured format
-5. Save session history ring buffer to `~/.bit-office/memory/sessions/{agentId}/`
+Exported APIs now include:
 
-**Backward compatibility:**
-- Keep `recentMessages` in `RecoveryContext` as fallback
-- If `SessionSummary` exists, use it; otherwise fall back to old format
+```typescript
+commitSession()
+buildRecoveryContext()
+getMemoryContext()
+getRecoveryString()
+getAgentL0()
+getWorkState()
+updateWorkState()
+clearAgentWorkState()
+crossConfirmShared()
+addManualFact()
+```
 
-**Estimated effort**: ~2 hours
-
-### Phase 2: Agent Facts (L2) — MEDIUM EFFORT
-
-**Files to change:**
-- `packages/orchestrator/src/memory.ts` (extend)
-- `packages/orchestrator/src/agent-session.ts` (call fact extraction on task complete)
-
-**Changes:**
-1. Add `AgentFact` interface and CRUD functions to `memory.ts`
-2. Add `extractFacts()` rule-based parser
-3. Add `jaccardSimilarity()` dedup function
-4. Call `extractAndSaveFacts()` on task completion
-5. Inject agent facts into prompt via `getAgentMemoryContext(agentId)`
-
-**Estimated effort**: ~3 hours
-
-### Phase 3: Shared Knowledge (L3) + L0 Cross-Agent — LOW EFFORT
-
-**Files to change:**
-- `packages/orchestrator/src/memory.ts` (extend)
-- `packages/orchestrator/src/orchestrator.ts` (inject L0 into team roster)
-
-**Changes:**
-1. Add promotion logic: L2 facts with high reinforceCount → L3
-2. Add `getSharedKnowledge()` for prompt injection
-3. Add `getAgentL0()` for cross-agent summaries
-4. Inject into team roster context
-
-**Estimated effort**: ~1.5 hours
-
-### Total: ~6.5 hours across 3 phases
+Still intentionally out of scope:
+- LLM-based fact extraction
+- fact decay / TTL
+- UI dashboard for inspecting memory
 
 ---
 
@@ -443,9 +450,10 @@ function getAgentL0(agentId: string): string {
 |-------|--------------|--------|-----------|
 | L0 (cross-agent) | Team roster | ~30/agent | Every task in team mode |
 | L1 (session summary) | Recovery only | ~150 | Only after session loss |
+| Work state | Recovery only | ~100-180 | During interrupted/crashed sessions |
 | L2 (agent facts) | Every task | ~200 (top 10 facts) | Every task |
 | L3 (shared knowledge) | Every task | ~100 (top 5 items) | Every task |
-| **Total new overhead** | | **~330 tokens** | Per task |
+| **Total new overhead** | | **~330 tokens steady-state** | Per task |
 
 Compare to current:
 - Current `recentMessages`: ~400 tokens (only on recovery, low value)
@@ -454,24 +462,24 @@ Compare to current:
 
 ---
 
-## 7. Migration Strategy
+## 7. Evolution
 
 ```
-v1 (current)          v2 (phase 1)           v3 (phase 2+3)
+v1 (legacy)           v2 (implemented)       v3 (possible future)
 ┌──────────┐         ┌──────────────┐        ┌──────────────────┐
 │recentMsg │ ──────► │SessionSummary│ ──────► │SessionSummary    │
-│(raw 6x   │         │(structured)  │        │+ AgentFacts      │
-│ 400ch)   │         │              │        │+ SharedKnowledge  │
+│(raw 6x   │         │(structured)  │        │+ richer extraction│
+│ 400ch)   │         │              │        │+ memory tooling   │
 ├──────────┤         ├──────────────┤        │+ L0 Cross-Agent   │
 │memory.ts │         │memory.ts     │        ├──────────────────┤
-│(project  │         │(unchanged)   │        │memory.ts         │
-│ level)   │         │              │        │(extended)        │
+│(project  │         │+ work-state  │        │memory.ts         │
+│ level)   │         │+ L2/L3       │        │(further extended)│
 └──────────┘         └──────────────┘        └──────────────────┘
      100%                  100%                     100%
   compatible            compatible               compatible
 ```
 
-Each phase is independently deployable. Phase 1 alone gives the biggest improvement (structured recovery).
+The middle column reflects the code currently in the repository.
 
 ---
 
@@ -527,10 +535,11 @@ Alex 2 after recovery: "I was redesigning the pagination bar. I committed ad8ed5
 | Decision | Chosen | Alternatives Considered | Rationale |
 |----------|--------|------------------------|-----------|
 | No vector DB | File-based JSON | Qdrant, Chroma, FAISS | G4: Zero external deps. Our fact count (<50/agent) doesn't need ANN search |
-| No LLM for extraction (v1) | Rule-based parsing | GPT-4o-mini, Ollama | G6: Zero token cost. Agent output is already structured enough to parse |
+| No LLM for extraction | Rule-based parsing | GPT-4o-mini, Ollama | G6: Zero token cost. Agent output is already structured enough to parse |
 | Jaccard dedup over embeddings | Word-set overlap | Cosine similarity, LLM comparison | Sufficient for <50 facts. No embedding model dependency |
-| Ring buffer (10 sessions) | Fixed size | Unlimited, LRU, TTL | Predictable storage cost (~20KB/agent max) |
+| Ring buffer (30 sessions) | Fixed size | Unlimited, LRU, TTL | Predictable storage cost with more recovery context |
 | Promote at reinforceCount=3 | Threshold-based | Manual, voting | Simple, self-correcting. Bad facts decay naturally |
+| Persist live work state | JSON snapshot | In-memory only | Required for crash-safe recovery before a successful session commit |
 
 ---
 
@@ -538,7 +547,7 @@ Alex 2 after recovery: "I was redesigning the pagination bar. I committed ad8ed5
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Rule-based extraction misses important facts | Medium | Phase 2 adds optional LLM extraction; manual fact injection API as escape hatch |
+| Rule-based extraction misses important facts | Medium | `addManualFact()` exists now; optional LLM extraction can be added later |
 | Jaccard dedup produces false positives | Low | Threshold 0.6 is conservative; worst case = mild duplication |
 | Fact accumulation slows prompt | Low | Hard cap at 50 facts/agent + 20 shared; top-N by reinforceCount |
 | Session summary too brief | Medium | Include `recentMessages` as L1.5 fallback alongside structured summary |
@@ -548,7 +557,7 @@ Alex 2 after recovery: "I was redesigning the pagination bar. I committed ad8ed5
 
 ## 11. Future Extensions
 
-- **v2 LLM extraction**: Use a small local model (Ollama) to extract richer facts at session end
+- **Optional LLM extraction**: Use a small local model (Ollama) to extract richer facts at session end
 - **Fact decay**: Auto-reduce `reinforceCount` over time for stale facts
 - **Semantic search**: If fact count grows large (>200), add simple TF-IDF for retrieval
 - **Memory dashboard**: UI in Open Office web app to inspect/edit/delete agent memories
