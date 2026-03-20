@@ -239,7 +239,7 @@ export const wsChannel: Channel = {
               }
 
               // Spectators get subscribe-only (no publish on commands channel)
-              const commandsCap = clientRole === "spectator" ? ["subscribe"] : ["publish"];
+              const commandsCap: Ably.capabilityOp[] = clientRole === "spectator" ? ["subscribe"] : ["publish"];
               const rest = new Ably.Rest({ key: config.ablyApiKey });
               const tokenRequest = await rest.auth.createTokenRequest({
                 clientId: `${clientRole}:${nanoid(8)}`,

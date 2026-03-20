@@ -310,7 +310,10 @@ export class AgentSession {
 
     this.currentTaskId = taskId;
     this.currentPhase = phaseOverride ?? null;
-    const cwd = repoPath ?? this.worktreePath ?? this.workspace;
+    // Worktree path takes priority over repoPath — the whole point of worktree
+    // isolation is to keep agent work off the main branch. repoPath is only used
+    // as a fallback when no worktree is assigned.
+    const cwd = this.worktreePath ?? repoPath ?? this.workspace;
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
