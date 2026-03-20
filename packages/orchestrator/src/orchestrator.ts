@@ -480,7 +480,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const session = this.agentManager.get(agentId);
       const wasCancelled = event.error === "Task cancelled by user";
       const wasTimeout = session?.wasTimeout ?? false;
-      if (!wasCancelled && !wasTimeout && this.retryTracker.shouldRetry(taskId) && !this.delegationRouter.isDelegated(taskId)) {
+      const isReviewer = session?.role?.toLowerCase().includes("review") ?? false;
+      if (!wasCancelled && !wasTimeout && !isReviewer && this.retryTracker.shouldRetry(taskId) && !this.delegationRouter.isDelegated(taskId)) {
         const state = this.retryTracker.recordAttempt(taskId, event.error);
         if (state) {
           this.emitEvent({
