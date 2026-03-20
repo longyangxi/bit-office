@@ -335,11 +335,14 @@ export class AgentSession {
       // Cap originalTask to avoid exceeding CLI argument limits (especially for non-Claude backends)
       const rawOriginalTask = this._isTeamLead ? (this.originalTask ?? prompt) : "";
       const originalTask = rawOriginalTask.length > 1500 ? rawOriginalTask.slice(0, 1500) + "\n...(truncated)" : rawOriginalTask;
-      // Build recovery context string for ALL non-leader agents.
-      // Always inject so that resume and app-restart scenarios retain prior-session context.
-      // Uses @bit-office/memory's structured SessionSummary instead of raw message fragments.
+      // Build recovery context string ONLY when the session was truly lost.
+      // When --resume is active (canResume below), Claude already has full conversation
+      // history — injecting "[Session recovered] Your previous session was lost" would
+      // mislead Claude into ignoring its existing context and following the recovery
+      // summary instead. This was the root cause of the "Alex 2 amnesia" bug.
+      const canResumeSession = !this._isTeamLead && this.hasHistory && !!this.sessionId;
       let recoveryContextStr = "";
-      if (!this._isTeamLead) {
+      if (!this._isTeamLead && !canResumeSession) {
         const recovery = buildRecoveryContext(this.agentId, {
           originalTask: this.originalTask?.slice(0, 300),
           phase: this.currentPhase ?? undefined,
@@ -914,6 +917,29 @@ export class AgentSession {
       }
     }
     return result;
+  }
+
+  /**
+   * Insert a task at the FRONT of the queue (used by retry logic).
+   * Unlike runTask() which appends to the back, this ensures retries
+   * execute before any user-queued messages — preventing the race where
+   * dequeueNext() (100ms) fires before retry (500ms) and overwrites context.
+   */
+  prependTask(taskId: string, prompt: string, repoPath?: string, teamContext?: string, phaseOverride?: string) {
+    if (!this.process) {
+      // No process running — execute immediately (same as runTask)
+      this.runTask(taskId, prompt, repoPath, teamContext, false, phaseOverride);
+      return;
+    }
+    // Insert at front of queue so it runs before any user-queued messages
+    this.taskQueue.unshift({ taskId, prompt, repoPath, teamContext, phaseOverride });
+    this.onEvent({
+      type: "task:queued",
+      agentId: this.agentId,
+      taskId,
+      prompt,
+      position: 0, // front of queue
+    });
   }
 
   private dequeueNext() {
