@@ -8,7 +8,6 @@ import { PromptEngine } from "./prompt-templates.js";
 import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
-import { createWorktree, removeWorktree } from "./worktree.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
@@ -33,8 +32,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private defaultBackendId: string;
   private workspace: string;
   private sandboxMode: "full" | "safe";
-  private worktreeEnabled: boolean;
-  private worktreeMerge: boolean;
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
   /** Accumulated changedFiles from all workers in the current team session */
@@ -57,22 +54,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.promptEngine = new PromptEngine(opts.promptsDir);
     this.promptEngine.init();
 
-    // Worktree (must be before delegation router which needs these values)
-    if (opts.worktree === false) {
-      this.worktreeEnabled = false;
-      this.worktreeMerge = false;
-    } else {
-      this.worktreeEnabled = true;
-      this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
-    }
-
     // Delegation
     this.delegationRouter = new DelegationRouter(
       this.agentManager,
       this.promptEngine,
       (e) => this.emitEvent(e),
-      this.worktreeEnabled,
-      this.worktreeMerge,
     );
 
     // Retry
@@ -137,16 +123,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   removeAgent(agentId: string): void {
-    const session = this.agentManager.get(agentId);
-    // Force-clean worktree + branch on fire
-    if (session?.worktreePath && session.worktreeBranch) {
-      const base = session.currentWorkingDir
-        ? require("path").dirname(require("path").dirname(session.worktreePath))
-        : this.workspace;
-      removeWorktree(session.worktreePath, session.worktreeBranch, base);
-      session.worktreePath = null;
-      session.worktreeBranch = null;
-    }
     this.cancelTask(agentId);
     this.delegationRouter.clearAgent(agentId);
     this.agentManager.delete(agentId);
@@ -233,49 +209,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Track for retry
     this.retryTracker?.track(taskId, prompt);
 
-    // Worktree setup:
-    // 1. Team members: created by DelegationRouter in delegation.ts (not here)
-    // 2. Solo agents sharing the same workDir: auto-isolate via worktree
-    const teamProjectDir = this.delegationRouter.getTeamProjectDir();
-    const effectiveRepo = opts?.repoPath ?? session.workspaceDir;
-    // Worktree isolation for solo agents sharing the same repoPath/workspace.
-    // Team dev worktrees are created by delegation.ts (not here).
-    const isLeader = this.agentManager.isTeamLead(agentId);
-    const isReviewerRole = session.role.toLowerCase().includes("review");
-    // Claude Code has native --worktree support; skip manual worktree for it.
-    // Other backends (codex, gemini, aider, opencode) use bit-office managed worktrees.
-    const isClaudeBackend = session.backend.id === "claude";
-    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !isClaudeBackend && (
-      // Solo agents: isolate when another solo agent shares the same repoPath
-      (!session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo))
-    );
-    if (needsWorktree) {
-      const base = session.teamId ? teamProjectDir! : effectiveRepo;
-      const wt = createWorktree(base, agentId, taskId, session.name);
-      if (wt) {
-        const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
-        // Worktree changes the CWD — old session can't --resume in a different directory.
-        // Clear history so the agent starts fresh in the new worktree.
-        if (session.hasSessionHistory) {
-          session.clearHistory();
-        }
-        session.worktreePath = wt;
-        session.worktreeBranch = branch;
-        this.emitEvent({
-          type: "worktree:created",
-          agentId,
-          taskId,
-          worktreePath: wt,
-          branch,
-        });
-      }
-    }
-
-    // Claude Code: use native --worktree when neighbor detected (instead of manual worktree)
-    // Re-evaluate every task — clear when no neighbor exists anymore.
-    session.useNativeWorktree = isClaudeBackend && !session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo);
-
-    const repoPath = session.worktreePath ?? opts?.repoPath;
+    const repoPath = opts?.repoPath;
     // Team lead gets full roster (to decide delegation).
     // Solo agents sharing a workspace get lightweight peer awareness.
     // Team workers get context via delegation.ts (buildWorkerTeamContext).
@@ -290,18 +224,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   /**
-   * Check if another solo agent (no teamId) is actively working in the same repoPath.
-   */
-  private hasSoloNeighbor(agentId: string, repoPath: string): boolean {
-    for (const other of this.agentManager.getAll()) {
-      if (other.agentId === agentId || other.teamId) continue;
-      if (other.status !== "working") continue;
-      if (other.workspaceDir === repoPath) return true;
-    }
-    return false;
-  }
-
-  /**
    * Build lightweight peer context for solo agents sharing the same workspace.
    * Helps avoid file conflicts and provides awareness of concurrent work.
    * Returns empty string if no peers exist (~30 tokens per peer).
@@ -313,9 +235,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const other of this.agentManager.getAll()) {
       if (other.agentId === agentId) continue;
       if (other.teamId) continue; // skip team members — different workflow
-      // Compare base workspace (not currentWorkingDir which may be a worktree path)
+      // Compare base workspace
       if (other.workspaceDir !== session.workspaceDir) continue;
-      const status = other.status === "working" ? "working" : other.status;
+      const status = other.status;
       const lastResult = other.lastResult;
       const brief = lastResult ? ` — ${lastResult.length > 80 ? lastResult.slice(0, 80) + "…" : lastResult}` : "";
       lines.push(`- ${other.name} (${other.role}) [${status}]${brief}`);
@@ -327,17 +249,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   cancelTask(agentId: string): void {
     const session = this.agentManager.get(agentId);
     if (!session) return;
-
-    // Clean up worktree on cancel
-    if (session.worktreePath && session.worktreeBranch) {
-      const base = session.currentWorkingDir
-        ? require("path").dirname(require("path").dirname(session.worktreePath))
-        : this.workspace;
-      removeWorktree(session.worktreePath, session.worktreeBranch, base);
-      session.worktreePath = null;
-      session.worktreeBranch = null;
-    }
-
     session.cancelTask();
   }
 
@@ -393,23 +304,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     return { agentId: s.agentId, name: s.name, role: s.role, status: s.status, palette: s.palette, backend: s.backend.id, pid: s.pid, teamId: s.teamId };
   }
 
-  /** Restore worktree state on the live session (used during startup restore). */
-  restoreWorktree(agentId: string, worktreePath: string, worktreeBranch: string): void {
-    const s = this.agentManager.get(agentId);
-    if (s) {
-      s.worktreePath = worktreePath;
-      s.worktreeBranch = worktreeBranch;
-    }
-  }
-
   getAllAgents() {
     return this.agentManager.getAll().map(s => ({
       agentId: s.agentId, name: s.name, role: s.role, status: s.status,
       palette: s.palette, personality: s.personality, backend: s.backend.id, pid: s.pid,
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
       teamId: s.teamId,
-      worktreePath: s.worktreePath,
-      worktreeBranch: s.worktreeBranch,
     }));
   }
 
@@ -565,9 +465,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   destroy(): void {
     for (const agent of this.agentManager.getAll()) {
-      if (agent.worktreePath && agent.worktreeBranch) {
-        removeWorktree(agent.worktreePath, agent.worktreeBranch, this.workspace);
-      }
       agent.destroy();
     }
   }
@@ -648,29 +545,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
-    // Solo agent worktree: auto-commit + merge to main on task completion, but KEEP worktree alive
-    // (--resume needs same CWD, so don't delete the worktree directory).
-    // Team agent worktrees are handled in delegation.ts (different lifecycle).
     if (event.type === "task:done") {
-      const session = this.agentManager.get(agentId);
-      if (session?.worktreePath && session.worktreeBranch && !session.teamId) {
-        try {
-          const { execSync } = require("child_process");
-          const base = require("path").resolve(session.worktreePath, "../..");
-          // Commit any uncommitted changes
-          try { execSync("git add -A && git diff --cached --quiet || git commit -m 'auto-save'", { cwd: session.worktreePath, stdio: "pipe", timeout: 5000 }); } catch { /* ignore */ }
-          // Merge branch into main (but keep worktree + branch alive)
-          try {
-            execSync(`git merge --no-ff "${session.worktreeBranch}" -m "merge ${session.name}"`, { cwd: base, stdio: "pipe", timeout: 5000 });
-            console.log(`[Worktree] Auto-merged ${session.worktreeBranch} to main (worktree kept alive)`);
-          } catch {
-            console.log(`[Worktree] Auto-merge failed for ${session.worktreeBranch} (conflict or no changes)`);
-          }
-        } catch (err) {
-          console.error(`[Worktree] Auto-save/merge failed:`, err);
-        }
-      }
-
       this.retryTracker?.clear(event.taskId);
 
       // Accumulate changedFiles from all workers (not leader, not QA/reviewer)
@@ -783,16 +658,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             this.emitEvent({ type: "team:phase", teamId: completeInfo.teamId, phase: completeInfo.phase, leadAgentId: completeInfo.leadAgentId });
           }
         }
-      }
-    }
-
-    // Handle worktree cleanup on task failure (after retry logic)
-    if (event.type === "task:failed") {
-      const session = this.agentManager.get(agentId);
-      if (session?.worktreePath && session.worktreeBranch) {
-        removeWorktree(session.worktreePath, session.worktreeBranch, this.workspace);
-        session.worktreePath = null;
-        session.worktreeBranch = null;
       }
     }
 

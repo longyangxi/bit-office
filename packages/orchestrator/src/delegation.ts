@@ -1,7 +1,6 @@
 import { nanoid } from "nanoid";
 import path from "path";
 import { CONFIG } from "./config.js";
-import { createWorktree, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts } from "./worktree.js";
 import type { AgentManager } from "./agent-manager.js";
 import type { AgentSession } from "./agent-session.js";
 import type { PromptEngine } from "./prompt-templates.js";
@@ -57,21 +56,14 @@ export class DelegationRouter {
   private agentManager: AgentManager;
   private promptEngine: PromptEngine;
   private emitEvent: (event: OrchestratorEvent) => void;
-  private worktreeEnabled: boolean;
-  private worktreeMerge: boolean;
-
   constructor(
     agentManager: AgentManager,
     promptEngine: PromptEngine,
     emitEvent: (event: OrchestratorEvent) => void,
-    worktreeEnabled = false,
-    worktreeMerge = true,
   ) {
     this.agentManager = agentManager;
     this.promptEngine = promptEngine;
     this.emitEvent = emitEvent;
-    this.worktreeEnabled = worktreeEnabled;
-    this.worktreeMerge = worktreeMerge;
   }
 
   /**
@@ -268,37 +260,7 @@ export class DelegationRouter {
         this.lastDevAgentId = target.agentId;
       }
 
-      // Create worktree for dev agents only when multiple devs work concurrently.
-      // Single dev doesn't need isolation, and worktrees break --resume (CWD changes).
-      let effectiveRepoPath = repoPath;
-      if (this.worktreeEnabled && repoPath && !target.worktreePath && !target.hasSessionHistory) {
-        const targetRole = target.role.toLowerCase();
-        const isDevWorker = !targetRole.includes("review") && !targetRole.includes("lead");
-        // Count active dev workers (excluding this target)
-        const activeDevs = this.agentManager.getAll().filter(a =>
-          a.agentId !== target.agentId && a.teamId === target.teamId
-          && !a.role.toLowerCase().includes("review") && !a.role.toLowerCase().includes("lead")
-          && (a.status === "working" || a.worktreePath)
-        );
-        if (isDevWorker && activeDevs.length > 0) {
-          const wt = createWorktree(repoPath, target.agentId, taskId, target.name);
-          if (wt) {
-            const branch = `agent/${target.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
-            target.worktreePath = wt;
-            target.worktreeBranch = branch;
-            effectiveRepoPath = wt;
-            this.emitEvent({
-              type: "worktree:created",
-              agentId: target.agentId,
-              taskId,
-              worktreePath: wt,
-              branch,
-            });
-          }
-        }
-      }
-
-      console.log(`[Delegation] ${fromAgentId} -> ${target.agentId} (${targetName}) depth=${newDepth} total=${this.totalDelegations} repoPath=${effectiveRepoPath ?? "default"}: ${cleanPrompt.slice(0, 80)}`);
+      console.log(`[Delegation] ${fromAgentId} -> ${target.agentId} (${targetName}) depth=${newDepth} total=${this.totalDelegations} repoPath=${repoPath ?? "default"}: ${cleanPrompt.slice(0, 80)}`);
       this.emitEvent({
         type: "task:delegated",
         fromAgentId,
@@ -326,7 +288,7 @@ export class DelegationRouter {
       });
       // Inject lightweight team context so workers are aware of peers
       const workerTeamContext = this.buildWorkerTeamContext(target.agentId);
-      target.runTask(taskId, fullPrompt, effectiveRepoPath, workerTeamContext);
+      target.runTask(taskId, fullPrompt, repoPath, workerTeamContext);
     };
   }
 
@@ -378,29 +340,6 @@ export class DelegationRouter {
         intent: summary.slice(0, CONFIG.limits.intentChars),
         phase: "completed",
       });
-
-      // ── Worktree merge on task completion (non-blocking) ──
-      if (fromSession?.worktreePath && fromSession.worktreeBranch && this.teamProjectDir) {
-        try {
-          if (this.worktreeMerge && success) {
-            const conflicts = checkConflicts(this.teamProjectDir, fromSession.worktreeBranch);
-            if (conflicts.length > 0) {
-              console.log(`[Worktree] Conflict detected for ${fromName}: ${conflicts.join(", ")}`);
-              removeWorktreeOnly(fromSession.worktreePath, this.teamProjectDir);
-              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: false, conflictFiles: conflicts });
-            } else {
-              const result = mergeWorktree(this.teamProjectDir, fromSession.worktreePath, fromSession.worktreeBranch);
-              this.emitEvent({ type: "worktree:merged", agentId, taskId, branch: fromSession.worktreeBranch, success: result.success, conflictFiles: result.conflictFiles, stagedFiles: result.stagedFiles });
-            }
-          } else {
-            removeWorktree(fromSession.worktreePath, fromSession.worktreeBranch, this.teamProjectDir);
-          }
-        } catch (err) {
-          console.error(`[Worktree] Merge failed for ${fromName}, continuing result forwarding:`, err);
-        }
-        fromSession.worktreePath = null;
-        fromSession.worktreeBranch = null;
-      }
 
       // ── Direct fix complete: dev finished fix → auto re-review ──
       if (meta.isDirectFix && meta.reviewerAgentId && success) {
@@ -574,7 +513,7 @@ export class DelegationRouter {
       if (session.agentId === excludeAgentId) continue;
       if (session.teamId !== callerTeamId) continue; // same team only
       if (this.agentManager.isTeamLead(session.agentId)) continue; // skip leader
-      const status = session.status === "working" ? "working" : session.status;
+      const status = session.status;
       const lastResult = session.lastResult;
       const brief = lastResult ? ` — ${lastResult.length > 80 ? lastResult.slice(0, 80) + "…" : lastResult}` : "";
       lines.push(`- ${session.name} (${session.role}) [${status}]${brief}`);
