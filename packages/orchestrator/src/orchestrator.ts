@@ -496,7 +496,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           if (retryPrompt) {
             const session = this.agentManager.get(agentId);
             if (session) {
-              setTimeout(() => session.runTask(taskId, retryPrompt), CONFIG.timing.retryDelayMs);
+              // Use prependTask to insert retry at the FRONT of the queue.
+              // This eliminates the race condition where dequeueDelayMs (100ms) < retryDelayMs (500ms)
+              // caused user-queued messages to execute before retries, overwriting session context.
+              session.prependTask(taskId, retryPrompt);
               return; // Don't emit the task:failed — we're retrying
             }
           }
