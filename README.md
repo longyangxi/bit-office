@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/open-office/pulls)
 
-**Support Claude, Codex, Gemini, Aider etc. — one team, getting better every project. 🚀**
+**Support Claude, Codex, Gemini, Copilot, Cursor, Aider, OpenCode, Pi & Sapling — one team, getting better every project. 🚀**
 
 > _Last tested: 2026-03-18_
 
@@ -36,7 +36,7 @@ That's it. This will:
 
 1. Start a local gateway daemon
 2. Open the pixel-art office UI in your browser
-3. Auto-detect installed AI CLIs (Claude, Codex, Gemini, Aider, OpenCode)
+3. Auto-detect installed AI CLIs (see [Supported Backends](#supported-backends))
 4. Generate a pair code for mobile access
 
 ## Features
@@ -58,8 +58,8 @@ Auditor.
 
 ### Multi-Model Workflows
 
-Run **Claude, Codex, Gemini, Aider, and OpenCode** together in one
-pipeline, letting each model focus on what it does best.
+Run **8 AI CLI backends** together in one pipeline, letting each model
+focus on what it does best (see [Supported Backends](#supported-backends)).
 
 ### Pixel Office Workspace
 
@@ -142,7 +142,7 @@ Full details in [team-workflow.md](team-workflow.md).
 
 - **Node.js** 18+
 - **pnpm**
-- At least one AI CLI installed: `claude`, `codex`, `gemini`, `aider`, or `opencode`
+- At least one AI CLI installed (see [Supported Backends](#supported-backends))
 
 ### Setup
 
@@ -218,6 +218,26 @@ The release app:
 | `pnpm dev` | 9099 | localhost:3000 |
 | `pnpm dev:desktop` | 9099 | Tauri window → localhost:3000 |
 | Desktop app (release) | 9090 | Tauri window → static export |
+
+## Supported Backends
+
+Open Office auto-detects installed AI CLIs at startup. Each backend has its own instruction file convention and capability set.
+
+| Backend | Command | Stability | Guard | Instruction File | Resume | Structured Output | Tested |
+|---|---|---|---|---|---|---|---|
+| **Claude Code** | `claude` | Stable | Hooks | `.claude/CLAUDE.md` | Yes | Yes (stream-json) | ✅ |
+| **Codex CLI** | `codex` | Stable | Sandbox (Seatbelt/Landlock) | `AGENTS.md` | — | — | ✅ |
+| **Gemini CLI** | `gemini` | Beta | `--sandbox` flag | `GEMINI.md` | — | — | — |
+| **GitHub Copilot** | `copilot` | Experimental | — | `.github/copilot-instructions.md` | — | — | — |
+| **Cursor CLI** | `agent` | Experimental | — | `.cursor/rules/instructions.md` | — | — | — |
+| **Aider** | `aider` | Experimental | — | `.aider.conf.yml` | — | — | — |
+| **OpenCode** | `opencode` | Experimental | — | `AGENTS.md` | — | Yes (json) | — |
+| **Pi** | `pi` | Experimental | — | `.claude/CLAUDE.md` | — | — | — |
+| **Sapling** | `sp` | Experimental | — | `SAPLING.md` | — | Yes (json) | — |
+
+> ✅ = actively tested in production workflows. Other backends have integration code but are not yet verified end-to-end.
+>
+> Backends with ambiguous binary names (`agent`, `pi`, `sp`) use version-probe detection to avoid false positives.
 
 ## Architecture
 
