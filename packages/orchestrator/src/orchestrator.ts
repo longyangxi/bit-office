@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { existsSync } from "fs";
 import { nanoid } from "nanoid";
 import { CONFIG } from "./config.js";
 import { AgentSession, clearSessionId } from "./agent-session.js";
@@ -243,17 +244,17 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     // Worktree isolation for solo agents sharing the same workspace.
-    // Claude Code: use native --worktree flag (avoids absolute-path penetration bug).
-    // Other backends: use bit-office managed worktrees.
+    // Use stable metadata: count how many solo agents are *registered* for this
+    // workspace (set at createAgent time), not how many happen to be running now.
     const isLeader = this.agentManager.isTeamLead(agentId);
     const isReviewerRole = session.role.toLowerCase().includes("review");
-    const hasSoloNeighbor = this.agentManager.getAll().some(
-      a => a.agentId !== agentId && !a.teamId && a.workspaceDir === session.workspaceDir,
-    );
+    const isSharedWorkspace = this.agentManager.getAll().filter(
+      a => !a.teamId && a.workspaceDir === session.workspaceDir,
+    ).length > 1;
 
     // NOTE: Claude Code's native --worktree flag is incompatible with -p and --resume
     // (causes exit code 1). All backends use managed worktrees (.worktrees/) instead.
-    if (this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && hasSoloNeighbor) {
+    if (this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && isSharedWorkspace) {
       const base = repoPath ?? session.workspaceDir;
       const wt = createWorktree(base, agentId, taskId, session.name);
       if (wt) {
@@ -275,6 +276,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   restoreWorktree(agentId: string, worktreePath: string, branch: string): void {
     const session = this.agentManager.get(agentId);
     if (!session) return;
+    // Validate worktree directory still exists on disk — stale paths from
+    // previous runs cause spawn failures → 0-output → session clear cascade.
+    if (!existsSync(worktreePath)) {
+      console.warn(`[Orchestrator] Worktree ${worktreePath} no longer exists for agent ${agentId}, skipping restore`);
+      return;
+    }
     session.worktreePath = worktreePath;
     session.worktreeBranch = branch;
   }

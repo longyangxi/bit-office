@@ -16,6 +16,7 @@ import path from "path";
 import os from "os";
 import { ProcessScanner } from "./process-scanner.js";
 import { ExternalOutputReader } from "./external-output-reader.js";
+import { installFileLogger } from "./file-logger.js";
 import { loadTeamState, saveTeamState, clearTeamState, type TeamState, type PersistedAgent, bufferEvent, archiveProject, resetProjectBuffer, setProjectName, listProjects, loadProject, loadProjectBuffer, rateProject } from "./team-state.js";
 
 // Register all channels — each one self-activates if configured
@@ -945,6 +946,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  // Install file logger early — tee all console output to gateway.log
+  installFileLogger(config.instanceDir);
+
   // First run or --setup flag: interactive setup wizard
   if (!hasSetupRun() || process.argv.includes("--setup")) {
     await runSetup();
@@ -1007,9 +1011,13 @@ async function main() {
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
       }
-      // Restore worktree info on the live session
+      // Restore worktree info on the live session (only if directory still exists)
       if (agent.worktreePath && agent.worktreeBranch) {
-        orc.restoreWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
+        if (existsSync(agent.worktreePath)) {
+          orc.restoreWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
+        } else {
+          console.warn(`[Gateway] Worktree ${agent.worktreePath} for agent ${agent.agentId} no longer exists, skipping restore`);
+        }
       }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {

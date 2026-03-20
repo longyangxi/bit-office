@@ -313,7 +313,16 @@ export class AgentSession {
     // Worktree path takes priority over repoPath — the whole point of worktree
     // isolation is to keep agent work off the main branch. repoPath is only used
     // as a fallback when no worktree is assigned.
-    const cwd = this.worktreePath ?? repoPath ?? this.workspace;
+    // Safety: if worktree directory was cleaned up (e.g. by git prune, manual rm,
+    // or gateway restart with stale state), fall back to repoPath/workspace to
+    // prevent spawn failure → 0-output → session clear cascade.
+    const rawCwd = this.worktreePath ?? repoPath ?? this.workspace;
+    const cwd = (rawCwd && existsSync(rawCwd)) ? rawCwd : (repoPath ?? this.workspace);
+    if (rawCwd !== cwd) {
+      console.warn(`[Agent ${this.agentId}] Worktree path ${rawCwd} no longer exists, falling back to ${cwd}. Clearing stale worktree state.`);
+      this.worktreePath = null;
+      this.worktreeBranch = null;
+    }
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
@@ -799,14 +808,15 @@ export class AgentSession {
             // Strategy: only clear after 2+ consecutive 0-output failures.
             if (this.sessionId && this.stdoutBuffer.length === 0) {
               this.resumeFailCount++;
-              if (this.resumeFailCount >= 2) {
-                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed ${this.resumeFailCount}x consecutively (0ch output), clearing corrupted session`);
+              if (this.resumeFailCount >= 3) {
+                const stderrTail = this.stderrBuffer.slice(-500);
+                console.error(`[CRITICAL] [Agent ${this.agentId}] Session ${this.sessionId} cleared after ${this.resumeFailCount} consecutive 0-output failures. cwd=${this.currentCwd}, stderr: ${stderrTail || "(empty)"}`);
                 this.sessionId = null;
                 this.hasHistory = false;
                 this.resumeFailCount = 0;
                 saveSessionId(this.agentId, null);
               } else {
-                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/2 — preserving session for retry`);
+                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/3 — preserving session for retry`);
               }
             } else if (this.stdoutBuffer.length > 0) {
               // Non-zero output on a failed run proves the session is alive —
