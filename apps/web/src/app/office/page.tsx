@@ -1006,7 +1006,7 @@ export default function OfficePage() {
   }, [agents, reviewOverlay, reviewResultText]);
 
   // User actions on review completion
-  const handleApplyReviewFixes = useCallback(() => {
+  const handleApplyReviewFixes = useCallback((userFeedback?: string) => {
     if (!reviewOverlay) return;
     const { reviewerAgentId, sourceAgentId } = reviewOverlay;
     const reviewer = agents.get(reviewerAgentId);
@@ -1035,14 +1035,16 @@ export default function OfficePage() {
       return text.length > 1000 ? text.slice(-1000).trim() : text;
     };
     const structuredFeedback = extractStructured(resolvedText);
-    const fixPrompt = [
+    const fixPromptParts = [
       `A code review found issues. Fix ONLY CRITICAL items (bugs, crashes, security).`,
       `IGNORE SUGGESTION items. Make minimum changes — do NOT rewrite or restructure.`,
-      ``,
-      `Review findings:`,
-      structuredFeedback,
-    ].join("\n");
-    addUserMessage(sourceAgentId, fixTaskId, `[Review] Apply critical fixes`);
+    ];
+    if (userFeedback) {
+      fixPromptParts.push(``, `User instructions: ${userFeedback}`);
+    }
+    fixPromptParts.push(``, `Review findings:`, structuredFeedback);
+    const fixPrompt = fixPromptParts.join("\n");
+    addUserMessage(sourceAgentId, fixTaskId, userFeedback ? `[Review] ${userFeedback}` : `[Review] Apply critical fixes`);
     sendCommand({ type: "RUN_TASK", agentId: sourceAgentId, taskId: fixTaskId, prompt: fixPrompt, repoPath: cwd || undefined });
     // Cleanup
     sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });

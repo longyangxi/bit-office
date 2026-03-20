@@ -52,7 +52,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onDropImage: (agentId: string, e: React.DragEvent) => void;
   reviewerOverlay?: any;
   onReviewerLoadMore?: () => void;
-  onApplyReviewFixes?: () => void;
+  onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
   scrollFrozen?: boolean;
 }) {
@@ -222,7 +222,7 @@ export interface MultiPaneViewProps {
   reviewOverlay?: { reviewerAgentId: string; sourceAgentId: string } | null;
   getReviewerData?: (reviewerAgentId: string) => ReviewerOverlayData | null;
   onReviewerLoadMore?: (agentId: string) => void;
-  onApplyReviewFixes?: () => void;
+  onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
   /** Freeze scroll management during CSS width transitions */
   scrollFrozen?: boolean;

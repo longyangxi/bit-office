@@ -1,4 +1,4 @@
-import { useRef, useEffect, memo, useCallback } from "react";
+import { useRef, useEffect, memo, useCallback, useState } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
@@ -125,7 +125,7 @@ export interface AgentPaneProps {
   // Review overlay — reviewer pane rendered on top of this agent
   reviewerOverlay?: ReviewerOverlayData | null;
   onReviewerLoadMore?: () => void;
-  onApplyReviewFixes?: () => void;
+  onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
   /** When true, all scroll management is frozen (e.g. during CSS width transition) */
   scrollFrozen?: boolean;
@@ -243,6 +243,84 @@ function getPhaseInfo(): Record<string, { color: string; icon: string; hint: str
     execute: { color: TERM_SEM_YELLOW, icon: "\u26A1", hint: "Team is building your project" },
     complete: { color: TERM_SEM_GREEN, icon: "\u2713", hint: "Review results \u2014 give feedback or end project" },
   };
+}
+
+/** Review footer with feedback input + action buttons */
+function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
+  onApplyReviewFixes?: (userFeedback?: string) => void;
+  onDismissReview?: () => void;
+}) {
+  const [feedback, setFeedback] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    // Auto-focus feedback input when review panel appears
+    setTimeout(() => inputRef.current?.focus(), 100);
+  }, []);
+
+  return (
+    <div style={{
+      padding: "8px 12px",
+      background: TERM_PANEL,
+      borderTop: `1px solid ${TERM_GREEN}30`,
+      fontFamily: TERM_FONT, flexShrink: 0,
+    }}>
+      {/* Feedback input */}
+      <div style={{
+        display: "flex", gap: 8, alignItems: "center",
+        marginBottom: 8,
+      }}>
+        <input
+          ref={inputRef}
+          type="text"
+          value={feedback}
+          onChange={(e) => setFeedback(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && onApplyReviewFixes) {
+              e.preventDefault();
+              onApplyReviewFixes(feedback || undefined);
+            }
+          }}
+          placeholder="Add feedback for the fix (e.g. skip issue #1, focus on #3)..."
+          style={{
+            flex: 1, padding: "6px 10px",
+            background: TERM_BG, border: `1px solid ${TERM_GREEN}30`,
+            color: TERM_TEXT, fontSize: 12, fontFamily: TERM_FONT,
+            outline: "none",
+          }}
+        />
+      </div>
+      {/* Action buttons */}
+      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+        {onApplyReviewFixes && (
+          <button
+            onClick={() => onApplyReviewFixes(feedback || undefined)}
+            style={{
+              padding: "6px 18px", border: `1px solid ${TERM_SEM_GREEN}60`,
+              backgroundColor: `${TERM_SEM_GREEN}10`, color: TERM_SEM_GREEN,
+              fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}20`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}10`; }}
+          >Apply Fixes</button>
+        )}
+        {onDismissReview && (
+          <button
+            onClick={onDismissReview}
+            style={{
+              padding: "6px 18px", border: `1px solid ${TERM_GREEN}40`,
+              backgroundColor: "transparent", color: TERM_GREEN,
+              fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
+          >Dismiss</button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
@@ -392,17 +470,76 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         </div>
       )}
 
-      {/* ── Review overlay — floats on top of this agent's pane ── */}
-      {reviewerOverlay && (
+      {/* ── Review overlay — two-phase: mini bar (working) → slide-up panel (done) ── */}
+      {reviewerOverlay && reviewerOverlay.busy && (
+        /* Phase 1: Mini review bar — replaces input area, doesn't cover chat */
         <div style={{
-          position: "absolute", inset: 0, zIndex: 20,
+          position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
+          display: "flex", alignItems: "center", gap: 10,
+          padding: "10px 14px",
+          background: TERM_PANEL,
+          borderTop: `2px solid ${TERM_GREEN}40`,
+          fontFamily: TERM_FONT, fontSize: 12,
+          animation: "review-overlay-in 0.3s ease-out",
+        }}>
+          {/* Reviewer avatar dot */}
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 13, fontWeight: 700, color: TERM_BG, flexShrink: 0,
+          }}>
+            {reviewerOverlay.name.charAt(0).toUpperCase()}
+          </div>
+          {/* Name + status */}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
+                {reviewerOverlay.name}
+              </span>
+              <span className="working-dots" style={{ color: TERM_GREEN, opacity: 0.5 }}>
+                <span className="working-dots-mid" />
+              </span>
+            </div>
+            <div style={{
+              color: TERM_DIM, fontSize: 10, marginTop: 1,
+              whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+            }}>
+              {reviewerOverlay.lastLogLine?.slice(0, 60) || "Reviewing code changes..."}
+            </div>
+          </div>
+          {/* Token usage */}
+          {reviewerOverlay.tokenUsage.inputTokens > 0 && (
+            <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
+          )}
+          {/* Dismiss */}
+          {onDismissReview && (
+            <button
+              onClick={onDismissReview}
+              style={{
+                padding: "4px 10px", border: `1px solid ${TERM_GREEN}30`,
+                backgroundColor: "transparent", color: TERM_DIM,
+                fontSize: 10, fontFamily: TERM_FONT,
+                cursor: "pointer", flexShrink: 0,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+            >{"\u00d7"}</button>
+          )}
+        </div>
+      )}
+
+      {reviewerOverlay && !reviewerOverlay.busy && (
+        /* Phase 2: Slide-up result panel — covers bottom 65% of agent pane */
+        <div style={{
+          position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
+          height: "65%", minHeight: 200,
           display: "flex", flexDirection: "column",
           backgroundColor: TERM_BG,
-          animation: "review-overlay-in 0.3s ease-out",
-          borderLeft: `2px solid ${TERM_GREEN}40`,
-          borderRight: `2px solid ${TERM_GREEN}40`,
+          borderTop: `2px solid ${TERM_GREEN}50`,
+          animation: "review-slide-up 0.25s ease-out",
         }}>
-          {/* Reviewer info bar */}
+          {/* Header bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
@@ -411,19 +548,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             fontSize: 12, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
+            <div style={{
+              width: 22, height: 22, borderRadius: "50%",
+              background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, fontWeight: 700, color: TERM_BG, flexShrink: 0,
+            }}>
+              {reviewerOverlay.name.charAt(0).toUpperCase()}
+            </div>
             <span style={{
               display: "inline-block", padding: "2px 8px",
-              backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN,
+              backgroundColor: `${TERM_SEM_GREEN}15`, color: TERM_SEM_GREEN,
               fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
-              border: `1px solid ${TERM_GREEN}40`,
+              border: `1px solid ${TERM_SEM_GREEN}40`,
             }}>
-              {reviewerOverlay.busy ? "REVIEWING..." : "REVIEW COMPLETE"}
+              REVIEW COMPLETE
             </span>
             <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
               {reviewerOverlay.name}
-            </span>
-            <span style={{ color: TERM_DIM, fontSize: 11 }}>
-              {reviewerOverlay.role?.split("\u2014")[0]?.trim()}
             </span>
             <span style={{ flex: 1 }} />
             {reviewerOverlay.tokenUsage.inputTokens > 0 && (
@@ -431,77 +573,26 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             )}
           </div>
 
-          {/* Reviewer messages */}
-          <div data-scrollbar className="crt-screen term-dotgrid term-chat-area" style={{
+          {/* Review messages */}
+          <div data-scrollbar className="term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
-            {reviewerOverlay.visibleMessages.length === 0 && (
-              <div style={{ textAlign: "center", color: TERM_GREEN, padding: 20, fontSize: 13, opacity: 0.6 }}>
-                Starting review...
-              </div>
-            )}
             {reviewerOverlay.hasMoreMessages && onReviewerLoadMore && (
               <LoadMoreSentinel onLoadMore={onReviewerLoadMore} />
             )}
             {reviewerOverlay.visibleMessages.map((msg) => (
               <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
             ))}
-            {reviewerOverlay.busy && reviewerOverlay.visibleMessages.length > 0 && reviewerOverlay.visibleMessages[reviewerOverlay.visibleMessages.length - 1]?.text && (
-              <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
-                {reviewerOverlay.lastLogLine && (
-                  <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
-                    {reviewerOverlay.lastLogLine.slice(0, 60)}
-                  </span>
-                )}
-              </div>
-            )}
             <div ref={reviewChatEndRef} />
           </div>
 
-          {/* Reviewer footer — status or action buttons */}
-          <div style={{
-            padding: "8px 12px",
-            background: TERM_PANEL,
-            borderTop: `1px solid ${TERM_GREEN}30`,
-            fontSize: 11, color: TERM_GREEN, fontFamily: TERM_FONT,
-            flexShrink: 0,
-          }}>
-            {!reviewerOverlay.busy ? (
-              <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
-                {onApplyReviewFixes && (
-                  <button
-                    onClick={onApplyReviewFixes}
-                    style={{
-                      padding: "6px 18px", border: `1px solid ${TERM_SEM_GREEN}60`,
-                      backgroundColor: `${TERM_SEM_GREEN}10`, color: TERM_SEM_GREEN,
-                      fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
-                      cursor: "pointer", transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}20`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}10`; }}
-                  >Apply Fixes</button>
-                )}
-                {onDismissReview && (
-                  <button
-                    onClick={onDismissReview}
-                    style={{
-                      padding: "6px 18px", border: `1px solid ${TERM_GREEN}40`,
-                      backgroundColor: "transparent", color: TERM_GREEN,
-                      fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
-                      cursor: "pointer", transition: "all 0.15s",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >Dismiss</button>
-                )}
-              </div>
-            ) : (
-              <div style={{ textAlign: "center" }}>Reviewing code changes...</div>
-            )}
-          </div>
+          {/* Footer: feedback input + action buttons */}
+          <ReviewFooter
+            onApplyReviewFixes={onApplyReviewFixes}
+            onDismissReview={onDismissReview}
+          />
         </div>
       )}
 
