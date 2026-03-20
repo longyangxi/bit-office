@@ -95,7 +95,7 @@ const backends: AIBackend[] = [
     name: "OpenCode",
     command: "opencode",
     buildArgs(prompt) {
-      return ["run", prompt, "--quiet"];
+      return ["-p", prompt, "-f", "json", "-q"];
     },
   },
 ];
