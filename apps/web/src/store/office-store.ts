@@ -131,6 +131,8 @@ interface OfficeStore {
   detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
+  /** Separated from agents to avoid full Map clone on every LOG_APPEND */
+  agentLogLines: Map<string, string>;
   /** Per-agent visible message count for lazy loading (default: 50) */
   visibleMessageCount: Map<string, number>;
   consumePreviewUrl: () => string | null;
@@ -205,6 +207,7 @@ function _flushSave() {
       }
     }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    invalidateStorageCache();
   } catch {
     // quota exceeded or unavailable
   }
@@ -235,20 +238,32 @@ function loadFromStorage(): Map<string, PersistedAgent> {
   }
 }
 
+// ── Cached localStorage snapshot ──
+// Populated once during hydrate(), used by AGENT_CREATED to avoid
+// repeated JSON.parse of the full storage blob.
+let _storageCache: Map<string, PersistedAgent> | null = null;
+
+function getCachedStorage(): Map<string, PersistedAgent> {
+  if (_storageCache) return _storageCache;
+  _storageCache = loadFromStorage();
+  return _storageCache;
+}
+
+/** Invalidate cache when we know storage has changed (e.g. after save) */
+function invalidateStorageCache() {
+  _storageCache = null;
+}
+
 // Flush pending save on page unload to avoid data loss
 if (isBrowser()) {
   window.addEventListener("beforeunload", _flushSave);
 }
 
-function removeFromStorage(agentId: string) {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return;
-    const data: PersistedAgent[] = JSON.parse(raw);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data.filter(a => a.agentId !== agentId)));
-  } catch {
-    // ignore
-  }
+function removeFromStorage(_agentId: string) {
+  // No-op: the next throttled saveToStorage() call will exclude this agent
+  // because it's already been removed from the agents Map.
+  // Only invalidate the cache so getCachedStorage() re-reads if needed.
+  invalidateStorageCache();
 }
 
 // ── Team messages persistence ──
@@ -333,6 +348,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   detectedBackends: [],
   connected: false,
   hydrated: false,
+  agentLogLines: new Map(),
   visibleMessageCount: new Map(),
 
   consumePreviewUrl: () => {
@@ -345,7 +361,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
 
   hydrate: () => {
     if (get().hydrated) return;
-    const saved = loadFromStorage();
+    const saved = getCachedStorage();
     const savedTeamMessages = loadTeamMessages();
     const savedTeamPhases = loadTeamPhases();
     if (saved.size === 0 && savedTeamMessages.length === 0 && savedTeamPhases.size === 0) { set({ hydrated: true, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases }); return; }
@@ -463,7 +479,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
-            const saved = event.isExternal ? undefined : loadFromStorage().get(event.agentId);
+            const saved = event.isExternal ? undefined : getCachedStorage().get(event.agentId);
             const agent = defaultAgent(event.agentId, event.name, event.role);
             agent.palette = event.palette ?? saved?.palette;
             agent.personality = event.personality ?? saved?.personality;
@@ -495,6 +511,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         case "AGENT_FIRED": {
           agents.delete(event.agentId);
           removeFromStorage(event.agentId);
+          saveToStorage(agents);  // Trigger throttled save to persist removal
           // Clean up team phase if this was a team lead
           const teamPhases = new Map(state.teamPhases);
           for (const [teamId, tp] of teamPhases) {
@@ -524,6 +541,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               ? { ...m, id: m.id.replace("-stream", "-streamed") }
               : m
           );
+          // Clear log line when new task starts
+          const taskStartLogLines = new Map(state.agentLogLines);
+          taskStartLogLines.delete(event.agentId);
           agents.set(event.agentId, {
             ...agent,
             status: "working",
@@ -539,7 +559,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               timestamp: Date.now(),
             }],
           });
-          break;
+          return { agents, agentLogLines: taskStartLogLines };
         }
         case "APPROVAL_NEEDED": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
@@ -599,6 +619,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             const finalizedMsgs = intStreamMsg
               ? agent.messages.map((m) => m.id === intStreamId ? { ...m, id: intStreamId.replace("-stream", "-streamed") } : m)
               : agent.messages;
+            const intLogLines = new Map(state.agentLogLines);
+            intLogLines.set(event.agentId, event.result.summary?.slice(0, 100) ?? "Coordinating team...");
             agents.set(event.agentId, {
               ...agent,
               status: "working",
@@ -609,7 +631,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               tokenUsage: updatedTokenUsage,
               _tokenBaseline: updatedTokenUsage,
             });
-            break;
+            return { agents, agentLogLines: intLogLines };
           }
 
           // Keep streaming message and append the final result after it
@@ -638,6 +660,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               durationMs,
             },
           ];
+          const doneLogLines = new Map(state.agentLogLines);
+          doneLogLines.delete(event.agentId);
           agents.set(event.agentId, {
             ...agent,
             status: "done",
@@ -651,7 +675,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           });
           saveToStorage(agents);
           notifyTaskDone(agent.name, bestText.slice(0, 200));
-          break;
+          return { agents, agentLogLines: doneLogLines };
         }
         case "TASK_FAILED": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
@@ -666,6 +690,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const finalizedMessages = agent.messages.map((m) =>
             m.id === failStreamId ? { ...m, id: failStreamId.replace("-stream", "-streamed") } : m
           );
+          const failLogLines = new Map(state.agentLogLines);
+          failLogLines.delete(event.agentId);
           agents.set(event.agentId, {
             ...agent,
             status: "error",
@@ -681,7 +707,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             }],
           });
           saveToStorage(agents);
-          break;
+          return { agents, agentLogLines: failLogLines };
         }
         case "TASK_DELEGATED": {
           const fromAgent = agents.get(event.fromAgentId);
@@ -721,10 +747,14 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         case "LOG_APPEND": {
           const agent = agents.get(event.agentId);
           if (!agent || !event.chunk) break;
-          agents.set(event.agentId, { ...agent, lastLogLine: event.chunk });
+          // Update log line in separate map — avoids cloning agent object for status-only updates
+          const logLines = new Map(state.agentLogLines);
+          logLines.set(event.agentId, event.chunk);
 
-          // Thinking snippets (💭 prefix) are status-only — update lastLogLine but skip chat
-          if (event.chunk.startsWith("\uD83D\uDCAD ")) break;
+          // Thinking snippets (💭 prefix) are status-only — update agentLogLines but skip chat
+          if (event.chunk.startsWith("\uD83D\uDCAD ")) {
+            return { agents: state.agents, agentLogLines: logLines };
+          }
 
           // Update the streaming message — append new lines to build up output
           const streamId = agent.currentTaskId ? agent.currentTaskId + "-stream" : null;
@@ -740,7 +770,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               timestamp: Date.now(),
               _accumulatedText: accumulated,
             };
-            agents.set(event.agentId, { ...agents.get(event.agentId)!, messages: updatedMessages });
+            agents.set(event.agentId, { ...agent, messages: updatedMessages });
           } else if (agent.isExternal) {
             // External agents: accumulate text into the latest agent message (no task:done to replace)
             const now = Date.now();
@@ -750,20 +780,24 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               const newText = prev ? prev + "\n" + event.chunk : event.chunk;
               const updatedMessages = [...agent.messages];
               updatedMessages[updatedMessages.length - 1] = { ...lastMsg, text: newText, timestamp: now };
-              agents.set(event.agentId, { ...agents.get(event.agentId)!, messages: updatedMessages });
+              agents.set(event.agentId, { ...agent, messages: updatedMessages });
             } else {
               // New message block (gap > 10 seconds = new "turn")
               agents.set(event.agentId, {
-                ...agents.get(event.agentId)!,
-                messages: [...agents.get(event.agentId)!.messages, { id: `ext-log-${now}`, role: "agent", text: event.chunk, timestamp: now }],
+                ...agent,
+                messages: [...agent.messages, { id: `ext-log-${now}`, role: "agent", text: event.chunk, timestamp: now }],
               });
             }
           }
-          break;
+          return { agents, agentLogLines: logLines };
         }
         case "TOOL_ACTIVITY": {
           const agent = agents.get(event.agentId);
-          if (agent) agents.set(event.agentId, { ...agent, lastLogLine: event.text });
+          if (agent) {
+            const toolLogLines = new Map(state.agentLogLines);
+            toolLogLines.set(event.agentId, event.text);
+            return { agents, agentLogLines: toolLogLines };
+          }
           break;
         }
         case "TASK_RESULT_RETURNED": {

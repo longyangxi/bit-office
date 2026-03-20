@@ -40,6 +40,7 @@ import {
 
 // ── Text measurement cache ──────────────────────────────────────
 // Avoids calling ctx.measureText() every frame for the same text+font combo.
+// When full, evicts the oldest half (insertion-order) instead of clearing all.
 const textWidthCache = new Map<string, number>()
 const TEXT_CACHE_MAX = 200
 
@@ -49,8 +50,14 @@ function measureTextCached(ctx: CanvasRenderingContext2D, text: string, font: st
   if (w !== undefined) return w
   ctx.font = font
   w = Math.ceil(ctx.measureText(text).width)
-  // Evict when cache gets too large
-  if (textWidthCache.size >= TEXT_CACHE_MAX) textWidthCache.clear()
+  // Evict oldest half when cache is full (Map maintains insertion order)
+  if (textWidthCache.size >= TEXT_CACHE_MAX) {
+    let toDelete = TEXT_CACHE_MAX >> 1
+    for (const k of textWidthCache.keys()) {
+      if (toDelete-- <= 0) break
+      textWidthCache.delete(k)
+    }
+  }
   textWidthCache.set(key, w)
   return w
 }

@@ -68,7 +68,7 @@ export function useSceneBridge(
       adapter.updateAgent(agentId, agent.status, deriveBubble(agent), !!agent.teamId);
       knownAgentsRef.current.add(agentId);
       prevMsgCountRef.current.set(agentId, agent.messages.length);
-      prevLogLineRef.current.set(agentId, agent.lastLogLine ?? null);
+      prevLogLineRef.current.set(agentId, state.agentLogLines.get(agentId) ?? agent.lastLogLine ?? null);
     }
     prevTeamMsgCountRef.current = state.teamMessages.length;
 
@@ -114,12 +114,13 @@ export function useSceneBridge(
         }
         prevMsgCountRef.current.set(agentId, curCount);
 
-        // Detect log output -> speech bubble
+        // Detect log output -> speech bubble (read from separated agentLogLines)
         const prevLog = prevLogLineRef.current.get(agentId);
-        if (agent.lastLogLine && agent.lastLogLine !== prevLog) {
-          adapter.showSpeechBubble(agentId, agent.lastLogLine);
+        const curLog = state.agentLogLines.get(agentId) ?? agent.lastLogLine;
+        if (curLog && curLog !== prevLog) {
+          adapter.showSpeechBubble(agentId, curLog);
         }
-        prevLogLineRef.current.set(agentId, agent.lastLogLine);
+        prevLogLineRef.current.set(agentId, curLog);
       }
 
       // Team chat messages -> speech bubble on sender

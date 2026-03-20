@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOfficeStore, imageUploadCallbacks } from "@/store/office-store";
 import { connect, sendCommand } from "@/lib/connection";
@@ -162,7 +162,19 @@ const agentWorkDirMap = new Map<string, string>();
 
 export default function OfficePage() {
   const router = useRouter();
-  const { agents, connected, addUserMessage, teamMessages, clearTeamMessages, teamPhases, agentDefs, role, suggestions, setRole, getVisibleMessages, loadMoreMessages, detectedBackends } = useOfficeStore();
+  // Reactive state — re-render when these change
+  const agents = useOfficeStore(s => s.agents);
+  const connected = useOfficeStore(s => s.connected);
+  const teamMessages = useOfficeStore(s => s.teamMessages);
+  const teamPhases = useOfficeStore(s => s.teamPhases);
+  const agentDefs = useOfficeStore(s => s.agentDefs);
+  const role = useOfficeStore(s => s.role);
+  const suggestions = useOfficeStore(s => s.suggestions);
+  const detectedBackends = useOfficeStore(s => s.detectedBackends);
+  const agentLogLines = useOfficeStore(s => s.agentLogLines);
+
+  // Stable refs — these functions never change identity, no need to trigger re-renders
+  const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages } = useOfficeStore.getState();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRatings, setPreviewRatings] = useState<Ratings>({});
@@ -297,7 +309,7 @@ export default function OfficePage() {
   // Celebrate task completion:
   // - Solo agent (no teamId, not leader): status === "done"
   // - Team leader: message has isFinalResult === true (set by orchestrator when no pending delegations)
-  const { hydrated } = useOfficeStore();
+  const hydrated = useOfficeStore(s => s.hydrated);
   const seenCelebrationIdsRef = useRef<Set<string> | null>(null);
   useEffect(() => {
     if (!hydrated) return;
@@ -312,31 +324,36 @@ export default function OfficePage() {
       seenCelebrationIdsRef.current = seen;
       return;
     }
+    // Only check the last message of each agent — new results always append at the end.
+    // Assumption: TASK_DONE handler always appends the result as the final message.
+    // If two results arrive in the same React render batch, only the last is detected.
+    // This is acceptable because Zustand state updates are synchronous per event.
     for (const [, agentState] of agents) {
-      for (const msg of agentState.messages) {
-        if (!msg.result) continue;
-        if (seenCelebrationIdsRef.current.has(msg.id)) continue;
-        seenCelebrationIdsRef.current.add(msg.id);
-        // Only celebrate when actual work was done (code changes, tests, or preview)
-        const r = msg.result;
-        if (r.changedFiles.length === 0 && r.testResult === "unknown" && !r.previewUrl && !r.previewCmd && !r.previewPath) continue;
-        // Team member → never celebrate
-        if (agentState.teamId && !agentState.isTeamLead) continue;
-        // Team leader → only celebrate when isFinalResult is explicitly true
-        if (agentState.isTeamLead && !msg.isFinalResult) continue;
-        // Solo agent or leader with isFinalResult → celebrate
-        const celebData = { previewUrl: r.previewUrl, previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile };
-        // Only show modal if there's something to preview/launch
-        const canPreview = hasWebPreview({ previewUrl: r.previewUrl, previewCmd: r.previewCmd, previewPort: r.previewPort, previewPath: r.previewPath, entryFile: r.entryFile });
-        const canLaunch = !canPreview && buildPreviewCommand({ previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile });
-        if (canPreview || canLaunch) {
-          setCelebration(celebData);
-          setPreviewRatings({});
-          setPreviewRated(false);
-        }
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 3000);
+      const msgs = agentState.messages;
+      if (msgs.length === 0) continue;
+      const msg = msgs[msgs.length - 1];
+      if (!msg.result) continue;
+      if (seenCelebrationIdsRef.current.has(msg.id)) continue;
+      seenCelebrationIdsRef.current.add(msg.id);
+      // Only celebrate when actual work was done (code changes, tests, or preview)
+      const r = msg.result;
+      if (r.changedFiles.length === 0 && r.testResult === "unknown" && !r.previewUrl && !r.previewCmd && !r.previewPath) continue;
+      // Team member → never celebrate
+      if (agentState.teamId && !agentState.isTeamLead) continue;
+      // Team leader → only celebrate when isFinalResult is explicitly true
+      if (agentState.isTeamLead && !msg.isFinalResult) continue;
+      // Solo agent or leader with isFinalResult → celebrate
+      const celebData = { previewUrl: r.previewUrl, previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile };
+      // Only show modal if there's something to preview/launch
+      const canPreview = hasWebPreview({ previewUrl: r.previewUrl, previewCmd: r.previewCmd, previewPort: r.previewPort, previewPath: r.previewPath, entryFile: r.entryFile });
+      const canLaunch = !canPreview && buildPreviewCommand({ previewPath: r.previewPath, previewCmd: r.previewCmd, previewPort: r.previewPort, projectDir: r.projectDir, entryFile: r.entryFile });
+      if (canPreview || canLaunch) {
+        setCelebration(celebData);
+        setPreviewRatings({});
+        setPreviewRated(false);
       }
+      setShowConfetti(true);
+      setTimeout(() => setShowConfetti(false), 3000);
     }
   }, [hydrated, agents]);
 
@@ -645,7 +662,12 @@ export default function OfficePage() {
     }
   }, [selectedAgent, agents, confirm]);
 
-  const hasTeam = Array.from(agents.values()).some((a) => !!a.teamId);
+  const hasTeam = useMemo(() => {
+    for (const a of agents.values()) {
+      if (a.teamId) return true;
+    }
+    return false;
+  }, [agents]);
 
   const teamBusy = Array.from(agents.values()).some(
     (a) => !!a.teamId && (a.status === "working" || a.status === "waiting_approval"),
@@ -1069,7 +1091,7 @@ export default function OfficePage() {
       visibleMessages: visible,
       hasMoreMessages: visible.length < ag.messages.length,
       tokenUsage: ag.tokenUsage,
-      lastLogLine: ag.lastLogLine ?? null,
+      lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
       busy: ag.status === "working" || ag.status === "waiting_approval",
       reviewDone: reviewResultText !== null,
     };
@@ -1601,7 +1623,7 @@ export default function OfficePage() {
                     teamPhase: ag.isTeamLead ? getAgentPhase(agentId) : null,
                     pendingApproval: ag.pendingApproval ?? null,
                     awaitingApproval: ag.awaitingApproval,
-                    lastLogLine: ag.lastLogLine ?? null,
+                    lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
                     busy: ag.status === "working" || ag.status === "waiting_approval",
                     pid: ag.pid,
                   };
@@ -1712,7 +1734,7 @@ export default function OfficePage() {
                   teamPhase={ag.isTeamLead ? getAgentPhase(selectedAgent) : null}
                   pendingApproval={ag.pendingApproval ?? null}
                   awaitingApproval={ag.awaitingApproval}
-                  lastLogLine={ag.lastLogLine ?? null}
+                  lastLogLine={agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null}
                   busy={busy}
                   pid={ag.pid}
                   isOwner={isOwner}

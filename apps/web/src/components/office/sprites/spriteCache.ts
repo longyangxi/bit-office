@@ -43,10 +43,12 @@ export function getOutlineSprite(sprite: SpriteData): SpriteData {
 }
 
 export function getCachedSprite(sprite: SpriteData, zoom: number): HTMLCanvasElement {
-  let cache = zoomCaches.get(zoom)
+  // Quantize zoom to 2 decimal places to prevent cache explosion from float precision
+  const qZoom = Math.round(zoom * 100) / 100
+  let cache = zoomCaches.get(qZoom)
   if (!cache) {
     cache = new WeakMap()
-    zoomCaches.set(zoom, cache)
+    zoomCaches.set(qZoom, cache)
   }
 
   const cached = cache.get(sprite)
@@ -55,8 +57,8 @@ export function getCachedSprite(sprite: SpriteData, zoom: number): HTMLCanvasEle
   const rows = sprite.length
   const cols = sprite[0].length
   const canvas = document.createElement('canvas')
-  canvas.width = cols * zoom
-  canvas.height = rows * zoom
+  canvas.width = cols * qZoom
+  canvas.height = rows * qZoom
   const ctx = canvas.getContext('2d')!
   ctx.imageSmoothingEnabled = false
 
@@ -65,7 +67,7 @@ export function getCachedSprite(sprite: SpriteData, zoom: number): HTMLCanvasEle
       const color = sprite[r][c]
       if (color === '') continue
       ctx.fillStyle = color
-      ctx.fillRect(c * zoom, r * zoom, zoom, zoom)
+      ctx.fillRect(c * qZoom, r * qZoom, qZoom, qZoom)
     }
   }
 
