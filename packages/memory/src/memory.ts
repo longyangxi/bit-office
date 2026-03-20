@@ -44,7 +44,7 @@ import {
 
 /* ── Constants ──────────────────────────────────────────────────────────── */
 
-const MAX_SESSION_HISTORY = 10;
+const MAX_SESSION_HISTORY = 30;
 const MAX_AGENT_FACTS = 50;
 const MAX_SHARED_ITEMS = 20;
 
@@ -134,8 +134,8 @@ export function buildRecoveryContext(
 ): RecoveryContext {
   const sessionStore = loadSessionHistory(agentId);
 
-  // Include up to 5 older sessions (skip index 0 = latest, already in sessionSummary)
-  const olderHistory = sessionStore.history.slice(1, 6);
+  // Include up to 10 older sessions (skip index 0 = latest, already in sessionSummary)
+  const olderHistory = sessionStore.history.slice(1, 11);
 
   return {
     originalTask: opts?.originalTask,
