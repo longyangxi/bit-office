@@ -9,7 +9,7 @@
 // All data comes from what the agent already printed.
 // ---------------------------------------------------------------------------
 
-import type { SessionSummary, AgentFact, FactCategory, TaskCompletionData } from "./types.js";
+import type { SessionSummary, AgentFact, FactCategory, TaskCompletionData, WorkState, WorkStateStatus } from "./types.js";
 import { hashFact } from "./dedup.js";
 
 /* ── L1: Session Summary extraction ─────────────────────────────────────── */
@@ -34,6 +34,44 @@ export function extractSessionSummary(data: TaskCompletionData): SessionSummary 
     unfinished: extractUnfinished(stdout),
     commits: extractCommits(stdout),
     tokens,
+  };
+}
+
+export function extractWorkStateSnapshot(data: {
+  stdout: string;
+  taskPrompt?: string;
+  taskId?: string;
+  cwd?: string;
+  changedFiles: string[];
+  status: WorkStateStatus;
+  startedAt: string;
+  updatedAt?: string;
+  lastActivity?: string;
+}): WorkState {
+  const {
+    stdout,
+    taskPrompt,
+    taskId,
+    cwd,
+    changedFiles,
+    status,
+    startedAt,
+    updatedAt,
+    lastActivity,
+  } = data;
+
+  return {
+    startedAt,
+    updatedAt: updatedAt ?? new Date().toISOString(),
+    status,
+    taskId,
+    taskPrompt: taskPrompt?.slice(0, 500),
+    cwd,
+    summary: extractWhat(stdout, taskPrompt),
+    nextSteps: extractNextSteps(stdout),
+    unfinished: extractUnfinished(stdout),
+    filesTouched: shortenFiles(changedFiles),
+    lastActivity: lastActivity?.slice(0, 160),
   };
 }
 
@@ -70,6 +108,13 @@ function extractWhat(stdout: string, parsedSummary?: string): string {
   }
 
   return "Task completed";
+}
+
+function shortenFiles(files: string[]): string[] {
+  return files.map(f => {
+    const parts = f.split("/");
+    return parts.length > 3 ? parts.slice(-3).join("/") : f;
+  });
 }
 
 /** Extract key decisions from agent output. */
@@ -144,6 +189,26 @@ function extractUnfinished(stdout: string): string[] {
     if (/\b(?:remain|still|not yet|haven'?t)\b.*\b(?:unstaged|uncommitted|unfinished|incomplete|pending)\b/i.test(t)) {
       items.push(t.slice(0, 150));
       continue;
+    }
+  }
+
+  return [...new Set(items)].slice(0, 3);
+}
+
+function extractNextSteps(stdout: string): string[] {
+  const items: string[] = [];
+  const lines = stdout.split("\n");
+
+  for (const line of lines) {
+    const t = line.trim();
+
+    if (/^(?:Next|Next step|Next steps|Remaining|Still need|TODO|Follow-up)[:\s]/i.test(t)) {
+      items.push(t.replace(/^(?:Next|Next step|Next steps|Remaining|Still need to|Still need|TODO|Follow-up)[:\s]+/i, "").slice(0, 150));
+      continue;
+    }
+
+    if (/^[-*>•]\s/.test(t) && /\b(?:next|remaining|still need|follow-up|todo)\b/i.test(t)) {
+      items.push(t.replace(/^[-*>•]\s+/, "").slice(0, 150));
     }
   }
 

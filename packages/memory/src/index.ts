@@ -27,6 +27,9 @@ export {
   getMemoryContext,
   getRecoveryString,
   getAgentL0,
+  getWorkState,
+  updateWorkState,
+  clearAgentWorkState,
   crossConfirmShared,
   addManualFact,
   // Inspection/debug
@@ -43,7 +46,7 @@ export {
 } from "./memory.js";
 
 // Storage configuration
-export { setStorageRoot, getStorageRoot, saveSessionHistory } from "./storage.js";
+export { setStorageRoot, getStorageRoot, saveSessionHistory, loadWorkState, saveWorkState, clearWorkState } from "./storage.js";
 
 // Types (for consumers who need to type-check)
 export type {
@@ -55,6 +58,8 @@ export type {
   SharedKnowledge,
   SharedKnowledgeStore,
   RecoveryContext,
+  WorkState,
+  WorkStateStatus,
   TaskCompletionData,
   // Legacy types
   ReviewPattern,

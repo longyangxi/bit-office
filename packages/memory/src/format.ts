@@ -12,6 +12,7 @@ import type {
   SharedKnowledge,
   RecoveryContext,
   LegacyMemoryStore,
+  WorkState,
 } from "./types.js";
 
 /* ── L1: Recovery context string ────────────────────────────────────────── */
@@ -34,8 +35,10 @@ export function formatRecoveryContext(recovery: RecoveryContext): string {
     lines.push(`- Phase: ${recovery.phase}`);
   }
 
-  // Prefer structured summary over raw messages
-  if (recovery.sessionSummary) {
+  if (recovery.workState) {
+    appendWorkState(lines, recovery.workState);
+  } else if (recovery.sessionSummary) {
+    // Prefer structured summary over raw messages
     const s = recovery.sessionSummary;
     lines.push(`- What you did: ${s.what}`);
 
@@ -221,4 +224,39 @@ function formatTimeAgo(isoTimestamp: string): string {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   return `${days}d ago`;
+}
+
+function appendWorkState(lines: string[], state: WorkState): void {
+  const statusLabel: Record<WorkState["status"], string> = {
+    running: "Task was in progress",
+    interrupted: "Task was interrupted",
+    failed: "Last run failed",
+    cancelled: "Task was cancelled",
+  };
+
+  lines.push(`- ${statusLabel[state.status]}: ${state.summary}`);
+  if (state.taskPrompt) {
+    lines.push(`- Active prompt: ${state.taskPrompt}`);
+  }
+  if (state.cwd) {
+    lines.push(`- Working directory: ${state.cwd}`);
+  }
+  if (state.filesTouched.length > 0) {
+    lines.push(`- Files touched so far: ${state.filesTouched.join(", ")}`);
+  }
+  if (state.lastActivity) {
+    lines.push(`- Last activity: ${state.lastActivity}`);
+  }
+  if (state.nextSteps.length > 0) {
+    lines.push(`- Next steps:`);
+    for (const item of state.nextSteps) {
+      lines.push(`  - ${item}`);
+    }
+  }
+  if (state.unfinished.length > 0) {
+    lines.push(`- Unfinished:`);
+    for (const item of state.unfinished) {
+      lines.push(`  - ${item}`);
+    }
+  }
 }

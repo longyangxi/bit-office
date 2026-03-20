@@ -23,6 +23,9 @@ export {
   buildRecoveryContext,
   getRecoveryString,
   getAgentL0,
+  getWorkState,
+  updateWorkState,
+  clearAgentWorkState,
   setStorageRoot,
   saveSessionHistory,
 } from "@bit-office/memory";
