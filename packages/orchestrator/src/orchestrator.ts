@@ -235,20 +235,22 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
     // Worktree setup:
     // 1. Team members: created by DelegationRouter in delegation.ts (not here)
-    // 2. Solo agents: always isolate via worktree for consistent merge behavior
+    // 2. Solo agents sharing the same workDir: auto-isolate via worktree
     const teamProjectDir = this.delegationRouter.getTeamProjectDir();
     const effectiveRepo = opts?.repoPath ?? session.workspaceDir;
-    // Every solo dev agent gets its own worktree so task:done always follows the same
-    // auto-save → merge --no-ff path. Without this, the first solo agent to start
-    // works directly on main (no neighbor yet) while later agents get worktrees,
-    // causing inconsistent git history and potential merge conflicts.
-    // Reviewers are excluded — they only read code, never produce file changes.
+    // Worktree isolation for solo agents sharing the same repoPath/workspace.
     // Team dev worktrees are created by delegation.ts (not here).
     const isLeader = this.agentManager.isTeamLead(agentId);
     const isReviewerRole = session.role.toLowerCase().includes("review");
-    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !session.teamId;
+    // Claude Code has native --worktree support; skip manual worktree for it.
+    // Other backends (codex, gemini, aider, opencode) use bit-office managed worktrees.
+    const isClaudeBackend = session.backend.id === "claude";
+    const needsWorktree = this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && !isClaudeBackend && (
+      // Solo agents: isolate when another solo agent shares the same repoPath
+      (!session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo))
+    );
     if (needsWorktree) {
-      const base = effectiveRepo;
+      const base = session.teamId ? teamProjectDir! : effectiveRepo;
       const wt = createWorktree(base, agentId, taskId, session.name);
       if (wt) {
         const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
@@ -269,6 +271,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
+    // Claude Code: use native --worktree when neighbor detected (instead of manual worktree)
+    // Re-evaluate every task — clear when no neighbor exists anymore.
+    session.useNativeWorktree = isClaudeBackend && !session.teamId && this.hasSoloNeighbor(agentId, effectiveRepo);
+
     const repoPath = session.worktreePath ?? opts?.repoPath;
     // Team lead gets full roster (to decide delegation).
     // Solo agents sharing a workspace get lightweight peer awareness.
@@ -281,6 +287,18 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     session.runTask(taskId, prompt, repoPath, teamContext, true /* isUserInitiated */, opts?.phaseOverride);
+  }
+
+  /**
+   * Check if another solo agent (no teamId) is actively working in the same repoPath.
+   */
+  private hasSoloNeighbor(agentId: string, repoPath: string): boolean {
+    for (const other of this.agentManager.getAll()) {
+      if (other.agentId === agentId || other.teamId) continue;
+      if (other.status !== "working") continue;
+      if (other.workspaceDir === repoPath) return true;
+    }
+    return false;
   }
 
   /**

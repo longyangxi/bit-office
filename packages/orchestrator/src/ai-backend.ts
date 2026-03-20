@@ -17,6 +17,8 @@ export interface BuildArgsOpts {
   skipResume?: boolean;
   /** Run as a specific subagent type (e.g. "Game Designer" → --agent "Game Designer") */
   agentType?: string;
+  /** Use native worktree isolation (Claude Code --worktree) */
+  worktree?: boolean;
 }
 
 export interface AIBackend {

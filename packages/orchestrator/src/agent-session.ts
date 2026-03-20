@@ -254,6 +254,8 @@ export class AgentSession {
   /** Worktree path if task is running in one (set externally by orchestrator) */
   worktreePath: string | null = null;
   worktreeBranch: string | null = null;
+  /** Use backend-native worktree isolation (e.g. Claude Code --worktree) */
+  useNativeWorktree = false;
   teamId?: string;
 
   constructor(opts: AgentSessionOpts) {
@@ -419,6 +421,7 @@ export class AgentSession {
         // Only skip resume on first execute (to shed conversational create/design context).
         // On subsequent runs (result forwarding, user feedback), resume so leader keeps context.
         skipResume: isFirstExecute && this.hasHistory,
+        worktree: this.useNativeWorktree,
       });
 
       // Log which binary + env state
