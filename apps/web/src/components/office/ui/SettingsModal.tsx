@@ -7,6 +7,7 @@ import { serializeLayout, deserializeLayout } from '../layout/layoutSerializer'
 import { loadRoomZip } from '../layout/roomZipLoader'
 import { sendCommand } from '@/lib/connection'
 import { useOfficeStore } from '@/store/office-store'
+import { APP_VERSION, APP_BUILD_TIME } from '@/lib/appMeta'
 
 interface SettingsModalProps {
   isOpen: boolean
@@ -279,6 +280,29 @@ export default function SettingsModal({
             </span>
           )}
         </button>
+        <div
+          style={{
+            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            marginTop: 4,
+            padding: '8px 10px 6px',
+            fontSize: 11,
+            color: 'rgba(255, 255, 255, 0.45)',
+            fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+            lineHeight: 1.45,
+            userSelect: 'text',
+          }}
+          title="From monorepo root package.json at build time — compare after deploy / desktop bundle"
+        >
+          <div>
+            <span style={{ opacity: 0.75 }}>Web UI</span>{' '}
+            <span style={{ color: 'rgba(255, 255, 255, 0.75)' }}>v{APP_VERSION}</span>
+          </div>
+          {APP_BUILD_TIME ? (
+            <div style={{ marginTop: 2, fontSize: 10, opacity: 0.9 }}>
+              build {APP_BUILD_TIME.replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC')}
+            </div>
+          ) : null}
+        </div>
       </div>
     </>
   )

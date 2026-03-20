@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from 'react'
+import { APP_VERSION } from '@/lib/appMeta'
 
 interface BottomToolbarProps {
   editMode: boolean
@@ -96,7 +97,7 @@ export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettin
               background: hovered === 'settings' ? 'rgba(255, 255, 255, 0.08)' : btnBase.background,
               color: hovered === 'settings' ? 'rgba(255, 255, 255, 0.8)' : btnBase.color,
             }}
-            title="Settings"
+            title={`Settings · Web UI v${APP_VERSION}`}
           >
             Settings
           </button>

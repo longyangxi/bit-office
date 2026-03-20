@@ -22,6 +22,7 @@ import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/of
 import type { Ratings } from "@/components/office/ui/office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
 import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
+import { APP_VERSION, APP_BUILD_TIME } from "@/lib/appMeta";
 
 // Extracted components — regular imports for hooks and inline-rendered components
 import { useConfirm } from "@/components/office/ui/ConfirmModal";
@@ -1189,6 +1190,16 @@ export default function OfficePage() {
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "auto" }}>
             <h1 className="px-font" style={{ fontSize: 12, margin: 0, color: "#e8b040", textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Open Office</h1>
+            <span
+              title={APP_BUILD_TIME ? `Web UI v${APP_VERSION}\nBuild ${APP_BUILD_TIME}` : `Web UI v${APP_VERSION}`}
+              style={{
+                fontSize: 9,
+                color: "rgba(232, 220, 184, 0.4)",
+                fontFamily: "monospace",
+                letterSpacing: "0.04em",
+                userSelect: "text",
+              }}
+            >v{APP_VERSION}</span>
             <span style={{
               fontSize: 10, padding: "3px 7px",
               border: `1px solid ${connected ? `${TERM_SEM_GREEN}40` : `${TERM_SEM_RED}40`}`,
