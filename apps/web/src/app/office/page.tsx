@@ -966,7 +966,6 @@ export default function OfficePage() {
 
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
-    // Don't allow review if one is already in progress (ref for synchronous guard)
     if (reviewInProgress.current || reviewOverlay) return;
     reviewInProgress.current = true;
     const sourceAgent = agents.get(sourceAgentId);

@@ -578,18 +578,17 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             )}
           </div>
 
-          {/* Review messages */}
+          {/* Review result — show only the last message (the actual review verdict) */}
           <div data-scrollbar className="term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
-            {reviewerOverlay.hasMoreMessages && onReviewerLoadMore && (
-              <LoadMoreSentinel onLoadMore={onReviewerLoadMore} />
-            )}
-            {reviewerOverlay.visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
-            ))}
+            {(() => {
+              const msgs = reviewerOverlay.visibleMessages;
+              const last = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+              return last ? <MessageBubble key={last.id} msg={last} agentName={reviewerOverlay.name} /> : null;
+            })()}
             <div ref={reviewChatEndRef} />
           </div>
 
@@ -631,7 +630,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               name={name}
               agentId={agentId}
               onPreview={onPreview}
-              onReview={reviewerOverlay ? undefined : onReview}
+              onReview={(reviewerOverlay || onDismissReview) ? undefined : onReview}
               isTeamLead={isTeamLead}
               isTeamMember={isTeamMember}
               teamPhase={teamPhase}

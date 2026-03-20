@@ -826,6 +826,11 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     }
     case "REQUEST_REVIEW": {
       const { reviewerAgentId, sourceAgentId, changedFiles, projectDir, entryFile, summary, backend: reviewBackend } = parsed;
+      // Dedup: skip if this reviewer already exists (double-fire guard)
+      if (orc.getAgent(reviewerAgentId)) {
+        console.log(`[Gateway] REQUEST_REVIEW skipped — reviewer ${reviewerAgentId} already exists`);
+        break;
+      }
       const sourceAgent = orc.getAgent(sourceAgentId);
       const cwd = agentWorkDirs.get(sourceAgentId) ?? projectDir ?? config.defaultWorkspace;
       const reviewerBackendId = reviewBackend ?? sourceAgent?.backend ?? config.defaultBackend;
