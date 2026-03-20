@@ -88,6 +88,43 @@ Each dev agent works in its own git worktree, physically isolating the filesyste
 3. On completion: merge back to main
 4. Requires workDir to be a git repo (otherwise no isolation)
 
+### Native vs Managed Worktrees
+
+| Mode | Mechanism | Status |
+|------|-----------|--------|
+| **Managed** (`.worktrees/`) | orchestrator creates worktree via `git worktree add`, agent runs in isolated dir | ✅ Active |
+| **Native** (`--worktree` flag) | Claude Code's built-in worktree support | ❌ Incompatible with `-p` and `--resume` (exit code 1) |
+
+All backends use **managed worktrees** (`.worktrees/<agentId>-<taskId>`) regardless of native support. The `useNativeWorktree` field on `AgentSession` exists but is always `false`.
+
+### Git Environment Isolation
+
+`worktree.ts` exports `getIsolatedGitEnv()` which clears leaked git env vars (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, etc.) before every git subprocess. This prevents one worktree's commands from accidentally targeting another repo — a subtle bug that caused cross-contamination in early versions.
+
+All agent subprocess spawns (`agent-session.ts`) use this isolated env as the base, then further strip backend-specific vars (`deleteEnv`).
+
+### Merge Strategy: Squash
+
+`mergeWorktree()` uses `git merge --squash` — the agent's work appears as staged changes on main (no merge commit). This enables the reviewer to see a clean diff. On conflict, `git reset --hard HEAD` rolls back and conflict files are reported.
+
+### Worktree Path Priority in CWD Resolution
+
+```
+session.worktreePath > repoPath (from RUN_TASK) > session.workspace
+```
+
+If `worktreePath` no longer exists on disk (stale state from ungraceful shutdown), the session auto-clears it and falls back. This prevents spawn-failure → 0-output → session-clear cascades.
+
+### Persistence and Restore
+
+- `team-state.ts` persists `worktreePath` and `worktreeBranch` per agent
+- On gateway restart, `orchestrator.restoreWorktree()` validates the path exists on disk before restoring — stale paths are silently skipped
+- `cleanupStaleWorktrees()` runs on startup: prunes dead metadata, removes orphaned `.worktrees/*` dirs, deletes orphaned `agent/*` branches not attached to any active worktree
+
+### Auto-Cleanup on Failure
+
+When an agent task fails (non-zero exit), `agent-session.ts` auto-removes the orphaned worktree + branch to avoid accumulating dead directories. This runs in a try/catch so cleanup failure never masks the original error.
+
 ### Safety: Worktree Operations Never Block Team Flow
 - **delegation.ts**: worktree merge in `wireResultForwarding` is wrapped in try/catch — if merge fails, result forwarding to leader continues uninterrupted
 - **orchestrator.ts**: worktree handling in `handleSessionEvent` only runs for solo agents (`!session.teamId`), skips team agents entirely (team worktrees are handled by delegation.ts)
@@ -194,7 +231,7 @@ Terminal-style chat interface with CRT effects:
 | `packages/shared/src/commands.ts` | Command protocol — `workDir` on CREATE_AGENT/CREATE_TEAM, `PICK_FOLDER`, `UPLOAD_IMAGE` |
 | `packages/shared/src/events.ts` | Wire events — `FOLDER_PICKED`, `IMAGE_UPLOADED` |
 | `packages/orchestrator/src/types.ts` | Internal events — `AgentActivityEvent`, `WorktreeCreatedEvent`, `WorktreeMergedEvent` |
-| `packages/orchestrator/src/worktree.ts` | Git worktree CRUD — `createWorktree`, `mergeWorktree`, `removeWorktree`, `removeWorktreeOnly`, `checkConflicts` |
+| `packages/orchestrator/src/worktree.ts` | Git worktree CRUD + env isolation — `createWorktree`, `mergeWorktree` (squash), `removeWorktree`, `removeWorktreeOnly`, `checkConflicts`, `cleanupStaleWorktrees`, `getIsolatedGitEnv` |
 | `packages/orchestrator/src/delegation.ts` | Team delegation — worktree creation per dev agent, non-blocking merge on completion, activity broadcast |
 | `packages/orchestrator/src/orchestrator.ts` | Orchestrator — solo agent neighbor detection, worktree lifecycle (solo only), leader conversational reply handling |
 | `packages/orchestrator/src/agent-session.ts` | Agent session — `worktreePath`/`worktreeBranch` storage, `currentWorkingDir` getter, CLI cwd resolution |
