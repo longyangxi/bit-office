@@ -994,18 +994,18 @@ export default function OfficePage() {
     if (!reviewer) return;
     const isTerminal = reviewer.status === "done" || reviewer.status === "idle" || reviewer.status === "error";
     if (!isTerminal) return;
-    // Guard: don't treat idle/done as terminal if reviewer hasn't produced any agent messages yet
-    // (reviewer starts as "idle" before gateway assigns the task)
+    // Guard: reviewer must have produced at least 1 agent message to be considered done.
+    // Without this, a race (status→done arrives before agent message) sets empty result
+    // that never updates (reviewResultText !== null blocks re-entry).
     const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
-    if (reviewer.status !== "error" && reviewMessages.length === 0 && reviewer.messages.length <= 1) return;
-    if (reviewer.status === "error") {
-      // Reviewer errored — set fallback text so overlay can be dismissed
-      const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
-      setReviewResultText(text || "(Review failed — reviewer encountered an error)");
-    } else {
-      const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
-      setReviewResultText(text || "(No issues found)");
+    if (reviewer.status === "error" && reviewMessages.length === 0) {
+      // Error with no output — allow dismissal with fallback text
+      setReviewResultText("(Review failed — reviewer encountered an error)");
+    } else if (reviewMessages.length > 0) {
+      // Normal completion — use last agent message
+      setReviewResultText(reviewMessages[reviewMessages.length - 1].text || "(No issues found)");
     }
+    // else: terminal status but no agent messages yet — wait for message to arrive
   }, [agents, reviewOverlay, reviewResultText]);
 
   // User actions on review completion
@@ -1013,8 +1013,9 @@ export default function OfficePage() {
     if (!reviewOverlay) return;
     const { reviewerAgentId, sourceAgentId } = reviewOverlay;
     const reviewer = agents.get(reviewerAgentId);
+    // Combine all reviewer agent messages (reviewer may split findings across multiple messages)
     const resolvedText = reviewResultText
-      ?? reviewer?.messages.filter(m => m.role === "agent" && m.text).at(-1)?.text;
+      ?? (reviewer?.messages.filter(m => m.role === "agent" && m.text).map(m => m.text).join("\n\n") || null);
     if (!resolvedText) return;
     const sourceAgent = agents.get(sourceAgentId);
     const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? "";

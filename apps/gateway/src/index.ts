@@ -10,7 +10,7 @@ import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
 import { nanoid } from "nanoid";
-import { exec, execFile, execSync } from "child_process";
+import { exec, execFile, execFileSync, execSync } from "child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import path from "path";
 import os from "os";
@@ -836,13 +836,18 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const reviewerBackendId = reviewBackend ?? sourceAgent?.backend ?? config.defaultBackend;
 
       // Run git diff to get actual changes — much cheaper than reviewer reading entire files
+      // Scope to changedFiles only to avoid leaking unrelated repo changes into review
+      // Uses execFileSync (no shell) to prevent injection via crafted filenames
       let diff = "";
       try {
-        // Try committed + staged + unstaged changes
-        diff = execSync("git diff HEAD", { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
-        if (!diff) {
-          // Fallback: unstaged only
-          diff = execSync("git diff", { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
+        if (changedFiles.length > 0) {
+          // Scoped diff: only the files this agent changed
+          diff = execFileSync("git", ["diff", "HEAD", "--", ...changedFiles], { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
+          if (!diff) {
+            diff = execFileSync("git", ["diff", "--", ...changedFiles], { cwd, encoding: "utf-8", timeout: 5000, maxBuffer: 200 * 1024 }).trim();
+          }
+        } else {
+          // No changedFiles — skip git diff entirely, fall through to file-reading below
         }
         if (!diff && changedFiles.length > 0) {
           // No diff but files reported — try showing new untracked files
