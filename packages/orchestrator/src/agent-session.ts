@@ -924,14 +924,14 @@ export class AgentSession {
    * Unlike runTask() which appends to the back, this ensures retries
    * execute before any user-queued messages — preventing the race where
    * dequeueNext() (100ms) fires before retry (500ms) and overwrites context.
+   *
+   * IMPORTANT: Always enqueues, never calls runTask() directly. This method
+   * is called from the orchestrator's handleSessionEvent during the close
+   * handler — calling runTask() re-entrantly would start the retry before
+   * the close handler finishes cleaning up (currentTaskPrompt, etc.),
+   * corrupting the retry's work-state. dequeueNext() picks it up safely.
    */
   prependTask(taskId: string, prompt: string, repoPath?: string, teamContext?: string, phaseOverride?: string) {
-    if (!this.process) {
-      // No process running — execute immediately (same as runTask)
-      this.runTask(taskId, prompt, repoPath, teamContext, false, phaseOverride);
-      return;
-    }
-    // Insert at front of queue so it runs before any user-queued messages
     this.taskQueue.unshift({ taskId, prompt, repoPath, teamContext, phaseOverride });
     this.onEvent({
       type: "task:queued",
