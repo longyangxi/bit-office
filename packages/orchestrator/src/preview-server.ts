@@ -73,9 +73,6 @@ class PreviewServer {
     }
     console.log(`[PreviewServer] Command: "${cmd}" (forced port ${port})`);
 
-    // Kill anything already on our port before starting
-    this.killPortHolder(port);
-
     try {
       this.process = spawn(cmd, {
         shell: true,
