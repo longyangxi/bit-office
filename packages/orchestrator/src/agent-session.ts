@@ -9,7 +9,7 @@ import { nanoid } from "nanoid";
 import type { AIBackend } from "./ai-backend.js";
 import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
 import type { TemplateName } from "./prompt-templates.js";
-import { getMemoryContext, commitSession, buildRecoveryContext, getRecoveryString, saveSessionHistory } from "./memory.js";
+import { getMemoryContext, commitSession, buildRecoveryContext, getRecoveryString, saveSessionHistory, updateWorkState, clearAgentWorkState } from "./memory.js";
 
 /* ── Tool activity summarizer ──────────────────────────────────── */
 
@@ -235,6 +235,10 @@ export class AgentSession {
   private _lastResultText: string | null = null;
   /** Full output from the last completed task (for plan capture). */
   private _lastFullOutput: string | null = null;
+  private currentTaskStartedAt: string | null = null;
+  private currentTaskPrompt: string | null = null;
+  private lastActivityText: string | null = null;
+  private lastWorkStatePersistAt = 0;
   get lastFullOutput(): string | null { return this._lastFullOutput; }
   set isTeamLead(v: boolean) { this._isTeamLead = v; }
   /** Current phase override for team collaboration phases */
@@ -306,6 +310,10 @@ export class AgentSession {
     this.taskOutputTokens = 0;
     this.taskChangedFiles.clear();
     this.lastUsageSignature = "";
+    this.currentTaskStartedAt = new Date().toISOString();
+    this.currentTaskPrompt = prompt;
+    this.lastActivityText = null;
+    this.lastWorkStatePersistAt = 0;
 
     this.onEvent({
       type: "task:started",
@@ -315,6 +323,7 @@ export class AgentSession {
     });
 
     this.setStatus("working");
+    this.persistWorkState("running", true);
 
     try {
       const cleanEnv = { ...process.env };
@@ -573,6 +582,7 @@ export class AgentSession {
                   if (block.type === "text" && block.text) {
                     this.stdoutBuffer += block.text + "\n";
                     handleTextLine(block.text, true);
+                    this.persistWorkState("running");
                   }
                   if (block.type === "thinking" && block.thinking) {
                     console.log(`[Agent ${this.name} thinking] ${block.thinking.slice(0, 120)}...`);
@@ -597,12 +607,14 @@ export class AgentSession {
                     }
                     const activity = summarizeToolUse(toolName, toolInput);
                     if (activity) {
+                      this.lastActivityText = activity;
                       this.onEvent({
                         type: "log:activity",
                         agentId: this.agentId,
                         taskId,
                         text: activity,
                       });
+                      this.persistWorkState("running");
                     }
                   }
                 }
@@ -647,6 +659,7 @@ export class AgentSession {
           // Plain text fallback (non-Claude backends)
           this.stdoutBuffer += line + "\n";
           handleTextLine(line);
+          this.persistWorkState("running");
         }
       });
 
@@ -736,6 +749,7 @@ export class AgentSession {
               changedFiles: [...this.taskChangedFiles],
               tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
             });
+            clearAgentWorkState(this.agentId);
 
             // Preview detection: skip for team leads (they don't create files).
             // Leader preview is handled by the orchestrator when isFinalResult is set.
@@ -796,6 +810,7 @@ export class AgentSession {
                 });
               } catch { /* best effort */ }
             }
+            this.persistWorkState(this.timedOut ? "interrupted" : "failed", true);
             // Extract meaningful error lines from stderr (e.g. "ERROR: You've hit your usage limit...")
             const stderrErrorLines = this.stderrBuffer
               .split("\n")
@@ -814,6 +829,10 @@ export class AgentSession {
             this.onTaskComplete?.(this.agentId, completedTaskId, errorMsg, false);
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleErrorDelayMs);
           }
+          this.currentTaskPrompt = null;
+          this.currentTaskStartedAt = null;
+          this.lastActivityText = null;
+          this.lastWorkStatePersistAt = 0;
           this.dequeueNext();
         } catch (err) {
           console.error(`[Agent ${this.agentId}] Error in close handler:`, err);
@@ -923,6 +942,7 @@ export class AgentSession {
       this.cancelled = true;
       this.hasHistory = true;
       saveSessionId(this.agentId, this.sessionId);
+      this.persistWorkState("cancelled", true);
       this.onTaskComplete?.(this.agentId, cancelledTaskId, "Task cancelled by user", false);
 
       const pgid = this.process.pid;
@@ -954,6 +974,7 @@ export class AgentSession {
     // session summary is what the agent sees as recovery context on restart.
     if (this.stdoutBuffer.length > 0) {
       try {
+        this.persistWorkState("interrupted", true);
         commitSession({
           agentId: this.agentId,
           agentName: this.name,
@@ -1000,6 +1021,7 @@ export class AgentSession {
     // Also clear new memory store's session history for this agent
     // to prevent stale L1 summaries from leaking into the next project.
     saveSessionHistory(this.agentId, { latest: null, history: [] });
+    clearAgentWorkState(this.agentId);
   }
 
   resolveApproval(approvalId: string, decision: "yes" | "no") {
@@ -1046,6 +1068,24 @@ export class AgentSession {
       type: "agent:status",
       agentId: this.agentId,
       status,
+    });
+  }
+
+  private persistWorkState(status: "running" | "interrupted" | "failed" | "cancelled", force = false) {
+    if (!this.currentTaskStartedAt) return;
+    const now = Date.now();
+    if (!force && now - this.lastWorkStatePersistAt < 1500) return;
+    this.lastWorkStatePersistAt = now;
+    updateWorkState({
+      agentId: this.agentId,
+      stdout: this.stdoutBuffer,
+      taskPrompt: this.currentTaskPrompt ?? this.originalTask ?? undefined,
+      taskId: this.currentTaskId ?? undefined,
+      cwd: this.currentCwd ?? undefined,
+      changedFiles: [...this.taskChangedFiles],
+      status,
+      startedAt: this.currentTaskStartedAt,
+      lastActivity: this.lastActivityText ?? undefined,
     });
   }
 }

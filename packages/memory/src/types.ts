@@ -35,6 +35,39 @@ export interface SessionHistoryStore {
   history: SessionSummary[];
 }
 
+/* ── Live Work State (for crash-safe in-progress recovery) ─────────────── */
+
+export type WorkStateStatus =
+  | "running"
+  | "interrupted"
+  | "failed"
+  | "cancelled";
+
+export interface WorkState {
+  /** ISO timestamp when this task state started */
+  startedAt: string;
+  /** ISO timestamp of the latest persisted update */
+  updatedAt: string;
+  /** Current lifecycle status */
+  status: WorkStateStatus;
+  /** Current task identifier if known */
+  taskId?: string;
+  /** Current task prompt (trimmed) */
+  taskPrompt?: string;
+  /** Current working directory */
+  cwd?: string;
+  /** One-line summary of the latest known progress */
+  summary: string;
+  /** Structured next-step hints */
+  nextSteps: string[];
+  /** Known unfinished items */
+  unfinished: string[];
+  /** Files touched so far */
+  filesTouched: string[];
+  /** Most recent visible activity/tool summary */
+  lastActivity?: string;
+}
+
 /* ── L2: Agent Facts ────────────────────────────────────────────────────── */
 
 export type FactCategory =
@@ -113,6 +146,8 @@ export interface RecoveryContext {
   originalTask?: string;
   /** Current phase (for team agents) */
   phase?: string;
+  /** Last known in-progress task state (preferred for crash recovery) */
+  workState?: WorkState;
   /** L1 session summary (new — preferred) */
   sessionSummary?: SessionSummary;
   /** Recent session history (older sessions, for broader context) */

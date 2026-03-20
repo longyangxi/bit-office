@@ -23,6 +23,9 @@ import type {
 import {
   loadSessionHistory,
   saveSessionHistory,
+  loadWorkState,
+  saveWorkState,
+  clearWorkState,
   loadAgentFacts,
   saveAgentFacts,
   loadSharedKnowledge,
@@ -31,7 +34,7 @@ import {
   saveLegacyMemory,
 } from "./storage.js";
 
-import { extractSessionSummary, extractFactCandidates, createFact } from "./extract.js";
+import { extractSessionSummary, extractFactCandidates, createFact, extractWorkStateSnapshot } from "./extract.js";
 import { dedupFact, shouldPromoteToShared, hashFact } from "./dedup.js";
 import {
   formatRecoveryContext,
@@ -136,10 +139,12 @@ export function buildRecoveryContext(
 
   // Include up to 10 older sessions (skip index 0 = latest, already in sessionSummary)
   const olderHistory = sessionStore.history.slice(1, 11);
+  const workState = loadWorkState(agentId);
 
   return {
     originalTask: opts?.originalTask,
     phase: opts?.phase,
+    workState: workState ?? undefined,
     sessionSummary: sessionStore.latest ?? undefined,
     recentHistory: olderHistory.length > 0 ? olderHistory : undefined,
     lastResult: opts?.lastResult,
@@ -248,6 +253,29 @@ export function getAgentL0(agentId: string, agentName: string): string {
  */
 export function getSessionHistory(agentId: string) {
   return loadSessionHistory(agentId);
+}
+
+export function getWorkState(agentId: string) {
+  return loadWorkState(agentId);
+}
+
+export function updateWorkState(data: {
+  agentId: string;
+  stdout: string;
+  taskPrompt?: string;
+  taskId?: string;
+  cwd?: string;
+  changedFiles: string[];
+  status: "running" | "interrupted" | "failed" | "cancelled";
+  startedAt: string;
+  lastActivity?: string;
+}): void {
+  const state = extractWorkStateSnapshot(data);
+  saveWorkState(data.agentId, state);
+}
+
+export function clearAgentWorkState(agentId: string): void {
+  clearWorkState(agentId);
 }
 
 /**

@@ -9,7 +9,7 @@
 //   {root}/shared.json              — L3 cross-agent knowledge
 // ---------------------------------------------------------------------------
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "fs";
 import path from "path";
 import { homedir } from "os";
 
@@ -18,6 +18,7 @@ import type {
   AgentFactStore,
   SharedKnowledgeStore,
   LegacyMemoryStore,
+  WorkState,
 } from "./types.js";
 
 /* ── Configurable root ──────────────────────────────────────────────────── */
@@ -56,7 +57,9 @@ function readJSON<T>(filePath: string, fallback: T): T {
 
 function writeJSON(filePath: string, data: unknown): void {
   ensureDir(filePath);
-  writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+  const tmpPath = `${filePath}.${process.pid}.${Date.now()}.tmp`;
+  writeFileSync(tmpPath, JSON.stringify(data, null, 2), "utf-8");
+  renameSync(tmpPath, filePath);
 }
 
 /* ── Path helpers ───────────────────────────────────────────────────────── */
@@ -77,6 +80,10 @@ function legacyPath(): string {
   return path.join(_root, "memory.json");
 }
 
+function workStatePath(agentId: string): string {
+  return path.join(_root, "work-state", `${agentId}.json`);
+}
+
 /* ── L1: Session History ────────────────────────────────────────────────── */
 
 function emptySessionStore(): SessionHistoryStore {
@@ -89,6 +96,20 @@ export function loadSessionHistory(agentId: string): SessionHistoryStore {
 
 export function saveSessionHistory(agentId: string, store: SessionHistoryStore): void {
   writeJSON(sessionPath(agentId), store);
+}
+
+/* ── Live Work State ────────────────────────────────────────────────────── */
+
+export function loadWorkState(agentId: string): WorkState | null {
+  return readJSON<WorkState | null>(workStatePath(agentId), null);
+}
+
+export function saveWorkState(agentId: string, state: WorkState): void {
+  writeJSON(workStatePath(agentId), state);
+}
+
+export function clearWorkState(agentId: string): void {
+  writeJSON(workStatePath(agentId), null);
 }
 
 /* ── L2: Agent Facts ────────────────────────────────────────────────────── */
