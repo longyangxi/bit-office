@@ -2,7 +2,7 @@
  * Persist team state to disk so gateway restarts don't lose agents/team/phase.
  * File: ~/.bit-office/team-state.json
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync, appendFileSync, readdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, appendFileSync, readdirSync } from "fs";
 import path from "path";
 import os from "os";
 import type { GatewayEvent } from "@office/shared";
@@ -58,9 +58,13 @@ export function loadTeamState(): TeamState {
 
 export function saveTeamState(state: TeamState): void {
   try {
-    const dir = path.dirname(getStateFile());
+    const file = getStateFile();
+    const dir = path.dirname(file);
     if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
-    writeFileSync(getStateFile(), JSON.stringify(state, null, 2), "utf-8");
+    // Atomic write: tmp file + rename to prevent truncation on kill
+    const tmp = file + ".tmp";
+    writeFileSync(tmp, JSON.stringify(state, null, 2), "utf-8");
+    renameSync(tmp, file);
   } catch (e) {
     console.log(`[TeamState] Failed to save: ${e}`);
   }
