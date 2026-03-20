@@ -16,17 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          id="google-fonts"
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=Press+Start+2P&display=swap"
           rel="stylesheet"
-          media="print"
         />
-        <script dangerouslySetInnerHTML={{ __html: `
-          document.getElementById('google-fonts').onload = function() { this.media = 'all'; };
-        `}} />
-        <noscript>
-          <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=Press+Start+2P&display=swap" rel="stylesheet" />
-        </noscript>
       </head>
       <body style={{ margin: 0, backgroundColor: "#16122a", color: "#eddcb8", fontFamily: "system-ui, sans-serif" }}>
         {children}
