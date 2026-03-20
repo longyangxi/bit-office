@@ -1,6 +1,10 @@
 /**
  * AIBackend interface — consumers register their own implementations.
  * No concrete backends shipped in this package.
+ *
+ * Inspired by Overstory's AgentRuntime pattern: each CLI adapter knows
+ * its own instruction file path, stability level, and capability flags.
+ * See: https://github.com/jayminwest/overstory/blob/main/src/runtimes/types.ts
  */
 
 export interface BuildArgsOpts {
@@ -21,6 +25,12 @@ export interface BuildArgsOpts {
   worktree?: boolean;
 }
 
+/** Stability level of a backend adapter */
+export type BackendStability = "stable" | "beta" | "experimental";
+
+/** Guard mechanism supported by the backend */
+export type GuardType = "hooks" | "sandbox" | "flag" | "none";
+
 export interface AIBackend {
   id: string;
   name: string;
@@ -30,4 +40,37 @@ export interface AIBackend {
   deleteEnv?: string[];
   /** Whether this backend accepts stdin messages while running */
   supportsStdin?: boolean;
+
+  // ── Overstory-inspired adapter metadata ──
+
+  /**
+   * Relative path to the instruction file within a worktree.
+   * Each CLI reads its own convention:
+   *   claude  → .claude/CLAUDE.md
+   *   codex   → AGENTS.md
+   *   gemini  → GEMINI.md
+   *   copilot → .github/copilot-instructions.md
+   *   cursor  → .cursor/rules/overstory.md
+   *   aider   → .aider.conf.yml (or prompt via CLI)
+   * Used by worktree setup to deploy agent instructions to the right path.
+   */
+  instructionPath?: string;
+
+  /** Stability level: stable backends are production-tested, experimental may have gaps */
+  stability?: BackendStability;
+
+  /** What guard mechanism this backend supports for security boundaries */
+  guardType?: GuardType;
+
+  /** Whether this backend supports session resume (--resume / --continue) */
+  supportsResume?: boolean;
+
+  /** Whether this backend supports subagent types (--agent) */
+  supportsAgentType?: boolean;
+
+  /** Whether this backend supports native worktree isolation */
+  supportsNativeWorktree?: boolean;
+
+  /** Whether this backend outputs structured JSON (stream-json, NDJSON, etc.) */
+  supportsStructuredOutput?: boolean;
 }

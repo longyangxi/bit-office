@@ -18,7 +18,7 @@ export { getMemoryContext, getMemoryStore, clearMemory, recordReviewFeedback, re
 export type { ReviewPattern, ProjectRecord } from "./memory.js";
 export { createWorktree, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts, cleanupStaleWorktrees, getIsolatedGitEnv } from "./worktree.js";
 export type { MergeResult } from "./worktree.js";
-export type { AIBackend, BuildArgsOpts } from "./ai-backend.js";
+export type { AIBackend, BuildArgsOpts, BackendStability, GuardType } from "./ai-backend.js";
 export type { TeamPhaseInfo } from "./phase-machine.js";
 export type {
   AgentStatus,

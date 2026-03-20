@@ -41,11 +41,19 @@ function ensureClaudeSettingsForRoot() {
 ensureClaudeSettingsForRoot();
 
 const backends: AIBackend[] = [
+  // ── Stable backends ───────────────────────────────────────────
   {
     id: "claude",
     name: "Claude Code",
     command: "claude",
     supportsStdin: true,
+    instructionPath: ".claude/CLAUDE.md",
+    stability: "stable",
+    guardType: "hooks",
+    supportsResume: true,
+    supportsAgentType: true,
+    supportsNativeWorktree: true,
+    supportsStructuredOutput: true,
     buildArgs(prompt, opts) {
       const args = ["-p", prompt, "--output-format", "stream-json", "--verbose"];
       if (!isRoot) args.push("--dangerously-skip-permissions");
@@ -68,6 +76,13 @@ const backends: AIBackend[] = [
     id: "codex",
     name: "Codex CLI",
     command: "codex",
+    instructionPath: "AGENTS.md",
+    stability: "stable",
+    guardType: "sandbox",          // OS-level Seatbelt (macOS) / Landlock (Linux)
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
     buildArgs(prompt, opts) {
       if (opts.fullAccess && !isRoot) {
         return ["exec", prompt, "--dangerously-bypass-approvals-and-sandbox", "--skip-git-repo-check"];
@@ -75,18 +90,72 @@ const backends: AIBackend[] = [
       return ["exec", prompt, "--full-auto", "--skip-git-repo-check"];
     },
   },
+
+  // ── Beta backends ─────────────────────────────────────────────
   {
     id: "gemini",
     name: "Gemini CLI",
     command: "gemini",
+    instructionPath: "GEMINI.md",
+    stability: "beta",
+    guardType: "flag",             // --sandbox flag
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
     buildArgs(prompt) {
       return ["-p", prompt, "--yolo"];
+    },
+  },
+
+  // ── Experimental backends ─────────────────────────────────────
+  {
+    id: "copilot",
+    name: "GitHub Copilot",
+    command: "copilot",
+    instructionPath: ".github/copilot-instructions.md",
+    stability: "experimental",
+    guardType: "none",
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
+    buildArgs(prompt, opts) {
+      const args = ["-p", prompt];
+      if (opts.fullAccess) args.push("--allow-all-tools");
+      if (opts.model) args.push("--model", opts.model);
+      return args;
+    },
+  },
+  {
+    id: "cursor",
+    name: "Cursor CLI",
+    command: "agent",              // Cursor's CLI binary is "agent", not "cursor"
+    instructionPath: ".cursor/rules/instructions.md",
+    stability: "experimental",
+    guardType: "none",
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
+    buildArgs(prompt, opts) {
+      const args = ["-p", prompt];
+      if (opts.fullAccess) args.push("--yolo");
+      if (opts.model) args.push("--model", opts.model);
+      return args;
     },
   },
   {
     id: "aider",
     name: "Aider",
     command: "aider",
+    instructionPath: ".aider.conf.yml",
+    stability: "experimental",
+    guardType: "none",
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
     buildArgs(prompt) {
       return ["--message", prompt, "--yes", "--no-pretty", "--no-git"];
     },
@@ -95,8 +164,50 @@ const backends: AIBackend[] = [
     id: "opencode",
     name: "OpenCode",
     command: "opencode",
+    instructionPath: "AGENTS.md",  // Same convention as Codex
+    stability: "experimental",
+    guardType: "none",
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: true,
     buildArgs(prompt) {
       return ["run", prompt, "--format", "json"];
+    },
+  },
+  {
+    id: "pi",
+    name: "Pi",
+    command: "pi",
+    instructionPath: ".claude/CLAUDE.md",  // Pi reads .claude/CLAUDE.md like Claude Code
+    stability: "experimental",
+    guardType: "none",             // .pi/extensions/ guard system exists but not deployed by us
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: false,
+    buildArgs(prompt, opts) {
+      const args = ["-p", prompt];
+      if (opts.model) args.push("--model", opts.model);
+      return args;
+    },
+  },
+  {
+    id: "sapling",
+    name: "Sapling",
+    command: "sp",
+    instructionPath: "SAPLING.md",
+    stability: "experimental",
+    guardType: "none",             // .sapling/guards.json exists but not deployed by us
+    supportsResume: false,
+    supportsAgentType: false,
+    supportsNativeWorktree: false,
+    supportsStructuredOutput: true,
+    buildArgs(prompt, opts) {
+      const args = ["run"];
+      if (opts.model) args.push("--model", opts.model);
+      args.push("--json", prompt);
+      return args;
     },
   },
 ];
@@ -111,15 +222,36 @@ export function getAllBackends(): AIBackend[] {
   return backends;
 }
 
+/**
+ * Version-probe commands for backends with ambiguous binary names.
+ * Maps backend id → shell command that succeeds ONLY if the real CLI is installed.
+ * Backends not listed here use plain `which <command>` (their names are distinctive enough).
+ */
+const VERSION_PROBES: Record<string, string> = {
+  // "agent" is too generic — verify it's actually Cursor's CLI
+  cursor: "agent --version 2>&1 | grep -iq cursor",
+  // "pi" collides with math utilities, coreutils, etc.
+  pi: "pi --version 2>&1 | grep -iq pi",
+  // "sp" collides with Sapling SCM and other tools
+  sapling: "sp --version 2>&1 | grep -iq sapling",
+};
+
 /** Check which AI CLI tools are installed on this machine */
 export function detectBackends(): string[] {
   const detected: string[] = [];
   for (const backend of backends) {
     try {
-      execSync(`which ${backend.command}`, { stdio: "ignore", timeout: 3000 });
+      const probe = VERSION_PROBES[backend.id];
+      if (probe) {
+        // Ambiguous name — run version probe to verify identity
+        execSync(probe, { stdio: "ignore", timeout: 5000 });
+      } else {
+        // Distinctive name — `which` is sufficient
+        execSync(`which ${backend.command}`, { stdio: "ignore", timeout: 3000 });
+      }
       detected.push(backend.id);
     } catch {
-      // not installed
+      // not installed or wrong binary
     }
   }
   return detected;

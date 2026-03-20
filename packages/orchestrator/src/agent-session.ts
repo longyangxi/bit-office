@@ -380,10 +380,10 @@ export class AgentSession {
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
 
-      // Resolve subagent type for Claude Code (matches ~/.claude/agents/ by name field).
-      // If no matching agent exists, Claude CLI silently ignores it.
+      // Resolve subagent type for backends that support it (e.g. Claude Code --agent).
+      // Uses the backend.supportsAgentType flag instead of hardcoded id check.
       let agentType: string | undefined;
-      if (this.backend.id === "claude" && !this._isTeamLead) {
+      if (this.backend.supportsAgentType && !this._isTeamLead) {
         const roleName = this.role.split(/\s*[—–]\s*/)[0].trim();
         if (roleName && roleName.length > 2) {
           agentType = roleName;

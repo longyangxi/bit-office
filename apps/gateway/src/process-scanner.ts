@@ -1,7 +1,12 @@
 import { execFile } from "child_process";
 
-/** Known CLI agent commands to detect */
-const KNOWN_COMMANDS = ["claude", "codex", "gemini", "aider", "opencode"];
+/**
+ * Known CLI agent commands to detect via process scanning.
+ * Only includes distinctive binary names that won't collide with unrelated tools.
+ * Ambiguous names (agent, pi, sp) are excluded — they require argv pattern matching
+ * handled separately in matchCommand() to avoid false positives.
+ */
+const KNOWN_COMMANDS = ["claude", "codex", "gemini", "aider", "opencode", "copilot"];
 
 /** Map command name → backend ID (matches BACKEND_OPTIONS in the UI) */
 const COMMAND_TO_BACKEND: Record<string, string> = {
@@ -10,7 +15,26 @@ const COMMAND_TO_BACKEND: Record<string, string> = {
   gemini: "gemini",
   aider: "aider",
   opencode: "opencode",
+  copilot: "copilot",
+  // Ambiguous names mapped via argv pattern matching (see matchCommand)
+  "cursor-agent": "cursor",
+  "pi-agent": "pi",
+  "sapling-agent": "sapling",
 };
+
+/**
+ * Argv patterns that disambiguate generic binary names from unrelated tools.
+ * Each entry: [regex matching the full argv string, mapped command key].
+ * These are checked AFTER the distinctive KNOWN_COMMANDS fail to match.
+ */
+const AMBIGUOUS_ARGV_PATTERNS: Array<[RegExp, string]> = [
+  // Cursor: "agent" binary with cursor-specific flags (--yolo, --model, -p)
+  [/(?:^|\/)agent\s+.*(?:--yolo|--model|-p\s)/, "cursor-agent"],
+  // Pi: "pi" binary with coding-agent flags (-p, --model)
+  [/(?:^|\/)pi\s+.*(?:-p\s|--model\s)/, "pi-agent"],
+  // Sapling: "sp" binary with sapling-specific subcommands (run --json)
+  [/(?:^|\/)sp\s+run\s/, "sapling-agent"],
+];
 
 export interface ExternalAgent {
   pid: number;
@@ -206,11 +230,18 @@ export class ProcessScanner {
   private matchCommand(args: string): string | null {
     // Match command name from the process args
     // args might be: /path/to/claude --flags, or just "claude ..."
+
+    // 1. Check distinctive command names first (safe — no ambiguity)
     for (const cmd of KNOWN_COMMANDS) {
-      // Match as standalone command (end of path or start of args)
       const re = new RegExp(`(?:^|/)${cmd}(?:\\s|$)`);
       if (re.test(args)) return cmd;
     }
+
+    // 2. Check ambiguous names only with argv pattern disambiguation
+    for (const [pattern, mappedKey] of AMBIGUOUS_ARGV_PATTERNS) {
+      if (pattern.test(args)) return mappedKey;
+    }
+
     return null;
   }
 }

@@ -247,26 +247,22 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Other backends: use bit-office managed worktrees.
     const isLeader = this.agentManager.isTeamLead(agentId);
     const isReviewerRole = session.role.toLowerCase().includes("review");
-    const isClaudeBackend = session.backendId === "claude";
     const hasSoloNeighbor = this.agentManager.getAll().some(
       a => a.agentId !== agentId && !a.teamId && a.workspaceDir === session.workspaceDir,
     );
 
+    // NOTE: Claude Code's native --worktree flag is incompatible with -p and --resume
+    // (causes exit code 1). All backends use managed worktrees (.worktrees/) instead.
     if (this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && hasSoloNeighbor) {
-      if (isClaudeBackend) {
-        // Claude Code has native --worktree; skip manual worktree
-        session.useNativeWorktree = true;
-      } else {
-        const base = repoPath ?? session.workspaceDir;
-        const wt = createWorktree(base, agentId, taskId, session.name);
-        if (wt) {
-          const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
-          session.worktreePath = wt;
-          session.worktreeBranch = branch;
-          // Clear history — can't --resume in a different directory
-          session.clearHistory();
-          this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
-        }
+      const base = repoPath ?? session.workspaceDir;
+      const wt = createWorktree(base, agentId, taskId, session.name);
+      if (wt) {
+        const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+        session.worktreePath = wt;
+        session.worktreeBranch = branch;
+        // Clear history — can't --resume in a different directory
+        session.clearHistory();
+        this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
       }
     }
 
