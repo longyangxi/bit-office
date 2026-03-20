@@ -302,7 +302,7 @@ export class AgentSession {
 
     this.currentTaskId = taskId;
     this.currentPhase = phaseOverride ?? null;
-    const cwd = repoPath ?? this.workspace;
+    const cwd = repoPath ?? this.worktreePath ?? this.workspace;
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
