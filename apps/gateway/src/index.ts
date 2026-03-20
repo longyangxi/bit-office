@@ -437,7 +437,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         if (detected) {
           console.log(`[Gateway] SERVE_PREVIEW (auto-detected ${detected.cmd}): cwd=${projectDir}`);
           previewServer.runCommand(detected.cmd, projectDir, detected.port);
-          publishEvent({ type: "PREVIEW_READY", url: "http://localhost:9101" });
+          publishEvent({ type: "PREVIEW_READY", url: "http://localhost:9198" });
         } else {
           console.log(`[Gateway] SERVE_PREVIEW (static): ${cleanPath}`);
           previewServer.serve(cleanPath);

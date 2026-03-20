@@ -48,7 +48,7 @@ export const CONFIG = {
 
   preview: {
     /** Port for static file serving (npx serve) */
-    staticPort: 9100,
+    staticPort: 9199,
     /** Common build output directories to scan for index.html */
     buildOutputCandidates: [
       "dist/index.html",

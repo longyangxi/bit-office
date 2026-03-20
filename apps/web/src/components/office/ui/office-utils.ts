@@ -56,9 +56,9 @@ export function linkifyText(children: React.ReactNode): React.ReactNode {
 /** Compute expected preview URL from result metadata (no server started yet) */
 export function computePreviewUrl(result: { previewUrl?: string; previewCmd?: string; previewPort?: number; previewPath?: string; entryFile?: string }): string | undefined {
   if (result.previewUrl) return result.previewUrl;
-  if (result.previewCmd && result.previewPort) return "http://localhost:9101";
-  if (result.previewPath) return `http://localhost:9100/${result.previewPath.split("/").pop()}`;
-  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return `http://localhost:9100/${result.entryFile.split("/").pop()}`;
+  if (result.previewCmd && result.previewPort) return "http://localhost:9198";
+  if (result.previewPath) return `http://localhost:9199/${result.previewPath.split("/").pop()}`;
+  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return `http://localhost:9199/${result.entryFile.split("/").pop()}`;
   return undefined;
 }
 

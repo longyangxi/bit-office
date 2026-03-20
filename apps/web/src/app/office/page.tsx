@@ -998,7 +998,7 @@ export default function OfficePage() {
       const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(Review failed — reviewer encountered an error)");
-    } else if (reviewer.messages.length > 0) {
+    } else {
       const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
       const text = reviewMessages.length > 0 ? reviewMessages[reviewMessages.length - 1].text : "";
       setReviewResultText(text || "(No issues found)");
@@ -1094,7 +1094,7 @@ export default function OfficePage() {
       hasMoreMessages: visible.length < ag.messages.length,
       tokenUsage: ag.tokenUsage,
       lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
-      busy: ag.status === "working" || ag.status === "waiting_approval",
+      busy: reviewResultText === null && (ag.status === "working" || ag.status === "waiting_approval"),
       reviewDone: reviewResultText !== null,
     };
   }, [agents, getVisibleMessages, reviewResultText]);
