@@ -247,6 +247,8 @@ export interface OrchestratorEventMap {
 export interface WorktreeOptions {
   /** Merge worktree branch back to parent on task success (default: true) */
   mergeOnComplete?: boolean;
+  /** Always create worktree for every agent, even without neighbors (default: false) */
+  alwaysIsolate?: boolean;
 }
 
 export interface RetryOptions {

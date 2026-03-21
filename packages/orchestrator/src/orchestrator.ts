@@ -37,6 +37,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private sandboxMode: "full" | "safe";
   private worktreeEnabled: boolean;
   private worktreeMerge: boolean;
+  private worktreeAlwaysIsolate: boolean;
   get isWorktreeEnabled(): boolean { return this.worktreeEnabled; }
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
@@ -54,9 +55,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (opts.worktree === false) {
       this.worktreeEnabled = false;
       this.worktreeMerge = false;
+      this.worktreeAlwaysIsolate = false;
     } else {
       this.worktreeEnabled = true;
       this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
+      this.worktreeAlwaysIsolate = opts.worktree?.alwaysIsolate ?? false;
     }
 
     // Register backends
@@ -282,9 +285,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (this.agentManager.isTeamLead(agentId)) return;
     if (session.role.toLowerCase().includes("review")) return;
 
-    // Solo agents: only create worktree when another solo agent is working in the same directory.
-    // Without a neighbor, worktree is unnecessary and breaks --resume (different cwd = lost session).
-    if (!session.teamId) {
+    // Solo agents: create worktree when alwaysIsolate is on, or when a neighbor is working in the same dir.
+    if (!session.teamId && !this.worktreeAlwaysIsolate) {
       const effectiveRepo = repoPath ?? session.workspaceDir;
       if (!this.hasSoloNeighbor(agentId, effectiveRepo)) return;
     }
