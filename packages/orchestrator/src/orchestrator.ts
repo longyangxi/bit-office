@@ -36,6 +36,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private sandboxMode: "full" | "safe";
   private worktreeEnabled: boolean;
   private worktreeMerge: boolean;
+  get isWorktreeEnabled(): boolean { return this.worktreeEnabled; }
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
   /** Accumulated changedFiles from all workers in the current team session */
@@ -72,6 +73,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       this.agentManager,
       this.promptEngine,
       (e) => this.emitEvent(e),
+      (agentId, taskId, repoPath) => this.setupWorktreeForAgent(agentId, taskId, repoPath),
     );
 
     // Retry
@@ -243,29 +245,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       teamContext = this.buildSoloPeerContext(agentId);
     }
 
-    // Worktree isolation for solo agents sharing the same workspace.
-    // Use stable metadata: count how many solo agents are *registered* for this
-    // workspace (set at createAgent time), not how many happen to be running now.
-    const isLeader = this.agentManager.isTeamLead(agentId);
-    const isReviewerRole = session.role.toLowerCase().includes("review");
-    const isSharedWorkspace = this.agentManager.getAll().filter(
-      a => !a.teamId && a.workspaceDir === session.workspaceDir,
-    ).length > 1;
-
+    // Worktree isolation: create a branch for each non-leader, non-reviewer agent.
+    // When worktree is disabled, agents work directly in the designated directory on the current branch.
     // NOTE: Claude Code's native --worktree flag is incompatible with -p and --resume
     // (causes exit code 1). All backends use managed worktrees (.worktrees/) instead.
-    if (this.worktreeEnabled && !session.worktreePath && !isLeader && !isReviewerRole && isSharedWorkspace) {
-      const base = repoPath ?? session.workspaceDir;
-      const wt = createWorktree(base, agentId, taskId, session.name);
-      if (wt) {
-        const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
-        session.worktreePath = wt;
-        session.worktreeBranch = branch;
-        // Clear history — can't --resume in a different directory
-        session.clearHistory();
-        this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
-      }
-    }
+    this.setupWorktreeForAgent(agentId, taskId, repoPath ?? session.workspaceDir);
 
     session.runTask(taskId, prompt, repoPath, teamContext, true /* isUserInitiated */, opts?.phaseOverride);
   }
@@ -284,6 +268,54 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
     session.worktreePath = worktreePath;
     session.worktreeBranch = branch;
+  }
+
+  /**
+   * Create a worktree for an agent's task (if worktree is enabled).
+   * Skips leaders and reviewers. Called from both runTask() and delegation.
+   */
+  private setupWorktreeForAgent(agentId: string, taskId: string, repoPath?: string): void {
+    if (!this.worktreeEnabled) return;
+    const session = this.agentManager.get(agentId);
+    if (!session || session.worktreePath) return;
+    if (this.agentManager.isTeamLead(agentId)) return;
+    if (session.role.toLowerCase().includes("review")) return;
+
+    const base = repoPath ?? session.workspaceDir;
+    const wt = createWorktree(base, agentId, taskId, session.name);
+    if (wt) {
+      const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+      session.worktreePath = wt;
+      session.worktreeBranch = branch;
+      // Clear history — can't --resume in a different directory
+      session.clearHistory();
+      this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
+    }
+  }
+
+  /**
+   * Merge all worker worktrees back to the main branch (called on team finalization).
+   */
+  private mergeAllWorkerWorktrees(leaderAgentId: string): void {
+    for (const session of this.agentManager.getAll()) {
+      if (session.agentId === leaderAgentId) continue;
+      if (!session.worktreePath || !session.worktreeBranch) continue;
+      const base = session.worktreePath.includes(".worktrees")
+        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        : this.workspace;
+      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
+      this.emitEvent({
+        type: "worktree:merged",
+        agentId: session.agentId,
+        taskId: "finalize",
+        branch: session.worktreeBranch,
+        success: result.success,
+        conflictFiles: result.conflictFiles,
+        stagedFiles: result.stagedFiles,
+      });
+      session.worktreePath = null;
+      session.worktreeBranch = null;
+    }
   }
 
   /**
@@ -617,9 +649,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (event.type === "task:done") {
       this.retryTracker?.clear(event.taskId);
 
-      // Merge worktree back on successful task completion (non-leader workers only)
+      // Worktree merge strategy:
+      // - Team workers: keep worktree alive between tasks so the agent retains session
+      //   history (--resume). Merge all at once when team result is finalized.
+      // - Solo agents: merge immediately on task completion (no team finalize event).
       const doneSession = this.agentManager.get(agentId);
-      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch && !this.agentManager.isTeamLead(agentId)) {
+      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
+        && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? require("path").dirname(require("path").dirname(doneSession.worktreePath))
           : this.workspace;
@@ -697,6 +733,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
           // Clear any straggler delegations so they don't restart the leader later
           this.delegationRouter.clearAgent(agentId);
+
+          // Merge all worker worktrees back to main branch
+          if (this.worktreeMerge) {
+            this.mergeAllWorkerWorktrees(agentId);
+          }
 
           // Finalize: merge team data, validate entry file, resolve preview URL
           if (event.result) {

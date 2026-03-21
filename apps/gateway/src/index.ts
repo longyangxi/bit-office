@@ -1011,14 +1011,8 @@ async function main() {
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
       }
-      // Restore worktree info on the live session (only if directory still exists)
-      if (agent.worktreePath && agent.worktreeBranch) {
-        if (existsSync(agent.worktreePath)) {
-          orc.restoreWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
-        } else {
-          console.warn(`[Gateway] Worktree ${agent.worktreePath} for agent ${agent.agentId} no longer exists, skipping restore`);
-        }
-      }
+      // Never restore old worktree state — stale worktrees are cleaned up on startup
+      // and fresh ones are created when agents start new tasks (if worktree is enabled).
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {
         agentWorkDirs.set(agent.agentId, agent.workDir);
@@ -1064,26 +1058,23 @@ async function main() {
     }
   }
 
-  // GC: clean up stale agent/* branches and orphaned worktrees from previous ungraceful shutdowns.
+  // GC: clean up ALL agent/* branches and orphaned worktrees from previous sessions.
+  // Fresh worktrees are created when agents start new tasks (if worktree is enabled).
   {
-    const repoActiveBranches = new Map<string, Set<string>>();
-    const addRepo = (repo: string, branch?: string | null) => {
-      if (!repoActiveBranches.has(repo)) repoActiveBranches.set(repo, new Set());
-      if (branch) repoActiveBranches.get(repo)!.add(branch);
-    };
-    addRepo(config.defaultWorkspace);
+    const repos = new Set<string>();
+    repos.add(config.defaultWorkspace);
     const cwd = process.cwd();
-    if (cwd !== "/" && cwd !== config.defaultWorkspace) addRepo(cwd);
+    if (cwd !== "/" && cwd !== config.defaultWorkspace) repos.add(cwd);
     if (savedState.team?.projectDir && existsSync(savedState.team.projectDir)) {
-      addRepo(savedState.team.projectDir);
+      repos.add(savedState.team.projectDir);
     }
     for (const agent of savedState.agents) {
       const repo = agent.workDir ?? config.defaultWorkspace;
-      addRepo(repo, agent.worktreeBranch);
+      repos.add(repo);
     }
-    for (const [repo, activeBranches] of repoActiveBranches) {
+    for (const repo of repos) {
       if (existsSync(repo)) {
-        cleanupStaleWorktrees(repo, activeBranches);
+        cleanupStaleWorktrees(repo); // empty activeBranches = clean all
       }
     }
   }

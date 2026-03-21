@@ -56,14 +56,17 @@ export class DelegationRouter {
   private agentManager: AgentManager;
   private promptEngine: PromptEngine;
   private emitEvent: (event: OrchestratorEvent) => void;
+  private prepareWorktree?: (agentId: string, taskId: string, repoPath?: string) => void;
   constructor(
     agentManager: AgentManager,
     promptEngine: PromptEngine,
     emitEvent: (event: OrchestratorEvent) => void,
+    prepareWorktree?: (agentId: string, taskId: string, repoPath?: string) => void,
   ) {
     this.agentManager = agentManager;
     this.promptEngine = promptEngine;
     this.emitEvent = emitEvent;
+    this.prepareWorktree = prepareWorktree;
   }
 
   /**
@@ -286,6 +289,8 @@ export class DelegationRouter {
         intent: cleanPrompt.slice(0, CONFIG.limits.intentChars),
         phase: "started",
       });
+      // Create worktree branch for this worker (if enabled)
+      this.prepareWorktree?.(target.agentId, taskId, repoPath);
       // Inject lightweight team context so workers are aware of peers
       const workerTeamContext = this.buildWorkerTeamContext(target.agentId);
       target.runTask(taskId, fullPrompt, repoPath, workerTeamContext);
@@ -493,6 +498,7 @@ export class DelegationRouter {
       timestamp: Date.now(),
     });
 
+    this.prepareWorktree?.(devAgentId, fixTaskId, repoPath);
     const workerTeamContext = this.buildWorkerTeamContext(devAgentId);
     devSession.runTask(fixTaskId, fixPrompt, repoPath, workerTeamContext);
     return true;
