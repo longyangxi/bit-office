@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
-import { TERM_BG, TERM_GREEN, TERM_PANEL, TERM_BORDER, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_BLUE, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_BG, TERM_GREEN, TERM_PANEL, TERM_BORDER, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
 import { computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 
 function ConfettiOverlay() {
@@ -90,10 +90,10 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
       <div style={{
         backgroundColor: TERM_BG, padding: "28px 24px",
         maxWidth: 420, width: "90%", textAlign: "center",
-        border: `2px solid ${TERM_SEM_YELLOW}`, boxShadow: `0 0 40px ${TERM_SEM_YELLOW}15, 4px 4px 0px rgba(0,0,0,0.5)`,
+        border: `2px solid ${TERM_GREEN}`, boxShadow: `0 0 40px ${TERM_GREEN}15, 4px 4px 0px rgba(0,0,0,0.5)`,
       }}>
-        <div style={{ fontSize: 34, marginBottom: 10, color: TERM_SEM_YELLOW }}>{"\u2605"}</div>
-        <div className="px-font" style={{ color: TERM_SEM_YELLOW, fontSize: 14, marginBottom: 10, letterSpacing: "0.05em" }}>
+        <div style={{ fontSize: 34, marginBottom: 10, color: TERM_GREEN }}>{"\u2605"}</div>
+        <div className="px-font" style={{ color: TERM_GREEN, fontSize: 14, marginBottom: 10, letterSpacing: "0.05em" }}>
           Mission Complete!
         </div>
         <div style={{

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useOfficeStore, type ProjectSummary } from "@/store/office-store";
 import { sendCommand } from "@/lib/connection";
 import type { GatewayEvent } from "@office/shared";
-import { TERM_SURFACE, TERM_PANEL, TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_DIM } from "./termTheme";
+import { TERM_BG, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_PANEL, TERM_SURFACE, TERM_HOVER, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 
 function formatTokens(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
@@ -101,33 +101,33 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
     delegation: { bg: `${TERM_SEM_BLUE}0a`, border: `${TERM_SEM_BLUE}20`, label: "DELEGATE", labelColor: TERM_SEM_BLUE },
     result: { bg: `${TERM_SEM_GREEN}0a`, border: `${TERM_SEM_GREEN}20`, label: "DONE", labelColor: TERM_SEM_GREEN },
     phase: { bg: `${TERM_SEM_YELLOW}0a`, border: `${TERM_SEM_YELLOW}20`, label: "PHASE", labelColor: TERM_SEM_YELLOW },
-    status: { bg: "rgba(255, 255, 255, 0.02)", border: "rgba(255, 255, 255, 0.06)", label: "STATUS", labelColor: TERM_DIM },
+    status: { bg: `${TERM_SURFACE}30`, border: TERM_BORDER_DIM, label: "STATUS", labelColor: TERM_DIM },
   };
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
       <div style={{
         padding: "14px 16px",
-        borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+        borderBottom: `1px solid ${TERM_BORDER}`,
         display: "flex", alignItems: "center", gap: 10,
       }}>
         <button
           onClick={onBack}
                     style={{
-            background: "none", border: "1px solid rgba(255, 255, 255, 0.15)", color: "rgba(255, 255, 255, 0.5)",
+            background: "none", border: `1px solid ${TERM_BORDER}`, color: TERM_DIM,
             padding: "5px 12px", cursor: "pointer", fontSize: 11, letterSpacing: "0.03em",
           }}
         >
           Back
         </button>
-        <span className="px-font" style={{ color: "#e8b040", fontSize: 13, fontWeight: 600, flex: 1, letterSpacing: "0.02em" }}>
+        <span className="px-font" style={{ color: TERM_GREEN, fontSize: 13, fontWeight: 600, flex: 1, letterSpacing: "0.02em" }}>
           {name}
         </span>
         {hasPreview(preview) && onPreview && (
           <button
             onClick={() => onPreview(preview)}
                         style={{
-              background: "rgba(72, 204, 106, 0.12)", border: "1px solid rgba(72, 204, 106, 0.25)",
+              background: `${TERM_SEM_GREEN}1f`, border: `1px solid ${TERM_SEM_GREEN}40`,
               color: TERM_SEM_GREEN, padding: "5px 14px", cursor: "pointer",
               fontSize: 11, letterSpacing: "0.03em",
             }}
@@ -138,7 +138,7 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
       </div>
       <div style={{ flex: 1, overflow: "auto", padding: "8px 12px" }}>
         {messages.length === 0 && (
-          <div className="px-font" style={{ color: "rgba(255, 255, 255, 0.3)", fontSize: 12, textAlign: "center", padding: 40 }}>
+          <div className="px-font" style={{ color: TERM_DIM, fontSize: 12, textAlign: "center", padding: 40 }}>
             No messages in this project
           </div>
         )}
@@ -157,14 +157,14 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
                   {s.label}
                 </span>
                 <span style={{
-                  color: "rgba(255, 255, 255, 0.6)", fontSize: 11, fontWeight: 600,
+                  color: TERM_TEXT, fontSize: 11, fontWeight: 600,
                   fontFamily: "monospace",
                 }}>
                   {msg.agent.replace(/^agent-/, "").split("-")[0]}
                 </span>
               </div>
               <div style={{
-                color: "rgba(255, 255, 255, 0.55)", fontSize: 12, lineHeight: 1.5,
+                color: TERM_TEXT, fontSize: 12, lineHeight: 1.5,
                 fontFamily: "monospace",
                 whiteSpace: "pre-wrap", wordBreak: "break-word",
               }}>
@@ -230,8 +230,8 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
     >
       <div
         style={{
-          backgroundColor: "#14141a", border: "2px solid #e8b040",
-          boxShadow: "0 0 40px rgba(200,155,48,0.08), 4px 4px 0px rgba(0,0,0,0.5)",
+          backgroundColor: TERM_BG, border: `2px solid ${TERM_GREEN}`,
+          boxShadow: `0 0 40px ${TERM_GREEN}14, 4px 4px 0px rgba(0,0,0,0.5)`,
           width: "90%", maxWidth: 560, height: "70vh",
           display: "flex", flexDirection: "column",
         }}
@@ -240,16 +240,16 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
         {/* Header */}
         <div style={{
           padding: "14px 18px",
-          borderBottom: "1px solid rgba(232, 176, 64, 0.2)",
+          borderBottom: `1px solid ${TERM_GREEN}33`,
           display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
-          <span className="px-font" style={{ color: "#e8b040", fontSize: 13, fontWeight: 600, letterSpacing: "0.05em" }}>
+          <span className="px-font" style={{ color: TERM_GREEN, fontSize: 13, fontWeight: 600, letterSpacing: "0.05em" }}>
             Project History
           </span>
           <button
             onClick={onClose}
                         style={{
-              background: "none", border: "none", color: "rgba(255, 255, 255, 0.3)",
+              background: "none", border: "none", color: TERM_DIM,
               fontSize: 16, cursor: "pointer", lineHeight: 1,
             }}
           >
@@ -271,7 +271,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
             <div style={{ padding: "6px 0" }}>
               {projectList.length === 0 ? (
                 <div className="px-font" style={{
-                  color: "rgba(255, 255, 255, 0.3)", fontSize: 12, textAlign: "center",
+                  color: TERM_DIM, fontSize: 12, textAlign: "center",
                   padding: 40, lineHeight: 1.8,
                 }}>
                   No archived projects yet.
@@ -284,11 +284,11 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                     key={p.id}
                     style={{
                       padding: "12px 18px",
-                      borderBottom: i < projectList.length - 1 ? "1px solid rgba(255, 255, 255, 0.05)" : "none",
+                      borderBottom: i < projectList.length - 1 ? `1px solid ${TERM_BORDER_DIM}` : "none",
                       cursor: "pointer",
                       transition: "background 0.15s",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(232, 176, 64, 0.04)"; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.background = `${TERM_GREEN}0a`; }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
@@ -302,7 +302,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                       >
                         {/* Project name */}
                         <div style={{
-                          color: "rgba(255, 255, 255, 0.85)", fontSize: 12, fontWeight: 600,
+                          color: TERM_TEXT_BRIGHT, fontSize: 12, fontWeight: 600,
                           fontFamily: "monospace", marginBottom: 5,
                         }}>
                           {p.name}
@@ -311,19 +311,19 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                           <span style={{
                             fontSize: 10, fontFamily: "monospace",
-                            color: "rgba(255, 255, 255, 0.35)",
+                            color: TERM_DIM,
                           }}>
                             {formatRelativeDate(p.endedAt)}
                           </span>
                           <span style={{
                             fontSize: 10, fontFamily: "monospace",
-                            color: "#e8b040", opacity: 0.6,
+                            color: TERM_GREEN, opacity: 0.6,
                           }}>
                             {formatDuration(p.startedAt, p.endedAt)}
                           </span>
                           <span style={{
                             fontSize: 10, fontFamily: "monospace",
-                            color: "rgba(90, 172, 255, 0.5)",
+                            color: `${TERM_SEM_BLUE}80`,
                           }}>
                             {p.agentNames.length} agent{p.agentNames.length !== 1 ? "s" : ""}
                           </span>
@@ -341,7 +341,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                         {/* Agent names */}
                         <div style={{
                           fontSize: 10, fontFamily: "monospace",
-                          color: "rgba(255, 255, 255, 0.25)", marginTop: 4,
+                          color: TERM_DIM, marginTop: 4, opacity: 0.7,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                         }}>
                           {p.agentNames.join(" / ")}
@@ -354,7 +354,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                               return (
                                 <span key={key} style={{
                                   fontSize: 9, fontFamily: "monospace",
-                                  color: "rgba(232, 176, 64, 0.7)",
+                                  color: `${TERM_GREEN}b3`,
                                 }}>
                                   {key.slice(0, 4)} {"★".repeat(stars)}{"☆".repeat(5 - stars)}
                                 </span>
@@ -368,13 +368,13 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                         <button
                           onClick={(e) => { e.stopPropagation(); handlePreview(p.preview!, p.ratings); }}
                                                     style={{
-                            background: "rgba(72, 204, 106, 0.1)", border: "1px solid rgba(72, 204, 106, 0.25)",
+                            background: `${TERM_SEM_GREEN}1a`, border: `1px solid ${TERM_SEM_GREEN}40`,
                             color: TERM_SEM_GREEN, padding: "5px 12px", cursor: "pointer",
                             fontSize: 10, letterSpacing: "0.04em",
                             flexShrink: 0, marginTop: 2,
                           }}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(72, 204, 106, 0.2)"; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(72, 204, 106, 0.1)"; }}
+                          onMouseEnter={(e) => { e.currentTarget.style.background = `${TERM_SEM_GREEN}33`; }}
+                          onMouseLeave={(e) => { e.currentTarget.style.background = `${TERM_SEM_GREEN}1a`; }}
                         >
                           Preview
                         </button>
