@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -218,9 +218,9 @@ function ReviewButton({ result, onReview, detectedBackends }: {
       <button
         className="term-btn"
         onClick={() => setOpen(!open)}
-        style={termBtnStyle}
-        onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }}
-        onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}
+        style={reviewBtnStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_PURPLE; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_PURPLE}55`; }}
       >review {open ? "\u25B4" : "\u25BE"}</button>
       {open && (
         <div style={{
@@ -266,11 +266,24 @@ function ReviewButton({ result, onReview, detectedBackends }: {
 const termBtnStyle: React.CSSProperties = {
   color: TERM_TEXT, cursor: "pointer",
   border: `1px solid ${TERM_DIM}`,
-  padding: "4px 14px", fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+  padding: "3px 10px", fontSize: TERM_SIZE, fontFamily: TERM_FONT,
   backgroundColor: "transparent",
   transition: "border-color 0.15s ease, color 0.15s ease",
   display: "inline-block", verticalAlign: "middle",
   letterSpacing: "0.02em",
+  borderRadius: 4,
+};
+
+/* ── Themed button styles for preview / review ── */
+const previewBtnStyle: React.CSSProperties = {
+  ...termBtnStyle,
+  color: TERM_SEM_BLUE,
+  border: `1px solid ${TERM_SEM_BLUE}55`,
+};
+const reviewBtnStyle: React.CSSProperties = {
+  ...termBtnStyle,
+  color: TERM_SEM_PURPLE,
+  border: `1px solid ${TERM_SEM_PURPLE}55`,
 };
 
 const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
@@ -362,9 +375,9 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
           </div>
         )}
         {changedFiles.length > 0 && <div style={{ color: TERM_DIM, marginTop: 2 }}>{changedFiles.length} files changed</div>}
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>preview</button>}
-          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>launch</button>}
+        <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
+          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={previewBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_BLUE; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_BLUE}55`; }}>preview</button>}
+          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={previewBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_BLUE; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_BLUE}55`; }}>launch</button>}
         </div>
       </div>
     );
@@ -393,9 +406,9 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
           <div style={{ color: TERM_DIM, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
         {msg.result && !isTeamMember && !isTeamLead && (hasWebPreview(msg.result) || (onReview && msg.result.changedFiles.length > 0)) && (
-          <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
+          <div style={{ display: "flex", gap: 4, marginTop: 8, alignItems: "center" }}>
             {hasWebPreview(msg.result) && onPreview && (
-              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>preview</button>
+              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={previewBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_BLUE; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_BLUE}55`; }}>preview</button>
             )}
             {onReview && msg.result.changedFiles.length > 0 && (
               <ReviewButton result={msg.result} onReview={onReview} detectedBackends={detectedBackends ?? []} />
