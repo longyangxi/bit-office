@@ -1775,7 +1775,7 @@ export default function OfficePage() {
                     if (!selectedAgent) return;
                     const taskId = 'task-' + Date.now().toString(36);
                     addUserMessage(selectedAgent, taskId, "yes");
-                    sendCommand({ type: "RUN_TASK", agentId: selectedAgent, taskId, prompt: "yes" });
+                    sendCommand({ type: "RUN_TASK", agentId: selectedAgent, taskId, prompt: "yes", repoPath: agentWorkDirMap.get(selectedAgent) });
                   }}
                   onEndProject={handleEndProject}
                   onSuggest={handleSuggest}

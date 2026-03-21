@@ -655,9 +655,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const accumulated = streamMsg?._accumulatedText ?? "";
           const serverFull = event.result.fullOutput || event.result.summary;
           const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
-          // Detect solo agent presenting a [PLAN] that needs user approval.
+          // Detect solo agent presenting a [PLAN] or asking for user approval.
           const isSoloAgent = !agent.isTeamLead && !agent.teamId;
           const hasPlanAsk = isSoloAgent && /\[PLAN\]/i.test(bestText);
+          // Detect approval requests: agent blocked by sandbox/hooks, or explicitly asking for permission.
+          const hasApprovalAsk = isSoloAgent && !hasPlanAsk && /(?:需要.*(?:批准|审批|确认|允许)|(?:ask|need|request).*(?:approv|permiss|confirm)|before.*(?:proceed|continu)|destructive|请.*(?:手动|批准|确认)|sandbox.*(?:限制|restrict|block))/i.test(bestText);
 
           // Remove streaming message — final result (bestText) already contains the complete content
           const finalizedMessages = agent.messages.filter((m) => m.id !== streamId);
@@ -679,7 +681,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             ...agent,
             status: "done",
             currentTaskId: null,
-            awaitingApproval: hasPlanAsk,
+            awaitingApproval: hasPlanAsk || hasApprovalAsk,
             pendingApproval: null,
             lastLogLine: null,
             messages: newMessages,
