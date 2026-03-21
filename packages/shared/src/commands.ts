@@ -161,6 +161,7 @@ export const SaveConfigCommand = z.object({
   type: z.literal("SAVE_CONFIG"),
   telegramBotToken: z.string().optional(),
   telegramAllowedUsers: z.array(z.string()).optional(),
+  worktreeEnabled: z.boolean().optional(),
 });
 
 export const RequestReviewCommand = z.object({

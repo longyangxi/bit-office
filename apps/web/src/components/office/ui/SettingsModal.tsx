@@ -1,10 +1,8 @@
 "use client"
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
 import type { OfficeLayout } from '../types'
-import { serializeLayout, deserializeLayout } from '../layout/layoutSerializer'
-import { loadRoomZip } from '../layout/roomZipLoader'
 import { sendCommand } from '@/lib/connection'
 import { useOfficeStore } from '@/store/office-store'
 import { APP_VERSION, APP_BUILD_TIME } from '@/lib/appMeta'
@@ -68,6 +66,21 @@ const saveBtnStyle: React.CSSProperties = {
   cursor: 'pointer',
 }
 
+const checkboxStyle = (checked: boolean): React.CSSProperties => ({
+  width: 14,
+  height: 14,
+  border: '2px solid rgba(255, 255, 255, 0.5)',
+  borderRadius: 3,
+  background: checked ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
+  flexShrink: 0,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  fontSize: '11px',
+  lineHeight: 1,
+  color: '#fff',
+})
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -86,8 +99,7 @@ export default function SettingsModal({
   const [tgMessage, setTgMessage] = useState<string | null>(null)
   const [tgConnected, setTgConnected] = useState(false)
   const [showToken, setShowToken] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
-  const roomZipInputRef = useRef<HTMLInputElement>(null)
+  const [worktreeOn, setWorktreeOn] = useState(true)
   const agencyResult = useOfficeStore((s) => s.agencyAgentsResult)
   const configData = useOfficeStore((s) => s.configData)
   const configResult = useOfficeStore((s) => s.configResult)
@@ -105,6 +117,7 @@ export default function SettingsModal({
       setTgToken(configData.telegramBotToken ?? '')
       setTgUsers(configData.telegramAllowedUsers?.join(', ') ?? '')
       setTgConnected(configData.telegramConnected ?? false)
+      setWorktreeOn(configData.worktreeEnabled ?? true)
     }
   }, [configData])
 
@@ -137,59 +150,16 @@ export default function SettingsModal({
 
   if (!isOpen) return null
 
-  const handleExport = () => {
-    const json = serializeLayout(layout)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `office-layout-${Date.now()}.json`
-    a.click()
-    URL.revokeObjectURL(url)
-    onClose()
-  }
-
-  const handleImport = () => {
-    fileInputRef.current?.click()
-  }
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = reader.result as string
-      const imported = deserializeLayout(text)
-      if (imported) {
-        onImportLayout(imported)
-        onClose()
-      } else {
-        alert('Invalid layout file')
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
-  }
-
-  const handleImportRoomZip = () => {
-    roomZipInputRef.current?.click()
-  }
-
-  const handleRoomZipChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
-    const result = await loadRoomZip(file)
-    if (result && onImportRoomZip) {
-      onImportRoomZip(result.layout, result.backgroundImage)
-      onClose()
-    }
-  }
-
   const toggleSound = () => {
     const next = !soundEnabled
     onSoundEnabledChange(next)
     localStorage.setItem('office-sound-enabled', JSON.stringify(next))
+  }
+
+  const toggleWorktree = () => {
+    const next = !worktreeOn
+    setWorktreeOn(next)
+    sendCommand({ type: "SAVE_CONFIG", worktreeEnabled: next })
   }
 
   const handleSaveTelegram = () => {
@@ -201,7 +171,6 @@ export default function SettingsModal({
       .filter(Boolean)
     sendCommand({
       type: "SAVE_CONFIG",
-      // Send empty string to clear, or actual token
       telegramBotToken: tgToken.includes('...') ? undefined : tgToken,
       telegramAllowedUsers: allowedUsers,
     })
@@ -297,7 +266,6 @@ export default function SettingsModal({
                 placeholder="123456:ABC-DEF..."
                 style={{ ...inputStyle, flex: 1 }}
                 onFocus={() => {
-                  // Clear masked value on focus so user can type new token
                   if (tgToken.includes('...')) setTgToken('')
                 }}
               />
@@ -353,48 +321,22 @@ export default function SettingsModal({
           </div>
         </div>
 
-        {/* ---- Layout Section ---- */}
+        {/* ---- Toggles Section ---- */}
         <button
-          onClick={handleExport}
-          onMouseEnter={() => setHovered('export')}
+          onClick={toggleWorktree}
+          onMouseEnter={() => setHovered('worktree')}
           onMouseLeave={() => setHovered(null)}
           style={{
             ...menuItemBase,
-            background: hovered === 'export' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'worktree' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
           }}
-        >Export Layout</button>
-        <button
-          onClick={handleImport}
-          onMouseEnter={() => setHovered('import')}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            ...menuItemBase,
-            background: hovered === 'import' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-          }}
-        >Import Layout</button>
-        <button
-          onClick={handleImportRoomZip}
-          onMouseEnter={() => setHovered('room-zip')}
-          onMouseLeave={() => setHovered(null)}
-          style={{
-            ...menuItemBase,
-            background: hovered === 'room-zip' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
-          }}
-        >Import Room (.zip)</button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".json"
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
-        />
-        <input
-          ref={roomZipInputRef}
-          type="file"
-          accept=".zip"
-          onChange={handleRoomZipChange}
-          style={{ display: 'none' }}
-        />
+          title="Each agent works in its own git worktree branch, merged on completion"
+        >
+          <span>Agent Isolation</span>
+          <span style={checkboxStyle(worktreeOn)}>
+            {worktreeOn ? 'X' : ''}
+          </span>
+        </button>
         <button
           onClick={toggleSound}
           onMouseEnter={() => setHovered('sound')}
@@ -405,22 +347,7 @@ export default function SettingsModal({
           }}
         >
           <span>Sound Notifications</span>
-          <span
-            style={{
-              width: 14,
-              height: 14,
-              border: '2px solid rgba(255, 255, 255, 0.5)',
-              borderRadius: 3,
-              background: soundEnabled ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
-              flexShrink: 0,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '11px',
-              lineHeight: 1,
-              color: '#fff',
-            }}
-          >
+          <span style={checkboxStyle(soundEnabled)}>
             {soundEnabled ? 'X' : ''}
           </span>
         </button>

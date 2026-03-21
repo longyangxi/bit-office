@@ -237,6 +237,7 @@ export const ConfigLoadedEvent = z.object({
   telegramBotToken: z.string().optional(),
   telegramAllowedUsers: z.array(z.string()).optional(),
   telegramConnected: z.boolean().optional(),
+  worktreeEnabled: z.boolean().optional(),
 });
 
 export const ConfigSavedEvent = z.object({

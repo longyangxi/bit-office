@@ -848,6 +848,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         telegramBotToken: config.telegramBotToken ? config.telegramBotToken.slice(0, 6) + "..." : undefined,
         telegramAllowedUsers: config.telegramAllowedUsers,
         telegramConnected: tgConnected,
+        worktreeEnabled: orc.isWorktreeEnabled,
       });
       break;
     }
@@ -856,6 +857,10 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         const updates: Record<string, unknown> = {};
         if (parsed.telegramBotToken !== undefined) updates.telegramBotToken = parsed.telegramBotToken || undefined;
         if (parsed.telegramAllowedUsers !== undefined) updates.telegramAllowedUsers = parsed.telegramAllowedUsers;
+        if (parsed.worktreeEnabled !== undefined) {
+          updates.worktreeEnabled = parsed.worktreeEnabled;
+          orc.isWorktreeEnabled = parsed.worktreeEnabled;
+        }
         // Clear legacy field to prevent fallback reconnection
         updates.telegramBotTokens = undefined;
         saveConfig(updates);
@@ -1027,7 +1032,7 @@ async function main() {
     workspace: config.defaultWorkspace,
     backends: backendsToUse,
     defaultBackend: config.defaultBackend,
-    worktree: { mergeOnComplete: true, alwaysIsolate: true },
+    worktree: config.worktreeEnabled ? { mergeOnComplete: true, alwaysIsolate: true } : false,
     retry: { maxRetries: 2, escalateToLeader: true },
     promptsDir: path.join(os.homedir(), ".bit-office", "prompts"),
     sandboxMode: config.sandboxMode,

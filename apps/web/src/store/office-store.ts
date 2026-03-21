@@ -129,7 +129,7 @@ interface OfficeStore {
   pendingPreviewUrl: string | null;
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
   configResult: { success: boolean; message: string; telegramConnected?: boolean } | null;
-  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean } | null;
+  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean } | null;
   detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
@@ -923,7 +923,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           return { agents, detectedBackends: event.backends };
         }
         case "CONFIG_LOADED": {
-          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected } };
+          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected, worktreeEnabled: event.worktreeEnabled } };
         }
         case "CONFIG_SAVED": {
           return { agents, configResult: { success: event.success, message: event.message, telegramConnected: event.telegramConnected } };

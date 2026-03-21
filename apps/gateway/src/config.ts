@@ -19,6 +19,7 @@ interface SavedConfig {
   detectedBackends?: string[];
   defaultBackend?: string;
   sandboxMode?: "full" | "safe";
+  worktreeEnabled?: boolean;
 }
 
 function ensureConfigDir() {
@@ -149,6 +150,7 @@ function buildConfig() {
     detectedBackends: saved.detectedBackends ?? [],
     defaultBackend: saved.defaultBackend ?? "claude",
     sandboxMode: (saved.sandboxMode ?? "full") as "full" | "safe",
+    worktreeEnabled: saved.worktreeEnabled ?? true,
   };
 }
 
