@@ -896,19 +896,22 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
 
         // Restart Telegram channel with new config
         const cid = meta.clientId;
+        const tunnelUp = isTunnelRunning();
         reinitChannel(telegramChannel).then((tgOk) => {
-          console.log(`[Gateway] Config saved. Telegram: ${tgOk ? "connected" : "not configured"}`);
+          console.log(`[Gateway] Config saved. Telegram: ${tgOk ? "connected" : "not configured"}, Tunnel: ${tunnelUp ? "running" : "off"}`);
           sendToClient(cid, {
             type: "CONFIG_SAVED",
             success: true,
             message: tgOk ? "Saved. Telegram connected." : "Saved. Telegram not configured.",
             telegramConnected: tgOk,
+            tunnelRunning: tunnelUp,
           });
         }).catch((err: any) => {
           sendToClient(cid, {
             type: "CONFIG_SAVED",
             success: false,
             message: `Saved but Telegram failed: ${err.message}`,
+            tunnelRunning: isTunnelRunning(),
           });
         });
       } catch (err: any) {

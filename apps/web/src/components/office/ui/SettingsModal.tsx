@@ -35,6 +35,12 @@ export default function SettingsModal({
   const [tgConnected, setTgConnected] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [worktreeOn, setWorktreeOn] = useState(true)
+  const [tunnelToken, setTunnelToken] = useState('')
+  const [tunnelBaseUrl, setTunnelBaseUrl] = useState('')
+  const [tunnelRunning, setTunnelRunning] = useState(false)
+  const [tunnelSaving, setTunnelSaving] = useState(false)
+  const [tunnelMessage, setTunnelMessage] = useState<string | null>(null)
+  const [showTunnelToken, setShowTunnelToken] = useState(false)
   const agencyResult = useOfficeStore((s) => s.agencyAgentsResult)
   const configData = useOfficeStore((s) => s.configData)
   const configResult = useOfficeStore((s) => s.configResult)
@@ -51,6 +57,9 @@ export default function SettingsModal({
       setTgUsers(configData.telegramAllowedUsers?.join(', ') ?? '')
       setTgConnected(configData.telegramConnected ?? false)
       setWorktreeOn(configData.worktreeEnabled ?? true)
+      setTunnelToken(configData.tunnelToken ?? '')
+      setTunnelBaseUrl(configData.tunnelBaseUrl ?? '')
+      setTunnelRunning(configData.tunnelRunning ?? false)
     }
   }, [configData])
 
@@ -62,6 +71,15 @@ export default function SettingsModal({
         setTgConnected(configResult.telegramConnected)
       }
       const t = setTimeout(() => setTgMessage(null), 5000)
+      return () => clearTimeout(t)
+    }
+    if (configResult && tunnelSaving) {
+      setTunnelSaving(false)
+      if (configResult.tunnelRunning !== undefined) {
+        setTunnelRunning(configResult.tunnelRunning)
+      }
+      setTunnelMessage(configResult.tunnelRunning ? 'Tunnel started' : 'Tunnel not running')
+      const t = setTimeout(() => setTunnelMessage(null), 5000)
       return () => clearTimeout(t)
     }
   }, [configResult])
@@ -102,6 +120,16 @@ export default function SettingsModal({
       type: "SAVE_CONFIG",
       telegramBotToken: tgToken.includes('...') ? undefined : tgToken,
       telegramAllowedUsers: allowedUsers,
+    })
+  }
+
+  const handleSaveTunnel = () => {
+    setTunnelSaving(true)
+    setTunnelMessage(null)
+    sendCommand({
+      type: "SAVE_CONFIG",
+      tunnelToken: tunnelToken.includes('...') ? undefined : tunnelToken,
+      tunnelBaseUrl: tunnelBaseUrl,
     })
   }
 
@@ -199,6 +227,66 @@ export default function SettingsModal({
               color: tgMessage.includes('Failed') || tgMessage.includes('not') ? TERM_SEM_RED : TERM_SEM_GREEN,
             }}>
               {tgMessage}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ---- Tunnel Section ---- */}
+      <div style={{ borderBottom: `1px solid ${TERM_BORDER_DIM}`, paddingBottom: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+          <span style={{
+            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
+            background: tunnelRunning ? TERM_SEM_GREEN : TERM_DIM, flexShrink: 0,
+          }} />
+          <span style={{ fontSize: '13px', color: TERM_TEXT, fontWeight: 500 }}>
+            Tunnel {tunnelRunning ? '(running)' : '(stopped)'}
+          </span>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>Tunnel Token</label>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <TermInput
+              type={showTunnelToken ? 'text' : 'password'}
+              value={tunnelToken}
+              onChange={e => setTunnelToken(e.target.value)}
+              placeholder="eyJ..."
+              style={{ flex: 1 }}
+              onFocus={() => { if (tunnelToken.includes('...')) setTunnelToken('') }}
+            />
+            <TermButton
+              variant="dim"
+              onClick={() => setShowTunnelToken(!showTunnelToken)}
+              title={showTunnelToken ? 'Hide' : 'Show'}
+              style={{ padding: '4px 8px', fontSize: '14px' }}
+            >{showTunnelToken ? '\u{1F648}' : '\u{1F441}'}</TermButton>
+          </div>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>
+            Public URL
+          </label>
+          <TermInput
+            type="text"
+            value={tunnelBaseUrl}
+            onChange={e => setTunnelBaseUrl(e.target.value)}
+            placeholder="https://office.example.com"
+          />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <TermButton
+            variant="primary"
+            onClick={handleSaveTunnel}
+            disabled={tunnelSaving}
+          >
+            {tunnelSaving ? 'Saving...' : 'Save & Start'}
+          </TermButton>
+          {tunnelMessage && (
+            <span style={{
+              fontSize: 12,
+              color: tunnelMessage.includes('not') || tunnelMessage.includes('Failed') ? TERM_SEM_RED : TERM_SEM_GREEN,
+            }}>
+              {tunnelMessage}
             </span>
           )}
         </div>

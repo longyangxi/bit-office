@@ -238,6 +238,9 @@ export const ConfigLoadedEvent = z.object({
   telegramAllowedUsers: z.array(z.string()).optional(),
   telegramConnected: z.boolean().optional(),
   worktreeEnabled: z.boolean().optional(),
+  tunnelBaseUrl: z.string().optional(),
+  tunnelToken: z.string().optional(),
+  tunnelRunning: z.boolean().optional(),
 });
 
 export const ConfigSavedEvent = z.object({
@@ -245,6 +248,7 @@ export const ConfigSavedEvent = z.object({
   success: z.boolean(),
   message: z.string(),
   telegramConnected: z.boolean().optional(),
+  tunnelRunning: z.boolean().optional(),
 });
 
 export const GatewayEventSchema = z.discriminatedUnion("type", [

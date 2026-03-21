@@ -128,8 +128,8 @@ interface OfficeStore {
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
-  configResult: { success: boolean; message: string; telegramConnected?: boolean } | null;
-  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean } | null;
+  configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
+  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
@@ -940,10 +940,10 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           return { agents, detectedBackends: event.backends };
         }
         case "CONFIG_LOADED": {
-          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected, worktreeEnabled: event.worktreeEnabled } };
+          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected, worktreeEnabled: event.worktreeEnabled, tunnelBaseUrl: event.tunnelBaseUrl, tunnelToken: event.tunnelToken, tunnelRunning: event.tunnelRunning } };
         }
         case "CONFIG_SAVED": {
-          return { agents, configResult: { success: event.success, message: event.message, telegramConnected: event.telegramConnected } };
+          return { agents, configResult: { success: event.success, message: event.message, telegramConnected: event.telegramConnected, tunnelRunning: event.tunnelRunning } };
         }
         case "PROJECT_LIST": {
           return { agents, projectList: event.projects };
