@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Starter Landing Page</title>
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* NAV */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 1.25rem 1.5rem;
+    }
+    .logo { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.5px; }
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a { color: var(--muted); transition: color .2s; }
+    .nav-links a:hover { color: var(--text); }
+
+    /* HERO */
+    .hero {
+      text-align: center;
+      max-width: 720px;
+      margin: 6rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(2.25rem, 5vw, 3.5rem);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.15;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 span { color: var(--primary); }
+    .hero p { color: var(--muted); font-size: 1.125rem; max-width: 540px; margin: 0 auto 2.5rem; }
+    .btn {
+      display: inline-block;
+      padding: .85rem 2rem;
+      border-radius: var(--radius);
+      font-weight: 600;
+      font-size: 1rem;
+      transition: transform .15s, box-shadow .15s;
+      cursor: pointer;
+      border: none;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(99,102,241,.35); }
+    .btn-outline { background: transparent; border: 1.5px solid var(--muted); color: var(--text); margin-left: .75rem; }
+    .btn-outline:hover { border-color: var(--text); }
+
+    /* FEATURES */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+      max-width: 1120px;
+      margin: 0 auto 5rem;
+      padding: 0 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border-radius: var(--radius);
+      padding: 2rem;
+      transition: transform .2s;
+    }
+    .card:hover { transform: translateY(-4px); }
+    .card .icon { font-size: 2rem; margin-bottom: .75rem; }
+    .card h3 { font-size: 1.15rem; margin-bottom: .5rem; }
+    .card p { color: var(--muted); font-size: .95rem; }
+
+    /* CTA */
+    .cta {
+      text-align: center;
+      background: var(--surface);
+      border-radius: var(--radius);
+      max-width: 800px;
+      margin: 0 auto 5rem;
+      padding: 3.5rem 2rem;
+    }
+    .cta h2 { font-size: 1.75rem; margin-bottom: .75rem; }
+    .cta p { color: var(--muted); margin-bottom: 1.5rem; }
+
+    /* FOOTER */
+    footer {
+      text-align: center;
+      padding: 2rem 1.5rem;
+      color: var(--muted);
+      font-size: .85rem;
+      border-top: 1px solid var(--surface);
+    }
+
+    /* MOBILE */
+    @media (max-width: 640px) {
+      .nav-links { display: none; }
+      .hero { margin-top: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <div class="logo">Acme</div>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#cta">Pricing</a></li>
+      <li><a href="#">Docs</a></li>
+    </ul>
+  </nav>
+
+  <section class="hero">
+    <h1>Build something <span>amazing</span> today</h1>
+    <p>A modern, minimal landing page template. Clean design, responsive layout, and ready for your next big idea.</p>
+    <a href="#cta" class="btn btn-primary">Get Started</a>
+    <a href="#features" class="btn btn-outline">Learn More</a>
+  </section>
+
+  <section class="features" id="features">
+    <div class="card">
+      <div class="icon">&#9889;</div>
+      <h3>Lightning Fast</h3>
+      <p>Optimized for speed with zero dependencies. Pure HTML & CSS that loads instantly.</p>
+    </div>
+    <div class="card">
+      <div class="icon">&#127912;</div>
+      <h3>Beautiful Design</h3>
+      <p>Clean, modern aesthetics with smooth hover animations and a polished dark theme.</p>
+    </div>
+    <div class="card">
+      <div class="icon">&#128241;</div>
+      <h3>Fully Responsive</h3>
+      <p>Looks great on every screen size, from phones to ultrawide monitors.</p>
+    </div>
+  </section>
+
+  <section class="cta" id="cta">
+    <h2>Ready to get started?</h2>
+    <p>Join thousands of creators who are already building with us.</p>
+    <a href="#" class="btn btn-primary">Start Free Trial</a>
+  </section>
+
+  <footer>&copy; 2026 Acme Inc. All rights reserved.</footer>
+
+</body>
+</html>
