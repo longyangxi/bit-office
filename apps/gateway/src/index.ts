@@ -1,7 +1,7 @@
 import { registerChannel, initTransports, publishEvent, destroyTransports, reinitChannel, isChannelActive } from "./transport.js";
 import { wsChannel, setPairCode, sendToClient } from "./ws-server.js";
 import { ablyChannel } from "./ably-client.js";
-import { telegramChannel } from "./telegram-channel.js";
+import { telegramChannel, setTelegramAgentDefs } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
@@ -744,6 +744,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         agentDefs.push(def);
       }
       saveAgentDefs(agentDefs);
+      setTelegramAgentDefs(agentDefs);
       publishEvent({ type: "AGENT_DEFS", agents: agentDefs });
       break;
     }
@@ -755,6 +756,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       }
       agentDefs = agentDefs.filter(a => a.id !== parsed.agentDefId);
       saveAgentDefs(agentDefs);
+      setTelegramAgentDefs(agentDefs);
       publishEvent({ type: "AGENT_DEFS", agents: agentDefs });
       break;
     }
@@ -1039,6 +1041,7 @@ async function main() {
   });
 
   agentDefs = loadAgentDefs();
+  setTelegramAgentDefs(agentDefs);
   console.log(`[Gateway] Loaded ${agentDefs.length} agent definitions (${agentDefs.filter(a => !a.isBuiltin).length} custom)`);
 
   // Restore project event buffer from disk (survives gateway restarts)

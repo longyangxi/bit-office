@@ -1,7 +1,7 @@
 import TelegramBot from "node-telegram-bot-api";
 import { config } from "./config.js";
 import { nanoid } from "nanoid";
-import { DEFAULT_AGENT_DEFS } from "@office/shared";
+import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
 import type { GatewayEvent, Command } from "@office/shared";
 import type { Channel, CommandMeta } from "./transport.js";
 
@@ -29,8 +29,11 @@ const stickyAgent = new Map<string, string>();
 /** Allowed TG user IDs (empty = allow all) */
 let allowedUsers: string[] = [];
 
+/** Live agent definitions — updated from gateway via setAgentDefs() */
+let liveAgentDefs: AgentDefinition[] = [];
+
 // ---------------------------------------------------------------------------
-// Agent menu (built from shared defs)
+// Agent menu (built from live defs, falling back to defaults)
 // ---------------------------------------------------------------------------
 
 interface AgentMenuItem {
@@ -41,7 +44,8 @@ interface AgentMenuItem {
 }
 
 function buildAgentMenu(): AgentMenuItem[] {
-  return DEFAULT_AGENT_DEFS.map((d) => ({
+  const defs = liveAgentDefs.length > 0 ? liveAgentDefs : DEFAULT_AGENT_DEFS;
+  return defs.map((d) => ({
     id: d.id,
     name: d.name,
     role: d.role,
@@ -80,6 +84,28 @@ function evictIfNeeded<K, V>(map: Map<K, V>, limit = 2000) {
 // ---------------------------------------------------------------------------
 // Channel implementation
 // ---------------------------------------------------------------------------
+
+/**
+ * Update the live agent definitions used by the Telegram channel.
+ * Also refreshes the bot menu commands if the bot is active.
+ */
+export function setTelegramAgentDefs(defs: AgentDefinition[]) {
+  liveAgentDefs = defs;
+  // Refresh bot menu commands if bot is active
+  if (bot) {
+    const menu = buildAgentMenu();
+    bot.setMyCommands([
+      ...menu.map((a) => ({
+        command: a.id,
+        description: `${a.name} - ${a.role}`,
+      })),
+      { command: "cancel", description: "Cancel current agent task" },
+      { command: "status", description: "Check agent statuses" },
+    ]).catch((err: Error) => {
+      console.error("[Telegram] Failed to update bot commands:", err.message);
+    });
+  }
+}
 
 export const telegramChannel: Channel = {
   name: "Telegram",
@@ -126,9 +152,12 @@ export const telegramChannel: Channel = {
       activeChatIds.add(msg.chat.id);
       const text = msg.text.trim();
 
+      // Build menu fresh each message so it picks up agent def changes
+      const currentMenu = buildAgentMenu();
+
       // --- /start ---
       if (text === "/start" || text === `/start@${botInfo.username}`) {
-        const lines = agentMenu.map((a) => `/${a.id} - ${a.name} (${a.role})`);
+        const lines = currentMenu.map((a) => `/${a.id} - ${a.name} (${a.role})`);
         bot!.sendMessage(
           msg.chat.id,
           `Welcome to Bit Office!\n\nAvailable agents:\n${lines.join("\n")}\n\nTap a command to start a conversation, then reply to the agent's message.`,
@@ -137,10 +166,9 @@ export const telegramChannel: Channel = {
       }
 
       // --- Agent selection commands: /alex, /mia, etc. ---
-      const agentCmd = agentMenu.find((a) => text === `/${a.id}` || text === `/${a.id}@${botInfo.username}`);
+      const agentCmd = currentMenu.find((a) => text === `/${a.id}` || text === `/${a.id}@${botInfo.username}`);
       if (agentCmd) {
         stickyAgent.set(`${msg.chat.id}:${msg.from!.id}`, agentCmd.id);
-        const label = `${agentCmd.name} (${agentCmd.role})`;
         bot!.sendMessage(
           msg.chat.id,
           `Now talking to ${agentCmd.name}. Send messages directly — switch anytime with /alex, /eli, etc.`,
@@ -192,7 +220,7 @@ export const telegramChannel: Channel = {
         return;
       }
 
-      const def = agentMenu.find((a) => a.id === agentId);
+      const def = currentMenu.find((a) => a.id === agentId);
       const taskId = nanoid();
 
       commandHandler(
