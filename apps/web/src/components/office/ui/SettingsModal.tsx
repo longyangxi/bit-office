@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
+import { TERM_BG, TERM_PANEL, TERM_BORDER, TERM_BORDER_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_DIM, TERM_GREEN, TERM_HOVER, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
 import type { OfficeLayout } from '../types'
 import { sendCommand } from '@/lib/connection'
 import { useOfficeStore } from '@/store/office-store'
@@ -17,76 +17,9 @@ interface SettingsModalProps {
   onSoundEnabledChange: (enabled: boolean) => void
 }
 
-const menuItemBase: React.CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  width: '100%',
-  padding: '6px 10px',
-  fontSize: '15px',
-  color: 'rgba(255, 255, 255, 0.8)',
-  background: 'transparent',
-  border: 'none',
-  borderRadius: 4,
-  cursor: 'pointer',
-  textAlign: 'left',
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '6px 8px',
-  fontSize: '13px',
-  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-  color: 'rgba(255, 255, 255, 0.9)',
-  background: 'rgba(255, 255, 255, 0.06)',
-  border: '1px solid rgba(255, 255, 255, 0.15)',
-  borderRadius: 4,
-  outline: 'none',
-  boxSizing: 'border-box' as const,
-}
-
-const labelStyle: React.CSSProperties = {
-  fontSize: '12px',
-  color: 'rgba(255, 255, 255, 0.5)',
-  marginBottom: 4,
-  display: 'block',
-}
-
-const sectionStyle: React.CSSProperties = {
-  padding: '6px 10px',
-}
-
-const saveBtnStyle: React.CSSProperties = {
-  padding: '5px 14px',
-  fontSize: '13px',
-  color: '#fff',
-  background: 'rgba(90, 140, 255, 0.7)',
-  border: '1px solid rgba(90, 140, 255, 0.5)',
-  borderRadius: 4,
-  cursor: 'pointer',
-}
-
-const checkboxStyle = (checked: boolean): React.CSSProperties => ({
-  width: 14,
-  height: 14,
-  border: '2px solid rgba(255, 255, 255, 0.5)',
-  borderRadius: 3,
-  background: checked ? 'rgba(90, 140, 255, 0.8)' : 'transparent',
-  flexShrink: 0,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '11px',
-  lineHeight: 1,
-  color: '#fff',
-})
-
 export default function SettingsModal({
   isOpen,
   onClose,
-  layout,
-  onImportLayout,
-  onImportRoomZip,
   soundEnabled,
   onSoundEnabledChange,
 }: SettingsModalProps) {
@@ -176,15 +109,48 @@ export default function SettingsModal({
     })
   }
 
-  const tgStatusDot: React.CSSProperties = {
-    display: 'inline-block',
-    width: 8,
-    height: 8,
-    borderRadius: '50%',
-    background: tgConnected ? TERM_SEM_GREEN : 'rgba(255, 255, 255, 0.25)',
-    marginRight: 6,
-    flexShrink: 0,
+  const menuItemBase: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    padding: '6px 10px',
+    fontSize: '15px',
+    color: TERM_TEXT,
+    background: 'transparent',
+    border: 'none',
+    borderRadius: 4,
+    cursor: 'pointer',
+    textAlign: 'left',
   }
+
+  const inputBase: React.CSSProperties = {
+    width: '100%',
+    padding: '6px 8px',
+    fontSize: '13px',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+    color: TERM_TEXT_BRIGHT,
+    background: TERM_BG,
+    border: `1px solid ${TERM_BORDER}`,
+    borderRadius: 4,
+    outline: 'none',
+    boxSizing: 'border-box' as const,
+  }
+
+  const checkboxStyle = (checked: boolean): React.CSSProperties => ({
+    width: 14,
+    height: 14,
+    border: `2px solid ${TERM_DIM}`,
+    borderRadius: 3,
+    background: checked ? TERM_GREEN : 'transparent',
+    flexShrink: 0,
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    fontSize: '11px',
+    lineHeight: 1,
+    color: TERM_BG,
+  })
 
   return (
     <>
@@ -209,9 +175,8 @@ export default function SettingsModal({
           left: '50%',
           transform: 'translate(-50%, -50%)',
           zIndex: 100,
-          background: 'rgba(20, 20, 25, 0.92)',
-          backdropFilter: 'blur(16px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)',
+          background: TERM_PANEL,
+          border: `1px solid ${TERM_BORDER}`,
           borderRadius: 10,
           padding: '4px',
           boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
@@ -226,20 +191,20 @@ export default function SettingsModal({
             alignItems: 'center',
             justifyContent: 'space-between',
             padding: '4px 10px',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+            borderBottom: `1px solid ${TERM_BORDER_DIM}`,
             marginBottom: '4px',
           }}
         >
-          <span style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.9)' }}>Settings</span>
+          <span style={{ fontSize: '15px', color: TERM_TEXT_BRIGHT }}>Settings</span>
           <button
             onClick={onClose}
             onMouseEnter={() => setHovered('close')}
             onMouseLeave={() => setHovered(null)}
             style={{
-              background: hovered === 'close' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+              background: hovered === 'close' ? TERM_HOVER : 'transparent',
               border: 'none',
               borderRadius: 4,
-              color: 'rgba(255, 255, 255, 0.6)',
+              color: TERM_DIM,
               fontSize: '15px',
               cursor: 'pointer',
               padding: '0 4px',
@@ -249,22 +214,29 @@ export default function SettingsModal({
         </div>
 
         {/* ---- Telegram Section ---- */}
-        <div style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.08)', paddingBottom: 8, marginBottom: 4 }}>
-          <div style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 2 }}>
-            <span style={tgStatusDot} />
-            <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.7)', fontWeight: 500 }}>
+        <div style={{ borderBottom: `1px solid ${TERM_BORDER_DIM}`, paddingBottom: 8, marginBottom: 4 }}>
+          <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 6, paddingBottom: 2 }}>
+            <span style={{
+              display: 'inline-block',
+              width: 8,
+              height: 8,
+              borderRadius: '50%',
+              background: tgConnected ? TERM_SEM_GREEN : TERM_DIM,
+              flexShrink: 0,
+            }} />
+            <span style={{ fontSize: '13px', color: TERM_TEXT, fontWeight: 500 }}>
               Telegram {tgConnected ? '(connected)' : '(disconnected)'}
             </span>
           </div>
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Bot Token</label>
+          <div style={{ padding: '6px 10px' }}>
+            <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>Bot Token</label>
             <div style={{ display: 'flex', gap: 4 }}>
               <input
                 type={showToken ? 'text' : 'password'}
                 value={tgToken}
                 onChange={e => setTgToken(e.target.value)}
                 placeholder="123456:ABC-DEF..."
-                style={{ ...inputStyle, flex: 1 }}
+                style={{ ...inputBase, flex: 1 }}
                 onFocus={() => {
                   if (tgToken.includes('...')) setTgToken('')
                 }}
@@ -274,38 +246,46 @@ export default function SettingsModal({
                 onMouseEnter={() => setHovered('eye')}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  ...inputStyle,
+                  ...inputBase,
                   width: 32,
                   padding: '4px',
                   cursor: 'pointer',
                   textAlign: 'center',
                   fontSize: '14px',
-                  background: hovered === 'eye' ? 'rgba(255, 255, 255, 0.1)' : inputStyle.background,
+                  background: hovered === 'eye' ? TERM_HOVER : TERM_BG,
                 }}
                 title={showToken ? 'Hide' : 'Show'}
               >{showToken ? '🙈' : '👁'}</button>
             </div>
           </div>
-          <div style={sectionStyle}>
-            <label style={labelStyle}>Allowed User IDs <span style={{ opacity: 0.6 }}>(comma-separated, empty = all)</span></label>
+          <div style={{ padding: '6px 10px' }}>
+            <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>
+              Allowed User IDs <span style={{ opacity: 0.6 }}>(comma-separated, empty = all)</span>
+            </label>
             <input
               type="text"
               value={tgUsers}
               onChange={e => setTgUsers(e.target.value)}
               placeholder="123456789, 987654321"
-              style={inputStyle}
+              style={inputBase}
             />
           </div>
-          <div style={{ ...sectionStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ padding: '6px 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
             <button
               onClick={handleSaveTelegram}
               disabled={tgSaving}
               onMouseEnter={() => setHovered('tg-save')}
               onMouseLeave={() => setHovered(null)}
               style={{
-                ...saveBtnStyle,
+                padding: '5px 14px',
+                fontSize: '13px',
+                color: TERM_BG,
+                background: hovered === 'tg-save' ? TERM_GREEN : `${TERM_GREEN}cc`,
+                border: `1px solid ${TERM_GREEN}`,
+                borderRadius: 4,
+                cursor: 'pointer',
                 opacity: tgSaving ? 0.5 : 1,
-                background: hovered === 'tg-save' ? 'rgba(90, 140, 255, 0.9)' : saveBtnStyle.background,
+                fontWeight: 500,
               }}
             >
               {tgSaving ? 'Saving...' : 'Save & Connect'}
@@ -328,13 +308,13 @@ export default function SettingsModal({
           onMouseLeave={() => setHovered(null)}
           style={{
             ...menuItemBase,
-            background: hovered === 'worktree' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'worktree' ? TERM_HOVER : 'transparent',
           }}
           title="Each agent works in its own git worktree branch, merged on completion"
         >
           <span>Agent Isolation</span>
           <span style={checkboxStyle(worktreeOn)}>
-            {worktreeOn ? 'X' : ''}
+            {worktreeOn ? '✓' : ''}
           </span>
         </button>
         <button
@@ -343,15 +323,15 @@ export default function SettingsModal({
           onMouseLeave={() => setHovered(null)}
           style={{
             ...menuItemBase,
-            background: hovered === 'sound' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'sound' ? TERM_HOVER : 'transparent',
           }}
         >
           <span>Sound Notifications</span>
           <span style={checkboxStyle(soundEnabled)}>
-            {soundEnabled ? 'X' : ''}
+            {soundEnabled ? '✓' : ''}
           </span>
         </button>
-        <div style={{ borderTop: '1px solid rgba(255, 255, 255, 0.08)', margin: '4px 0' }} />
+        <div style={{ borderTop: `1px solid ${TERM_BORDER_DIM}`, margin: '4px 0' }} />
         <button
           onClick={() => {
             setAgentsUpdating(true)
@@ -363,7 +343,7 @@ export default function SettingsModal({
           onMouseLeave={() => setHovered(null)}
           style={{
             ...menuItemBase,
-            background: hovered === 'agents' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
+            background: hovered === 'agents' ? TERM_HOVER : 'transparent',
             opacity: agentsUpdating ? 0.5 : 1,
           }}
         >
@@ -375,17 +355,17 @@ export default function SettingsModal({
               fontSize: 11,
               color: agentsMessage.startsWith('Failed') ? TERM_SEM_RED : TERM_SEM_GREEN,
             }}>
-              {agentsMessage.startsWith('Failed') ? 'X' : 'OK'}
+              {agentsMessage.startsWith('Failed') ? '✗' : '✓'}
             </span>
           )}
         </button>
         <div
           style={{
-            borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+            borderTop: `1px solid ${TERM_BORDER_DIM}`,
             marginTop: 4,
             padding: '8px 10px 6px',
             fontSize: 11,
-            color: 'rgba(255, 255, 255, 0.45)',
+            color: TERM_DIM,
             fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
             lineHeight: 1.45,
             userSelect: 'text',
@@ -394,7 +374,7 @@ export default function SettingsModal({
         >
           <div>
             <span style={{ opacity: 0.75 }}>Web UI</span>{' '}
-            <span style={{ color: 'rgba(255, 255, 255, 0.75)' }}>v{APP_VERSION}</span>
+            <span style={{ color: TERM_TEXT }}>v{APP_VERSION}</span>
           </div>
           {APP_BUILD_TIME ? (
             <div style={{ marginTop: 2, fontSize: 10, opacity: 0.9 }}>

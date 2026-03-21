@@ -88,19 +88,6 @@ export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettin
           Layout
         </button>
       )}
-      <button
-        onClick={onOpenSettings}
-        onMouseEnter={() => setHovered('settings')}
-        onMouseLeave={() => setHovered(null)}
-        style={{
-          ...btnBase,
-          background: hovered === 'settings' ? 'rgba(255, 255, 255, 0.08)' : btnBase.background,
-          color: hovered === 'settings' ? 'rgba(255, 255, 255, 0.8)' : btnBase.color,
-        }}
-        title={`Settings · Web UI v${APP_VERSION}`}
-      >
-        Settings
-      </button>
       {onOpenHistory && (
         <button
           onClick={onOpenHistory}
@@ -116,6 +103,19 @@ export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettin
           History
         </button>
       )}
+      <button
+        onClick={onOpenSettings}
+        onMouseEnter={() => setHovered('settings')}
+        onMouseLeave={() => setHovered(null)}
+        style={{
+          ...btnBase,
+          background: hovered === 'settings' ? 'rgba(255, 255, 255, 0.08)' : btnBase.background,
+          color: hovered === 'settings' ? 'rgba(255, 255, 255, 0.8)' : btnBase.color,
+        }}
+        title={`Settings · Web UI v${APP_VERSION}`}
+      >
+        Settings
+      </button>
       {onToggleTest && (
         <button
           onClick={onToggleTest}
