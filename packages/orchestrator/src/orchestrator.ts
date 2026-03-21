@@ -1,5 +1,6 @@
 import { EventEmitter } from "events";
 import { existsSync } from "fs";
+import path from "path";
 import { nanoid } from "nanoid";
 import { CONFIG } from "./config.js";
 import { AgentSession, clearSessionId } from "./agent-session.js";
@@ -142,7 +143,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Force-clean worktree + branch on fire
     if (session?.worktreePath && session.worktreeBranch) {
       const base = session.worktreePath.includes(".worktrees")
-        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        ? path.dirname(path.dirname(session.worktreePath))
         : this.workspace;
       removeWorktree(session.worktreePath, session.worktreeBranch, base);
       session.worktreePath = null;
@@ -301,7 +302,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
       const base = session.worktreePath.includes(".worktrees")
-        ? require("path").dirname(require("path").dirname(session.worktreePath))
+        ? path.dirname(path.dirname(session.worktreePath))
         : this.workspace;
       const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
       this.emitEvent({
@@ -657,7 +658,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const base = doneSession.worktreePath.includes(".worktrees")
-          ? require("path").dirname(require("path").dirname(doneSession.worktreePath))
+          ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
         const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch);
         this.emitEvent({
