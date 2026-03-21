@@ -167,6 +167,7 @@ export function mergeWorktree(
   workspace: string,
   worktreePath: string,
   branch: string,
+  keepAlive = false,
 ): MergeResult {
   try {
     autoCommitWorktree(worktreePath, branch);
@@ -184,9 +185,16 @@ export function mergeWorktree(
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
 
-    // Clean up
-    try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
-    try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
+    if (!keepAlive) {
+      // Clean up worktree + branch
+      try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
+      try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
+    } else {
+      // Keep worktree alive for session continuity — reset branch to current HEAD
+      // so next task starts from the merged state (avoids duplicate merge conflicts)
+      try { gitExec(`git reset --hard HEAD`, worktreePath); } catch { /* ignore */ }
+      console.log(`[Worktree] Merged ${branch}, worktree kept alive for session continuity`);
+    }
 
     return { success: true, stagedFiles };
   } catch (err) {

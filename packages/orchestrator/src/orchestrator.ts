@@ -668,16 +668,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       this.retryTracker?.clear(event.taskId);
 
       // Worktree merge strategy:
-      // - Team workers: keep worktree alive between tasks so the agent retains session
-      //   history (--resume). Merge all at once when team result is finalized.
-      // - Solo agents: squash merge + commit on completion when mergeOnComplete is true.
+      // - Team workers: keep worktree alive, merge all at once when team result is finalized.
+      // - Solo agents: merge changes back but keep worktree alive for session continuity.
+      //   Worktree is only cleaned up when agent is removed or gateway restarts (GC).
       const doneSession = this.agentManager.get(agentId);
       if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch);
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, true);
         this.emitEvent({
           type: "worktree:merged",
           agentId,
@@ -687,8 +687,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           conflictFiles: result.conflictFiles,
           stagedFiles: result.stagedFiles,
         });
-        doneSession.worktreePath = null;
-        doneSession.worktreeBranch = null;
+        // Keep worktreePath/worktreeBranch set — next task reuses the same worktree
       }
 
       // Accumulate changedFiles from all workers (not leader, not QA/reviewer)
