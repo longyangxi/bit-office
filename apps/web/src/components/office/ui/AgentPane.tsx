@@ -287,7 +287,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
             flex: 1, padding: "6px 10px",
             background: TERM_BG, border: `1px solid ${TERM_BORDER}`,
             color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-            outline: "none",
+            outline: "none", lineHeight: "20px",
           }}
         />
       </div>
