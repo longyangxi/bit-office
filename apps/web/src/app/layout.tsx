@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "@/styles/global.css";
+import "@/components/office/ui/primitives/primitives.css";
 
 export const metadata: Metadata = {
   title: "Open Office",

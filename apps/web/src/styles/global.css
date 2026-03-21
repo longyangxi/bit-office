@@ -28,6 +28,40 @@
   --term-sem-purple: #c084fc;
   --term-sem-cyan: #94e2d5;
 
+  /* ── Design Tokens ── */
+  /* Font */
+  --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+  --font-size-base: 12px;
+
+  /* Spacing (4px grid) */
+  --space-0: 0px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Border radius — terminal aesthetic: sharp */
+  --radius-none: 0px;
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-full: 9999px;
+
+  /* Shadows / Elevation */
+  --shadow-sm: 0 1px 0 var(--term-border-dim);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+
+  /* Motion */
+  --duration-fast: 100ms;
+  --duration-normal: 200ms;
+  --duration-slow: 350ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
   /* ── Legacy aliases (for components not yet migrated) ── */
   --px-bg-deep: var(--office-bg);
   --px-bg-panel: var(--office-panel);
@@ -389,4 +423,40 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 }
 .term-input-area:focus-within {
   box-shadow: inset 0 1px 0 rgba(var(--term-accent-rgb), 0.15);
+}
+
+/* ── Global focus-visible — keyboard accessibility ── */
+:focus-visible {
+  outline: 1px solid var(--term-green);
+  outline-offset: 2px;
+}
+/* Suppress focus ring for mouse/touch interactions */
+:focus:not(:focus-visible) {
+  outline: none;
+}
+/* Inputs already have their own focus treatment */
+.term-input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  box-shadow: inset 0 -1px 0 var(--term-green);
+}
+
+/* ── Reduced motion — respect user preference ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Modal animation ── */
+@keyframes modal-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-content-in {
+  from { opacity: 0; transform: scale(0.97) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
 }

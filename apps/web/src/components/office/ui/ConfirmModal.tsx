@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import TermModal from "./primitives/TermModal";
+import TermButton from "./primitives/TermButton";
 
 function ConfirmModal({ message, onConfirm, onCancel }: {
   message: string;
@@ -8,49 +10,22 @@ function ConfirmModal({ message, onConfirm, onCancel }: {
   onCancel: () => void;
 }) {
   return (
-    <div
-      style={{
-        position: "fixed", inset: 0, zIndex: 10000,
-        backgroundColor: "rgba(0,0,0,0.65)",
-        display: "flex", alignItems: "center", justifyContent: "center",
-      }}
-      onClick={onCancel}
+    <TermModal
+      open={true}
+      onClose={onCancel}
+      maxWidth={380}
+      title="Confirm"
+      footer={
+        <>
+          <TermButton variant="dim" onClick={onCancel}>No</TermButton>
+          <TermButton variant="danger" onClick={onConfirm}>Yes</TermButton>
+        </>
+      }
     >
-      <div
-        style={{
-          backgroundColor: "#1a1a2e", borderRadius: 14, padding: "28px 24px",
-          maxWidth: 380, width: "90%", textAlign: "center",
-          border: "1px solid #333", boxShadow: "0 16px 48px rgba(0,0,0,0.5)",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div style={{ color: "#eee", fontSize: 17, lineHeight: 1.6, marginBottom: 24 }}>
-          {message}
-        </div>
-        <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-          <button
-            onClick={onCancel}
-            style={{
-              padding: "9px 28px", borderRadius: 8,
-              border: "1px solid #444", backgroundColor: "#2a2a3e",
-              color: "#aaa", fontSize: 15, cursor: "pointer",
-            }}
-          >
-            No
-          </button>
-          <button
-            onClick={onConfirm}
-            style={{
-              padding: "9px 28px", borderRadius: 8, border: "none",
-              backgroundColor: "#dc2626", color: "#fff",
-              fontSize: 15, fontWeight: 600, cursor: "pointer",
-            }}
-          >
-            Yes
-          </button>
-        </div>
+      <div style={{ textAlign: "center", lineHeight: 1.6 }}>
+        {message}
       </div>
-    </div>
+    </TermModal>
   );
 }
 

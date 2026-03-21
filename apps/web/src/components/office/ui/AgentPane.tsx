@@ -4,6 +4,7 @@ import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
+import { TermButton, TermInput } from "./primitives";
 import type { ChatMessage } from "@/store/office-store";
 import dynamic from "next/dynamic";
 
@@ -267,11 +268,8 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
       fontFamily: TERM_FONT, flexShrink: 0,
     }}>
       {/* Feedback input */}
-      <div style={{
-        display: "flex", gap: 8, alignItems: "center",
-        marginBottom: 8,
-      }}>
-        <input
+      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+        <TermInput
           ref={inputRef}
           type="text"
           value={feedback}
@@ -283,41 +281,24 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
             }
           }}
           placeholder="Add feedback for the fix..."
-          style={{
-            flex: 1, padding: "6px 10px",
-            background: TERM_BG, border: `1px solid ${TERM_BORDER}`,
-            color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-            outline: "none", lineHeight: "20px",
-          }}
+          style={{ flex: 1 }}
         />
       </div>
       {/* Action buttons */}
       <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
         {onApplyReviewFixes && (
-          <button
+          <TermButton
+            variant="success"
             onClick={() => onApplyReviewFixes(feedback || undefined)}
-            style={{
-              padding: "6px 18px", border: `1px solid ${TERM_DIM}`,
-              backgroundColor: "transparent", color: TERM_SEM_GREEN,
-              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-              cursor: "pointer", transition: "border-color 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_GREEN; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}
-          >apply fixes</button>
+            style={{ padding: "6px 18px" }}
+          >apply fixes</TermButton>
         )}
         {onDismissReview && (
-          <button
+          <TermButton
+            variant="dim"
             onClick={onDismissReview}
-            style={{
-              padding: "6px 18px", border: `1px solid ${TERM_DIM}`,
-              backgroundColor: "transparent", color: TERM_DIM,
-              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-              cursor: "pointer", transition: "border-color 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_TEXT; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
-          >dismiss</button>
+            style={{ padding: "6px 18px" }}
+          >dismiss</TermButton>
         )}
       </div>
     </div>

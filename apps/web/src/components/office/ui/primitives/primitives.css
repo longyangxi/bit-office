@@ -1,0 +1,271 @@
+/* ── UI Primitives — CSS-class-based components ──
+   Uses CSS custom properties from global.css (--term-*) and design tokens (--space-*, etc).
+   All hover/focus states in CSS — no onMouseEnter/Leave JS required.
+   Components: TermButton, TermInput, TermModal, TermBadge
+*/
+
+/* ============================================================
+   BUTTON — .tb (term-button)
+   Variants: .tb-ghost (default), .tb-primary, .tb-danger, .tb-success
+   ============================================================ */
+.tb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding: 6px 14px;
+  border: 1px solid var(--term-border);
+  background: transparent;
+  color: var(--term-text);
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  line-height: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition:
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+.tb:hover {
+  border-color: var(--term-text);
+  color: var(--term-text-bright);
+}
+.tb:active {
+  opacity: 0.85;
+}
+.tb:disabled {
+  opacity: 0.4;
+  cursor: default;
+  pointer-events: none;
+}
+
+/* Ghost (default) — border only, transparent bg */
+.tb-ghost {
+  border-color: var(--term-border);
+  color: var(--term-text);
+}
+.tb-ghost:hover {
+  border-color: var(--term-text);
+  color: var(--term-text-bright);
+}
+
+/* Primary — accent colored border + text */
+.tb-primary {
+  border-color: var(--term-sem-green);
+  color: var(--term-sem-green);
+}
+.tb-primary:hover {
+  border-color: var(--term-sem-green);
+  background: color-mix(in srgb, var(--term-sem-green) 10%, transparent);
+  color: var(--term-sem-green);
+}
+
+/* Danger — red border + text */
+.tb-danger {
+  border-color: var(--term-sem-red);
+  color: var(--term-sem-red);
+}
+.tb-danger:hover {
+  background: color-mix(in srgb, var(--term-sem-red) 10%, transparent);
+}
+
+/* Success — green, same as primary but semantic alias */
+.tb-success {
+  border-color: var(--term-sem-green);
+  color: var(--term-sem-green);
+}
+.tb-success:hover {
+  background: color-mix(in srgb, var(--term-sem-green) 10%, transparent);
+}
+
+/* Warning — yellow */
+.tb-warning {
+  border-color: var(--term-sem-yellow);
+  color: var(--term-sem-yellow);
+}
+.tb-warning:hover {
+  background: color-mix(in srgb, var(--term-sem-yellow) 10%, transparent);
+}
+
+/* Dim — subtle, de-emphasized */
+.tb-dim {
+  border-color: var(--term-border);
+  color: var(--term-green-dim);
+}
+.tb-dim:hover {
+  color: var(--term-text);
+  border-color: var(--term-text);
+}
+
+/* ============================================================
+   INPUT — .ti (term-input-field)
+   Variants: .ti-textarea (multi-line)
+   ============================================================ */
+.ti {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid var(--term-border);
+  background: var(--term-bg);
+  color: var(--term-text);
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  line-height: 20px;
+  outline: none;
+  transition: border-color var(--duration-fast) ease;
+}
+.ti::placeholder {
+  color: var(--term-green-dim);
+  opacity: 0.5;
+}
+.ti:focus {
+  border-color: var(--term-green);
+}
+
+/* Textarea variant — minimal resize, auto-height friendly */
+.ti-textarea {
+  resize: none;
+  overflow: hidden;
+}
+
+/* Inline input — no border, transparent bg, for terminal-style inputs */
+.ti-inline {
+  border: none;
+  background: transparent;
+  color: var(--term-text-bright);
+  caret-color: var(--term-green);
+  padding: 6px 5px;
+}
+.ti-inline:focus {
+  border: none;
+  box-shadow: none;
+}
+
+/* ============================================================
+   MODAL — .tm (term-modal)
+   Structure: .tm-backdrop > .tm-container > .tm-header + .tm-body + .tm-footer
+   ============================================================ */
+.tm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background-color: rgba(0, 0, 0, 0.65);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: modal-backdrop-in var(--duration-normal) var(--ease-out);
+}
+
+.tm-container {
+  background: var(--term-panel);
+  border: 1px solid var(--term-border);
+  box-shadow: var(--shadow-lg);
+  width: 90%;
+  max-width: 420px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: modal-content-in var(--duration-slow) var(--ease-out);
+}
+
+.tm-header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--term-border-dim);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--term-text-bright);
+}
+
+.tm-body {
+  padding: var(--space-4);
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-base);
+  color: var(--term-text);
+  line-height: 1.7;
+}
+
+.tm-footer {
+  padding: var(--space-3) var(--space-4);
+  border-top: 1px solid var(--term-border-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* Close button inside header */
+.tm-close {
+  padding: 2px 8px;
+  border: 1px solid var(--term-border);
+  background: transparent;
+  color: var(--term-green-dim);
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  cursor: pointer;
+  line-height: 1;
+  transition: color var(--duration-fast) ease, border-color var(--duration-fast) ease;
+}
+.tm-close:hover {
+  color: var(--term-text);
+  border-color: var(--term-text);
+}
+
+/* ============================================================
+   BADGE — .tg (term-badge)
+   Variants: .tg-green, .tg-yellow, .tg-red, .tg-blue, .tg-purple, .tg-dim
+   ============================================================ */
+.tg {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 1px 6px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+
+.tg-green {
+  color: var(--term-sem-green);
+  background: color-mix(in srgb, var(--term-sem-green) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-green) 25%, transparent);
+}
+.tg-yellow {
+  color: var(--term-sem-yellow);
+  background: color-mix(in srgb, var(--term-sem-yellow) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-yellow) 25%, transparent);
+}
+.tg-red {
+  color: var(--term-sem-red);
+  background: color-mix(in srgb, var(--term-sem-red) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-red) 25%, transparent);
+}
+.tg-blue {
+  color: var(--term-sem-blue);
+  background: color-mix(in srgb, var(--term-sem-blue) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-blue) 25%, transparent);
+}
+.tg-purple {
+  color: var(--term-sem-purple);
+  background: color-mix(in srgb, var(--term-sem-purple) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-purple) 25%, transparent);
+}
+.tg-dim {
+  color: var(--term-green-dim);
+  background: color-mix(in srgb, var(--term-green-dim) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-green-dim) 20%, transparent);
+}
