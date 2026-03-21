@@ -269,3 +269,125 @@
   background: color-mix(in srgb, var(--term-green-dim) 8%, transparent);
   border-color: color-mix(in srgb, var(--term-green-dim) 20%, transparent);
 }
+
+/* ============================================================
+   BUTTON SIZE — .tb-sm (compact)
+   ============================================================ */
+.tb-sm {
+  padding: 4px 10px;
+  font-size: 11px;
+  line-height: 16px;
+}
+
+/* ============================================================
+   SECTION LABEL — .tsl (term-section-label)
+   Used for "AI BACKEND", "SKILLS", "WORKING DIRECTORY" etc.
+   ============================================================ */
+.tsl {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--term-green-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: var(--space-1);
+  line-height: 1.2;
+}
+
+/* ============================================================
+   AGENT CARD — .tac (term-agent-card)
+   Grid card for agent selection in HireModal/HireTeamModal
+   ============================================================ */
+.tac {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 6px 10px;
+  border: 1px solid var(--term-border);
+  background: transparent;
+  cursor: pointer;
+  text-align: center;
+  position: relative;
+  transition:
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+.tac:hover {
+  border-color: color-mix(in srgb, var(--term-green) 40%, transparent);
+  background: color-mix(in srgb, var(--term-green) 3%, transparent);
+}
+.tac-selected {
+  border-color: color-mix(in srgb, var(--term-green) 50%, transparent);
+  background: color-mix(in srgb, var(--term-green) 5%, transparent);
+}
+
+/* ============================================================
+   CLOSE / DISMISS — .tdx (term-dismiss-x)
+   Small X button for dismissing/closing things (info bar, overlays)
+   ============================================================ */
+.tdx {
+  font-size: var(--font-size-base);
+  color: var(--term-green-dim);
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: color var(--duration-fast) ease, opacity var(--duration-fast) ease;
+}
+.tdx:hover {
+  color: var(--term-sem-red);
+  opacity: 1;
+}
+
+/* ============================================================
+   BOTTOM TOOLBAR — .btb (bottom-toolbar)
+   Floating pill-shaped toolbar on the office scene
+   ============================================================ */
+.btb {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: rgba(10, 10, 14, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--term-border-dim);
+  padding: 3px 4px;
+  box-shadow: var(--shadow-md);
+}
+
+.btb-btn {
+  padding: 5px 10px;
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  color: var(--term-green-dim);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+  transition:
+    background var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease;
+}
+.btb-btn:hover {
+  background: color-mix(in srgb, var(--term-text) 8%, transparent);
+  color: var(--term-text);
+}
+.btb-btn-active {
+  background: color-mix(in srgb, var(--term-sem-blue) 12%, transparent);
+  border-color: color-mix(in srgb, var(--term-sem-blue) 35%, transparent);
+  color: color-mix(in srgb, var(--term-sem-blue) 90%, white);
+}
+.btb-btn-danger {
+  color: var(--term-sem-red);
+}
+.btb-btn-danger:hover {
+  background: color-mix(in srgb, var(--term-sem-red) 10%, transparent);
+}

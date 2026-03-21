@@ -8,6 +8,7 @@ import { playSound } from "@/lib/sound-manager";
  */
 export function useSoundEffects(enabled: boolean) {
   const prevStatuses = useRef<Map<string, string>>(new Map());
+  const lastDelegationId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -46,17 +47,13 @@ export function useSoundEffects(enabled: boolean) {
       const teamMsgs = state.teamMessages;
       if (teamMsgs.length > 0) {
         const latest = teamMsgs[teamMsgs.length - 1];
-        // Play delegation sound for recent delegation messages (within 2s)
         if (
           latest.messageType === "delegation" &&
+          latest.id !== lastDelegationId.current &&
           Date.now() - latest.timestamp < 2000
         ) {
-          // Debounce: only if we haven't already played for this message
-          const key = `_delegation_${latest.id}`;
-          if (!(prev as any)[key]) {
-            playSound("delegation");
-            (next as any)[key] = true;
-          }
+          lastDelegationId.current = latest.id;
+          playSound("delegation");
         }
       }
 
