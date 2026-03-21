@@ -13,6 +13,7 @@ import { EditTool } from "@/components/office/types";
 import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX } from "@/components/office/constants";
 import { useEditorActions } from "@/hooks/useEditorActions";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
+import { useSoundEffects } from "@/hooks/useSoundEffects";
 
 import type { SceneAdapter } from "@/components/office/scene/SceneAdapter";
 import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
@@ -254,6 +255,9 @@ export default function OfficePage() {
       if (stored !== null) setSoundEnabled(JSON.parse(stored));
     } catch { /* ignore */ }
   }, []);
+
+  // Play sound effects on store events (task start/done/error/approval/delegation)
+  useSoundEffects(soundEnabled);
 
   // Tauri: listen for drag-drop events to capture folder/file paths AND images
   // (Tauri intercepts native drop events, so web onDrop doesn't fire in desktop mode)
