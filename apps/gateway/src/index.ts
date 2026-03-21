@@ -980,7 +980,7 @@ async function main() {
     workspace: config.defaultWorkspace,
     backends: backendsToUse,
     defaultBackend: config.defaultBackend,
-    worktree: { mergeOnComplete: true, commitOnMerge: true },
+    worktree: { mergeOnComplete: true },
     retry: { maxRetries: 2, escalateToLeader: true },
     promptsDir: path.join(os.homedir(), ".bit-office", "prompts"),
     sandboxMode: config.sandboxMode,

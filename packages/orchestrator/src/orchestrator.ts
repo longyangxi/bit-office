@@ -37,7 +37,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private sandboxMode: "full" | "safe";
   private worktreeEnabled: boolean;
   private worktreeMerge: boolean;
-  private worktreeCommit: boolean;
   get isWorktreeEnabled(): boolean { return this.worktreeEnabled; }
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
@@ -55,11 +54,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (opts.worktree === false) {
       this.worktreeEnabled = false;
       this.worktreeMerge = false;
-      this.worktreeCommit = false;
     } else {
       this.worktreeEnabled = true;
       this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
-      this.worktreeCommit = opts.worktree?.commitOnMerge ?? true;
     }
 
     // Register backends
@@ -307,7 +304,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const base = session.worktreePath.includes(".worktrees")
         ? path.dirname(path.dirname(session.worktreePath))
         : this.workspace;
-      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch, this.worktreeCommit);
+      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -656,16 +653,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       // Worktree merge strategy:
       // - Team workers: keep worktree alive between tasks so the agent retains session
       //   history (--resume). Merge all at once when team result is finalized.
-      // - Solo agents: always squash merge on completion to bring changes back.
-      //   mergeOnComplete controls commit: true = commit, false = leave as unstaged.
+      // - Solo agents: squash merge + commit on completion when mergeOnComplete is true.
       const doneSession = this.agentManager.get(agentId);
-      if (doneSession?.worktreePath && doneSession.worktreeBranch
+      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
-        const shouldCommit = this.worktreeMerge && this.worktreeCommit;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, shouldCommit);
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch);
         this.emitEvent({
           type: "worktree:merged",
           agentId,

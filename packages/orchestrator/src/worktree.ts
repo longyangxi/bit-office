@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync, readdirSync, rmdirSync, copyFileSync, mkdirSync } from "fs";
+import { existsSync, readdirSync, rmdirSync } from "fs";
 import path from "path";
 
 const TIMEOUT = 5000;
@@ -167,45 +167,30 @@ export function mergeWorktree(
   workspace: string,
   worktreePath: string,
   branch: string,
-  commit = true,
 ): MergeResult {
   try {
-    if (commit) {
-      // Commit mode: auto-commit worktree → squash merge → commit on main
-      autoCommitWorktree(worktreePath, branch);
-      gitExec(`git merge --squash "${branch}"`, workspace);
+    autoCommitWorktree(worktreePath, branch);
+    gitExec(`git merge --squash "${branch}"`, workspace);
 
-      let stagedFiles: string[] = [];
-      try {
-        const output = gitExec("git diff --cached --name-only", workspace);
-        stagedFiles = output ? output.split("\n") : [];
-      } catch { /* ignore */ }
+    let stagedFiles: string[] = [];
+    try {
+      const output = gitExec("git diff --cached --name-only", workspace);
+      stagedFiles = output ? output.split("\n") : [];
+    } catch { /* ignore */ }
 
-      if (stagedFiles.length > 0) {
-        const sanitizedBranch = branch.replace(/"/g, '\\"');
-        gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
-        console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
-      }
-
-      // Clean up
-      try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
-      try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
-
-      return { success: true, stagedFiles };
-    } else {
-      // No-commit mode: copy changed files back to workspace as unstaged changes
-      const changedFiles = copyChangedFiles(worktreePath, workspace);
-      console.log(`[Worktree] Copied ${changedFiles.length} changed files from ${branch} to workspace`);
-
-      // Clean up
-      try { gitExec(`git worktree remove --force "${worktreePath}"`, workspace); } catch { /* already removed */ }
-      try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
-
-      return { success: true, stagedFiles: changedFiles };
+    if (stagedFiles.length > 0) {
+      const sanitizedBranch = branch.replace(/"/g, '\\"');
+      gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
+      console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
+
+    // Clean up
+    try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
+    try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
+
+    return { success: true, stagedFiles };
   } catch (err) {
     console.error(`[Worktree] Merge failed for ${branch}:`, (err as Error).message);
-    // Merge conflict or other failure
     let conflictFiles: string[] = [];
     try {
       const output = gitExec("git diff --name-only --diff-filter=U", workspace);
@@ -215,36 +200,6 @@ export function mergeWorktree(
 
     return { success: false, conflictFiles };
   }
-}
-
-/** Copy changed files from worktree to workspace (no git merge needed). */
-function copyChangedFiles(worktreePath: string, workspace: string): string[] {
-  // Find files that differ from the base commit
-  let changedOutput: string;
-  try {
-    changedOutput = gitExec("git diff HEAD --name-only", worktreePath);
-    if (!changedOutput) {
-      // Also check untracked files
-      const untracked = gitExec("git ls-files --others --exclude-standard", worktreePath);
-      changedOutput = untracked;
-    }
-  } catch {
-    return [];
-  }
-  if (!changedOutput) return [];
-
-  const files = changedOutput.split("\n").filter(Boolean);
-  for (const file of files) {
-    const src = path.join(worktreePath, file);
-    const dst = path.join(workspace, file);
-    try {
-      mkdirSync(path.dirname(dst), { recursive: true });
-      copyFileSync(src, dst);
-    } catch {
-      console.warn(`[Worktree] Failed to copy ${file}`);
-    }
-  }
-  return files;
 }
 
 /**

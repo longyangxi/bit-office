@@ -247,8 +247,6 @@ export interface OrchestratorEventMap {
 export interface WorktreeOptions {
   /** Merge worktree branch back to parent on task success (default: true) */
   mergeOnComplete?: boolean;
-  /** Auto-commit after squash merge (default: true). When false, changes are left staged for review. */
-  commitOnMerge?: boolean;
 }
 
 export interface RetryOptions {
