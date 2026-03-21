@@ -186,7 +186,9 @@ export function mergeWorktree(
       gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     } else if (stagedFiles.length > 0) {
-      console.log(`[Worktree] Squash-merged ${branch} (${stagedFiles.length} files staged for review)`);
+      // Unstage so changes appear as modified (not staged) for easier review
+      gitExec("git reset HEAD", workspace);
+      console.log(`[Worktree] Squash-merged ${branch} (${stagedFiles.length} files as unstaged changes)`);
     }
 
     // Clean up

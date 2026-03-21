@@ -656,14 +656,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       // Worktree merge strategy:
       // - Team workers: keep worktree alive between tasks so the agent retains session
       //   history (--resume). Merge all at once when team result is finalized.
-      // - Solo agents: merge immediately on task completion (no team finalize event).
+      // - Solo agents: always squash merge on completion to bring changes back.
+      //   mergeOnComplete controls commit: true = commit, false = leave as unstaged.
       const doneSession = this.agentManager.get(agentId);
-      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
+      if (doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, this.worktreeCommit);
+        const shouldCommit = this.worktreeMerge && this.worktreeCommit;
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, shouldCommit);
         this.emitEvent({
           type: "worktree:merged",
           agentId,
