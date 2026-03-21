@@ -8,6 +8,9 @@ import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
 import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
+import TermModal from "./primitives/TermModal";
+import TermButton from "./primitives/TermButton";
+import TermInput from "./primitives/TermInput";
 
 function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends }: {
   agentDefs: AgentDefinition[];
@@ -32,167 +35,128 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
     onCreateTeam(leader.id, memberIds, backends, workDir || undefined);
   };
 
-  // Fixed rows (leader + reviewer) + toggleable dev rows
   const fixedRows: { def: AgentDefinition; label: string }[] = [];
   if (leader) fixedRows.push({ def: leader, label: "LEAD" });
   if (reviewer) fixedRows.push({ def: reviewer, label: "REVIEWER" });
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
-      }}
+    <TermModal
+      open={true}
+      onClose={onClose}
+      maxWidth={440}
+      zIndex={100}
+      title="Hire Team"
+      footer={
+        <>
+          <TermButton variant="primary" onClick={handleCreate} disabled={!leader} style={{ flex: 1, padding: "9px", fontWeight: 700 }}>Create Team</TermButton>
+          <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
+        </>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: TERM_PANEL, padding: "18px 18px 14px",
-          width: "90%", maxWidth: 440, border: `2px solid ${TERM_BORDER}`,
-          boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
-          maxHeight: "90vh", overflowY: "auto",
-        }}
-        data-scrollbar
-      >
-        <h2 className="px-font" style={{ fontSize: 14, margin: "0 0 14px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em" }}>Hire Team</h2>
-
-        {/* Working directory picker */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>PROJECT DIRECTORY</div>
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <input
-              type="text"
-              value={workDir}
-              onChange={(e) => setWorkDir(e.target.value)}
-              placeholder="Paste path or click Browse"
-              style={{
-                flex: 1, padding: "6px 8px", fontSize: 12,
-                border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG,
-                color: "#eddcb8", fontFamily: "monospace",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => {
-                const rid = nanoid(6);
-                folderPickCallbacks.set(rid, (p) => setWorkDir(p));
-                sendCommand({ type: "PICK_FOLDER", requestId: rid });
-              }}
-              style={{
-                padding: "6px 10px", border: `1px solid ${TERM_BORDER}`,
-                backgroundColor: TERM_BG, color: TERM_DIM,
-                fontSize: 12, cursor: "pointer", fontFamily: "monospace",
-                whiteSpace: "nowrap",
-              }}
-            >Browse</button>
-          </div>
-          <div style={{ fontSize: 10, color: "#5a4a38", marginTop: 3, fontFamily: "monospace" }}>
-            Empty = default workspace
-          </div>
-        </div>
-
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 6, fontFamily: "monospace", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
-          {/* Fixed rows: leader and reviewer */}
-          {fixedRows.map(({ def, label }) => (
-            <div
-              key={def.id}
-              title={def.skills ? `Skills: ${def.skills}` : undefined}
-              style={{
-                display: "flex", alignItems: "center", gap: 8, padding: "7px 10px",
-                border: `1px solid ${TERM_SEM_YELLOW}70`,
-                backgroundColor: TERM_SURFACE,
-                textAlign: "left",
-              }}
-            >
-              <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
-                  {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: 11, fontFamily: "monospace" }}>{label}</span>
-                </div>
-                <div style={{ fontSize: 13, color: TERM_DIM }}>{def.role}</div>
-              </div>
-              <select
-                value={backends[def.id] ?? "claude"}
-                onClick={(e) => e.stopPropagation()}
-                onChange={(e) => setBackends((prev) => ({ ...prev, [def.id]: e.target.value }))}
-                style={{
-                  padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
-                  backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "monospace",
-                }}
-              >
-                {BACKEND_OPTIONS.map((b) => (
-                  <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
-                ))}
-              </select>
-            </div>
-          ))}
-
-          {/* Dev cards — single select grid */}
-          <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 4, marginBottom: 4, fontFamily: "monospace", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
-            {devAgents.map((def) => {
-              const selected = selectedDevId === def.id;
-              return (
-                <button
-                  key={def.id}
-                  onClick={() => setSelectedDevId(def.id)}
-                  title={def.skills ? `Skills: ${def.skills}` : undefined}
-                  style={{
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    padding: "12px 6px 10px",
-                    border: selected ? `1px solid ${TERM_GREEN}60` : `1px solid ${TERM_BORDER}`,
-                    backgroundColor: selected ? "#2a2200" : "transparent",
-                    cursor: "pointer", textAlign: "center",
-                    opacity: selected ? 1 : 0.5,
-                    transition: "opacity 0.15s, border-color 0.15s, background-color 0.15s",
-                  }}
-                >
-                  <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#eddcb8", marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-                  <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
-                  <select
-                    value={backends[def.id] ?? "claude"}
-                    onClick={(e) => { e.stopPropagation(); setSelectedDevId(def.id); }}
-                    onChange={(e) => { setSelectedDevId(def.id); setBackends((prev) => ({ ...prev, [def.id]: e.target.value })); }}
-                    style={{
-                      marginTop: 6, padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
-                      backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "monospace",
-                    }}
-                  >
-                    {BACKEND_OPTIONS.map((b) => (
-                      <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
-                    ))}
-                  </select>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: 6 }}>
-          <button
-            onClick={handleCreate}
-            style={{
-              flex: 1, padding: "9px", border: `1px solid ${TERM_GREEN}60`,
-              backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN, fontSize: 14,
-              fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
-              opacity: leader ? 1 : 0.4,
+      {/* Working directory picker */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>PROJECT DIRECTORY</div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <TermInput
+            type="text"
+            value={workDir}
+            onChange={(e) => setWorkDir(e.target.value)}
+            placeholder="Paste path or click Browse"
+            style={{ flex: 1 }}
+          />
+          <TermButton
+            variant="dim"
+            onClick={() => {
+              const rid = nanoid(6);
+              folderPickCallbacks.set(rid, (p) => setWorkDir(p));
+              sendCommand({ type: "PICK_FOLDER", requestId: rid });
             }}
-            disabled={!leader}
-          >Create Team</button>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "9px 16px",
-              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-              color: "#6a5848", fontSize: 14, cursor: "pointer", fontFamily: "monospace",
-            }}
-          >Cancel</button>
+          >Browse</TermButton>
+        </div>
+        <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+          Empty = default workspace
         </div>
       </div>
-    </div>
+
+      <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
+        {/* Fixed rows: leader and reviewer */}
+        {fixedRows.map(({ def, label }) => (
+          <div
+            key={def.id}
+            title={def.skills ? `Skills: ${def.skills}` : undefined}
+            style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "7px 10px",
+              border: `1px solid ${TERM_SEM_YELLOW}70`,
+              backgroundColor: TERM_SURFACE,
+              textAlign: "left",
+            }}
+          >
+            <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
+                {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: 11, fontFamily: "var(--font-mono)" }}>{label}</span>
+              </div>
+              <div style={{ fontSize: 13, color: TERM_DIM }}>{def.role}</div>
+            </div>
+            <select
+              value={backends[def.id] ?? "claude"}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => setBackends((prev) => ({ ...prev, [def.id]: e.target.value }))}
+              style={{
+                padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
+                backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)",
+              }}
+            >
+              {BACKEND_OPTIONS.map((b) => (
+                <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+
+        {/* Dev cards */}
+        <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 4, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
+          {devAgents.map((def) => {
+            const selected = selectedDevId === def.id;
+            return (
+              <button
+                key={def.id}
+                onClick={() => setSelectedDevId(def.id)}
+                title={def.skills ? `Skills: ${def.skills}` : undefined}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  padding: "12px 6px 10px",
+                  border: selected ? `1px solid ${TERM_GREEN}60` : `1px solid ${TERM_BORDER}`,
+                  backgroundColor: selected ? `${TERM_GREEN}0a` : "transparent",
+                  cursor: "pointer", textAlign: "center",
+                  opacity: selected ? 1 : 0.5,
+                  transition: "opacity 0.15s, border-color 0.15s, background-color 0.15s",
+                }}
+              >
+                <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+                <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+                <select
+                  value={backends[def.id] ?? "claude"}
+                  onClick={(e) => { e.stopPropagation(); setSelectedDevId(def.id); }}
+                  onChange={(e) => { setSelectedDevId(def.id); setBackends((prev) => ({ ...prev, [def.id]: e.target.value })); }}
+                  style={{
+                    marginTop: 6, padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
+                    backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)",
+                  }}
+                >
+                  {BACKEND_OPTIONS.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name}{detectedBackends && detectedBackends.length > 0 && !detectedBackends.includes(b.id) ? " (?)" : ""}</option>
+                  ))}
+                </select>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </TermModal>
   );
 }
 

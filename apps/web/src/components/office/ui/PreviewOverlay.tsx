@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
+import TermModal from "./primitives/TermModal";
+import TermButton from "./primitives/TermButton";
 
 function StarRow({ label, icon, value, onChange }: {
   label: string; icon: string; value: number; onChange: (v: number) => void;
@@ -40,41 +42,16 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
   const hasRatings = Object.values(ratings).some((v) => v && v > 0);
 
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 10000,
-      backgroundColor: "rgba(0,0,0,0.75)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }} onClick={onSkip}>
-      <div style={{
-        backgroundColor: TERM_BG, padding: "22px 20px",
-        border: `2px solid ${TERM_BORDER}`,
-        boxShadow: `0 0 40px ${TERM_GREEN}14`,
-        width: 280,
-      }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ fontSize: 13, color: TERM_GREEN, fontFamily: "monospace", fontWeight: 600, marginBottom: 14, textAlign: "center" }}>
-          Rate this project
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {RATING_DIMENSIONS.map((d) => (
-            <StarRow
-              key={d.key}
-              label={d.label}
-              icon={d.icon}
-              value={ratings[d.key] ?? 0}
-              onChange={(v) => setRatings((prev) => ({ ...prev, [d.key]: v }))}
-            />
-          ))}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center" }}>
-          <button
-            onClick={onSkip}
-            style={{
-              padding: "6px 16px", border: `1px solid ${TERM_BORDER}`,
-              background: "none", color: TERM_DIM,
-              fontSize: 11, fontFamily: "monospace", cursor: "pointer",
-            }}
-          >Skip</button>
-          <button
+    <TermModal
+      open={true}
+      onClose={onSkip}
+      maxWidth={280}
+      title="Rate this project"
+      footer={
+        <>
+          <TermButton variant="dim" onClick={onSkip} style={{ padding: "6px 16px", fontSize: 11 }}>Skip</TermButton>
+          <TermButton
+            variant="success"
             onClick={() => {
               if (!hasRatings) return;
               const filtered = Object.fromEntries(
@@ -83,16 +60,23 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
               onSubmit(filtered);
             }}
             disabled={!hasRatings}
-            style={{
-              padding: "6px 16px", border: `1px solid ${TERM_SEM_GREEN}30`,
-              background: hasRatings ? `${TERM_SEM_GREEN}20` : "rgba(255,255,255,0.03)",
-              color: hasRatings ? TERM_SEM_GREEN : "rgba(255,255,255,0.2)",
-              fontSize: 11, fontFamily: "monospace", cursor: hasRatings ? "pointer" : "default",
-            }}
-          >Submit</button>
-        </div>
+            style={{ padding: "6px 16px", fontSize: 11 }}
+          >Submit</TermButton>
+        </>
+      }
+    >
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {RATING_DIMENSIONS.map((d) => (
+          <StarRow
+            key={d.key}
+            label={d.label}
+            icon={d.icon}
+            value={ratings[d.key] ?? 0}
+            onChange={(v) => setRatings((prev) => ({ ...prev, [d.key]: v }))}
+          />
+        ))}
       </div>
-    </div>
+    </TermModal>
   );
 }
 

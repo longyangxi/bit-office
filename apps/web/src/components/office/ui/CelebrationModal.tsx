@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
 import { TERM_BG, TERM_GREEN, TERM_PANEL, TERM_BORDER, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
 import { computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
+import TermModal from "./primitives/TermModal";
+import TermButton from "./primitives/TermButton";
 
 function ConfettiOverlay() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -43,7 +45,6 @@ function ConfettiOverlay() {
         p.x += p.vx + Math.sin(now * 0.002 + p.rot) * 0.5;
         p.y += p.vy;
         p.rot += p.rotSpeed;
-        // Wrap horizontally, reset if fallen below
         if (p.x < -20) p.x = W + 20;
         if (p.x > W + 20) p.x = -20;
         if (p.y > H + 20) { p.y = -10; p.x = Math.random() * W; }
@@ -82,72 +83,49 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
   const canPreview = hasWebPreview(resultInfo);
   const canLaunch = !canPreview && buildPreviewCommand({ previewPath, previewCmd, previewPort, projectDir, entryFile });
   return (
-    <div style={{
-      position: "fixed", inset: 0, zIndex: 9999,
-      backgroundColor: "rgba(0,0,0,0.7)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-    }}>
-      <div style={{
-        backgroundColor: TERM_BG, padding: "28px 24px",
-        maxWidth: 420, width: "90%", textAlign: "center",
-        border: `2px solid ${TERM_BORDER}`, boxShadow: `0 0 40px ${TERM_GREEN}15, 4px 4px 0px rgba(0,0,0,0.5)`,
-      }}>
-        <div style={{ fontSize: 34, marginBottom: 10, color: TERM_GREEN }}>{"\u2605"}</div>
-        <div className="px-font" style={{ color: TERM_GREEN, fontSize: 14, marginBottom: 10, letterSpacing: "0.05em" }}>
-          Mission Complete!
-        </div>
-        <div style={{
-          color: TERM_DIM, fontSize: 14, marginBottom: 20, lineHeight: 1.7, fontFamily: "monospace",
-        }}>
-          Your task has been completed successfully. Ready for the next mission whenever you are.
-        </div>
-        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+    <TermModal
+      open={true}
+      onClose={onDismiss}
+      maxWidth={420}
+      zIndex={9999}
+      footer={
+        <>
           {canPreview && (
-            <button
+            <TermButton
+              variant="success"
               onClick={() => {
                 const cmd = buildPreviewCommand({ previewPath, previewCmd, previewPort, projectDir, entryFile });
                 if (cmd) sendCommand(cmd);
                 const url = computePreviewUrl(resultInfo);
                 if (url) onPreview(url);
               }}
-              style={{
-                padding: "9px 20px", border: `1px solid ${TERM_SEM_GREEN}`,
-                backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN,
-                fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
-              }}
-            >
-              {"\u25B6"} Preview
-            </button>
+              style={{ padding: "9px 20px" }}
+            >{"\u25B6"} Preview</TermButton>
           )}
           {canLaunch && (
-            <button
+            <TermButton
               onClick={() => {
                 const cmd = buildPreviewCommand({ previewPath, previewCmd, previewPort, projectDir, entryFile });
                 if (cmd) sendCommand(cmd);
                 onDismiss();
               }}
-              style={{
-                padding: "9px 20px", border: `1px solid ${TERM_SEM_BLUE}`,
-                backgroundColor: TERM_PANEL, color: TERM_SEM_BLUE,
-                fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "monospace",
-              }}
-            >
-              {"\u25B6"} Launch
-            </button>
+              style={{ padding: "9px 20px", borderColor: "var(--term-sem-blue)", color: "var(--term-sem-blue)" }}
+            >{"\u25B6"} Launch</TermButton>
           )}
-          <button
-            onClick={onDismiss}
-            style={{
-              padding: "9px 20px",
-              border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_PANEL,
-              color: TERM_DIM, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
-            }}
-          >
-            OK
-          </button>
+          <TermButton variant="dim" onClick={onDismiss} style={{ padding: "9px 20px" }}>OK</TermButton>
+        </>
+      }
+    >
+      <div style={{ textAlign: "center" }}>
+        <div style={{ fontSize: 34, marginBottom: 10, color: TERM_GREEN }}>{"\u2605"}</div>
+        <div className="px-font" style={{ color: TERM_GREEN, fontSize: 14, marginBottom: 10, letterSpacing: "0.05em" }}>
+          Mission Complete!
+        </div>
+        <div style={{ color: TERM_DIM, fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-mono)" }}>
+          Your task has been completed successfully. Ready for the next mission whenever you are.
         </div>
       </div>
-    </div>
+    </TermModal>
   );
 }
 

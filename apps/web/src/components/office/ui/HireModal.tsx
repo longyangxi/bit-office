@@ -8,6 +8,9 @@ import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
 import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
+import TermModal from "./primitives/TermModal";
+import TermButton from "./primitives/TermButton";
+import TermInput from "./primitives/TermInput";
 
 function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
   agentDefs: AgentDefinition[];
@@ -23,196 +26,155 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [workDir, setWorkDir] = useState<string>("");
 
-  // Leaders can only work in teams, not as solo agents
   const builtinAgents = agentDefs.filter((a) => a.isBuiltin && a.teamRole !== "leader");
   const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole !== "leader");
 
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed", inset: 0, backgroundColor: "rgba(0,0,0,0.6)",
-        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100,
-      }}
+    <TermModal
+      open={true}
+      onClose={onClose}
+      maxWidth={420}
+      zIndex={100}
+      title="Hire Team"
+      footer={
+        <>
+          <TermButton variant="primary" onClick={onCreate} style={{ flex: 1, padding: "9px" }}>+ Create New</TermButton>
+          <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
+        </>
+      }
     >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          backgroundColor: TERM_PANEL,
-          width: "90%", maxWidth: 420, border: `2px solid ${TERM_BORDER}`,
-          boxShadow: "4px 4px 0px rgba(0,0,0,0.5)",
-          maxHeight: "90vh", display: "flex", flexDirection: "column",
-        }}
-      >
-        <h2 className="px-font" style={{ fontSize: 14, margin: 0, padding: "14px 18px 10px", textAlign: "center", color: TERM_GREEN, letterSpacing: "0.05em", flexShrink: 0 }}>Hire Team</h2>
-
-        <div style={{ padding: "0 18px", flexShrink: 0 }}>
-        {/* Backend selector */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>AI BACKEND</div>
-          <div style={{ display: "flex", gap: 4 }}>
-            {BACKEND_OPTIONS.map((b) => {
-              const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
-              const isSelected = selectedBackend === b.id;
-              return (
-                <button
-                  key={b.id}
-                  onClick={() => setSelectedBackend(b.id)}
-                  style={{
-                    flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
-                    border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}`,
-                    backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
-                    color: isSelected ? TERM_GREEN : available ? TERM_DIM : TERM_DIM,
-                    cursor: "pointer", fontFamily: "monospace",
-                    opacity: available ? 1 : 0.7,
-                    position: "relative",
-                  }}
-                >
-                  <span style={{
-                    display: "inline-block", width: 5, height: 5, borderRadius: "50%",
-                    backgroundColor: available ? TERM_SEM_GREEN : TERM_SEM_YELLOW,
-                    marginRight: 4, verticalAlign: "middle",
-                  }} />
-                  {b.name}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Working directory picker */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
-          <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
-            <input
-              type="text"
-              value={workDir}
-              onChange={(e) => setWorkDir(e.target.value)}
-              placeholder="Paste path or click Browse"
-              style={{
-                flex: 1, padding: "6px 8px", fontSize: 12,
-                border: `1px solid ${TERM_BORDER}`, backgroundColor: TERM_BG,
-                color: TERM_TEXT_BRIGHT, fontFamily: "monospace",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={() => {
-                const rid = nanoid(6);
-                folderPickCallbacks.set(rid, (p) => setWorkDir(p));
-                sendCommand({ type: "PICK_FOLDER", requestId: rid });
-              }}
-              style={{
-                padding: "6px 10px", border: `1px solid ${TERM_BORDER}`,
-                backgroundColor: TERM_BG, color: TERM_DIM,
-                fontSize: 12, cursor: "pointer", fontFamily: "monospace",
-                whiteSpace: "nowrap",
-              }}
-            >Browse</button>
-          </div>
-          <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "monospace", opacity: 0.7 }}>
-            Empty = default workspace
-          </div>
-        </div>
-
-        </div>
-        <div data-scrollbar style={{ flex: 1, overflowY: "auto", padding: "0 18px" }}>
-        {/* Built-in agents */}
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
-          {builtinAgents.map((def) => (
-            <button
-              key={def.id}
-              onClick={() => onHire(def, selectedBackend, workDir || undefined)}
-              onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = TERM_GREEN + "40"; }}
-              onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = TERM_BORDER; }}
-              title={def.skills ? `Skills: ${def.skills}` : undefined}
-              style={{
-                display: "flex", flexDirection: "column", alignItems: "center",
-                padding: "12px 6px 10px", position: "relative",
-                border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-                cursor: "pointer", textAlign: "center",
-                transition: "border-color 0.15s",
-              }}
-            >
-              <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-              <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-              <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
-              {hoveredId === def.id && (
-                <span
-                  onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-                  style={{ position: "absolute", top: 4, right: 4, fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
-                  title="Edit"
-                >&#9998;</span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Custom agents */}
-        {customAgents.length > 0 && (
-          <>
-            <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "monospace", letterSpacing: "0.05em" }}>MY AGENTS</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
-              {customAgents.map((def) => (
-                <button
-                  key={def.id}
-                  onClick={() => onHire(def, selectedBackend, workDir || undefined)}
-                  onMouseEnter={(e) => { setHoveredId(def.id); e.currentTarget.style.borderColor = TERM_GREEN + "40"; }}
-                  onMouseLeave={(e) => { setHoveredId(null); e.currentTarget.style.borderColor = TERM_BORDER; }}
-                  title={def.skills ? `Skills: ${def.skills}` : undefined}
-                  style={{
-                    display: "flex", flexDirection: "column", alignItems: "center",
-                    padding: "12px 6px 10px", position: "relative",
-                    border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-                    cursor: "pointer", textAlign: "center",
-                    transition: "border-color 0.15s",
-                  }}
-                >
-                  <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-                  <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-                  <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
-                  {hoveredId === def.id && (
-                    <span style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2, alignItems: "center" }}>
-                      <span
-                        onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-                        style={{ fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
-                        title="Edit"
-                      >&#9998;</span>
-                      <span
-                        onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
-                        style={{ fontSize: 16, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 4px", fontWeight: 700 }}
-                        title="Delete"
-                      >&times;</span>
-                    </span>
-                  )}
-                </button>
-              ))}
-            </div>
-          </>
-        )}
-
-        </div>
-        <div style={{ display: "flex", gap: 6, padding: "10px 18px 14px", flexShrink: 0, borderTop: `1px solid ${TERM_BORDER}` }}>
-          <button
-            onClick={onCreate}
-            style={{
-              flex: 1, padding: "9px",
-              border: `1px solid ${TERM_GREEN}60`, backgroundColor: "transparent",
-              color: TERM_GREEN, fontSize: 14, cursor: "pointer", fontFamily: "monospace",
-            }}
-          >+ Create New</button>
-          <button
-            onClick={onClose}
-            style={{
-              padding: "9px 16px",
-              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
-              color: TERM_DIM, fontSize: 14, cursor: "pointer", fontFamily: "monospace",
-            }}
-          >Cancel</button>
+      {/* Backend selector */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>AI BACKEND</div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {BACKEND_OPTIONS.map((b) => {
+            const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
+            const isSelected = selectedBackend === b.id;
+            return (
+              <button
+                key={b.id}
+                onClick={() => setSelectedBackend(b.id)}
+                style={{
+                  flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
+                  border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}`,
+                  backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
+                  color: isSelected ? TERM_GREEN : TERM_DIM,
+                  cursor: "pointer", fontFamily: "var(--font-mono)",
+                  opacity: available ? 1 : 0.7,
+                }}
+              >
+                <span style={{
+                  display: "inline-block", width: 5, height: 5, borderRadius: "50%",
+                  backgroundColor: available ? TERM_SEM_GREEN : TERM_SEM_YELLOW,
+                  marginRight: 4, verticalAlign: "middle",
+                }} />
+                {b.name}
+              </button>
+            );
+          })}
         </div>
       </div>
-    </div>
+
+      {/* Working directory picker */}
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
+        <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+          <TermInput
+            type="text"
+            value={workDir}
+            onChange={(e) => setWorkDir(e.target.value)}
+            placeholder="Paste path or click Browse"
+            style={{ flex: 1 }}
+          />
+          <TermButton
+            variant="dim"
+            onClick={() => {
+              const rid = nanoid(6);
+              folderPickCallbacks.set(rid, (p) => setWorkDir(p));
+              sendCommand({ type: "PICK_FOLDER", requestId: rid });
+            }}
+          >Browse</TermButton>
+        </div>
+        <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+          Empty = default workspace
+        </div>
+      </div>
+
+      {/* Built-in agents */}
+      <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+        {builtinAgents.map((def) => (
+          <button
+            key={def.id}
+            onClick={() => onHire(def, selectedBackend, workDir || undefined)}
+            onMouseEnter={() => setHoveredId(def.id)}
+            onMouseLeave={() => setHoveredId(null)}
+            title={def.skills ? `Skills: ${def.skills}` : undefined}
+            style={{
+              display: "flex", flexDirection: "column", alignItems: "center",
+              padding: "12px 6px 10px", position: "relative",
+              border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
+              cursor: "pointer", textAlign: "center",
+              transition: "border-color 0.15s",
+            }}
+          >
+            <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
+            <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+            <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+            {hoveredId === def.id && (
+              <span
+                onClick={(e) => { e.stopPropagation(); onEdit(def); }}
+                style={{ position: "absolute", top: 4, right: 4, fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
+                title="Edit"
+              >&#9998;</span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Custom agents */}
+      {customAgents.length > 0 && (
+        <>
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>MY AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+            {customAgents.map((def) => (
+              <button
+                key={def.id}
+                onClick={() => onHire(def, selectedBackend, workDir || undefined)}
+                onMouseEnter={() => setHoveredId(def.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                title={def.skills ? `Skills: ${def.skills}` : undefined}
+                style={{
+                  display: "flex", flexDirection: "column", alignItems: "center",
+                  padding: "12px 6px 10px", position: "relative",
+                  border: `1px solid ${TERM_BORDER}`, backgroundColor: "transparent",
+                  cursor: "pointer", textAlign: "center",
+                  transition: "border-color 0.15s",
+                }}
+              >
+                <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
+                <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+                <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+                {hoveredId === def.id && (
+                  <span style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2, alignItems: "center" }}>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onEdit(def); }}
+                      style={{ fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
+                      title="Edit"
+                    >&#9998;</span>
+                    <span
+                      onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
+                      style={{ fontSize: 16, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 4px", fontWeight: 700 }}
+                      title="Delete"
+                    >&times;</span>
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </TermModal>
   );
 }
 
