@@ -83,7 +83,7 @@ export interface TeamChatMessage {
   toAgentId?: string;
   toAgentName?: string;
   message: string;
-  messageType: "delegation" | "result" | "status";
+  messageType: "delegation" | "result" | "status" | "warning";
   timestamp: number;
 }
 
@@ -852,6 +852,21 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           if (state.teamMessages.some((m) => m.id === teamMsg.id)) break;
           const newTeamMessages = [...state.teamMessages, teamMsg];
           saveTeamMessages(newTeamMessages);
+          // Warning messages: also inject into the agent's own console so solo agents see them
+          if (event.messageType === "warning" && fromAgent) {
+            const warnId = `warn-${event.timestamp}-${event.fromAgentId}`;
+            if (!fromAgent.messages.some((m) => m.id === warnId)) {
+              agents.set(event.fromAgentId, {
+                ...fromAgent,
+                messages: [...fromAgent.messages, {
+                  id: warnId,
+                  role: "system" as const,
+                  text: event.message,
+                  timestamp: event.timestamp,
+                }],
+              });
+            }
+          }
           return { agents, teamMessages: newTeamMessages };
         }
         case "TASK_QUEUED": {

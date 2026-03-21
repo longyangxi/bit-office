@@ -105,7 +105,7 @@ export interface TeamChatEvent {
   fromAgentId: string;
   toAgentId?: string;
   message: string;
-  messageType: "delegation" | "result" | "status";
+  messageType: "delegation" | "result" | "status" | "warning";
   taskId?: string;
   timestamp: number;
 }

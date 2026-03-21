@@ -4,6 +4,40 @@ import path from "path";
 
 const TIMEOUT = 5000;
 
+// Cached git version (parsed once per process)
+let cachedGitVersion: [number, number, number] | null = null;
+
+/**
+ * Parse the git version string (e.g. "git version 2.19.0") into [major, minor, patch].
+ */
+function getGitVersion(cwd?: string): [number, number, number] {
+  if (cachedGitVersion) return cachedGitVersion;
+  try {
+    const raw = execSync("git --version", {
+      cwd: cwd ?? process.cwd(),
+      encoding: "utf-8",
+      stdio: "pipe",
+      timeout: TIMEOUT,
+    }).trim();
+    const match = raw.match(/(\d+)\.(\d+)\.(\d+)/);
+    if (match) {
+      cachedGitVersion = [Number(match[1]), Number(match[2]), Number(match[3])];
+      return cachedGitVersion;
+    }
+  } catch { /* ignore */ }
+  return [0, 0, 0];
+}
+
+/**
+ * Check if the installed git version is >= the given version.
+ */
+function gitVersionAtLeast(major: number, minor: number, patch = 0): boolean {
+  const [a, b, c] = getGitVersion();
+  if (a !== major) return a > major;
+  if (b !== minor) return b > minor;
+  return c >= patch;
+}
+
 // ---------------------------------------------------------------------------
 // Git environment isolation (prevents worktree cross-contamination)
 // Inspired by Aperant's git-isolation.ts — clears env vars that cause
@@ -258,20 +292,46 @@ export function mergeWorktree(
 }
 
 /**
- * Check for conflicts (dry run) using git merge-tree.
+ * Check for conflicts (dry run).
+ * Uses `git merge-tree --write-tree` on git >= 2.38, otherwise falls back to
+ * `git merge --no-commit --no-ff` + `git merge --abort` for older versions
+ * (e.g. macOS bundled git 2.19).
  */
 export function checkConflicts(workspace: string, branch: string): string[] {
+  if (gitVersionAtLeast(2, 38)) {
+    // Modern path: pure dry-run, no working tree changes
+    try {
+      gitExec(`git merge-tree --write-tree HEAD "${branch}"`, workspace);
+      return [];
+    } catch (err) {
+      const output = (err as { stdout?: Buffer })?.stdout?.toString() ?? "";
+      const files: string[] = [];
+      for (const line of output.split("\n")) {
+        const match = line.match(/CONFLICT.*:\s+Merge conflict in\s+(.+)/);
+        if (match) files.push(match[1].trim());
+      }
+      return files;
+    }
+  }
+
+  // Fallback for git < 2.38: attempt a real merge and immediately abort
   try {
-    gitExec(`git merge-tree --write-tree HEAD "${branch}"`, workspace);
+    gitExec(`git merge --no-commit --no-ff "${branch}"`, workspace);
+    // Merge succeeded (no conflicts) — abort to undo
+    try { gitExec("git merge --abort", workspace); } catch { /* ignore */ }
     return [];
   } catch (err) {
-    const output = (err as { stdout?: Buffer })?.stdout?.toString() ?? "";
-    const files: string[] = [];
-    for (const line of output.split("\n")) {
-      const match = line.match(/CONFLICT.*:\s+Merge conflict in\s+(.+)/);
-      if (match) files.push(match[1].trim());
+    // Merge failed — extract conflict files, then abort
+    const conflictFiles: string[] = [];
+    try {
+      const output = gitExec("git diff --name-only --diff-filter=U", workspace);
+      if (output) conflictFiles.push(...output.split("\n").filter(Boolean));
+    } catch { /* ignore */ }
+    try { gitExec("git merge --abort", workspace); } catch {
+      // If --abort fails, hard reset as last resort
+      try { gitExec("git reset --hard HEAD", workspace); } catch { /* ignore */ }
     }
-    return files;
+    return conflictFiles;
   }
 }
 

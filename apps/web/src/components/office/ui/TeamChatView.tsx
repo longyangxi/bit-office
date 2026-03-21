@@ -5,13 +5,14 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_RED, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
 
 function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
   return {
     delegation: { bg: TERM_SURFACE, border: TERM_SEM_BLUE, label: "Delegated" },
     result: { bg: TERM_SURFACE, border: TERM_SEM_GREEN, label: "Result" },
     status: { bg: TERM_SURFACE, border: TERM_SEM_YELLOW, label: "Status" },
+    warning: { bg: TERM_SURFACE, border: TERM_SEM_RED, label: "Warning" },
   };
 }
 const TEAM_MSG_COLORS = getTeamMsgColors();

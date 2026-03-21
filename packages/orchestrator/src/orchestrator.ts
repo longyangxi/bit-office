@@ -340,6 +340,18 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         conflictFiles: result.conflictFiles,
         stagedFiles: result.stagedFiles,
       });
+      if (!result.success) {
+        const conflictList = result.conflictFiles?.length
+          ? `: ${result.conflictFiles.join(", ")}`
+          : "";
+        this.emitEvent({
+          type: "team:chat",
+          fromAgentId: session.agentId,
+          message: `Merge conflict — ${session.name}'s changes could not be merged to main${conflictList}. Manual resolution needed.`,
+          messageType: "warning",
+          timestamp: Date.now(),
+        });
+      }
       session.worktreePath = null;
       session.worktreeBranch = null;
     }
@@ -715,6 +727,18 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           conflictFiles: result.conflictFiles,
           stagedFiles: result.stagedFiles,
         });
+        if (!result.success) {
+          const conflictList = result.conflictFiles?.length
+            ? `: ${result.conflictFiles.join(", ")}`
+            : "";
+          this.emitEvent({
+            type: "team:chat",
+            fromAgentId: agentId,
+            message: `Merge conflict — ${doneSession.name}'s changes could not be merged to main${conflictList}. Manual resolution needed.`,
+            messageType: "warning",
+            timestamp: Date.now(),
+          });
+        }
         // Keep worktreePath/worktreeBranch set — next task reuses the same worktree
       }
 

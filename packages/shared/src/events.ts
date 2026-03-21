@@ -113,7 +113,7 @@ export const TeamChatEvent = z.object({
   fromAgentId: z.string(),
   toAgentId: z.string().optional(),
   message: z.string(),
-  messageType: z.enum(["delegation", "result", "status"]),
+  messageType: z.enum(["delegation", "result", "status", "warning"]),
   taskId: z.string().optional(),
   timestamp: z.number(),
 });
