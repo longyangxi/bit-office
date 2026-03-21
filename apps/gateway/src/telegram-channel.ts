@@ -232,7 +232,8 @@ export const telegramChannel: Channel = {
 
       // --- /start ---
       if (text === "/start" || text === `/start@${botInfo.username}`) {
-        // Show TG-safe commands mapped to agent names
+        // Rebuild commands from latest hiredAgents before responding
+        rebuildBotCommands();
         const lines: string[] = [];
         for (const [cmd, agentId] of cmdToAgentId) {
           const a = currentMenu.find((m) => m.id === agentId);

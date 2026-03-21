@@ -35,6 +35,7 @@ const externalAgents = new Map<string, { agentId: string; name: string; backendI
 /** Snapshot current team state to disk (reads phase from orchestrator's PhaseMachine) */
 function persistTeamState() {
   const agents: PersistedAgent[] = orc.getAllAgents()
+    .filter(a => !a.agentId.startsWith("reviewer-")) // Reviewers are ephemeral — never persist
     .map(a => ({
       agentId: a.agentId,
       name: a.name,
@@ -681,6 +682,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     }
     case "PING": {
       console.log("[Gateway] Received PING, broadcasting agent statuses");
+      // Re-sync Telegram commands with current agent list (catches any drift)
+      syncHiredAgentsToTelegram();
       // Tell frontend the authoritative list of agents — remove any stale cached agents
       const allAgents = orc.getAllAgents();
       const allAgentIds = allAgents.map(a => a.agentId);
@@ -1079,8 +1082,13 @@ async function main() {
   // Restore team state from disk (agents, team structure, phase)
   const savedState = loadTeamState();
   if (savedState.agents.length > 0) {
-    console.log(`[Gateway] Restoring ${savedState.agents.length} agents from team-state.json`);
-    for (const agent of savedState.agents) {
+    // Filter out ephemeral reviewer agents — they should not survive restarts
+    const restorable = savedState.agents.filter(a => !a.agentId.startsWith("reviewer-"));
+    if (restorable.length < savedState.agents.length) {
+      console.log(`[Gateway] Skipping ${savedState.agents.length - restorable.length} ephemeral reviewer agent(s)`);
+    }
+    console.log(`[Gateway] Restoring ${restorable.length} agents from team-state.json`);
+    for (const agent of restorable) {
       orc.createAgent({
         agentId: agent.agentId,
         name: agent.name,
@@ -1102,7 +1110,7 @@ async function main() {
         agentWorkDirs.set(agent.agentId, agent.workDir);
       }
     }
-    if (savedState.team) {
+    if (savedState.team && orc.getAgent(savedState.team.leadAgentId)) {
       const t = savedState.team;
       if (t.phase === "execute") {
         // Execute phase: delegation state (pending tasks, counters) can't be restored,
