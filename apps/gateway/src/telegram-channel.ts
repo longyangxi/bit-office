@@ -28,7 +28,7 @@ const stickyAgent = new Map<string, string>();
 
 /** Allowed TG user IDs (empty = allow all) */
 let allowedUsers: string[] = [];
-let conflict409Retries = 0;
+let isInitialConnect = false;
 
 /** Live hired agents — synced from gateway via setTelegramAgentDefs() */
 let hiredAgents: AgentMenuItem[] = [];
@@ -160,24 +160,27 @@ export const telegramChannel: Channel = {
 
     allowedUsers = config.telegramAllowedUsers ?? [];
 
+    // Takeover only on fresh connect, not when already running
+    isInitialConnect = true;
     bot = new TelegramBot(token, { polling: true });
 
     bot.on("polling_error", async (err: any) => {
       const code = err?.response?.statusCode ?? err?.code;
       if (code === 409) {
-        if (conflict409Retries >= 3) {
-          console.error("[Telegram] 409 Conflict persists after 3 retries. Giving up.");
+        if (!isInitialConnect) {
+          // Another instance took over — yield gracefully
+          console.warn("[Telegram] 409 Conflict: another instance took over. Yielding.");
           bot?.stopPolling();
           return;
         }
-        conflict409Retries++;
-        console.warn(`[Telegram] 409 Conflict: taking over from old instance (attempt ${conflict409Retries})...`);
+        // Fresh connect — take over from stale/orphan instance
+        isInitialConnect = false;
+        console.warn("[Telegram] 409 Conflict: taking over from old instance...");
         bot?.stopPolling();
         try {
           await bot?.deleteWebHook();
           await new Promise(r => setTimeout(r, 1500));
           await bot?.startPolling();
-          conflict409Retries = 0;
           console.log("[Telegram] Took over polling successfully.");
         } catch (retryErr: any) {
           console.error("[Telegram] Failed to take over:", retryErr.message ?? retryErr);
