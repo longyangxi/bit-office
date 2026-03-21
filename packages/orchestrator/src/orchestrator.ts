@@ -679,7 +679,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, true);
+        const summary = event.result?.summary;
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, true, summary);
         this.emitEvent({
           type: "worktree:merged",
           agentId,

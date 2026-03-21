@@ -168,6 +168,7 @@ export function mergeWorktree(
   worktreePath: string,
   branch: string,
   keepAlive = false,
+  summary?: string,
 ): MergeResult {
   try {
     autoCommitWorktree(worktreePath, branch);
@@ -180,8 +181,8 @@ export function mergeWorktree(
     } catch { /* ignore */ }
 
     if (stagedFiles.length > 0) {
-      const sanitizedBranch = branch.replace(/"/g, '\\"');
-      gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
+      const msg = summary ? summary.slice(0, 200).replace(/"/g, '\\"') : `merge: ${branch.replace(/"/g, '\\"')}`;
+      gitExec(`git commit -m "${msg}"`, workspace);
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
 
