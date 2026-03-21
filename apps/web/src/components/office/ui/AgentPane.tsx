@@ -380,35 +380,34 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       position: "relative",
     }}>
       {/* ── Info bar ── */}
-      <div style={{
+      <div className="term-info-bar" style={{
         display: "flex", alignItems: "center", gap: 10,
-        padding: "6px 14px",
+        padding: "5px 14px",
         background: TERM_PANEL,
-        borderBottom: `1px solid ${TERM_BORDER_DIM}`,
         fontSize: 12, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0 }}>
+        <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, letterSpacing: "-0.01em" }}>
           {role?.split("\u2014")[0]?.trim()}
-          {backend && <span style={{ color: TERM_DIM }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
+          {backend && <span style={{ color: TERM_DIM, opacity: 0.7 }}> {BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend}</span>}
         </span>
         {(cwd || workDir) && (
-          <span className="term-path-scroll" style={{ color: TERM_DIM, flexShrink: 1, minWidth: 0 }} title={cwd ?? workDir ?? undefined}>
+          <span className="term-path-scroll" style={{ color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.6 }} title={cwd ?? workDir ?? undefined}>
             {cwd ?? workDir}
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <span style={{ color: TERM_DIM, flexShrink: 0 }}>{cfg.label}</span>
+        <span style={{ color: TERM_DIM, flexShrink: 0, opacity: 0.8 }}>{cfg.label}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <span
             onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
             style={{
               fontSize: TERM_SIZE, color: TERM_DIM, cursor: "pointer", lineHeight: 1,
-              padding: "4px", flexShrink: 0,
+              padding: "4px", flexShrink: 0, opacity: 0.5, transition: "opacity 0.15s, color 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; e.currentTarget.style.opacity = "1"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; e.currentTarget.style.opacity = "0.5"; }}
           >{"\u2715"}</span>
         )}
       </div>
@@ -747,7 +746,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
             // Owner input area
             return (
-              <div style={{
+              <div className="term-input-area" style={{
                 padding: "8px 12px",
                 borderTop: `1px solid ${TERM_BORDER_DIM}`,
                 background: TERM_PANEL,

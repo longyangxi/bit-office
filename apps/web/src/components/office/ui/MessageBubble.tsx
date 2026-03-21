@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -49,14 +49,15 @@ function ThinkingBubble({ logLine }: { logLine: string | null }) {
   return (
     <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 8 }}>
       <div style={{
-        padding: "8px 12px",
+        padding: "6px 12px",
         backgroundColor: TERM_PANEL, color: TERM_DIM, fontSize: TERM_SIZE,
         fontFamily: TERM_FONT,
-        borderLeft: `2px solid ${TERM_DIM}`,
+        borderLeft: `2px solid ${TERM_BORDER_DIM}`,
         maxWidth: "100%", overflow: "hidden",
         whiteSpace: "pre-wrap", wordBreak: "break-word",
+        opacity: 0.8,
       }}>
-        <span style={{ marginRight: 6 }}>{">"}</span>
+        <span style={{ marginRight: 6, opacity: 0.5 }}>{">"}</span>
         {logLine || "Thinking..."}
       </div>
     </div>
@@ -69,7 +70,8 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
     <span style={{
       fontSize: TERM_SIZE, padding: "1px 4px",
       color: TERM_DIM, fontFamily: TERM_FONT,
-      whiteSpace: "nowrap",
+      whiteSpace: "nowrap", opacity: 0.6,
+      fontVariantNumeric: "tabular-nums",
     }} title={`Input: ${inputTokens.toLocaleString()} / Output: ${outputTokens.toLocaleString()}`}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
     </span>
@@ -83,11 +85,11 @@ function DiffHighlightedCode({ text }: { text: string }) {
       {text.split("\n").map((line, i) => {
         let color = "inherit";
         let bg = "transparent";
-        if (line.startsWith("+")) { color = TERM_SEM_GREEN; bg = `${TERM_SEM_GREEN}0a`; }
-        else if (line.startsWith("-")) { color = TERM_SEM_RED; bg = `${TERM_SEM_RED}0a`; }
+        if (line.startsWith("+")) { color = TERM_SEM_GREEN; bg = `${TERM_SEM_GREEN}08`; }
+        else if (line.startsWith("-")) { color = TERM_SEM_RED; bg = `${TERM_SEM_RED}08`; }
         else if (line.startsWith("@@")) { color = TERM_DIM; }
         return (
-          <span key={i} style={{ display: "block", color, backgroundColor: bg, padding: "0 4px", margin: "0 -4px" }}>
+          <span key={i} style={{ display: "block", color, backgroundColor: bg, padding: "0 6px", margin: "0 -6px", borderRadius: 1 }}>
             {line}
           </span>
         );
@@ -174,15 +176,15 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
   const [expanded, setExpanded] = useState(false);
   const textColor = isError ? TERM_ERROR : TERM_DIM;
   return (
-    <div className="term-msg" style={{ marginBottom: 2, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.65, color: TERM_DIM, padding: "1px 0" }}>
-      <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+    <div className="term-msg" style={{ marginBottom: 2, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.7, color: TERM_DIM, padding: "1px 0" }}>
+      <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
       {isLong && (
         <span
           onClick={() => setExpanded(!expanded)}
           style={{ color: isError ? TERM_ERROR : TERM_DIM, cursor: "pointer", marginRight: 4 }}
         >{expanded ? "\u25BE" : "\u25B8"}</span>
       )}
-      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, marginRight: 6 }}>{tag}</span>
+      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, marginRight: 6, opacity: 0.7 }}>{tag}</span>
       <span style={{ color: textColor, wordBreak: "break-word" }} className="chat-markdown">
         {isLong && !expanded
           ? <span>{firstLine}</span>
@@ -260,18 +262,20 @@ function ReviewButton({ result, onReview, detectedBackends }: {
   );
 }
 
-/* ── Shared button style: minimal, consistent ── */
+/* ── Shared button style: Ghostty-minimal ── */
 const termBtnStyle: React.CSSProperties = {
   color: TERM_TEXT, cursor: "pointer",
   border: `1px solid ${TERM_DIM}`,
   padding: "4px 14px", fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-  backgroundColor: "transparent", transition: "border-color 0.15s",
+  backgroundColor: "transparent",
+  transition: "border-color 0.15s ease, color 0.15s ease",
   display: "inline-block", verticalAlign: "middle",
+  letterSpacing: "0.02em",
 };
 
 const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.65 };
+  const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.7 };
 
   // ── User input ──
   if (msg.role === "user") {
@@ -281,12 +285,12 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     }
     return (
       <div className="term-msg" style={{
-        ...base, marginTop: 14, marginBottom: 8,
-        borderLeft: `2px solid ${TERM_DIM}`,
+        ...base, marginTop: 12, marginBottom: 8,
+        borderLeft: `2px solid ${TERM_BORDER}`,
         padding: "6px 12px",
       }}>
-        <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_GREEN }}>&gt; </span>
+        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
+        <span style={{ color: TERM_GREEN, opacity: 0.7 }}>&gt; </span>
         <span style={{ color: TERM_TEXT_BRIGHT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
     );
@@ -317,16 +321,16 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     if (!msg.text) {
       return (
         <div style={{ ...base, padding: "2px 0" }}>
-          <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-          <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
+          <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
+          <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
           <span style={{ color: TERM_DIM, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
         </div>
       );
     }
     return (
       <div style={{ ...base, padding: "2px 0" }}>
-        <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
+        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
+        <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
         <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
           <MdContent text={msg.text} />
         </div>
@@ -342,9 +346,9 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     const projectDir = r.projectDir ?? r.summary.match(/PROJECT_DIR:\s*(.+)/i)?.[1]?.trim();
     const changedFiles = r.changedFiles ?? [];
     return (
-      <div className="term-msg" style={{ ...base, marginTop: 12, borderTop: `1px solid ${TERM_BORDER}`, paddingTop: 10 }}>
+      <div className="term-msg" style={{ ...base, marginTop: 10, borderTop: `1px solid ${TERM_BORDER_DIM}`, paddingTop: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ color: TERM_DIM }}>{ts}</span>
+          <span className="term-ts" style={{ color: TERM_DIM, opacity: 0.6 }}>{ts}</span>
           <span style={{ color: TERM_SEM_GREEN }}>done</span>
           {msg.durationMs && msg.durationMs > 1000 && (
             <span style={{ color: TERM_DIM, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
@@ -370,8 +374,8 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   return (
     <div className="term-msg" style={{ ...base, paddingTop: 8, marginTop: 6 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <span style={{ color: TERM_DIM }}>{ts}</span>
-        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
+        <span className="term-ts" style={{ color: TERM_DIM, opacity: 0.6 }}>{ts}</span>
+        <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
       </div>
       <div style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
         {planContent ? (

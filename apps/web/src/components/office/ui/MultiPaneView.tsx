@@ -77,11 +77,10 @@ const StableAgentPane = memo(function StableAgentPane({
     <>
       {/* Inline avatar header for this pane */}
       {meta && (
-        <div style={{
+        <div className="term-info-bar" style={{
           display: "flex", alignItems: "center", gap: 8,
-          padding: "6px 12px",
+          padding: "5px 12px",
           background: TERM_PANEL,
-          borderBottom: `1px solid ${TERM_BORDER_DIM}`,
           flexShrink: 0,
         }}>
           <div style={{ position: "relative", width: 24, height: 28, overflow: "hidden", borderRadius: 2, flexShrink: 0 }}>
@@ -93,6 +92,7 @@ const StableAgentPane = memo(function StableAgentPane({
                 position: "absolute", top: 0, right: 0,
                 width: 5, height: 5, borderRadius: "50%",
                 backgroundColor: TERM_GREEN,
+                boxShadow: `0 0 4px ${TERM_GREEN}40`,
               }} />
             )}
             {meta.isTeamLead && (
@@ -101,7 +101,7 @@ const StableAgentPane = memo(function StableAgentPane({
           </div>
           <span style={{
             fontSize: TERM_SIZE, color: TERM_TEXT_BRIGHT,
-            fontFamily: TERM_FONT,
+            fontFamily: TERM_FONT, letterSpacing: "-0.01em",
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>{meta.name}</span>
         </div>
@@ -438,19 +438,20 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
       {/* Pagination bar — always visible so layout stays stable */}
       <div
+        className="term-info-bar"
         style={{
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "6px 12px",
+          padding: "5px 12px",
           fontFamily: TERM_FONT,
           fontSize: TERM_SIZE - 1,
           color: TERM_DIM,
           background: TERM_PANEL,
-          borderTop: `1px solid ${TERM_BORDER_DIM}`,
           flexShrink: 0,
           position: "relative",
           gap: 8,
+          boxShadow: `0 -1px 0 ${TERM_BORDER_DIM}`,
         }}
       >
         {/* Center: pagination controls */}
@@ -482,14 +483,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onClick={() => onPaneOffsetChange(i * MAX_VISIBLE)}
                 aria-label={`Page ${i + 1}`}
                 style={{
-                  width: currentPage === i + 1 ? 12 : 4,
-                  height: 4,
-                  borderRadius: 2,
+                  width: currentPage === i + 1 ? 14 : 4,
+                  height: 3,
+                  borderRadius: 1.5,
                   border: "none",
                   padding: 0,
                   background: currentPage === i + 1 ? TERM_TEXT : TERM_DIM,
+                  opacity: currentPage === i + 1 ? 1 : 0.5,
                   cursor: "pointer",
-                  transition: "width 0.2s ease",
+                  transition: "width 0.2s ease, opacity 0.2s ease",
                 }}
               />
             ))}

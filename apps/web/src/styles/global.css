@@ -50,32 +50,35 @@
 *::-webkit-scrollbar {
   display: none;
 }
-/* Custom scrollbar indicator */
+/* Custom scrollbar indicator — Ghostty-style: thin, high-contrast, smooth */
 .custom-scrollbar {
   position: absolute;
-  right: 1px;
+  right: 0;
   top: 0;
   bottom: 0;
-  width: 4px;
+  width: 6px;
   pointer-events: none;
   z-index: 10;
   opacity: 0;
-  transition: opacity 0.3s;
+  transition: opacity 0.4s ease;
 }
 .custom-scrollbar.visible {
   opacity: 1;
 }
 .custom-scrollbar-thumb {
   position: absolute;
-  right: 0;
-  width: 4px;
-  min-height: 20px;
+  right: 1px;
+  width: 3px;
+  min-height: 24px;
   background: var(--term-scroll-thumb);
-  border-radius: 2px;
-  transition: background 0.15s;
+  border-radius: 1.5px;
+  transition: background 0.2s ease, width 0.15s ease;
 }
+.custom-scrollbar:hover .custom-scrollbar-thumb,
 .custom-scrollbar-thumb:hover {
-  background: rgba(var(--term-accent-rgb), 0.3);
+  width: 5px;
+  right: 0;
+  background: rgba(var(--term-accent-rgb), 0.25);
 }
 /* Custom select styling for WebView compatibility */
 select {
@@ -116,8 +119,8 @@ select option {
   50%, 100% { opacity: 0; }
 }
 @keyframes msg-fadein {
-  from { opacity: 0; transform: translateY(6px) translateX(-4px); }
-  to { opacity: 1; transform: translateY(0) translateX(0); }
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 .crt-screen {
   position: relative;
@@ -152,7 +155,7 @@ select option {
   z-index: 2;
 }
 .term-msg {
-  animation: msg-fadein 0.15s ease-out;
+  animation: msg-fadein 0.12s ease-out;
 }
 .term-cursor {
   display: inline-block;
@@ -160,12 +163,14 @@ select option {
   color: var(--term-green);
 }
 /* ── Ghostty-inspired: unified typography ──
-   Single weight (400), single size (12px), hierarchy via color only */
+   Single weight (400), single size (12px), hierarchy via color only.
+   Tight letter-spacing for that premium monospace feel. */
 .chat-markdown, .chat-markdown *,
 .term-msg, .term-msg *,
 .crt-screen a, .crt-screen code, .crt-screen span {
   font-size: 12px !important; font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace !important;
-  font-weight: 400 !important; line-height: 1.65 !important;
+  font-weight: 400 !important; line-height: 1.7 !important;
+  letter-spacing: -0.01em;
 }
 /* ── Headings: same size, brighter color — no weight escalation ── */
 .chat-markdown h1 {
@@ -196,7 +201,7 @@ select option {
 .chat-markdown em, .chat-markdown i {
   font-style: italic !important; color: var(--term-text) !important;
 }
-/* ── Code: minimal decoration ── */
+/* ── Code: clean, Ghostty-grade presentation ── */
 .chat-markdown code {
   font-size: inherit !important; font-family: inherit !important;
   background: var(--term-code-bg) !important;
@@ -205,16 +210,18 @@ select option {
   color: var(--term-code-text) !important; opacity: 1 !important;
 }
 .chat-markdown pre {
-  margin: 8px 0 !important; padding: 10px 12px !important;
+  margin: 6px 0 !important; padding: 10px 14px !important;
   background: var(--term-code-bg) !important;
   border-left: 2px solid var(--term-border-dim) !important;
   border-radius: 0 !important;
   overflow-x: auto;
+  tab-size: 2;
 }
 .chat-markdown pre code {
   color: var(--term-code-text) !important; opacity: 1 !important;
   background: none !important; padding: 0 !important;
   border: none !important; border-radius: 0 !important;
+  letter-spacing: 0 !important;
 }
 /* ── Block elements ── */
 .chat-markdown p { margin: 0 0 6px !important; }
@@ -228,9 +235,16 @@ select option {
   border-left: 2px solid var(--term-border) !important;
   color: var(--term-dim) !important;
 }
-/* ── Links: clean, no opacity dance ── */
-.chat-markdown a, .crt-screen a { color: var(--term-green) !important; text-decoration: none !important; }
-.chat-markdown a:hover, .crt-screen a:hover { text-decoration: underline !important; }
+/* ── Links: clean underline on hover ── */
+.chat-markdown a, .crt-screen a {
+  color: var(--term-green) !important; text-decoration: none !important;
+  transition: color 0.1s ease;
+}
+.chat-markdown a:hover, .crt-screen a:hover {
+  text-decoration: underline !important;
+  text-underline-offset: 2px !important;
+  text-decoration-thickness: 1px !important;
+}
 /* ── Tables ── */
 .chat-markdown table {
   border-collapse: collapse !important; margin: 8px 0 !important; width: 100% !important;
@@ -298,25 +312,22 @@ select option {
 .term-dotgrid {
   background-image: none;
 }
-/* ── Text rendering ── */
+/* ── Text rendering — Ghostty-grade: subpixel off, crisp edges ── */
 .crt-screen, .crt-screen * {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  font-feature-settings: "liga" 1, "calt" 1;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga" 1, "calt" 1, "ss01" 1;
 }
-/* ── Text selection ── */
-.crt-screen ::selection { background: rgba(var(--term-accent-rgb),0.2); color: var(--term-text-bright); }
-/* ── Input focus glow ── */
-@keyframes input-glow {
-  0%,100% { box-shadow: 0 0 4px rgba(var(--term-accent-rgb),0.1); }
-  50% { box-shadow: 0 0 10px rgba(var(--term-accent-rgb),0.25); }
-}
-.term-input:focus { animation: input-glow 2s ease-in-out infinite; outline: none; }
-.term-input::placeholder { color: var(--term-green-dim); opacity: 0.6; }
-textarea::placeholder { color: var(--term-green-dim); opacity: 0.6; }
-/* ── Button click feedback ── */
-.term-btn { transition: all 0.15s ease; }
-.term-btn:active { transform: scale(0.97); }
+/* ── Text selection — subtle, non-distracting ── */
+.crt-screen ::selection { background: rgba(var(--term-accent-rgb),0.15); color: var(--term-text-bright); }
+/* ── Input focus — clean bottom-border accent instead of glow ── */
+.term-input:focus { outline: none; }
+.term-input::placeholder { color: var(--term-green-dim); opacity: 0.5; }
+textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
+/* ── Button — precise, no wobble ── */
+.term-btn { transition: border-color 0.15s ease, color 0.15s ease; }
+.term-btn:active { opacity: 0.85; }
 /* ── Horizontal scroll for paths ── */
 .term-path-scroll { overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
 .term-path-scroll::-webkit-scrollbar { display: none; }
@@ -355,4 +366,27 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.6; }
 .term-paused .working-dots::after,
 .term-paused .working-dots-mid {
   animation-play-state: paused !important;
+}
+/* ── Ghostty-grade polish ── */
+/* Smooth momentum scrolling */
+[data-scrollbar] {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+/* Timestamp monospace alignment */
+.term-msg .term-ts {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+}
+/* Info bar — subtle bottom shadow instead of hard border */
+.term-info-bar {
+  box-shadow: 0 1px 0 var(--term-border-dim);
+}
+/* Input area — top edge glow on focus-within */
+.term-input-area {
+  transition: box-shadow 0.2s ease;
+}
+.term-input-area:focus-within {
+  box-shadow: inset 0 1px 0 rgba(var(--term-accent-rgb), 0.15);
 }
