@@ -381,15 +381,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <span style={{ color: TERM_DIM, flexShrink: 0, opacity: 0.8 }}>{cfg.label}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
-          <span
+          <button
+            className="tdx"
             onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
-            style={{
-              fontSize: TERM_SIZE, color: TERM_DIM, cursor: "pointer", lineHeight: 1,
-              padding: "4px", flexShrink: 0, opacity: 0.5, transition: "opacity 0.15s, color 0.15s",
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; e.currentTarget.style.opacity = "1"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; e.currentTarget.style.opacity = "0.5"; }}
-          >{"\u2715"}</span>
+            aria-label="Fire agent"
+          >{"\u2715"}</button>
         )}
       </div>
 
