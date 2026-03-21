@@ -28,6 +28,7 @@ const stickyAgent = new Map<string, string>();
 
 /** Allowed TG user IDs (empty = allow all) */
 let allowedUsers: string[] = [];
+let conflict409Retries = 0;
 
 /** Live hired agents — synced from gateway via setTelegramAgentDefs() */
 let hiredAgents: AgentMenuItem[] = [];
@@ -161,11 +162,26 @@ export const telegramChannel: Channel = {
 
     bot = new TelegramBot(token, { polling: true });
 
-    bot.on("polling_error", (err: any) => {
+    bot.on("polling_error", async (err: any) => {
       const code = err?.response?.statusCode ?? err?.code;
       if (code === 409) {
-        console.warn("[Telegram] 409 Conflict: token already used by another instance. Stopping.");
+        if (conflict409Retries >= 3) {
+          console.error("[Telegram] 409 Conflict persists after 3 retries. Giving up.");
+          bot?.stopPolling();
+          return;
+        }
+        conflict409Retries++;
+        console.warn(`[Telegram] 409 Conflict: taking over from old instance (attempt ${conflict409Retries})...`);
         bot?.stopPolling();
+        try {
+          await bot?.deleteWebHook();
+          await new Promise(r => setTimeout(r, 1500));
+          await bot?.startPolling();
+          conflict409Retries = 0;
+          console.log("[Telegram] Took over polling successfully.");
+        } catch (retryErr: any) {
+          console.error("[Telegram] Failed to take over:", retryErr.message ?? retryErr);
+        }
         return;
       }
       console.error("[Telegram] Polling error:", err.message ?? err);

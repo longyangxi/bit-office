@@ -1337,6 +1337,22 @@ process.on("SIGTERM", cleanup);
 process.on("SIGHUP", cleanup);
 process.on("beforeExit", () => { try { persistTeamState(); } catch { /* ignore */ } });
 
+// Orphan detection: if parent process dies (e.g. tsx watch killed), exit gracefully.
+// ppid becomes 1 (launchd/init) when parent is gone.
+const parentPid = process.ppid;
+if (parentPid && parentPid !== 1) {
+  const orphanCheck = setInterval(() => {
+    try {
+      process.kill(parentPid, 0); // test if parent is alive
+    } catch {
+      console.log("[Gateway] Parent process gone, shutting down...");
+      clearInterval(orphanCheck);
+      cleanup();
+    }
+  }, 3000);
+  orphanCheck.unref();
+}
+
 // Global safety net: no single agent error should crash the gateway
 process.on("uncaughtException", (err) => {
   console.error("[Gateway] Uncaught exception (gateway stays alive):", err);
