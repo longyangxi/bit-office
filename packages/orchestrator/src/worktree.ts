@@ -94,7 +94,24 @@ export function createWorktree(
     if (existsSync(worktreePath) && isGitRepo(worktreePath)) {
       const currentBranch = gitExec("git branch --show-current", worktreePath);
       if (currentBranch === branch) {
-        console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
+        // Fast-forward worktree to main HEAD so agent doesn't fork
+        try {
+          const mainHead = gitExec("git rev-parse HEAD", workspace);
+          const wtHead = gitExec("git rev-parse HEAD", worktreePath);
+          if (wtHead !== mainHead) {
+            const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${wtHead} ${mainHead}`, workspace); return true; } catch { return false; } })();
+            if (isAncestor) {
+              gitExec(`git reset --hard ${mainHead}`, worktreePath);
+              console.log(`[Worktree] Reusing worktree, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
+            } else {
+              console.log(`[Worktree] Reusing worktree with unmerged commits, skipping fast-forward`);
+            }
+          } else {
+            console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
+          }
+        } catch {
+          console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
+        }
         return worktreePath;
       }
       console.log(`[Worktree] Existing worktree on wrong branch (${currentBranch} != ${branch}), recreating`);
@@ -114,7 +131,24 @@ export function createWorktree(
     // Branch may already exist — try attaching to it
     try {
       gitExec(`git worktree add "${worktreePath}" "${branch}"`, workspace);
-      console.log(`[Worktree] Attached to existing branch: ${branch}`);
+      // Fast-forward attached branch to main HEAD to avoid forking
+      try {
+        const mainHead = gitExec("git rev-parse HEAD", workspace);
+        const branchHead = gitExec("git rev-parse HEAD", worktreePath);
+        if (branchHead !== mainHead) {
+          const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${branchHead} ${mainHead}`, workspace); return true; } catch { return false; } })();
+          if (isAncestor) {
+            gitExec(`git reset --hard ${mainHead}`, worktreePath);
+            console.log(`[Worktree] Attached to branch ${branch}, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
+          } else {
+            console.log(`[Worktree] Attached to branch ${branch} with unmerged commits, skipping fast-forward`);
+          }
+        } else {
+          console.log(`[Worktree] Attached to existing branch: ${branch}`);
+        }
+      } catch {
+        console.log(`[Worktree] Attached to existing branch: ${branch}`);
+      }
       return worktreePath;
     } catch (err) {
       console.error(`[Worktree] Failed to create worktree: ${(err as Error).message}`);
@@ -199,9 +233,12 @@ export function mergeWorktree(
       try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
       try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
     } else {
-      // Keep worktree alive for session continuity — reset branch to current HEAD
-      // so next task starts from the merged state (avoids duplicate merge conflicts)
-      try { gitExec(`git reset --hard HEAD`, worktreePath); } catch { /* ignore */ }
+      // Keep worktree alive for session continuity — reset branch to main repo HEAD
+      // so next task starts from the merged state (avoids forking)
+      try {
+        const mainHead = gitExec("git rev-parse HEAD", workspace);
+        gitExec(`git reset --hard ${mainHead}`, worktreePath);
+      } catch { /* ignore */ }
       console.log(`[Worktree] Merged ${branch}, worktree kept alive for session continuity`);
     }
 
