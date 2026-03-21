@@ -74,6 +74,17 @@ export function setPairCode(code: string) {
   pairCode = code;
 }
 
+/** Send an event to a specific client by clientId (unicast) */
+export function sendToClient(clientId: string, event: GatewayEvent) {
+  const data = JSON.stringify(event);
+  for (const [ws, info] of clients) {
+    if (info.clientId === clientId && ws.readyState === WebSocket.OPEN) {
+      ws.send(data);
+      return;
+    }
+  }
+}
+
 export const wsChannel: Channel = {
   name: "WebSocket",
 

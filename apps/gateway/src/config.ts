@@ -40,6 +40,10 @@ export function saveConfig(cfg: SavedConfig) {
   ensureConfigDir();
   const existing = loadSavedConfig();
   const merged = { ...existing, ...cfg };
+  // Remove keys explicitly set to undefined (e.g. clearing legacy fields)
+  for (const [k, v] of Object.entries(merged)) {
+    if (v === undefined) delete (merged as Record<string, unknown>)[k];
+  }
   writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), "utf-8");
 }
 

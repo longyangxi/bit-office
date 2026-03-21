@@ -1,5 +1,5 @@
 import { registerChannel, initTransports, publishEvent, destroyTransports, reinitChannel, isChannelActive } from "./transport.js";
-import { wsChannel, setPairCode } from "./ws-server.js";
+import { wsChannel, setPairCode, sendToClient } from "./ws-server.js";
 import { ablyChannel } from "./ably-client.js";
 import { telegramChannel } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
@@ -843,7 +843,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     }
     case "GET_CONFIG": {
       const tgConnected = isChannelActive(telegramChannel);
-      publishEvent({
+      sendToClient(meta.clientId, {
         type: "CONFIG_LOADED",
         telegramBotToken: config.telegramBotToken ? config.telegramBotToken.slice(0, 6) + "..." : undefined,
         telegramAllowedUsers: config.telegramAllowedUsers,
@@ -856,20 +856,23 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         const updates: Record<string, unknown> = {};
         if (parsed.telegramBotToken !== undefined) updates.telegramBotToken = parsed.telegramBotToken || undefined;
         if (parsed.telegramAllowedUsers !== undefined) updates.telegramAllowedUsers = parsed.telegramAllowedUsers;
+        // Clear legacy field to prevent fallback reconnection
+        updates.telegramBotTokens = undefined;
         saveConfig(updates);
         reloadConfig();
 
         // Restart Telegram channel with new config
+        const cid = meta.clientId;
         reinitChannel(telegramChannel).then((tgOk) => {
           console.log(`[Gateway] Config saved. Telegram: ${tgOk ? "connected" : "not configured"}`);
-          publishEvent({
+          sendToClient(cid, {
             type: "CONFIG_SAVED",
             success: true,
             message: tgOk ? "Saved. Telegram connected." : "Saved. Telegram not configured.",
             telegramConnected: tgOk,
           });
         }).catch((err: any) => {
-          publishEvent({
+          sendToClient(cid, {
             type: "CONFIG_SAVED",
             success: false,
             message: `Saved but Telegram failed: ${err.message}`,
@@ -877,7 +880,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         });
       } catch (err: any) {
         console.error("[Gateway] Config save failed:", err);
-        publishEvent({
+        sendToClient(meta.clientId, {
           type: "CONFIG_SAVED",
           success: false,
           message: err.message ?? "Save failed",
