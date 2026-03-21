@@ -230,7 +230,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
     >
       <div
         style={{
-          backgroundColor: TERM_BG, border: `2px solid ${TERM_GREEN}`,
+          backgroundColor: TERM_BG, border: `2px solid ${TERM_BORDER}`,
           boxShadow: `0 0 40px ${TERM_GREEN}14, 4px 4px 0px rgba(0,0,0,0.5)`,
           width: "90%", maxWidth: 560, height: "70vh",
           display: "flex", flexDirection: "column",

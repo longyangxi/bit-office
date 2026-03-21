@@ -176,10 +176,10 @@ export default function SettingsModal({
           transform: 'translate(-50%, -50%)',
           zIndex: 100,
           background: TERM_PANEL,
-          border: `1px solid ${TERM_BORDER}`,
+          border: `2px solid ${TERM_BORDER}`,
           borderRadius: 10,
-          padding: '4px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)',
+          padding: '8px 6px',
+          boxShadow: `0 0 40px ${TERM_GREEN}14, 4px 4px 0px rgba(0,0,0,0.5)`,
           minWidth: 320,
           maxWidth: 400,
         }}

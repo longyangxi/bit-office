@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TERM_BG, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
 
@@ -11,7 +11,7 @@ function StarRow({ label, icon, value, onChange }: {
   const [hover, setHover] = useState(0);
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8, height: 24 }}>
-      <span style={{ width: 100, fontSize: 11, color: "rgba(255,255,255,0.5)", fontFamily: "monospace" }}>
+      <span style={{ width: 100, fontSize: 11, color: TERM_DIM, fontFamily: "monospace" }}>
         {icon} {label}
       </span>
       <div style={{ display: "flex", gap: 2 }} onMouseLeave={() => setHover(0)}>
@@ -22,7 +22,7 @@ function StarRow({ label, icon, value, onChange }: {
             onMouseEnter={() => setHover(n)}
             style={{
               cursor: "pointer", fontSize: 14, lineHeight: 1,
-              color: n <= (hover || value) ? "#e8b040" : "rgba(255,255,255,0.15)",
+              color: n <= (hover || value) ? TERM_SEM_YELLOW : "rgba(255,255,255,0.15)",
               transition: "color 0.1s",
             }}
           >{"\u2605"}</span>
@@ -47,11 +47,11 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
     }} onClick={onSkip}>
       <div style={{
         backgroundColor: TERM_BG, padding: "22px 20px",
-        border: "2px solid rgba(232,176,64,0.4)",
-        boxShadow: "0 0 40px rgba(200,155,48,0.1)",
+        border: `2px solid ${TERM_BORDER}`,
+        boxShadow: `0 0 40px ${TERM_GREEN}14`,
         width: 280,
       }} onClick={(e) => e.stopPropagation()}>
-        <div style={{ fontSize: 13, color: "#e8b040", fontFamily: "monospace", fontWeight: 600, marginBottom: 14, textAlign: "center" }}>
+        <div style={{ fontSize: 13, color: TERM_GREEN, fontFamily: "monospace", fontWeight: 600, marginBottom: 14, textAlign: "center" }}>
           Rate this project
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -69,8 +69,8 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
           <button
             onClick={onSkip}
             style={{
-              padding: "6px 16px", border: "1px solid rgba(255,255,255,0.1)",
-              background: "none", color: "rgba(255,255,255,0.35)",
+              padding: "6px 16px", border: `1px solid ${TERM_BORDER}`,
+              background: "none", color: TERM_DIM,
               fontSize: 11, fontFamily: "monospace", cursor: "pointer",
             }}
           >Skip</button>
