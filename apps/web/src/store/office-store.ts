@@ -541,6 +541,15 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               ? { ...m, id: m.id.replace("-stream", "-streamed") }
               : m
           );
+          // If no user message for this task yet (e.g. sent via Telegram),
+          // inject one so the prompt appears in the App chat panel
+          const hasUserMsg = staleFinalized.some((m) => m.id === event.taskId);
+          const withUserMsg = hasUserMsg ? staleFinalized : [...staleFinalized, {
+            id: event.taskId,
+            role: "user" as const,
+            text: event.prompt,
+            timestamp: Date.now(),
+          }];
           // Clear log line when new task starts
           const taskStartLogLines = new Map(state.agentLogLines);
           taskStartLogLines.delete(event.agentId);
@@ -552,7 +561,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             awaitingApproval: false,
             pendingApproval: null,
             lastLogLine: null,
-            messages: hasStream ? staleFinalized : [...staleFinalized, {
+            messages: hasStream ? withUserMsg : [...withUserMsg, {
               id: streamId,
               role: "agent" as const,
               text: "",
