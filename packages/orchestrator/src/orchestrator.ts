@@ -37,6 +37,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private sandboxMode: "full" | "safe";
   private worktreeEnabled: boolean;
   private worktreeMerge: boolean;
+  private worktreeCommit: boolean;
   get isWorktreeEnabled(): boolean { return this.worktreeEnabled; }
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
@@ -54,9 +55,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (opts.worktree === false) {
       this.worktreeEnabled = false;
       this.worktreeMerge = false;
+      this.worktreeCommit = false;
     } else {
       this.worktreeEnabled = true;
       this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
+      this.worktreeCommit = opts.worktree?.commitOnMerge ?? true;
     }
 
     // Register backends
@@ -304,7 +307,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const base = session.worktreePath.includes(".worktrees")
         ? path.dirname(path.dirname(session.worktreePath))
         : this.workspace;
-      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
+      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch, this.worktreeCommit);
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -660,7 +663,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         const base = doneSession.worktreePath.includes(".worktrees")
           ? path.dirname(path.dirname(doneSession.worktreePath))
           : this.workspace;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch);
+        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, this.worktreeCommit);
         this.emitEvent({
           type: "worktree:merged",
           agentId,

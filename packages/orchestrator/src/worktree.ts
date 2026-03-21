@@ -167,6 +167,7 @@ export function mergeWorktree(
   workspace: string,
   worktreePath: string,
   branch: string,
+  commit = true,
 ): MergeResult {
   try {
     // Auto-commit any uncommitted work before merging
@@ -180,11 +181,12 @@ export function mergeWorktree(
       stagedFiles = output ? output.split("\n") : [];
     } catch { /* ignore */ }
 
-    // Auto-commit the squash merge (otherwise staged changes are lost on next git op)
-    if (stagedFiles.length > 0) {
+    if (stagedFiles.length > 0 && commit) {
       const sanitizedBranch = branch.replace(/"/g, '\\"');
       gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
+    } else if (stagedFiles.length > 0) {
+      console.log(`[Worktree] Squash-merged ${branch} (${stagedFiles.length} files staged for review)`);
     }
 
     // Clean up
