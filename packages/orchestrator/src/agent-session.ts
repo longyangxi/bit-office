@@ -395,7 +395,8 @@ export class AgentSession {
 - WORKSPACE: Your working directory is ${cwd}. ALL files must be created inside this directory. Do NOT create files in $HOME or any other directory.
 - PROJECT DIRECTORY: When creating files, first create a dedicated project directory (short kebab-case name, e.g. "snake-game") inside your workspace. Do ALL work inside it. Report it as PROJECT_DIR: <directory-name> in your output. If the user is just chatting (no code needed), skip this.
 - Before destructive operations (rm -rf, git reset, chmod), ask for approval first.
-- OUTPUT DISCIPLINE: Return ONLY actionable results (code changes, file paths, findings, errors). No chain-of-thought, no step-by-step narration, no reasoning process. Maximum 5 sentences for summary. If the task produced code changes, return: files changed, what changed, any issues. Nothing else.`,
+- OUTPUT DISCIPLINE: Return ONLY actionable results (code changes, file paths, findings, errors). No chain-of-thought, no step-by-step narration, no reasoning process. Maximum 5 sentences for summary. If the task produced code changes, return: files changed, what changed, any issues. Nothing else.
+- LANGUAGE: Always write SUMMARY in English, using conventional commit style (e.g. "feat: add login page with OAuth support"). Keep it under 72 characters.`,
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;

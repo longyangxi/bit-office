@@ -215,7 +215,8 @@ export function mergeWorktree(
     } catch { /* ignore */ }
 
     if (stagedFiles.length > 0) {
-      const msg = summary ? summary.slice(0, 200) : `merge: ${branch}`;
+      const raw = summary ? summary.split("\n")[0].trim().slice(0, 72) : `merge: ${branch}`;
+      const msg = raw || `merge: ${branch}`;
       // Use env var to pass commit message — avoids shell injection from
       // backticks, quotes, or other special chars in agent summary output.
       execSync(`git commit -m "$COMMIT_MSG"`, {
