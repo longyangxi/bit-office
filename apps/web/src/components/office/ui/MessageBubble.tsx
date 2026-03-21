@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_GLOW, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -50,14 +50,13 @@ function ThinkingBubble({ logLine }: { logLine: string | null }) {
     <div style={{ display: "flex", justifyContent: "flex-start", marginBottom: 8 }}>
       <div style={{
         padding: "8px 12px",
-        backgroundColor: TERM_PANEL, color: "#7a8a6a", fontSize: 12,
-        fontFamily: "monospace",
-        border: `1px solid ${TERM_BORDER}`,
-        borderLeft: `2px solid ${TERM_GREEN}60`,
+        backgroundColor: TERM_PANEL, color: TERM_DIM, fontSize: TERM_SIZE,
+        fontFamily: TERM_FONT,
+        borderLeft: `2px solid ${TERM_DIM}`,
         maxWidth: "100%", overflow: "hidden",
         whiteSpace: "pre-wrap", wordBreak: "break-word",
       }}>
-        <span style={{ opacity: 0.5, marginRight: 6 }}>{">"}</span>
+        <span style={{ marginRight: 6 }}>{">"}</span>
         {logLine || "Thinking..."}
       </div>
     </div>
@@ -68,9 +67,8 @@ function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; output
   if (inputTokens === 0 && outputTokens === 0) return null;
   return (
     <span style={{
-      fontSize: 9, padding: "1px 4px",
-      backgroundColor: `${TERM_GREEN}18`, color: TERM_GREEN,
-      border: `1px solid ${TERM_GREEN}40`, fontFamily: "monospace",
+      fontSize: TERM_SIZE, padding: "1px 4px",
+      color: TERM_DIM, fontFamily: TERM_FONT,
       whiteSpace: "nowrap",
     }} title={`Input: ${inputTokens.toLocaleString()} / Output: ${outputTokens.toLocaleString()}`}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
@@ -85,9 +83,9 @@ function DiffHighlightedCode({ text }: { text: string }) {
       {text.split("\n").map((line, i) => {
         let color = "inherit";
         let bg = "transparent";
-        if (line.startsWith("+")) { color = "#4ade80"; bg = "rgba(74,222,128,0.08)"; }
-        else if (line.startsWith("-")) { color = "#f87171"; bg = "rgba(248,113,113,0.08)"; }
-        else if (line.startsWith("@@")) { color = "#60a5fa"; }
+        if (line.startsWith("+")) { color = TERM_SEM_GREEN; bg = `${TERM_SEM_GREEN}0a`; }
+        else if (line.startsWith("-")) { color = TERM_SEM_RED; bg = `${TERM_SEM_RED}0a`; }
+        else if (line.startsWith("@@")) { color = TERM_DIM; }
         return (
           <span key={i} style={{ display: "block", color, backgroundColor: bg, padding: "0 4px", margin: "0 -4px" }}>
             {line}
@@ -99,8 +97,6 @@ function DiffHighlightedCode({ text }: { text: string }) {
 }
 
 const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
-  // Use <div> instead of <p> to avoid hydration errors when block elements
-  // (like <pre>) appear inside paragraphs — HTML forbids <pre> inside <p>.
   p({ children }) {
     return <div style={{ marginBottom: 8 }}>{children}</div>;
   },
@@ -124,8 +120,8 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
         <pre
           onClick={() => sendCommand({ type: "OPEN_FILE", path: filePath })}
           style={{
-            backgroundColor: "#1a1830", padding: "8px 10px", borderRadius: 6,
-            cursor: "pointer", border: "1px solid #2a2a4a",
+            padding: "8px 10px",
+            cursor: "pointer",
             display: "flex", alignItems: "center", gap: 6,
             whiteSpace: "pre-wrap", wordBreak: "break-all",
           }}
@@ -141,7 +137,7 @@ const mdComponents: React.ComponentProps<typeof ReactMarkdown>["components"] = {
           {lang && (
             <span style={{
               position: "absolute", top: -1, right: 6,
-              fontSize: 9, color: "#5a6a5a", opacity: 0.6,
+              fontSize: TERM_SIZE, color: TERM_DIM,
               fontFamily: "inherit", letterSpacing: "0.04em",
               userSelect: "none", pointerEvents: "none",
             }}>{lang}</span>
@@ -178,15 +174,15 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
   const [expanded, setExpanded] = useState(false);
   const textColor = isError ? TERM_ERROR : TERM_DIM;
   return (
-    <div className="term-msg" style={{ marginBottom: 2, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.5, opacity: isError ? 0.9 : 0.5, padding: "1px 0" }}>
-      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
+    <div className="term-msg" style={{ marginBottom: 2, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.65, color: TERM_DIM, padding: "1px 0" }}>
+      <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
       {isLong && (
         <span
           onClick={() => setExpanded(!expanded)}
-          style={{ color: isError ? TERM_ERROR : TERM_GREEN, opacity: 0.4, cursor: "pointer", marginRight: 4 }}
+          style={{ color: isError ? TERM_ERROR : TERM_DIM, cursor: "pointer", marginRight: 4 }}
         >{expanded ? "\u25BE" : "\u25B8"}</span>
       )}
-      <span style={{ color: isError ? TERM_ERROR : TERM_GREEN, opacity: 0.5, fontSize: 10, marginRight: 6 }}>{tag}</span>
+      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, marginRight: 6 }}>{tag}</span>
       <span style={{ color: textColor, wordBreak: "break-word" }} className="chat-markdown">
         {isLong && !expanded
           ? <span>{firstLine}</span>
@@ -206,7 +202,6 @@ function ReviewButton({ result, onReview, detectedBackends }: {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
-  // Close on click outside
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
@@ -216,29 +211,22 @@ function ReviewButton({ result, onReview, detectedBackends }: {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const btnStyle: React.CSSProperties = {
-    color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`,
-    padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT,
-    fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s",
-    boxShadow: "none", display: "inline-block", verticalAlign: "middle",
-  };
-
   return (
     <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
       <button
         className="term-btn"
         onClick={() => setOpen(!open)}
-        style={btnStyle}
-        onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; }}
-        onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; }}
+        style={termBtnStyle}
+        onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }}
+        onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}
       >review {open ? "\u25B4" : "\u25BE"}</button>
       {open && (
         <div style={{
           position: "absolute", bottom: "100%", left: 0, marginBottom: 4, zIndex: 50,
-          backgroundColor: TERM_PANEL, border: `1px solid ${TERM_GREEN}40`,
-          borderRadius: 4, minWidth: 150, boxShadow: "0 4px 12px rgba(0,0,0,0.5)",
+          backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
+          minWidth: 150, boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
         }}>
-          <div style={{ padding: "4px 8px", fontSize: 10, color: TERM_DIM, fontFamily: TERM_FONT, letterSpacing: "0.05em", borderBottom: `1px solid ${TERM_GREEN}20` }}>
+          <div style={{ padding: "4px 8px", color: TERM_DIM, fontFamily: TERM_FONT, fontSize: TERM_SIZE, letterSpacing: "0.05em", borderBottom: `1px solid ${TERM_BORDER}` }}>
             SELECT AI
           </div>
           {BACKEND_OPTIONS.map((b) => {
@@ -251,19 +239,18 @@ function ReviewButton({ result, onReview, detectedBackends }: {
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
                   padding: "6px 10px", border: "none", cursor: "pointer",
                   backgroundColor: "transparent", textAlign: "left",
-                  fontFamily: TERM_FONT, fontSize: 12,
-                  color: available ? b.color : "#9a8a7a",
-                  opacity: available ? 1 : 0.75,
+                  fontFamily: TERM_FONT, fontSize: TERM_SIZE,
+                  color: available ? TERM_TEXT : TERM_DIM,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
+                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
               >
                 <span style={{
-                  width: 6, height: 6, borderRadius: "50%",
-                  backgroundColor: available ? TERM_SEM_GREEN : TERM_SEM_YELLOW,
+                  width: 5, height: 5, borderRadius: "50%",
+                  backgroundColor: available ? TERM_SEM_GREEN : TERM_DIM,
                   flexShrink: 0,
                 }} />
-                <span style={{ fontWeight: 600 }}>{b.name}</span>
+                <span>{b.name}</span>
               </button>
             );
           })}
@@ -273,9 +260,18 @@ function ReviewButton({ result, onReview, detectedBackends }: {
   );
 }
 
+/* ── Shared button style: minimal, consistent ── */
+const termBtnStyle: React.CSSProperties = {
+  color: TERM_TEXT, cursor: "pointer",
+  border: `1px solid ${TERM_DIM}`,
+  padding: "4px 14px", fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+  backgroundColor: "transparent", transition: "border-color 0.15s",
+  display: "inline-block", verticalAlign: "middle",
+};
+
 const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
-  const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, fontWeight: 400, lineHeight: 1.6 };
+  const base: React.CSSProperties = { marginBottom: 4, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.65 };
 
   // ── User input ──
   if (msg.role === "user") {
@@ -286,13 +282,11 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     return (
       <div className="term-msg" style={{
         ...base, marginTop: 14, marginBottom: 8,
-        borderLeft: `2px solid ${TERM_GREEN}50`,
-        backgroundColor: `${TERM_GREEN}06`,
+        borderLeft: `2px solid ${TERM_DIM}`,
         padding: "6px 12px",
-        borderRadius: "0 4px 4px 0",
       }}>
-        <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_GREEN, textShadow: TERM_GLOW }}>&gt; </span>
+        <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+        <span style={{ color: TERM_GREEN }}>&gt; </span>
         <span style={{ color: TERM_TEXT_BRIGHT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
     );
@@ -318,21 +312,21 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   const textWithoutPlan = planContent ? msg.text.replace(/\[PLAN\][\s\S]*?\[\/PLAN\]/i, "").trim() : null;
   const displayText = hasFullOutput ? (msg.result?.fullOutput ?? msg.text) : msg.text;
 
-  // Streaming message — markdown rendered
+  // Streaming message
   if (isStreaming) {
     if (!msg.text) {
       return (
         <div style={{ ...base, padding: "2px 0" }}>
-          <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
-          <span style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10 }}>{agentName ?? "agent"}</span>
-          <span style={{ color: TERM_GREEN, opacity: 0.5, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
+          <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+          <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
+          <span style={{ color: TERM_DIM, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
         </div>
       );
     }
     return (
       <div style={{ ...base, padding: "2px 0" }}>
-        <span style={{ color: TERM_DIM, fontSize: 10, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10 }}>{agentName ?? "agent"}</span>
+        <span style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
         <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
           <MdContent text={msg.text} />
         </div>
@@ -340,62 +334,51 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     );
   }
 
-  // Completion
+  // Completion (team lead final result)
   if (isTeamLead && msg.isFinalResult && msg.result) {
     const r = msg.result;
     const cleanSummary = r.summary.replace(/ENTRY_FILE:\s*.+/gi, "").replace(/PROJECT_DIR:\s*.+/gi, "").replace(/SUMMARY:\s*/gi, "").trim();
     const entryFile = r.entryFile ?? r.summary.match(/ENTRY_FILE:\s*(.+)/i)?.[1]?.trim();
     const projectDir = r.projectDir ?? r.summary.match(/PROJECT_DIR:\s*(.+)/i)?.[1]?.trim();
     const changedFiles = r.changedFiles ?? [];
-    const btnStyle: React.CSSProperties = { color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s", boxShadow: "none" };
-    const btnHover = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; };
-    const btnLeave = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; };
     return (
-      <div className="term-msg" style={{ ...base, marginTop: 12, borderTop: `1px solid ${TERM_GREEN}10`, paddingTop: 10 }}>
+      <div className="term-msg" style={{ ...base, marginTop: 12, borderTop: `1px solid ${TERM_BORDER}`, paddingTop: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts}</span>
-          <span style={{
-            display: "inline-block", padding: "2px 10px", borderRadius: 3,
-            backgroundColor: `${TERM_GREEN}15`, color: TERM_GREEN,
-            fontSize: 10, fontFamily: TERM_FONT, fontWeight: 600, letterSpacing: "0.04em",
-          }}>DONE</span>
+          <span style={{ color: TERM_DIM }}>{ts}</span>
+          <span style={{ color: TERM_SEM_GREEN }}>done</span>
           {msg.durationMs && msg.durationMs > 1000 && (
-            <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
+            <span style={{ color: TERM_DIM, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
           )}
         </div>
-        <div style={{ color: TERM_TEXT, wordBreak: "break-word", lineHeight: 1.6 }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></div>
+        <div style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown"><MdContent text={cleanSummary || "completed."} /></div>
         {(projectDir || entryFile) && (
-          <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4, display: "flex", gap: 8, alignItems: "center" }}>
-            {projectDir && <span className="term-path-scroll" style={{ opacity: 0.6 }}>{projectDir}</span>}
-            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_GREEN, opacity: 0.6 }}>{entryFile}</span>}
+          <div style={{ color: TERM_DIM, marginTop: 4, display: "flex", gap: 8, alignItems: "center" }}>
+            {projectDir && <span className="term-path-scroll">{projectDir}</span>}
+            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_GREEN }}>{entryFile}</span>}
           </div>
         )}
-        {changedFiles.length > 0 && <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 2 }}>{changedFiles.length} files changed</div>}
+        {changedFiles.length > 0 && <div style={{ color: TERM_DIM, marginTop: 2 }}>{changedFiles.length} files changed</div>}
         <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>}
-          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={btnStyle} onMouseEnter={btnHover} onMouseLeave={btnLeave}>launch</button>}
+          {hasWebPreview(r) && onPreview && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>preview</button>}
+          {!hasWebPreview(r) && buildPreviewCommand(r) && <button className="term-btn" onClick={() => { const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>launch</button>}
         </div>
       </div>
     );
   }
 
   // ── Regular agent message ──
-  const btnStyle: React.CSSProperties = { color: TERM_GREEN, cursor: "pointer", border: `1px solid ${TERM_GREEN}40`, padding: "4px 16px", borderRadius: 3, fontSize: 11, fontFamily: TERM_FONT, fontWeight: 600, backgroundColor: `${TERM_GREEN}08`, transition: "all 0.15s", boxShadow: "none", marginTop: 8, display: "inline-block" };
-  const btnHover = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}18`; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}15`; };
-  const btnLeave = (e: React.MouseEvent<HTMLButtonElement>) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; e.currentTarget.style.boxShadow = "none"; };
-
   return (
     <div className="term-msg" style={{ ...base, paddingTop: 8, marginTop: 6 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <span style={{ color: TERM_DIM, fontSize: 10 }}>{ts}</span>
-        <span style={{ color: TERM_GREEN, opacity: 0.5, fontSize: 10 }}>{agentName ?? "agent"}</span>
+        <span style={{ color: TERM_DIM }}>{ts}</span>
+        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
       </div>
-      <div style={{ color: TERM_TEXT, wordBreak: "break-word", lineHeight: 1.6 }} className="chat-markdown">
+      <div style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
         {planContent ? (
           <>
             {textWithoutPlan && <div className="chat-markdown"><MdContent text={textWithoutPlan} /></div>}
-            <div style={{ marginTop: 6, paddingLeft: 12, borderLeft: `2px solid ${TERM_GREEN}18` }}>
-              <div style={{ color: TERM_GREEN, opacity: 0.4, fontSize: 10, marginBottom: 4, letterSpacing: "0.04em" }}>PLAN</div>
+            <div style={{ marginTop: 6, paddingLeft: 12, borderLeft: `2px solid ${TERM_BORDER}` }}>
+              <div style={{ color: TERM_DIM, marginBottom: 4, letterSpacing: "0.04em" }}>PLAN</div>
               <div className="chat-markdown"><MdContent text={planContent!} /></div>
             </div>
           </>
@@ -403,12 +386,12 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
           <MdContent text={displayText} />
         )}
         {msg.result && msg.result.changedFiles.length > 0 && !planContent && (
-          <div style={{ color: TERM_DIM, fontSize: 11, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
+          <div style={{ color: TERM_DIM, marginTop: 4 }}>{msg.result.changedFiles.length} files: {msg.result.changedFiles.slice(0, 3).join(", ")}{msg.result.changedFiles.length > 3 ? ` +${msg.result.changedFiles.length - 3}` : ""}</div>
         )}
         {msg.result && !isTeamMember && !isTeamLead && (hasWebPreview(msg.result) || (onReview && msg.result.changedFiles.length > 0)) && (
           <div style={{ display: "flex", gap: 8, marginTop: 8, alignItems: "center" }}>
             {hasWebPreview(msg.result) && onPreview && (
-              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={{ ...btnStyle, marginTop: 0 }} onMouseEnter={btnHover} onMouseLeave={btnLeave}>preview</button>
+              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={termBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}>preview</button>
             )}
             {onReview && msg.result.changedFiles.length > 0 && (
               <ReviewButton result={msg.result} onReview={onReview} detectedBackends={detectedBackends ?? []} />
@@ -416,7 +399,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
           </div>
         )}
         {msg.durationMs && msg.durationMs > 1000 && (
-          <div style={{ color: TERM_DIM, marginTop: 4, fontSize: 10, fontFamily: TERM_FONT }}>
+          <div style={{ color: TERM_DIM, marginTop: 4, fontFamily: TERM_FONT }}>
             {formatDuration(msg.durationMs)}
           </div>
         )}

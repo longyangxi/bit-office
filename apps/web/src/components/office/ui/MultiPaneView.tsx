@@ -92,8 +92,7 @@ const StableAgentPane = memo(function StableAgentPane({
               <span style={{
                 position: "absolute", top: 0, right: 0,
                 width: 5, height: 5, borderRadius: "50%",
-                backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}`,
-                animation: "px-pulse-gold 1.5s ease infinite",
+                backgroundColor: TERM_GREEN,
               }} />
             )}
             {meta.isTeamLead && (
@@ -101,8 +100,8 @@ const StableAgentPane = memo(function StableAgentPane({
             )}
           </div>
           <span style={{
-            fontSize: 11, color: TERM_TEXT_BRIGHT,
-            fontFamily: TERM_FONT, fontWeight: 600,
+            fontSize: TERM_SIZE, color: TERM_TEXT_BRIGHT,
+            fontFamily: TERM_FONT,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
           }}>{meta.name}</span>
         </div>
@@ -317,18 +316,17 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             onClick={onHire}
             title="Hire Team"
             style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              gap: 10, padding: "28px 48px",
-              border: `1px solid ${TERM_GREEN}30`, borderRadius: 6, cursor: "pointer",
-              backgroundColor: `${TERM_GREEN}06`, color: TERM_GREEN,
-              fontSize: 13, fontFamily: TERM_FONT,
-              transition: "all 0.2s ease",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              gap: 6, padding: "12px 28px",
+              border: `1px solid ${TERM_DIM}`, cursor: "pointer",
+              backgroundColor: "transparent", color: TERM_TEXT,
+              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+              transition: "border-color 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}60`; e.currentTarget.style.transform = "scale(1.02)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}06`; e.currentTarget.style.borderColor = `${TERM_GREEN}30`; e.currentTarget.style.transform = "scale(1)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_TEXT_BRIGHT; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; e.currentTarget.style.color = TERM_TEXT; }}
           >
-            <span style={{ fontSize: 22, opacity: 0.8 }}>+</span>
-            <span style={{ letterSpacing: "0.5px" }}>Hire Team</span>
+            <span>+ hire team</span>
           </button>
         ) : (
           "No agents active"
@@ -353,7 +351,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 minWidth: 0,
                 display: "flex",
                 flexDirection: "column",
-                borderLeft: i > 0 ? `1px solid rgba(24,255,98,0.1)` : undefined,
+                borderLeft: i > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
               }}
             >
               <StableAgentPane
@@ -403,7 +401,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
               display: "flex", flexDirection: "column",
               alignItems: "center", justifyContent: "center",
               gap: 8, padding: "0 16px",
-              borderLeft: visiblePanes.length > 0 ? `1px solid rgba(24,255,98,0.1)` : undefined,
+              borderLeft: visiblePanes.length > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
               minWidth: 60, flexShrink: 0,
             }}
           >
@@ -413,9 +411,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 title="Stop Team Work"
                 style={{
                   padding: "6px 12px",
-                  border: `1px solid ${TERM_SEM_YELLOW}60`, cursor: "pointer",
-                  backgroundColor: `${TERM_SEM_YELLOW}15`, color: TERM_SEM_YELLOW,
-                  fontSize: 10, fontFamily: TERM_FONT,
+                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
                 }}
               >stop</button>
             )}
@@ -425,13 +423,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 title="Fire Team"
                 style={{
                   padding: "6px 12px",
-                  border: `1px solid ${TERM_SEM_RED}30`, cursor: "pointer",
-                  backgroundColor: "transparent", color: TERM_SEM_RED,
-                  fontSize: 10, fontFamily: TERM_FONT,
-                  transition: "all 0.15s", opacity: 0.7,
+                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_DIM,
+                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+                  transition: "color 0.15s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}15`; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.backgroundColor = "transparent"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
               >fire</button>
             )}
           </div>
@@ -463,20 +461,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             aria-label="Previous panes"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: 26, height: 26,
-              background: snappedOffset === 0 ? "transparent" : TERM_SURFACE,
-              border: `1px solid ${snappedOffset === 0 ? "transparent" : TERM_BORDER_DIM}`,
-              borderRadius: 4,
-              color: snappedOffset === 0 ? TERM_DIM : TERM_GREEN,
+              width: 24, height: 24,
+              background: "transparent",
+              border: "none",
+              color: snappedOffset === 0 ? TERM_DIM : TERM_TEXT,
               cursor: snappedOffset === 0 ? "default" : "pointer",
               fontFamily: TERM_FONT,
-              fontSize: 10,
+              fontSize: TERM_SIZE,
               padding: 0,
-              opacity: snappedOffset === 0 ? 0.35 : 1,
-              transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { if (snappedOffset > 0) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
-            onMouseLeave={(e) => { if (snappedOffset > 0) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
           >
             ◀
           </button>
@@ -489,15 +482,14 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onClick={() => onPaneOffsetChange(i * MAX_VISIBLE)}
                 aria-label={`Page ${i + 1}`}
                 style={{
-                  width: currentPage === i + 1 ? 14 : 6,
-                  height: 6,
-                  borderRadius: 3,
+                  width: currentPage === i + 1 ? 12 : 4,
+                  height: 4,
+                  borderRadius: 2,
                   border: "none",
                   padding: 0,
-                  background: currentPage === i + 1 ? TERM_GREEN : `${TERM_DIM}60`,
+                  background: currentPage === i + 1 ? TERM_TEXT : TERM_DIM,
                   cursor: "pointer",
-                  transition: "all 0.2s ease",
-                  opacity: currentPage === i + 1 ? 1 : 0.6,
+                  transition: "width 0.2s ease",
                 }}
               />
             ))}
@@ -509,20 +501,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             aria-label="Next panes"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              width: 26, height: 26,
-              background: snappedOffset >= maxOffset ? "transparent" : TERM_SURFACE,
-              border: `1px solid ${snappedOffset >= maxOffset ? "transparent" : TERM_BORDER_DIM}`,
-              borderRadius: 4,
-              color: snappedOffset >= maxOffset ? TERM_DIM : TERM_GREEN,
+              width: 24, height: 24,
+              background: "transparent",
+              border: "none",
+              color: snappedOffset >= maxOffset ? TERM_DIM : TERM_TEXT,
               cursor: snappedOffset >= maxOffset ? "default" : "pointer",
               fontFamily: TERM_FONT,
-              fontSize: 10,
+              fontSize: TERM_SIZE,
               padding: 0,
-              opacity: snappedOffset >= maxOffset ? 0.35 : 1,
-              transition: "all 0.15s",
             }}
-            onMouseEnter={(e) => { if (snappedOffset < maxOffset) { e.currentTarget.style.background = TERM_HOVER; e.currentTarget.style.borderColor = TERM_BORDER; } }}
-            onMouseLeave={(e) => { if (snappedOffset < maxOffset) { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.borderColor = TERM_BORDER_DIM; } }}
           >
             ▶
           </button>
@@ -537,25 +524,21 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             style={{
               position: "absolute",
               right: 10,
-              display: "flex", alignItems: "center", gap: 5,
+              display: "flex", alignItems: "center", gap: 4,
               padding: "4px 12px",
-              height: 26,
-              border: "none",
-              borderRadius: 4,
+              height: 24,
+              border: `1px solid ${TERM_DIM}`,
               cursor: "pointer",
-              backgroundColor: TERM_GREEN,
-              color: "#0a0a0a",
-              fontSize: 11, fontFamily: TERM_FONT,
-              fontWeight: 600,
-              transition: "all 0.15s",
+              backgroundColor: "transparent",
+              color: TERM_TEXT,
+              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+              transition: "border-color 0.15s",
               whiteSpace: "nowrap" as const,
-              boxShadow: `0 0 8px ${TERM_GREEN}40`,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.85"; e.currentTarget.style.boxShadow = `0 0 12px ${TERM_GREEN}60`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.boxShadow = `0 0 8px ${TERM_GREEN}40`; }}
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_TEXT_BRIGHT; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; e.currentTarget.style.color = TERM_TEXT; }}
           >
-            <span style={{ fontSize: 13, lineHeight: 1, fontWeight: 700 }}>+</span>
-            <span>hire</span>
+            <span>+ hire</span>
           </button>
         )}
       </div>

@@ -1,7 +1,7 @@
 import { useRef, useEffect, memo, useCallback, useState } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
 import type { ChatMessage } from "@/store/office-store";
@@ -167,22 +167,18 @@ const ChatMessageList = memo(function ChatMessageList({
         return (
           <div style={{
             padding: "6px 10px", marginBottom: 8,
-            backgroundColor: info.color + "10",
-            backdropFilter: "blur(6px)",
-            WebkitBackdropFilter: "blur(6px)",
-            border: `1px solid ${info.color}30`,
+            borderLeft: `2px solid ${TERM_DIM}`,
             display: "flex", alignItems: "center", gap: 6,
-            fontSize: 12, fontFamily: "monospace",
+            fontSize: TERM_SIZE, fontFamily: TERM_FONT,
           }}>
-            <span>{info.icon}</span>
-            <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 10, letterSpacing: "0.05em" }}>{teamPhase}</span>
+            <span style={{ color: TERM_DIM, textTransform: "uppercase", letterSpacing: "0.05em" }}>{teamPhase}</span>
             <span style={{ color: TERM_DIM }}>{info.hint}</span>
           </div>
         );
       })()}
 
       {messages.length === 0 && (
-        <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
+        <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
           {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
         </div>
       )}
@@ -195,13 +191,13 @@ const ChatMessageList = memo(function ChatMessageList({
       {pendingApproval && (
         <div style={{
           marginBottom: 8, padding: 12,
-          backgroundColor: TERM_SURFACE,
-          border: `1px solid ${TERM_SEM_YELLOW}`,
+          borderLeft: `2px solid ${TERM_SEM_YELLOW}`,
+          fontSize: TERM_SIZE, fontFamily: TERM_FONT,
         }}>
-          <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
-            {"\u25B2"} {pendingApproval.title}
+          <div style={{ color: TERM_SEM_YELLOW, marginBottom: 6 }}>
+            {pendingApproval.title}
           </div>
-          <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
+          <div style={{ color: TERM_TEXT, marginBottom: 10, lineHeight: 1.65 }}>
             {pendingApproval.summary}
           </div>
           {isOwner && (
@@ -209,13 +205,13 @@ const ChatMessageList = memo(function ChatMessageList({
               <button
                 className="term-btn"
                 onClick={() => onApproval(pendingApproval.approvalId, "yes")}
-                style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-              >{"\u25B6"} Approve</button>
+                style={{ flex: 1, padding: "6px", border: `1px solid ${TERM_DIM}`, backgroundColor: "transparent", color: TERM_SEM_GREEN, cursor: "pointer", fontSize: TERM_SIZE, fontFamily: TERM_FONT }}
+              >approve</button>
               <button
                 className="term-btn"
                 onClick={() => onApproval(pendingApproval.approvalId, "no")}
-                style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
-              >{"\u2715"} Reject</button>
+                style={{ flex: 1, padding: "6px", border: `1px solid ${TERM_DIM}`, backgroundColor: "transparent", color: TERM_SEM_RED, cursor: "pointer", fontSize: TERM_SIZE, fontFamily: TERM_FONT }}
+              >reject</button>
             </div>
           )}
         </div>
@@ -227,9 +223,9 @@ const ChatMessageList = memo(function ChatMessageList({
           || null;
         return (
           <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ color: TERM_GREEN, opacity: 0.5 }} className="working-dots"><span className="working-dots-mid" /></span>
+            <span style={{ color: TERM_DIM }} className="working-dots"><span className="working-dots-mid" /></span>
             {hint && (
-              <span style={{ color: TERM_DIM, fontSize: 10, fontFamily: TERM_FONT, opacity: 0.6 }}>
+              <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
                 {hint.slice(0, 60)}
               </span>
             )}
@@ -267,7 +263,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
     <div style={{
       padding: "8px 12px",
       background: TERM_PANEL,
-      borderTop: `1px solid ${TERM_GREEN}30`,
+      borderTop: `1px solid ${TERM_BORDER_DIM}`,
       fontFamily: TERM_FONT, flexShrink: 0,
     }}>
       {/* Feedback input */}
@@ -286,11 +282,11 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
               onApplyReviewFixes(feedback || undefined);
             }
           }}
-          placeholder="Add feedback for the fix (e.g. skip issue #1, focus on #3)..."
+          placeholder="Add feedback for the fix..."
           style={{
             flex: 1, padding: "6px 10px",
-            background: TERM_BG, border: `1px solid ${TERM_GREEN}30`,
-            color: TERM_TEXT, fontSize: 12, fontFamily: TERM_FONT,
+            background: TERM_BG, border: `1px solid ${TERM_BORDER}`,
+            color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             outline: "none",
           }}
         />
@@ -301,27 +297,27 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
           <button
             onClick={() => onApplyReviewFixes(feedback || undefined)}
             style={{
-              padding: "6px 18px", border: `1px solid ${TERM_SEM_GREEN}60`,
-              backgroundColor: `${TERM_SEM_GREEN}10`, color: TERM_SEM_GREEN,
-              fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
-              cursor: "pointer", transition: "all 0.15s",
+              padding: "6px 18px", border: `1px solid ${TERM_DIM}`,
+              backgroundColor: "transparent", color: TERM_SEM_GREEN,
+              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+              cursor: "pointer", transition: "border-color 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}20`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_GREEN}10`; }}
-          >Apply Fixes</button>
+            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_GREEN; }}
+            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; }}
+          >apply fixes</button>
         )}
         {onDismissReview && (
           <button
             onClick={onDismissReview}
             style={{
-              padding: "6px 18px", border: `1px solid ${TERM_GREEN}40`,
-              backgroundColor: "transparent", color: TERM_GREEN,
-              fontSize: 12, fontWeight: 600, fontFamily: TERM_FONT,
-              cursor: "pointer", transition: "all 0.15s",
+              padding: "6px 18px", border: `1px solid ${TERM_DIM}`,
+              backgroundColor: "transparent", color: TERM_DIM,
+              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+              cursor: "pointer", transition: "border-color 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}10`; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-          >Dismiss</button>
+            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_TEXT; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+          >dismiss</button>
         )}
       </div>
     </div>
@@ -392,27 +388,27 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         fontSize: 12, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: TERM_GREEN, fontWeight: 600, flexShrink: 0, fontSize: 12 }}>
+        <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0 }}>
           {role?.split("\u2014")[0]?.trim()}
-          {backend && <span style={{ color: TERM_DIM, fontSize: 11 }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
+          {backend && <span style={{ color: TERM_DIM }}> ({BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend})</span>}
         </span>
         {(cwd || workDir) && (
-          <span className="term-path-scroll" style={{ fontSize: 11, color: TERM_DIM, flexShrink: 1, minWidth: 0 }} title={cwd ?? workDir ?? undefined}>
+          <span className="term-path-scroll" style={{ color: TERM_DIM, flexShrink: 1, minWidth: 0 }} title={cwd ?? workDir ?? undefined}>
             {cwd ?? workDir}
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <span style={{ color: cfg.color, fontSize: 11, flexShrink: 0, fontWeight: 500 }}>{cfg.label}</span>
+        <span style={{ color: TERM_DIM, flexShrink: 0 }}>{cfg.label}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <span
             onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
             style={{
-              fontSize: 12, color: TERM_SEM_RED, cursor: "pointer", lineHeight: 1,
-              padding: "4px", flexShrink: 0, opacity: 0.7,
+              fontSize: TERM_SIZE, color: TERM_DIM, cursor: "pointer", lineHeight: 1,
+              padding: "4px", flexShrink: 0,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
+            onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
           >{"\u2715"}</span>
         )}
       </div>
@@ -433,7 +429,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             background: TERM_PANEL,
             flexShrink: 0,
           }}>
-            <div style={{ fontSize: TERM_SIZE, color: TERM_GREEN, opacity: 0.6, marginBottom: 4, fontFamily: TERM_FONT, letterSpacing: "0.05em" }}>
+            <div style={{ fontSize: TERM_SIZE, color: TERM_DIM, marginBottom: 4, fontFamily: TERM_FONT, letterSpacing: "0.05em" }}>
               EXTERNAL PROCESS
             </div>
             <div style={{ display: "flex", gap: 12, fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, flexWrap: "wrap" }}>
@@ -452,7 +448,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0,
           }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13 }}>
+              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
                 Waiting for output...
               </div>
             )}
@@ -483,29 +479,21 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           maxHeight: "40%",
           display: "flex", flexDirection: "column",
           background: TERM_PANEL,
-          borderTop: `2px solid ${TERM_GREEN}40`,
-          fontFamily: TERM_FONT, fontSize: 12,
+          borderTop: `1px solid ${TERM_BORDER}`,
+          fontFamily: TERM_FONT, fontSize: TERM_SIZE,
           animation: "review-overlay-in 0.3s ease-out",
         }}>
-          {/* Header: avatar + name + dots + dismiss */}
+          {/* Header: name + dots + dismiss */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 12px",
-            borderBottom: `1px solid ${TERM_GREEN}20`,
+            borderBottom: `1px solid ${TERM_BORDER_DIM}`,
             flexShrink: 0,
           }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: "50%",
-              background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 700, color: TERM_BG, flexShrink: 0,
-            }}>
-              {reviewerOverlay.name.charAt(0).toUpperCase()}
-            </div>
-            <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
+            <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.role?.split("\u2014")[0]?.trim() || reviewerOverlay.name}
             </span>
-            <span className="working-dots" style={{ color: TERM_GREEN, opacity: 0.5 }}>
+            <span className="working-dots" style={{ color: TERM_DIM }}>
               <span className="working-dots-mid" />
             </span>
             <span style={{ flex: 1 }} />
@@ -516,12 +504,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               <button
                 onClick={onDismissReview}
                 style={{
-                  padding: "2px 8px", border: `1px solid ${TERM_GREEN}30`,
+                  padding: "2px 8px", border: `1px solid ${TERM_BORDER}`,
                   backgroundColor: "transparent", color: TERM_DIM,
-                  fontSize: 10, fontFamily: TERM_FONT,
+                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
                   cursor: "pointer", flexShrink: 0, lineHeight: 1,
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_TEXT; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
               >{"\u00d7"}</button>
             )}
@@ -535,7 +523,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             }}>
               {reviewerOverlay.visibleMessages.filter(m => m.role === "agent" && m.text).map((msg) => (
                 <div key={msg.id} style={{
-                  fontSize: 11, color: TERM_DIM, lineHeight: 1.5,
+                  fontSize: TERM_SIZE, color: TERM_DIM, lineHeight: 1.65,
                   fontFamily: TERM_FONT, marginBottom: 4,
                   whiteSpace: "pre-wrap", wordBreak: "break-word",
                 }}>
@@ -548,7 +536,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Fallback hint when no messages yet */}
           {reviewerOverlay.visibleMessages.length === 0 && (
             <div style={{
-              padding: "6px 12px", color: TERM_DIM, fontSize: 11,
+              padding: "6px 12px", color: TERM_DIM, fontSize: TERM_SIZE,
               fontFamily: TERM_FONT,
             }}>
               {reviewerOverlay.lastLogLine?.slice(0, 80) || "Reviewing code changes..."}
@@ -564,7 +552,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           height: "65%", minHeight: 200,
           display: "flex", flexDirection: "column",
           backgroundColor: TERM_BG,
-          borderTop: `2px solid ${TERM_GREEN}50`,
+          borderTop: `1px solid ${TERM_BORDER}`,
           animation: "review-slide-up 0.25s ease-out",
         }}>
           {/* Header bar */}
@@ -572,27 +560,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
             background: TERM_PANEL,
-            borderBottom: `1px solid ${TERM_GREEN}30`,
-            fontSize: 12, fontFamily: TERM_FONT,
+            borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+            fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            <div style={{
-              width: 22, height: 22, borderRadius: "50%",
-              background: `linear-gradient(135deg, ${TERM_GREEN}60, ${TERM_SEM_CYAN}60)`,
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontSize: 11, fontWeight: 700, color: TERM_BG, flexShrink: 0,
-            }}>
-              {reviewerOverlay.name.charAt(0).toUpperCase()}
-            </div>
-            <span style={{
-              display: "inline-block", padding: "2px 8px",
-              backgroundColor: `${TERM_SEM_GREEN}15`, color: TERM_SEM_GREEN,
-              fontSize: 10, fontWeight: 600, letterSpacing: "0.06em",
-              border: `1px solid ${TERM_SEM_GREEN}40`,
-            }}>
-              REVIEW COMPLETE
-            </span>
-            <span style={{ color: TERM_GREEN, fontWeight: 600, fontSize: 12 }}>
+            <span style={{ color: TERM_SEM_GREEN }}>done</span>
+            <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.name}
             </span>
             <span style={{ flex: 1 }} />
@@ -614,7 +587,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
                 ))
               ) : (
-                <div style={{ color: TERM_DIM, fontSize: 12, fontFamily: TERM_FONT, padding: "10px 0" }}>
+                <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0" }}>
                   (No review content)
                 </div>
               );
@@ -681,10 +654,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
               backgroundColor: TERM_BG, maxHeight: 120, overflowY: "auto",
             }}>
-              <div style={{ fontSize: 10, color: TERM_SEM_PURPLE, fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
+              <div style={{ fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
               {suggestions.slice(-10).map((s, i) => (
-                <div key={i} style={{ fontSize: 12, color: TERM_TEXT, marginBottom: 2, lineHeight: 1.4 }}>
-                  <span style={{ color: TERM_SEM_PURPLE, fontWeight: 600 }}>{s.author}:</span> {s.text}
+                <div key={i} style={{ fontSize: TERM_SIZE, color: TERM_TEXT, marginBottom: 2, lineHeight: 1.65, fontFamily: TERM_FONT }}>
+                  <span style={{ color: TERM_DIM }}>{s.author}:</span> {s.text}
                 </div>
               ))}
             </div>
@@ -711,7 +684,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   >{"\u00d7"}</button>
                 </div>
               ))}
-              <span style={{ fontSize: 10, color: TERM_DIM, fontFamily: "monospace" }}>
+              <span style={{ fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT }}>
                 {pendingImages.length} image{pendingImages.length > 1 ? "s" : ""} attached
               </span>
             </div>
@@ -727,7 +700,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 <div style={{
                   padding: "8px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
                   backgroundColor: TERM_SURFACE, flexShrink: 0,
-                  fontSize: 12, color: TERM_SEM_BLUE, fontFamily: "monospace", textAlign: "center",
+                  fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, textAlign: "center",
                 }}>
                   Watching — read-only mode
                 </div>
@@ -751,22 +724,22 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       placeholder="Share an idea..."
                       maxLength={500}
                       style={{
-                        flex: 1, padding: "9px 12px", border: `1px solid ${TERM_SEM_PURPLE}40`,
-                        backgroundColor: TERM_BG, color: TERM_SEM_PURPLE, fontSize: 14, outline: "none",
-                        resize: "none", lineHeight: "20px", fontFamily: "inherit",
+                        flex: 1, padding: "6px 10px", border: `1px solid ${TERM_BORDER}`,
+                        backgroundColor: TERM_BG, color: TERM_TEXT, fontSize: TERM_SIZE, outline: "none",
+                        resize: "none", lineHeight: "20px", fontFamily: TERM_FONT,
                       }}
                     />
                     <button
                       onClick={onSuggest}
                       disabled={!suggestText.trim()}
                       style={{
-                        padding: "9px 14px", border: "none",
-                        backgroundColor: suggestText.trim() ? TERM_SEM_PURPLE : TERM_SURFACE,
-                        color: suggestText.trim() ? "#fff" : TERM_DIM,
-                        fontSize: 13, cursor: suggestText.trim() ? "pointer" : "default",
-                        fontWeight: 700, fontFamily: "monospace",
+                        padding: "6px 14px", border: `1px solid ${TERM_DIM}`,
+                        backgroundColor: "transparent",
+                        color: suggestText.trim() ? TERM_TEXT : TERM_DIM,
+                        fontSize: TERM_SIZE, cursor: suggestText.trim() ? "pointer" : "default",
+                        fontFamily: TERM_FONT,
                       }}
-                    >Suggest</button>
+                    >suggest</button>
                   </div>
                 </div>
               );
@@ -782,14 +755,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               }}>
                 {isTeamMember ? (
                   <div style={{
-                    textAlign: "center", color: TERM_DIM, fontSize: 12, padding: "8px 0", fontFamily: "monospace",
+                    textAlign: "center", color: TERM_DIM, fontSize: TERM_SIZE, padding: "8px 0", fontFamily: TERM_FONT,
                   }}>
                     Tasks are assigned by the Team Lead
                   </div>
                 ) : cardPhase === "execute" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
-                      <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
+                      <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                       <textarea
                         ref={inputRef}
                         rows={1}
@@ -905,7 +878,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 ) : (
                   <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
-                    <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: busy ? "none" : TERM_GLOW }}>&gt;</span>
+                    <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}

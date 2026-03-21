@@ -159,56 +159,56 @@ select option {
   animation: cursor-blink 1s step-end infinite;
   color: var(--term-green);
 }
+/* ── Ghostty-inspired: unified typography ──
+   Single weight (400), single size (12px), hierarchy via color only */
 .chat-markdown, .chat-markdown *,
 .term-msg, .term-msg *,
 .crt-screen a, .crt-screen code, .crt-screen span {
   font-size: 12px !important; font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace !important;
-  font-weight: 300 !important; line-height: 1.6 !important;
+  font-weight: 400 !important; line-height: 1.65 !important;
 }
-/* ── Headings ── */
+/* ── Headings: same size, brighter color — no weight escalation ── */
 .chat-markdown h1 {
-  font-size: 14px !important; font-weight: 600 !important;
-  color: var(--term-green) !important; opacity: 0.9;
-  margin: 12px 0 6px !important; padding: 0 !important;
-  border-bottom: 1px solid rgba(var(--term-accent-rgb),0.12) !important;
-  padding-bottom: 4px !important;
-}
-.chat-markdown h2 {
-  font-size: 13px !important; font-weight: 600 !important;
-  color: var(--term-green) !important; opacity: 0.8;
-  margin: 10px 0 4px !important; padding: 0 !important;
-}
-.chat-markdown h3 {
-  font-size: 12px !important; font-weight: 600 !important;
-  color: var(--term-green) !important; opacity: 0.7;
-  margin: 8px 0 3px !important; padding: 0 !important;
-}
-.chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
   font-size: 12px !important; font-weight: 500 !important;
   color: var(--term-text-bright) !important;
-  margin: 6px 0 2px !important; padding: 0 !important;
+  margin: 14px 0 6px !important; padding: 0 0 4px !important;
+  border-bottom: 1px solid var(--term-border-dim) !important;
 }
-/* ── Inline emphasis ── */
+.chat-markdown h2 {
+  font-size: 12px !important; font-weight: 500 !important;
+  color: var(--term-text-bright) !important;
+  margin: 12px 0 4px !important; padding: 0 !important;
+}
+.chat-markdown h3 {
+  font-size: 12px !important; font-weight: 500 !important;
+  color: var(--term-text-bright) !important;
+  margin: 10px 0 3px !important; padding: 0 !important;
+}
+.chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
+  font-size: 12px !important; font-weight: 400 !important;
+  color: var(--term-text-bright) !important;
+  margin: 8px 0 2px !important; padding: 0 !important;
+}
+/* ── Inline emphasis: subtle, minimal differentiation ── */
 .chat-markdown strong, .chat-markdown b {
-  font-weight: 600 !important; color: var(--term-text-bright) !important;
+  font-weight: 500 !important; color: var(--term-text-bright) !important;
 }
 .chat-markdown em, .chat-markdown i {
-  font-style: italic !important; color: var(--term-dim) !important;
-  opacity: 0.9;
+  font-style: italic !important; color: var(--term-text) !important;
 }
-/* ── Code ── */
+/* ── Code: minimal decoration ── */
 .chat-markdown code {
   font-size: inherit !important; font-family: inherit !important;
-  background: rgba(var(--term-accent-rgb),0.06) !important;
-  padding: 1px 5px !important; border-radius: 3px !important;
-  border: 1px solid rgba(var(--term-accent-rgb),0.1) !important;
-  color: var(--term-green) !important; opacity: 0.7 !important;
+  background: var(--term-code-bg) !important;
+  padding: 1px 5px !important; border-radius: 2px !important;
+  border: none !important;
+  color: var(--term-code-text) !important; opacity: 1 !important;
 }
 .chat-markdown pre {
   margin: 8px 0 !important; padding: 10px 12px !important;
   background: var(--term-code-bg) !important;
-  border-left: 2px solid rgba(var(--term-accent-rgb),0.2) !important;
-  border-radius: 0 4px 4px 0 !important;
+  border-left: 2px solid var(--term-border-dim) !important;
+  border-radius: 0 !important;
   overflow-x: auto;
 }
 .chat-markdown pre code {
@@ -222,27 +222,27 @@ select option {
 .chat-markdown ul, .chat-markdown ol { margin: 4px 0 8px !important; padding-left: 20px !important; }
 .chat-markdown li { margin: 2px 0 !important; }
 .chat-markdown li::marker { color: var(--term-dim) !important; }
-.chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border) !important; margin: 8px 0 !important; }
+.chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border-dim) !important; margin: 10px 0 !important; }
 .chat-markdown blockquote {
   margin: 6px 0 !important; padding: 4px 12px !important;
-  border-left: 2px solid rgba(var(--term-accent-rgb),0.3) !important;
+  border-left: 2px solid var(--term-border) !important;
   color: var(--term-dim) !important;
 }
-/* ── Links ── */
-.chat-markdown a, .crt-screen a { color: var(--term-green) !important; opacity: 0.7; text-decoration: none !important; }
-.chat-markdown a:hover, .crt-screen a:hover { opacity: 1; text-decoration: underline !important; }
+/* ── Links: clean, no opacity dance ── */
+.chat-markdown a, .crt-screen a { color: var(--term-green) !important; text-decoration: none !important; }
+.chat-markdown a:hover, .crt-screen a:hover { text-decoration: underline !important; }
 /* ── Tables ── */
 .chat-markdown table {
   border-collapse: collapse !important; margin: 8px 0 !important; width: 100% !important;
 }
 .chat-markdown th {
   padding: 4px 12px !important; text-align: left !important;
-  font-weight: 600 !important; color: var(--term-text-bright) !important;
-  border-bottom: 2px solid rgba(var(--term-accent-rgb),0.2) !important;
+  font-weight: 500 !important; color: var(--term-text-bright) !important;
+  border-bottom: 1px solid var(--term-border) !important;
 }
 .chat-markdown td {
   padding: 3px 12px !important;
-  border-bottom: 1px solid rgba(var(--term-accent-rgb),0.06) !important;
+  border-bottom: 1px solid var(--term-border-dim) !important;
 }
 .chat-markdown tr:hover td {
   background: rgba(var(--term-accent-rgb),0.03) !important;
@@ -294,10 +294,9 @@ select option {
   0%, 100% { box-shadow: 0 0 0 0 rgba(200,155,48,0); }
   50% { box-shadow: 0 0 8px 2px rgba(200,155,48,0.25); }
 }
-/* ── Dot-grid background ── */
+/* ── Dot-grid background (disabled for clean look) ── */
 .term-dotgrid {
-  background-image: radial-gradient(circle, rgba(var(--term-accent-rgb),0.12) 1px, transparent 1px);
-  background-size: 20px 20px;
+  background-image: none;
 }
 /* ── Text rendering ── */
 .crt-screen, .crt-screen * {
@@ -334,9 +333,9 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.6; }
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
-/* ── Chat area vignette ── */
+/* ── Chat area (clean, no vignette) ── */
 .term-chat-area {
-  background-image: linear-gradient(to bottom, rgba(0,0,0,0.15) 0%, transparent 40px, transparent 100%);
+  background-image: none;
 }
 /* ── Clean mode: disable all textures and effects ── */
 .term-clean .crt-screen { animation: none !important; }
