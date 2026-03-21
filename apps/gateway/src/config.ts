@@ -20,6 +20,8 @@ interface SavedConfig {
   defaultBackend?: string;
   sandboxMode?: "full" | "safe";
   worktreeEnabled?: boolean;
+  tunnelBaseUrl?: string;
+  tunnelToken?: string;
 }
 
 function ensureConfigDir() {
@@ -151,6 +153,8 @@ function buildConfig() {
     defaultBackend: saved.defaultBackend ?? "claude",
     sandboxMode: (saved.sandboxMode ?? "full") as "full" | "safe",
     worktreeEnabled: saved.worktreeEnabled ?? true,
+    tunnelBaseUrl: (process.env.TUNNEL_BASE_URL || saved.tunnelBaseUrl || "").replace(/\/+$/, "") || undefined,
+    tunnelToken: process.env.TUNNEL_TOKEN || saved.tunnelToken || undefined,
   };
 }
 

@@ -78,6 +78,26 @@ function tgMeta(): CommandMeta {
   return { role: "owner", clientId: "telegram" };
 }
 
+/**
+ * Build a public preview URL for Telegram when tunnel is configured.
+ * Rewrites localhost:9199 → tunnelBaseUrl/preview-static/
+ * and localhost:9198 → tunnelBaseUrl/preview-app/
+ * Returns empty string if no tunnel or no preview URL.
+ */
+function buildTunnelPreviewLink(result: any): string {
+  if (!config.tunnelBaseUrl || !result) return "";
+  const url: string | undefined = result.previewUrl;
+  if (!url) return "";
+  const base = config.tunnelBaseUrl;
+  if (url.includes("localhost:9199") || url.includes("127.0.0.1:9199")) {
+    return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${base}/preview-static`);
+  }
+  if (url.includes("localhost:9198") || url.includes("127.0.0.1:9198")) {
+    return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${base}/preview-app`);
+  }
+  return "";
+}
+
 function resolveAgentFromReply(msg: TelegramBot.Message): string | null {
   const replyId = msg.reply_to_message?.message_id;
   if (!replyId) return null;
@@ -333,16 +353,23 @@ export const telegramChannel: Channel = {
         const r = (event as any).result;
         const summary = (r?.summary ?? "Done").slice(0, 500);
         const files = r?.changedFiles?.length ? `\n\nFiles: ${r.changedFiles.length}` : "";
+        const previewUrl = buildTunnelPreviewLink(r);
         const text = `Done: ${summary}${files}`;
+        const opts: TelegramBot.SendMessageOptions = {};
+        if (previewUrl) {
+          opts.reply_markup = {
+            inline_keyboard: [[{ text: "Preview", url: previewUrl }]],
+          };
+        }
         const msgId = statusMessages.get(key);
 
         if (msgId) {
-          bot.editMessageText(text, { chat_id: chatId, message_id: msgId }).catch(() => {
-            bot!.sendMessage(chatId, text).catch(() => {});
+          bot.editMessageText(text, { chat_id: chatId, message_id: msgId, ...opts }).catch(() => {
+            bot!.sendMessage(chatId, text, opts).catch(() => {});
           });
           statusMessages.delete(key);
         } else {
-          bot.sendMessage(chatId, text).catch(() => {});
+          bot.sendMessage(chatId, text, opts).catch(() => {});
         }
       }
 

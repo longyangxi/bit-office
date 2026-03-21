@@ -17,6 +17,7 @@ import os from "os";
 import { ProcessScanner } from "./process-scanner.js";
 import { ExternalOutputReader } from "./external-output-reader.js";
 import { installFileLogger } from "./file-logger.js";
+import { startTunnel, stopTunnel, isTunnelRunning } from "./tunnel.js";
 import { loadTeamState, saveTeamState, clearTeamState, type TeamState, type PersistedAgent, bufferEvent, archiveProject, resetProjectBuffer, setProjectName, listProjects, loadProject, loadProjectBuffer, rateProject } from "./team-state.js";
 
 // Register all channels — each one self-activates if configured
@@ -864,6 +865,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         telegramAllowedUsers: config.telegramAllowedUsers,
         telegramConnected: tgConnected,
         worktreeEnabled: orc.isWorktreeEnabled,
+        tunnelBaseUrl: config.tunnelBaseUrl ?? "",
+        tunnelToken: config.tunnelToken ? config.tunnelToken.slice(0, 10) + "..." : "",
+        tunnelRunning: isTunnelRunning(),
       });
       break;
     }
@@ -876,10 +880,19 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           updates.worktreeEnabled = parsed.worktreeEnabled;
           orc.setWorktreeEnabled(parsed.worktreeEnabled);
         }
+        if (parsed.tunnelBaseUrl !== undefined) updates.tunnelBaseUrl = parsed.tunnelBaseUrl || undefined;
+        if (parsed.tunnelToken !== undefined) updates.tunnelToken = parsed.tunnelToken || undefined;
         // Clear legacy field to prevent fallback reconnection
         updates.telegramBotTokens = undefined;
         saveConfig(updates);
         reloadConfig();
+
+        // Start or stop tunnel based on new config
+        if (config.tunnelToken) {
+          if (!isTunnelRunning()) startTunnel();
+        } else {
+          stopTunnel();
+        }
 
         // Restart Telegram channel with new config
         const cid = meta.clientId;
@@ -1299,6 +1312,9 @@ async function main() {
   // Start transports (WS + optional Ably)
   await initTransports(handleCommand);
 
+  // Start Cloudflare Tunnel if configured
+  startTunnel();
+
   console.log("[Gateway] Listening for commands...");
   console.log("[Gateway] Press 'p' + Enter to generate a new pair code");
 
@@ -1328,6 +1344,7 @@ function cleanup() {
   outputReader?.detachAll();
   scanner?.stop();
   previewServer.stop();
+  stopTunnel();
   orc?.destroy();
   destroyTransports();
   process.exit(0);

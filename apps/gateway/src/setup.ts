@@ -67,6 +67,16 @@ export async function runSetup(): Promise<void> {
   const sandboxPick = await ask(rl, "Permission mode (1/2, default=1): ");
   const sandboxMode: "full" | "safe" = sandboxPick === "2" ? "safe" : "full";
 
+  // Cloudflare Tunnel
+  console.log("\n── Cloudflare Tunnel ─────────────────");
+  console.log("Enables remote preview access via Telegram.");
+  console.log("Get your token from: Cloudflare Zero Trust > Networks > Tunnels");
+  const tunnelToken = await ask(rl, "Tunnel token (optional): ");
+  let tunnelBaseUrl = "";
+  if (tunnelToken) {
+    tunnelBaseUrl = await ask(rl, "Public URL (e.g. https://office.example.com): ");
+  }
+
   rl.close();
 
   saveConfig({
@@ -74,11 +84,14 @@ export async function runSetup(): Promise<void> {
     detectedBackends: detected,
     defaultBackend,
     sandboxMode,
+    ...(tunnelToken ? { tunnelToken } : {}),
+    ...(tunnelBaseUrl ? { tunnelBaseUrl: tunnelBaseUrl.replace(/\/+$/, "") } : {}),
   });
 
   console.log("\n✓ Config saved to ~/.bit-office/config.json");
   if (ablyApiKey) console.log("  • Ably: enabled");
   console.log(`  • Default AI: ${getBackend(defaultBackend)?.name ?? defaultBackend}`);
   console.log(`  • Permissions: ${sandboxMode === "full" ? "Full access" : "Sandbox"}`);
+  if (tunnelToken) console.log(`  • Tunnel: ${tunnelBaseUrl || "(token set, no URL)"}`);
   console.log("  • Run with --setup to reconfigure\n");
 }

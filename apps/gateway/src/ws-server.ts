@@ -1,4 +1,4 @@
-import { createServer, type IncomingMessage, type ServerResponse } from "http";
+import { createServer, request as httpRequest, type IncomingMessage, type ServerResponse } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { CommandSchema } from "@office/shared";
 import type { GatewayEvent, Command, UserRole } from "@office/shared";
@@ -269,6 +269,27 @@ export const wsChannel: Channel = {
               res.end(JSON.stringify({ error: "Token creation failed" }));
             }
           });
+          return;
+        }
+
+        // --- Reverse proxy for preview servers (enables tunnel access via single port) ---
+        const url = req.url ?? "/";
+        const proxyMatch = url.match(/^\/(preview-static|preview-app)(\/.*)?$/);
+        if (proxyMatch) {
+          const targetPort = proxyMatch[1] === "preview-static" ? 9199 : 9198;
+          const targetPath = proxyMatch[2] || "/";
+          const proxyReq = httpRequest(
+            { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
+            (proxyRes) => {
+              res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+              proxyRes.pipe(res, { end: true });
+            },
+          );
+          proxyReq.on("error", () => {
+            res.writeHead(502, { "Content-Type": "text/plain" });
+            res.end("Preview server not running");
+          });
+          req.pipe(proxyReq, { end: true });
           return;
         }
 
