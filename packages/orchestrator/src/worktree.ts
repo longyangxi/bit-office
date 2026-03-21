@@ -181,8 +181,16 @@ export function mergeWorktree(
     } catch { /* ignore */ }
 
     if (stagedFiles.length > 0) {
-      const msg = summary ? summary.slice(0, 200).replace(/"/g, '\\"') : `merge: ${branch.replace(/"/g, '\\"')}`;
-      gitExec(`git commit -m "${msg}"`, workspace);
+      const msg = summary ? summary.slice(0, 200) : `merge: ${branch}`;
+      // Use env var to pass commit message — avoids shell injection from
+      // backticks, quotes, or other special chars in agent summary output.
+      execSync(`git commit -m "$COMMIT_MSG"`, {
+        cwd: workspace,
+        stdio: "pipe",
+        encoding: "utf-8",
+        timeout: TIMEOUT,
+        env: { ...getIsolatedGitEnv(), COMMIT_MSG: msg },
+      });
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
 
@@ -246,10 +254,13 @@ export function removeWorktree(worktreePath: string, branch: string, workspace?:
 
 /**
  * Clean up stale agent worktrees and branches from previous ungraceful shutdowns.
+ * @param ownedAgentIds — if provided, only remove worktrees/branches belonging to
+ *   these agents. This prevents one gateway instance from deleting another's worktrees.
  */
 export function cleanupStaleWorktrees(
   workspace: string,
   activeBranches: Set<string> = new Set(),
+  ownedAgentIds?: Set<string>,
 ): { removedBranches: string[]; removedWorktrees: string[] } {
   const removed = { removedBranches: [] as string[], removedWorktrees: [] as string[] };
   if (!isGitRepo(workspace)) return removed;
@@ -257,12 +268,14 @@ export function cleanupStaleWorktrees(
   // 1. Prune dead worktree metadata
   try { gitExec("git worktree prune", workspace); } catch { /* ignore */ }
 
-  // 2. Remove stale .worktrees/* directories
+  // 2. Remove stale .worktrees/* directories (only ours)
   const worktreeDir = path.join(workspace, ".worktrees");
   try {
     if (existsSync(worktreeDir)) {
       const entries: string[] = readdirSync(worktreeDir);
       for (const entry of entries) {
+        // Skip worktrees that don't belong to this instance
+        if (ownedAgentIds && !Array.from(ownedAgentIds).some(id => entry.startsWith(id))) continue;
         const wtPath = path.join(worktreeDir, entry);
         try {
           gitExec(`git worktree remove --force "${wtPath}"`, workspace);
@@ -279,6 +292,8 @@ export function cleanupStaleWorktrees(
   } catch { /* ignore */ }
 
   // 3. Delete orphaned agent/* branches
+  // When scoped (ownedAgentIds), only delete branches whose taskId matches
+  // a worktree we just removed — this avoids deleting other instances' branches.
   try {
     const branchOutput = gitExec('git branch --list "agent/*"', workspace);
     if (!branchOutput) return removed;
@@ -290,9 +305,19 @@ export function cleanupStaleWorktrees(
       if (m) wtBranches.add(m[1]);
     }
 
+    // Extract taskIds from worktrees we just cleaned up (e.g. "agent-AwdBcw-task-xxx" → "task-xxx")
+    const cleanedTaskIds = new Set(
+      removed.removedWorktrees.map(wt => { const m = wt.match(/(task-\w+)/); return m?.[1]; }).filter(Boolean),
+    );
+
     const branches = branchOutput.split("\n").map(b => b.trim().replace(/^\*\s*/, "")).filter(Boolean);
     for (const branch of branches) {
       if (activeBranches.has(branch) || wtBranches.has(branch)) continue;
+      // When scoped, only delete branches matching our cleaned worktrees
+      if (ownedAgentIds) {
+        const branchTaskId = branch.match(/(task-\w+)/)?.[1];
+        if (!branchTaskId || !cleanedTaskIds.has(branchTaskId)) continue;
+      }
       try {
         gitExec(`git branch -D "${branch}"`, workspace);
         removed.removedBranches.push(branch);

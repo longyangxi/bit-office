@@ -1058,9 +1058,11 @@ async function main() {
     }
   }
 
-  // GC: clean up ALL agent/* branches and orphaned worktrees from previous sessions.
-  // Fresh worktrees are created when agents start new tasks (if worktree is enabled).
+  // GC: clean up stale worktrees/branches from previous sessions.
+  // Only clean worktrees belonging to THIS instance's agents to avoid
+  // destroying worktrees owned by other gateway instances sharing the workspace.
   {
+    const ownedAgentIds = new Set(savedState.agents.map(a => a.agentId));
     const repos = new Set<string>();
     repos.add(config.defaultWorkspace);
     const cwd = process.cwd();
@@ -1074,7 +1076,7 @@ async function main() {
     }
     for (const repo of repos) {
       if (existsSync(repo)) {
-        cleanupStaleWorktrees(repo); // empty activeBranches = clean all
+        cleanupStaleWorktrees(repo, new Set(), ownedAgentIds);
       }
     }
   }
@@ -1263,5 +1265,14 @@ process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 process.on("SIGHUP", cleanup);
 process.on("beforeExit", () => { try { persistTeamState(); } catch { /* ignore */ } });
+
+// Global safety net: no single agent error should crash the gateway
+process.on("uncaughtException", (err) => {
+  console.error("[Gateway] Uncaught exception (gateway stays alive):", err);
+  try { persistTeamState(); } catch { /* ignore */ }
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[Gateway] Unhandled rejection (gateway stays alive):", reason);
+});
 
 main().catch(console.error);

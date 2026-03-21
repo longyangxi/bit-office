@@ -319,9 +319,17 @@ export class AgentSession {
     const rawCwd = this.worktreePath ?? repoPath ?? this.workspace;
     const cwd = (rawCwd && existsSync(rawCwd)) ? rawCwd : (repoPath ?? this.workspace);
     if (rawCwd !== cwd) {
-      console.warn(`[Agent ${this.agentId}] Worktree path ${rawCwd} no longer exists, falling back to ${cwd}. Clearing stale worktree state.`);
+      console.warn(`[Agent ${this.agentId}] Worktree path ${rawCwd} no longer exists, falling back to ${cwd}. Clearing stale worktree + session state.`);
       this.worktreePath = null;
       this.worktreeBranch = null;
+      // Session was created in the now-gone worktree CWD — can't resume from a different dir
+      if (this.sessionId) {
+        console.warn(`[Agent ${this.agentId}] Clearing session ${this.sessionId} (bound to missing worktree)`);
+        this.sessionId = null;
+        this.hasHistory = false;
+        this.resumeFailCount = 0;
+        saveSessionId(this.agentId, null);
+      }
     }
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
@@ -805,10 +813,11 @@ export class AgentSession {
             // clear immediately. Transient errors (API rate limit, balance exhaustion,
             // network timeout) also produce 0 output. Clearing the session on the first
             // failure causes total context loss when the user retries.
-            // Strategy: only clear after 2+ consecutive 0-output failures.
+            // Strategy: clear after 2 consecutive 0-output failures so the 3rd
+            // attempt (last retry) runs with a fresh session instead of wasting it.
             if (this.sessionId && this.stdoutBuffer.length === 0) {
               this.resumeFailCount++;
-              if (this.resumeFailCount >= 3) {
+              if (this.resumeFailCount >= 2) {
                 const stderrTail = this.stderrBuffer.slice(-500);
                 console.error(`[CRITICAL] [Agent ${this.agentId}] Session ${this.sessionId} cleared after ${this.resumeFailCount} consecutive 0-output failures. cwd=${this.currentCwd}, stderr: ${stderrTail || "(empty)"}`);
                 this.sessionId = null;

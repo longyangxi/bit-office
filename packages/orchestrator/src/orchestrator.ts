@@ -591,6 +591,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   // ---------------------------------------------------------------------------
 
   private handleSessionEvent(event: OrchestratorEvent, agentId: string): void {
+    try {
+      this._handleSessionEventUnsafe(event, agentId);
+    } catch (err) {
+      console.error(`[Orchestrator] Uncaught error in handleSessionEvent for agent ${agentId}, event ${event.type}:`, err);
+    }
+  }
+
+  private _handleSessionEventUnsafe(event: OrchestratorEvent, agentId: string): void {
     // Handle retry logic on task failure (skip if timeout — retrying won't help)
     if (event.type === "task:failed" && this.retryTracker) {
       const taskId = event.taskId;
