@@ -282,6 +282,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (this.agentManager.isTeamLead(agentId)) return;
     if (session.role.toLowerCase().includes("review")) return;
 
+    // Solo agents: only create worktree when another solo agent is working in the same directory.
+    // Without a neighbor, worktree is unnecessary and breaks --resume (different cwd = lost session).
+    if (!session.teamId) {
+      const effectiveRepo = repoPath ?? session.workspaceDir;
+      if (!this.hasSoloNeighbor(agentId, effectiveRepo)) return;
+    }
+
     const base = repoPath ?? session.workspaceDir;
     const wt = createWorktree(base, agentId, taskId, session.name);
     if (wt) {
@@ -340,6 +347,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
     if (lines.length === 0) return undefined;
     return `===== WORKSPACE PEERS =====\nOther agents working in the same project (for awareness — coordinate to avoid file conflicts):\n${lines.join("\n")}`;
+  }
+
+  /** Check if another solo agent (no teamId) is actively working in the same repoPath. */
+  private hasSoloNeighbor(agentId: string, repoPath: string): boolean {
+    for (const other of this.agentManager.getAll()) {
+      if (other.agentId === agentId || other.teamId) continue;
+      if (other.status !== "working") continue;
+      if (other.workspaceDir === repoPath) return true;
+    }
+    return false;
   }
 
   cancelTask(agentId: string): void {
