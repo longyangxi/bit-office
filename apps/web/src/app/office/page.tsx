@@ -1148,13 +1148,13 @@ export default function OfficePage() {
   const isChatExpanded = chatOpen && selectedAgent !== null;
 
   return (
-    <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden", display: "flex" }}>
+    <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden", display: "flex", backgroundColor: TERM_BG }}>
       {/* Game Scene — fills remaining space after sidebar, centered */}
       {sceneVisible && !consoleMode && <div style={{ flex: 1, position: "relative", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginRight: "calc(min(40vw, 800px) + 30px)" }}>
         {/* Loading overlay — fades out to reveal scene */}
         <div style={{
           position: "absolute", inset: 0, zIndex: 5,
-          backgroundColor: "#16122a",
+          backgroundColor: TERM_BG,
           animation: "scene-overlay-fadeout 2s ease-out 0.1s forwards",
           pointerEvents: "none",
         }} />
@@ -2048,7 +2048,7 @@ export default function OfficePage() {
                         maxLength={500}
                         style={{
                           flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
-                          backgroundColor: "#16122a", color: "#c084fc", fontSize: 14, outline: "none",
+                          backgroundColor: TERM_BG, color: "#c084fc", fontSize: 14, outline: "none",
                         }}
                       />
                       <button
@@ -2140,7 +2140,7 @@ export default function OfficePage() {
                           placeholder="Or give feedback..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
+                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
                           }}
                         />
                         <button
@@ -2167,7 +2167,7 @@ export default function OfficePage() {
                           placeholder="Request changes..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
+                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
                           }}
                         />
                         <button
@@ -2209,7 +2209,7 @@ export default function OfficePage() {
                         placeholder="Send a message..."
                         style={{
                           flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                          backgroundColor: "#16122a", color: "#eddcb8", fontSize: 14, outline: "none",
+                          backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
                         }}
                         autoFocus
                       />
@@ -2365,7 +2365,7 @@ export default function OfficePage() {
               value={shareUrl}
               style={{
                 width: "100%", padding: "8px 10px", border: `1px solid ${TERM_BORDER}`,
-                backgroundColor: "#16122a", color: "#eddcb8", fontSize: 12,
+                backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 12,
                 fontFamily: "monospace", outline: "none",
               }}
               onFocus={(e) => e.target.select()}

@@ -7,6 +7,7 @@ import { renderFrame } from "../engine/renderer";
 import type { EditorRenderState } from "../engine/renderer";
 import { EditTool } from "../types";
 import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX, PAN_ENABLED } from "../constants";
+import { TERM_BG } from "../ui/termTheme";
 import { loadAllAssets } from "../sprites/assetLoader";
 import { registerTilesetSprites, getCatalogEntry, isRotatable } from "../layout/furnitureCatalog";
 import { EditorState } from "../editor/editorState";
@@ -510,7 +511,7 @@ export default function PixelOfficeScene({
     : "grab";
 
   return (
-    <div style={{ width: "100%", height: "100%", overflow: "hidden", backgroundColor: "#12121f" }}>
+    <div style={{ width: "100%", height: "100%", overflow: "hidden", backgroundColor: TERM_BG }}>
       {!assetsLoaded && (
         <div style={{
           position: "absolute",
