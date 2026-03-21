@@ -29,11 +29,14 @@ const stickyAgent = new Map<string, string>();
 /** Allowed TG user IDs (empty = allow all) */
 let allowedUsers: string[] = [];
 
-/** Live agent definitions — updated from gateway via setAgentDefs() */
-let liveAgentDefs: AgentDefinition[] = [];
+/** Live hired agents — synced from gateway via setTelegramAgentDefs() */
+let hiredAgents: AgentMenuItem[] = [];
+
+/** All agent definitions (fallback for name/role/personality lookup) */
+let allAgentDefs: AgentDefinition[] = [];
 
 // ---------------------------------------------------------------------------
-// Agent menu (built from live defs, falling back to defaults)
+// Agent menu (only hired agents; falls back to all defs if none hired)
 // ---------------------------------------------------------------------------
 
 interface AgentMenuItem {
@@ -44,8 +47,7 @@ interface AgentMenuItem {
 }
 
 function buildAgentMenu(): AgentMenuItem[] {
-  const defs = liveAgentDefs.length > 0 ? liveAgentDefs : DEFAULT_AGENT_DEFS;
-  return defs.map((d) => ({
+  return hiredAgents.length > 0 ? hiredAgents : allAgentDefs.map((d) => ({
     id: d.id,
     name: d.name,
     role: d.role,
@@ -86,11 +88,24 @@ function evictIfNeeded<K, V>(map: Map<K, V>, limit = 2000) {
 // ---------------------------------------------------------------------------
 
 /**
- * Update the live agent definitions used by the Telegram channel.
- * Also refreshes the bot menu commands if the bot is active.
+ * Update the full agent definitions (used as fallback for name/role lookup).
  */
 export function setTelegramAgentDefs(defs: AgentDefinition[]) {
-  liveAgentDefs = defs;
+  allAgentDefs = defs;
+}
+
+/**
+ * Sync the currently hired agents to the Telegram channel.
+ * Only these agents appear in the bot menu and can receive messages.
+ * Also refreshes the bot menu commands if the bot is active.
+ */
+export function syncTelegramHiredAgents(agents: { agentId: string; name: string; role: string; personality?: string }[]) {
+  hiredAgents = agents.map((a) => ({
+    id: a.agentId,
+    name: a.name,
+    role: a.role,
+    personality: a.personality ?? "",
+  }));
   // Refresh bot menu commands if bot is active
   if (bot) {
     const menu = buildAgentMenu();

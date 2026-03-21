@@ -1,7 +1,7 @@
 import { registerChannel, initTransports, publishEvent, destroyTransports, reinitChannel, isChannelActive } from "./transport.js";
 import { wsChannel, setPairCode, sendToClient } from "./ws-server.js";
 import { ablyChannel } from "./ably-client.js";
-import { telegramChannel, setTelegramAgentDefs } from "./telegram-channel.js";
+import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "./telegram-channel.js";
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
@@ -218,6 +218,17 @@ function detectDevServer(projectDir: string): { cmd: string; port: number } | nu
 // Archive helpers (shared between phase-complete and END_PROJECT)
 // ---------------------------------------------------------------------------
 
+/** Push current hired agents list to the Telegram channel */
+function syncHiredAgentsToTelegram() {
+  const agents = orc.getAllAgents();
+  syncTelegramHiredAgents(agents.map(a => ({
+    agentId: a.agentId,
+    name: a.name,
+    role: a.role,
+    personality: a.personality,
+  })));
+}
+
 function buildArchiveAgents(): PersistedAgent[] {
   return orc.getAllAgents().map(a => ({
     agentId: a.agentId, name: a.name, role: a.role,
@@ -260,8 +271,10 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
     case "task:queued":
       return { type: "TASK_QUEUED", agentId: e.agentId, taskId: e.taskId, prompt: e.prompt, position: e.position };
     case "agent:created":
+      syncHiredAgentsToTelegram();
       return { type: "AGENT_CREATED", agentId: e.agentId, name: e.name, role: e.role, palette: e.palette, personality: e.personality, backend: e.backend, isTeamLead: e.isTeamLead || undefined, teamId: e.teamId, workDir: agentWorkDirs.get(e.agentId) ?? config.defaultWorkspace };
     case "agent:fired":
+      syncHiredAgentsToTelegram();
       return { type: "AGENT_FIRED", agentId: e.agentId };
     case "task:result-returned":
       return { type: "TASK_RESULT_RETURNED", fromAgentId: e.fromAgentId, toAgentId: e.toAgentId, taskId: e.taskId, summary: e.summary, success: e.success };
@@ -1112,6 +1125,9 @@ async function main() {
       console.log(`[Gateway] Restored team ${t.teamId}: phase=${t.phase}→${restoredPhase}, lead=${t.leadAgentId}, projectDir=${t.projectDir}`);
     }
   }
+
+  // Sync hired agents to Telegram after restore
+  syncHiredAgentsToTelegram();
 
   // GC: clean up stale worktrees/branches from previous sessions.
   // Only clean worktrees belonging to THIS instance's agents to avoid
