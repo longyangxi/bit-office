@@ -59,6 +59,20 @@ function buildAgentMenu(): AgentMenuItem[] {
 // Helpers
 // ---------------------------------------------------------------------------
 
+/** TG command -> agentId mapping (commands must be [a-z0-9_], 1-32 chars) */
+const cmdToAgentId = new Map<string, string>();
+
+/** Convert an agent ID or name to a valid TG bot command */
+function toTgCommand(agent: AgentMenuItem): string {
+  // If the id is already a simple lowercase word (e.g. "alex", "rex"), use it directly
+  if (/^[a-z][a-z0-9_]{0,31}$/.test(agent.id)) return agent.id;
+  // Otherwise derive from the display name: lowercase, replace non-alphanum with _
+  const fromName = agent.name.toLowerCase().replace(/[^a-z0-9]/g, "_").replace(/_+/g, "_").replace(/^_|_$/g, "");
+  if (fromName.length > 0 && fromName.length <= 32) return fromName;
+  // Last resort: "a" + first 8 chars of id lowercased
+  return ("a" + agent.id.replace(/[^a-z0-9]/gi, "").toLowerCase()).slice(0, 32);
+}
+
 function tgMeta(): CommandMeta {
   return { role: "owner", clientId: "telegram" };
 }
@@ -106,20 +120,34 @@ export function syncTelegramHiredAgents(agents: { agentId: string; name: string;
     role: a.role,
     personality: a.personality ?? "",
   }));
-  // Refresh bot menu commands if bot is active
-  if (bot) {
-    const menu = buildAgentMenu();
-    bot.setMyCommands([
-      ...menu.map((a) => ({
-        command: a.id,
-        description: `${a.name} - ${a.role}`,
-      })),
-      { command: "cancel", description: "Cancel current agent task" },
-      { command: "status", description: "Check agent statuses" },
-    ]).catch((err: Error) => {
-      console.error("[Telegram] Failed to update bot commands:", err.message);
-    });
+  rebuildBotCommands();
+}
+
+/** Rebuild TG bot command menu from current agent list */
+function rebuildBotCommands() {
+  if (!bot) return;
+  const menu = buildAgentMenu();
+  // Build cmd→agentId mapping and deduplicate commands
+  cmdToAgentId.clear();
+  const seen = new Set<string>();
+  const commands: { command: string; description: string }[] = [];
+  for (const a of menu) {
+    let cmd = toTgCommand(a);
+    // Handle duplicates (e.g. multiple "Alex" agents) by appending a suffix
+    if (seen.has(cmd)) {
+      let i = 2;
+      while (seen.has(`${cmd}${i}`)) i++;
+      cmd = `${cmd}${i}`;
+    }
+    seen.add(cmd);
+    cmdToAgentId.set(cmd, a.id);
+    commands.push({ command: cmd, description: `${a.name} - ${a.role}`.slice(0, 256) });
   }
+  commands.push({ command: "cancel", description: "Cancel current agent task" });
+  commands.push({ command: "status", description: "Check agent statuses" });
+  bot.setMyCommands(commands).catch((err: Error) => {
+    console.error("[Telegram] Failed to update bot commands:", err.message);
+  });
 }
 
 export const telegramChannel: Channel = {
@@ -130,7 +158,6 @@ export const telegramChannel: Channel = {
     if (!token) return false;
 
     allowedUsers = config.telegramAllowedUsers ?? [];
-    const agentMenu = buildAgentMenu();
 
     bot = new TelegramBot(token, { polling: true });
 
@@ -144,17 +171,11 @@ export const telegramChannel: Channel = {
       console.error("[Telegram] Polling error:", err.message ?? err);
     });
 
-    // Register bot menu commands
-    await bot.setMyCommands([
-      ...agentMenu.map((a) => ({
-        command: a.id,
-        description: `${a.name} - ${a.role}`,
-      })),
-      { command: "cancel", description: "Cancel current agent task" },
-      { command: "status", description: "Check agent statuses" },
-    ]);
+    // Register bot menu commands (sanitized for TG command format)
+    rebuildBotCommands();
 
     const botInfo = await bot.getMe();
+    const agentMenu = buildAgentMenu();
     console.log(`[Telegram] @${botInfo.username} ready (single-bot mode, ${agentMenu.length} agents)`);
 
     // ----- Message handler -----
@@ -167,32 +188,43 @@ export const telegramChannel: Channel = {
       activeChatIds.add(msg.chat.id);
       const text = msg.text.trim();
 
-      // Build menu fresh each message so it picks up agent def changes
+      // Build menu fresh each message so it picks up agent changes
       const currentMenu = buildAgentMenu();
 
       // --- /start ---
       if (text === "/start" || text === `/start@${botInfo.username}`) {
-        const lines = currentMenu.map((a) => `/${a.id} - ${a.name} (${a.role})`);
+        // Show TG-safe commands mapped to agent names
+        const lines: string[] = [];
+        for (const [cmd, agentId] of cmdToAgentId) {
+          const a = currentMenu.find((m) => m.id === agentId);
+          if (a) lines.push(`/${cmd} - ${a.name} (${a.role})`);
+        }
         bot!.sendMessage(
           msg.chat.id,
-          `Welcome to Bit Office!\n\nAvailable agents:\n${lines.join("\n")}\n\nTap a command to start a conversation, then reply to the agent's message.`,
+          `Welcome to Bit Office!\n\nAvailable agents:\n${lines.join("\n")}\n\nTap a command to start a conversation, then send messages directly.`,
         );
         return;
       }
 
-      // --- Agent selection commands: /alex, /mia, etc. ---
-      const agentCmd = currentMenu.find((a) => text === `/${a.id}` || text === `/${a.id}@${botInfo.username}`);
-      if (agentCmd) {
-        stickyAgent.set(`${msg.chat.id}:${msg.from!.id}`, agentCmd.id);
-        bot!.sendMessage(
-          msg.chat.id,
-          `Now talking to ${agentCmd.name}. Send messages directly — switch anytime with /alex, /eli, etc.`,
-        ).then((sent) => {
-          replyToAgent.set(sent.message_id, agentCmd.id);
-          anchorMessages.set(anchorKey(msg.chat.id, agentCmd.id), sent.message_id);
-          evictIfNeeded(replyToAgent);
-        });
-        return;
+      // --- Agent selection commands (resolved via cmdToAgentId map) ---
+      const cmdMatch = text.match(/^\/([a-z0-9_]+)(?:@\S+)?$/);
+      if (cmdMatch) {
+        const cmd = cmdMatch[1];
+        const resolvedAgentId = cmdToAgentId.get(cmd);
+        if (resolvedAgentId) {
+          const agentDef = currentMenu.find((a) => a.id === resolvedAgentId);
+          const displayName = agentDef?.name ?? resolvedAgentId;
+          stickyAgent.set(`${msg.chat.id}:${msg.from!.id}`, resolvedAgentId);
+          bot!.sendMessage(
+            msg.chat.id,
+            `Now talking to ${displayName}. Send messages directly — switch anytime with another agent command.`,
+          ).then((sent) => {
+            replyToAgent.set(sent.message_id, resolvedAgentId);
+            anchorMessages.set(anchorKey(msg.chat.id, resolvedAgentId), sent.message_id);
+            evictIfNeeded(replyToAgent);
+          });
+          return;
+        }
       }
 
       // --- /yes, /no ---
@@ -330,6 +362,7 @@ export const telegramChannel: Channel = {
     anchorMessages.clear();
     statusMessages.clear();
     activeChatIds.clear();
+    cmdToAgentId.clear();
     stickyAgent.clear();
   },
 };
