@@ -284,4 +284,6 @@ Pixel office art inspired by [pixel-agents](https://github.com/pablodelucca/pixe
 
 **If Open Office helps your workflow, consider giving it a star!**
 
+This line was added by Alex 2 for testing purposes.
+
 </div>
