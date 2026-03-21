@@ -12,7 +12,10 @@ const CONFIG_FILE = resolve(CONFIG_DIR, "config.json");
 
 interface SavedConfig {
   ablyApiKey?: string;
+  /** @deprecated Use telegramBotToken (singular) */
   telegramBotTokens?: (string | null)[];
+  telegramBotToken?: string;
+  telegramAllowedUsers?: string[];
   detectedBackends?: string[];
   defaultBackend?: string;
   sandboxMode?: "full" | "safe";
@@ -126,11 +129,17 @@ function buildConfig() {
     wsPort: Number(process.env.WS_PORT) || 9090,
     ablyApiKey: process.env.ABLY_API_KEY || saved.ablyApiKey || undefined,
     webDir: resolveWebDir(),
-    telegramBotTokens: (
-      process.env.TELEGRAM_BOT_TOKENS
-        ? process.env.TELEGRAM_BOT_TOKENS.split(",").map((t) => t.trim() || undefined)
-        : (saved.telegramBotTokens ?? []).map((t) => t || undefined)
-    ) as (string | undefined)[],
+    telegramBotToken:
+      process.env.TELEGRAM_BOT_TOKEN
+      || saved.telegramBotToken
+      || (process.env.TELEGRAM_BOT_TOKENS?.split(",")[0]?.trim())
+      || (saved.telegramBotTokens?.[0] ?? undefined)
+      || undefined,
+    telegramAllowedUsers: (
+      process.env.TELEGRAM_ALLOWED_USERS
+        ? process.env.TELEGRAM_ALLOWED_USERS.split(",").map((s) => s.trim()).filter(Boolean)
+        : saved.telegramAllowedUsers ?? []
+    ),
     detectedBackends: saved.detectedBackends ?? [],
     defaultBackend: saved.defaultBackend ?? "claude",
     sandboxMode: (saved.sandboxMode ?? "full") as "full" | "safe",
