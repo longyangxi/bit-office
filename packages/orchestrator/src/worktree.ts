@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readdirSync, rmdirSync } from "fs";
 import path from "path";
 
 const TIMEOUT = 5000;
@@ -134,6 +134,33 @@ export interface MergeResult {
 }
 
 /**
+ * Auto-commit any uncommitted changes in a worktree so they can be merged.
+ * Returns true if a commit was created (or working tree was already clean).
+ */
+function autoCommitWorktree(worktreePath: string, branch: string): boolean {
+  try {
+    // Check if there are any changes (staged or unstaged)
+    const status = gitExec("git status --porcelain", worktreePath);
+    if (!status) return true; // Already clean
+
+    // Stage all changes
+    gitExec("git add -A", worktreePath);
+
+    // Commit with a descriptive message
+    const sanitizedBranch = branch.replace(/"/g, '\\"');
+    gitExec(
+      `git commit -m "auto-commit: agent work on ${sanitizedBranch}"`,
+      worktreePath,
+    );
+    console.log(`[Worktree] Auto-committed uncommitted changes in ${worktreePath}`);
+    return true;
+  } catch (err) {
+    console.error(`[Worktree] Auto-commit failed in ${worktreePath}: ${(err as Error).message}`);
+    return false;
+  }
+}
+
+/**
  * Merge a worktree branch back as staged changes (squash, no commit).
  */
 export function mergeWorktree(
@@ -142,6 +169,9 @@ export function mergeWorktree(
   branch: string,
 ): MergeResult {
   try {
+    // Auto-commit any uncommitted work before merging
+    autoCommitWorktree(worktreePath, branch);
+
     gitExec(`git merge --squash "${branch}"`, workspace);
 
     let stagedFiles: string[] = [];
@@ -217,7 +247,6 @@ export function cleanupStaleWorktrees(
   // 2. Remove stale .worktrees/* directories
   const worktreeDir = path.join(workspace, ".worktrees");
   try {
-    const { readdirSync } = require("fs");
     if (existsSync(worktreeDir)) {
       const entries: string[] = readdirSync(worktreeDir);
       for (const entry of entries) {
@@ -230,7 +259,7 @@ export function cleanupStaleWorktrees(
       // Remove dir if empty
       try {
         if (readdirSync(worktreeDir).length === 0) {
-          require("fs").rmdirSync(worktreeDir);
+          rmdirSync(worktreeDir);
         }
       } catch { /* ignore */ }
     }
