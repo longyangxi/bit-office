@@ -161,7 +161,7 @@ function autoCommitWorktree(worktreePath: string, branch: string): boolean {
 }
 
 /**
- * Merge a worktree branch back as staged changes (squash, no commit).
+ * Merge a worktree branch back to the main branch (squash + auto-commit).
  */
 export function mergeWorktree(
   workspace: string,
@@ -179,6 +179,13 @@ export function mergeWorktree(
       const output = gitExec("git diff --cached --name-only", workspace);
       stagedFiles = output ? output.split("\n") : [];
     } catch { /* ignore */ }
+
+    // Auto-commit the squash merge (otherwise staged changes are lost on next git op)
+    if (stagedFiles.length > 0) {
+      const sanitizedBranch = branch.replace(/"/g, '\\"');
+      gitExec(`git commit -m "merge: ${sanitizedBranch}"`, workspace);
+      console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
+    }
 
     // Clean up
     try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
