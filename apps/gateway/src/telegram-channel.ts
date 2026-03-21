@@ -136,8 +136,8 @@ function rebuildBotCommands() {
     // Handle duplicates (e.g. multiple "Alex" agents) by appending a suffix
     if (seen.has(cmd)) {
       let i = 2;
-      while (seen.has(`${cmd}${i}`)) i++;
-      cmd = `${cmd}${i}`;
+      while (seen.has(`${cmd.slice(0, 30)}${i}`)) i++;
+      cmd = `${cmd.slice(0, 30)}${i}`.slice(0, 32);
     }
     seen.add(cmd);
     cmdToAgentId.set(cmd, a.id);
