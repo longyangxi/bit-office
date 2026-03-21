@@ -23,6 +23,9 @@ const statusMessages = new Map<string, number>();
 /** All chat IDs that have interacted with the bot */
 const activeChatIds = new Set<number>();
 
+/** "chatId:userId" -> agentId sticky session (set by /alex, /eli, etc.) */
+const stickyAgent = new Map<string, string>();
+
 /** Allowed TG user IDs (empty = allow all) */
 let allowedUsers: string[] = [];
 
@@ -136,11 +139,11 @@ export const telegramChannel: Channel = {
       // --- Agent selection commands: /alex, /mia, etc. ---
       const agentCmd = agentMenu.find((a) => text === `/${a.id}` || text === `/${a.id}@${botInfo.username}`);
       if (agentCmd) {
+        stickyAgent.set(`${msg.chat.id}:${msg.from!.id}`, agentCmd.id);
         const label = `${agentCmd.name} (${agentCmd.role})`;
         bot!.sendMessage(
           msg.chat.id,
-          `${label}\n\nReply to this message to chat with ${agentCmd.name}`,
-          { reply_markup: { force_reply: true, selective: true } },
+          `Now talking to ${agentCmd.name}. Send messages directly — switch anytime with /alex, /eli, etc.`,
         ).then((sent) => {
           replyToAgent.set(sent.message_id, agentCmd.id);
           anchorMessages.set(anchorKey(msg.chat.id, agentCmd.id), sent.message_id);
@@ -179,12 +182,12 @@ export const telegramChannel: Channel = {
       // Ignore other commands
       if (text.startsWith("/")) return;
 
-      // --- Reply-chain routing ---
-      const agentId = resolveAgentFromReply(msg);
+      // --- Reply-chain routing (reply > sticky > prompt) ---
+      const agentId = resolveAgentFromReply(msg) ?? stickyAgent.get(`${msg.chat.id}:${msg.from!.id}`) ?? null;
       if (!agentId) {
         bot!.sendMessage(
           msg.chat.id,
-          "Select an agent first (tap the menu button or type /alex, /mia, etc.), then reply to its message.",
+          "Select an agent first: /alex, /eli, etc. After that, all messages go to that agent until you switch.",
         );
         return;
       }
@@ -284,5 +287,6 @@ export const telegramChannel: Channel = {
     anchorMessages.clear();
     statusMessages.clear();
     activeChatIds.clear();
+    stickyAgent.clear();
   },
 };
