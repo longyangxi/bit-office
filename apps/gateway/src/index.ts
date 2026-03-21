@@ -1,4 +1,4 @@
-import { registerChannel, initTransports, publishEvent, destroyTransports } from "./transport.js";
+import { registerChannel, initTransports, publishEvent, destroyTransports, reinitChannel, isChannelActive } from "./transport.js";
 import { wsChannel, setPairCode } from "./ws-server.js";
 import { ablyChannel } from "./ably-client.js";
 import { telegramChannel } from "./telegram-channel.js";
@@ -839,6 +839,50 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           });
         }
       });
+      break;
+    }
+    case "GET_CONFIG": {
+      const tgConnected = isChannelActive(telegramChannel);
+      publishEvent({
+        type: "CONFIG_LOADED",
+        telegramBotToken: config.telegramBotToken ? config.telegramBotToken.slice(0, 6) + "..." : undefined,
+        telegramAllowedUsers: config.telegramAllowedUsers,
+        telegramConnected: tgConnected,
+      });
+      break;
+    }
+    case "SAVE_CONFIG": {
+      try {
+        const updates: Record<string, unknown> = {};
+        if (parsed.telegramBotToken !== undefined) updates.telegramBotToken = parsed.telegramBotToken || undefined;
+        if (parsed.telegramAllowedUsers !== undefined) updates.telegramAllowedUsers = parsed.telegramAllowedUsers;
+        saveConfig(updates);
+        reloadConfig();
+
+        // Restart Telegram channel with new config
+        reinitChannel(telegramChannel).then((tgOk) => {
+          console.log(`[Gateway] Config saved. Telegram: ${tgOk ? "connected" : "not configured"}`);
+          publishEvent({
+            type: "CONFIG_SAVED",
+            success: true,
+            message: tgOk ? "Saved. Telegram connected." : "Saved. Telegram not configured.",
+            telegramConnected: tgOk,
+          });
+        }).catch((err: any) => {
+          publishEvent({
+            type: "CONFIG_SAVED",
+            success: false,
+            message: `Saved but Telegram failed: ${err.message}`,
+          });
+        });
+      } catch (err: any) {
+        console.error("[Gateway] Config save failed:", err);
+        publishEvent({
+          type: "CONFIG_SAVED",
+          success: false,
+          message: err.message ?? "Save failed",
+        });
+      }
       break;
     }
     case "REQUEST_REVIEW": {

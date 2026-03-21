@@ -21,14 +21,40 @@ export interface Channel {
 }
 
 const channels: Channel[] = [];
+let storedCommandHandler: ((cmd: Command, meta: CommandMeta) => void) | null = null;
 
 /** Register a channel. Call before initTransports(). */
 export function registerChannel(channel: Channel) {
   channels.push(channel);
 }
 
+/** Re-initialize a specific channel (e.g. after config change). Returns true if activated. */
+export async function reinitChannel(channel: Channel): Promise<boolean> {
+  if (!storedCommandHandler) return false;
+  // Destroy existing instance first
+  channel.destroy?.();
+  // Remove from active channels if present
+  const idx = channels.indexOf(channel);
+  if (idx !== -1) channels.splice(idx, 1);
+  // Re-init
+  const ok = await channel.init(storedCommandHandler);
+  if (ok) {
+    channels.push(channel);
+    console.log(`[Transport] Re-initialized channel: ${channel.name}`);
+  } else {
+    console.log(`[Transport] Channel ${channel.name} skipped on re-init`);
+  }
+  return ok;
+}
+
+/** Check if a channel is currently active */
+export function isChannelActive(channel: Channel): boolean {
+  return channels.includes(channel);
+}
+
 /** Initialize all registered channels. Skips those that return false from init(). */
 export async function initTransports(commandHandler: (cmd: Command, meta: CommandMeta) => void) {
+  storedCommandHandler = commandHandler;
   const active: string[] = [];
   const skipped: string[] = [];
 

@@ -38,7 +38,9 @@ function loadSavedConfig(): SavedConfig {
 
 export function saveConfig(cfg: SavedConfig) {
   ensureConfigDir();
-  writeFileSync(CONFIG_FILE, JSON.stringify(cfg, null, 2), "utf-8");
+  const existing = loadSavedConfig();
+  const merged = { ...existing, ...cfg };
+  writeFileSync(CONFIG_FILE, JSON.stringify(merged, null, 2), "utf-8");
 }
 
 export function hasSetupRun(): boolean {

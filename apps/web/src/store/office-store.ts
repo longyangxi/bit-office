@@ -128,6 +128,8 @@ interface OfficeStore {
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
+  configResult: { success: boolean; message: string; telegramConnected?: boolean } | null;
+  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean } | null;
   detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
@@ -345,6 +347,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   viewingProjectName: null,
   pendingPreviewUrl: null,
   agencyAgentsResult: null,
+  configResult: null,
+  configData: null,
   detectedBackends: [],
   connected: false,
   hydrated: false,
@@ -917,6 +921,12 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "BACKENDS_AVAILABLE": {
           return { agents, detectedBackends: event.backends };
+        }
+        case "CONFIG_LOADED": {
+          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected } };
+        }
+        case "CONFIG_SAVED": {
+          return { agents, configResult: { success: event.success, message: event.message, telegramConnected: event.telegramConnected } };
         }
         case "PROJECT_LIST": {
           return { agents, projectList: event.projects };

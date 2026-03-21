@@ -153,6 +153,16 @@ export const UpdateAgencyAgentsCommand = z.object({
   type: z.literal("UPDATE_AGENCY_AGENTS"),
 });
 
+export const GetConfigCommand = z.object({
+  type: z.literal("GET_CONFIG"),
+});
+
+export const SaveConfigCommand = z.object({
+  type: z.literal("SAVE_CONFIG"),
+  telegramBotToken: z.string().optional(),
+  telegramAllowedUsers: z.array(z.string()).optional(),
+});
+
 export const RequestReviewCommand = z.object({
   type: z.literal("REQUEST_REVIEW"),
   /** Frontend-generated reviewer agent ID (so frontend can set up overlay immediately) */
@@ -190,6 +200,8 @@ export const CommandSchema = z.discriminatedUnion("type", [
   LoadProjectCommand,
   UpdateAgencyAgentsCommand,
   RequestReviewCommand,
+  GetConfigCommand,
+  SaveConfigCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -216,4 +228,6 @@ export type ListProjectsCommand = z.infer<typeof ListProjectsCommand>;
 export type LoadProjectCommand = z.infer<typeof LoadProjectCommand>;
 export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand>;
 export type RequestReviewCommand = z.infer<typeof RequestReviewCommand>;
+export type GetConfigCommand = z.infer<typeof GetConfigCommand>;
+export type SaveConfigCommand = z.infer<typeof SaveConfigCommand>;
 export type Command = z.infer<typeof CommandSchema>;

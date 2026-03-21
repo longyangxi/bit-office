@@ -232,6 +232,20 @@ export const BackendsAvailableEvent = z.object({
   backends: z.array(z.string()),
 });
 
+export const ConfigLoadedEvent = z.object({
+  type: z.literal("CONFIG_LOADED"),
+  telegramBotToken: z.string().optional(),
+  telegramAllowedUsers: z.array(z.string()).optional(),
+  telegramConnected: z.boolean().optional(),
+});
+
+export const ConfigSavedEvent = z.object({
+  type: z.literal("CONFIG_SAVED"),
+  success: z.boolean(),
+  message: z.string(),
+  telegramConnected: z.boolean().optional(),
+});
+
 export const GatewayEventSchema = z.discriminatedUnion("type", [
   AgentsSyncEvent,
   AgentStatusEvent,
@@ -258,6 +272,8 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   ImageUploadedEvent,
   AgencyAgentsUpdatedEvent,
   BackendsAvailableEvent,
+  ConfigLoadedEvent,
+  ConfigSavedEvent,
 ]);
 
 export type TokenUsage = z.infer<typeof TokenUsage>;
@@ -287,4 +303,6 @@ export type FolderPickedEvent = z.infer<typeof FolderPickedEvent>;
 export type ImageUploadedEvent = z.infer<typeof ImageUploadedEvent>;
 export type AgencyAgentsUpdatedEvent = z.infer<typeof AgencyAgentsUpdatedEvent>;
 export type BackendsAvailableEvent = z.infer<typeof BackendsAvailableEvent>;
+export type ConfigLoadedEvent = z.infer<typeof ConfigLoadedEvent>;
+export type ConfigSavedEvent = z.infer<typeof ConfigSavedEvent>;
 export type GatewayEvent = z.infer<typeof GatewayEventSchema>;
