@@ -4,7 +4,7 @@ import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
-import { TermButton, TermInput } from "./primitives";
+import { TermButton, TermInput, TermEmpty } from "./primitives";
 import type { ChatMessage } from "@/store/office-store";
 import dynamic from "next/dynamic";
 
@@ -179,9 +179,10 @@ const ChatMessageList = memo(function ChatMessageList({
       })()}
 
       {messages.length === 0 && (
-        <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
-          {isTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
-        </div>
+        <TermEmpty
+          message={isTeamMember ? "managed by Team Lead" : "no messages yet"}
+          hint={isTeamMember ? undefined : "send a message to get started"}
+        />
       )}
 
       {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
@@ -347,6 +348,28 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     }
   }, [prompt]);
 
+  // ── Scroll-away detection for "new messages" pill ──
+  const [scrolledAway, setScrolledAway] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const away = el.scrollHeight - el.scrollTop - el.clientHeight > 120;
+        setScrolledAway(away);
+      });
+    };
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => { el.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
+  }, [agentId]);
+  const scrollToBottom = useCallback(() => {
+    chatEndRef.current?.scrollIntoView({ block: "end", behavior: "smooth" as ScrollBehavior });
+    setScrolledAway(false);
+  }, [chatEndRef]);
+
   // ── Reviewer overlay scroll (same hook, separate instance) ──
   const reviewChatEndRef = useScrollAnchor({
     msgCount: reviewerOverlay?.messages.length ?? 0,
@@ -361,7 +384,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       position: "relative",
     }}>
       {/* ── Info bar ── */}
-      <div className="term-info-bar" style={{
+      <div className={`term-info-bar ${status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle"}`} style={{
         display: "flex", alignItems: "center", gap: 10,
         padding: "5px 14px",
         background: TERM_PANEL,
@@ -424,9 +447,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0,
           }}>
             {messages.length === 0 && (
-              <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
-                Waiting for output...
-              </div>
+              <TermEmpty message="waiting for output" />
             )}
             {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
             {visibleMessages.map((msg) => (
@@ -597,31 +618,43 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           }}
         >
           {/* Messages */}
-          <div data-scrollbar className="term-dotgrid term-chat-area" style={{
-            flex: 1, overflowY: "auto", padding: "10px 14px",
-            display: "flex", flexDirection: "column",
-            minHeight: 0,
-          }}>
-            <ChatMessageList
-              visibleMessages={visibleMessages}
-              hasMoreMessages={hasMoreMessages}
-              messages={messages}
-              name={name}
-              agentId={agentId}
-              onPreview={onPreview}
-              onReview={(reviewerOverlay || onDismissReview) ? undefined : onReview}
-              isTeamLead={isTeamLead}
-              isTeamMember={isTeamMember}
-              teamPhase={teamPhase}
-              detectedBackends={detectedBackends}
-              onLoadMore={onLoadMore}
-              busy={busy}
-              pendingApproval={pendingApproval}
-              lastLogLine={lastLogLine}
-              chatEndRef={chatEndRef}
-              isOwner={isOwner}
-              onApproval={onApproval}
-            />
+          <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+            <div ref={scrollContainerRef} data-scrollbar className="term-dotgrid term-chat-area" style={{
+              flex: 1, overflowY: "auto", padding: "10px 14px",
+              display: "flex", flexDirection: "column",
+              minHeight: 0,
+            }}>
+              <ChatMessageList
+                visibleMessages={visibleMessages}
+                hasMoreMessages={hasMoreMessages}
+                messages={messages}
+                name={name}
+                agentId={agentId}
+                onPreview={onPreview}
+                onReview={(reviewerOverlay || onDismissReview) ? undefined : onReview}
+                isTeamLead={isTeamLead}
+                isTeamMember={isTeamMember}
+                teamPhase={teamPhase}
+                detectedBackends={detectedBackends}
+                onLoadMore={onLoadMore}
+                busy={busy}
+                pendingApproval={pendingApproval}
+                lastLogLine={lastLogLine}
+                chatEndRef={chatEndRef}
+                isOwner={isOwner}
+                onApproval={onApproval}
+              />
+            </div>
+            {/* Scroll-to-bottom pill */}
+            <div
+              className={`scroll-pill${scrolledAway ? " visible" : ""}`}
+              onClick={scrollToBottom}
+              role="button"
+              aria-label="Scroll to bottom"
+            >
+              <span className="scroll-pill-arrow">{"\u2193"}</span>
+              new messages
+            </div>
           </div>
 
           {/* Suggestion feed (visible to owner and collaborator) */}

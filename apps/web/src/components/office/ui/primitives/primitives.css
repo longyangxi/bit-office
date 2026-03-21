@@ -391,3 +391,241 @@
 .btb-btn-danger:hover {
   background: color-mix(in srgb, var(--term-sem-red) 10%, transparent);
 }
+
+/* ============================================================
+   EMPTY STATE — .te (term-empty)
+   Centered placeholder for empty panes/lists
+   ============================================================ */
+.te {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+  font-family: var(--font-mono);
+  min-height: 120px;
+}
+.te-msg {
+  font-size: var(--font-size-base);
+  color: var(--term-green-dim);
+  letter-spacing: 0.02em;
+}
+.te-msg::before {
+  content: "> ";
+  opacity: 0.5;
+}
+.te-hint {
+  font-size: 11px;
+  color: var(--term-green-dim);
+  opacity: 0.5;
+}
+
+/* ============================================================
+   PANE STATUS ACCENT — .ap-status-* (agent-pane status border)
+   2px top-border accent on info bar indicating agent state
+   ============================================================ */
+.ap-status-idle {
+  box-shadow: inset 0 2px 0 var(--term-border);
+}
+.ap-status-working {
+  box-shadow: inset 0 2px 0 var(--term-sem-blue);
+}
+.ap-status-waiting {
+  box-shadow: inset 0 2px 0 var(--term-sem-yellow);
+}
+.ap-status-done {
+  box-shadow: inset 0 2px 0 var(--term-sem-green);
+}
+.ap-status-error {
+  box-shadow: inset 0 2px 0 var(--term-sem-red);
+}
+
+/* Pulse animation for working state */
+@keyframes status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+.ap-status-working {
+  animation: status-pulse 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   SCROLL-TO-BOTTOM PILL — .scroll-pill
+   Floating indicator when user has scrolled away from bottom
+   ============================================================ */
+.scroll-pill {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: var(--term-text);
+  background: var(--term-panel);
+  border: 1px solid var(--term-border);
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--duration-normal) ease,
+    transform var(--duration-normal) ease;
+  transform: translateX(-50%) translateY(8px);
+}
+.scroll-pill.visible {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.scroll-pill:hover {
+  border-color: var(--term-text);
+  color: var(--term-text-bright);
+}
+.scroll-pill-arrow {
+  font-size: 10px;
+  line-height: 1;
+}
+
+/* ============================================================
+   COMMAND PALETTE — .cp (command-palette)
+   Cmd+K fuzzy search overlay
+   ============================================================ */
+.cp-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: min(20vh, 160px);
+  animation: modal-backdrop-in var(--duration-fast) var(--ease-out);
+}
+.cp-container {
+  width: 90%;
+  max-width: 480px;
+  background: var(--term-panel);
+  border: 1px solid var(--term-border);
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  max-height: 400px;
+  overflow: hidden;
+  animation: modal-content-in var(--duration-normal) var(--ease-out);
+}
+.cp-input {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-bottom: 1px solid var(--term-border-dim);
+  background: transparent;
+  color: var(--term-text-bright);
+  font-size: 14px;
+  font-family: var(--font-mono);
+  outline: none;
+  caret-color: var(--term-green);
+}
+.cp-input::placeholder {
+  color: var(--term-green-dim);
+  opacity: 0.5;
+}
+.cp-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-1) 0;
+  min-height: 0;
+}
+.cp-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 16px;
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  color: var(--term-text);
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: background var(--duration-fast) ease;
+}
+.cp-item:hover,
+.cp-item-active {
+  background: color-mix(in srgb, var(--term-green) 8%, transparent);
+  color: var(--term-text-bright);
+}
+.cp-item-icon {
+  width: 20px;
+  text-align: center;
+  flex-shrink: 0;
+  font-size: 13px;
+}
+.cp-item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cp-item-hint {
+  font-size: 11px;
+  color: var(--term-green-dim);
+  flex-shrink: 0;
+}
+.cp-empty {
+  padding: 16px;
+  text-align: center;
+  font-size: var(--font-size-base);
+  font-family: var(--font-mono);
+  color: var(--term-green-dim);
+}
+.cp-group-label {
+  padding: 8px 16px 4px;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 500;
+  color: var(--term-green-dim);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ============================================================
+   RESIZE HANDLE — .pane-resize (draggable divider between panes)
+   ============================================================ */
+.pane-resize {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  position: relative;
+  flex-shrink: 0;
+  z-index: 5;
+  transition: background var(--duration-fast) ease;
+}
+.pane-resize::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 2px;
+  width: 1px;
+  background: var(--term-border-dim);
+  transition: background var(--duration-fast) ease, width var(--duration-fast) ease;
+}
+.pane-resize:hover::after,
+.pane-resize-active::after {
+  background: var(--term-green);
+  width: 2px;
+  left: 1.5px;
+}
+.pane-resize:hover {
+  background: color-mix(in srgb, var(--term-green) 5%, transparent);
+}

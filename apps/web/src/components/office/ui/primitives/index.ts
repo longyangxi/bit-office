@@ -9,3 +9,6 @@ export type { TermModalProps } from "./TermModal";
 
 export { default as TermBadge } from "./TermBadge";
 export type { TermBadgeProps, TermBadgeVariant } from "./TermBadge";
+
+export { default as TermEmpty } from "./TermEmpty";
+export type { TermEmptyProps } from "./TermEmpty";

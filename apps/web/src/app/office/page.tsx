@@ -52,6 +52,7 @@ const HireModal = dynamic(() => import("@/components/office/ui/HireModal"), { ss
 const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal"), { ssr: false });
 const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
 const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
+const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
@@ -201,6 +202,7 @@ export default function OfficePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [showOfficeSwitcher, setShowOfficeSwitcher] = useState(false);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentOfficeId, setCurrentOfficeId] = useState<string | null>(null);
   const [showEditorControls, setShowEditorControls] = useState(false);
   const [testActive, setTestActive] = useState(false);
@@ -235,6 +237,18 @@ export default function OfficePage() {
     applyTermTheme(termTheme);
     localStorage.setItem("open-office-theme", termTheme);
   }, [termTheme]);
+
+  // ── Cmd+K command palette ──
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowCommandPalette(prev => !prev);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   // Bridge store → scene adapter
   useSceneBridge(sceneAdapter, selectedAgent);
@@ -2387,6 +2401,16 @@ export default function OfficePage() {
       )}
 
       {confirmModal}
+
+      <CommandPalette
+        open={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        currentTheme={termTheme}
+        onThemeChange={(key) => setTermTheme(key)}
+        onOpenSettings={() => setShowSettings(true)}
+        onOpenHistory={() => setShowHistory(true)}
+        onHire={() => setShowHireModal(true)}
+      />
 
       {/* Demo mode button */}
       {showDemoButton && !demoRunning && (

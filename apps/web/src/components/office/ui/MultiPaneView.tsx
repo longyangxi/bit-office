@@ -1,4 +1,4 @@
-import { memo, useCallback, useRef } from "react";
+import { memo, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_BG, TERM_SURFACE, TERM_HOVER } from "./termTheme";
@@ -285,12 +285,65 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onFireTeam,
   } = props;
 
+  // ── Pane resize logic ──
+  // Track flex ratios for each visible pane (default: equal 1:1:1)
+  const [paneWidths, setPaneWidths] = useState<number[]>([]);
+  const dragRef = useRef<{ index: number; startX: number; startWidths: number[]; containerW: number } | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+
+  const startResize = useCallback((index: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    const container = rowRef.current;
+    if (!container) return;
+    const containerW = container.getBoundingClientRect().width;
+    const count = Math.min(openPanes.length, MAX_VISIBLE);
+    const currentWidths = paneWidths.length === count ? [...paneWidths] : Array(count).fill(1 / count);
+    dragRef.current = { index, startX: e.clientX, startWidths: currentWidths, containerW };
+
+    const onMouseMove = (ev: MouseEvent) => {
+      const d = dragRef.current;
+      if (!d) return;
+      const delta = (ev.clientX - d.startX) / d.containerW;
+      const newWidths = [...d.startWidths];
+      const minW = 0.15; // minimum 15% per pane
+      const left = d.startWidths[d.index] + delta;
+      const right = d.startWidths[d.index + 1] - delta;
+      if (left >= minW && right >= minW) {
+        newWidths[d.index] = left;
+        newWidths[d.index + 1] = right;
+        setPaneWidths(newWidths);
+      }
+    };
+    const onMouseUp = () => {
+      dragRef.current = null;
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+  }, [openPanes.length, paneWidths]);
+
+  // Reset widths when visible panes change
+  const prevVisibleCountRef = useRef(0);
+
   // Snap paneOffset to page boundaries so indicator and arrows stay in sync
   const totalPages = Math.ceil(openPanes.length / MAX_VISIBLE);
   const currentPage = Math.min(Math.floor(paneOffset / MAX_VISIBLE) + 1, totalPages);
   const snappedOffset = (currentPage - 1) * MAX_VISIBLE;
   const visiblePanes = openPanes.slice(snappedOffset, snappedOffset + MAX_VISIBLE);
   const maxOffset = (totalPages - 1) * MAX_VISIBLE;
+
+  // Reset pane widths when visible count changes
+  if (visiblePanes.length !== prevVisibleCountRef.current) {
+    prevVisibleCountRef.current = visiblePanes.length;
+    if (paneWidths.length !== visiblePanes.length) {
+      setPaneWidths(Array(visiblePanes.length).fill(1 / visiblePanes.length));
+    }
+  }
 
   // Check if trailing controls should show (team controls only — hire button moved to pagination bar)
   // Only show in last page of pagination (or when no pagination)
@@ -335,25 +388,36 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     );
   }
 
+  // Compute flex values for panes
+  const flexValues = paneWidths.length === visiblePanes.length
+    ? paneWidths
+    : Array(visiblePanes.length).fill(1 / Math.max(1, visiblePanes.length));
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       {/* Panes row */}
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+      <div ref={rowRef} style={{ display: "flex", flex: 1, minHeight: 0 }}>
         {visiblePanes.map((agentId, i) => {
           const data = getAgentData(agentId);
           if (!data) return null;
           const meta = agentMeta?.find(m => m.agentId === agentId);
           return (
-            <div
-              key={agentId}
-              style={{
-                flex: 1,
-                minWidth: 0,
-                display: "flex",
-                flexDirection: "column",
-                borderLeft: i > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
-              }}
-            >
+            <div key={agentId} style={{ display: "contents" }}>
+              {/* Resize handle between panes */}
+              {i > 0 && (
+                <div
+                  className={`pane-resize${dragRef.current?.index === i - 1 ? " pane-resize-active" : ""}`}
+                  onMouseDown={(e) => startResize(i - 1, e)}
+                />
+              )}
+              <div
+                style={{
+                  flex: `${flexValues[i]} 1 0%`,
+                  minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
               <StableAgentPane
                 agentId={agentId}
                 data={data}
@@ -390,6 +454,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
                 scrollFrozen={scrollFrozen}
               />
+              </div>
             </div>
           );
         })}

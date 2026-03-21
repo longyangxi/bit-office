@@ -77,6 +77,19 @@
   --px-amber: #e0900a;
   --px-amber-bg: rgba(232, 176, 64, 0.14);
 }
+/* ── Theme transition smoothing ──
+   Smooth cross-fade when switching between terminal themes */
+body,
+.crt-screen,
+.term-info-bar,
+.term-input-area,
+.btb {
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
 /* Hide native scrollbar, use custom indicator instead */
 * {
   scrollbar-width: none;
