@@ -859,7 +859,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         if (parsed.telegramAllowedUsers !== undefined) updates.telegramAllowedUsers = parsed.telegramAllowedUsers;
         if (parsed.worktreeEnabled !== undefined) {
           updates.worktreeEnabled = parsed.worktreeEnabled;
-          orc.isWorktreeEnabled = parsed.worktreeEnabled;
+          orc.setWorktreeEnabled(parsed.worktreeEnabled);
         }
         // Clear legacy field to prevent fallback reconnection
         updates.telegramBotTokens = undefined;

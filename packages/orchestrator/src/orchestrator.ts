@@ -39,7 +39,23 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private worktreeMerge: boolean;
   private worktreeAlwaysIsolate: boolean;
   get isWorktreeEnabled(): boolean { return this.worktreeEnabled; }
-  set isWorktreeEnabled(v: boolean) { this.worktreeEnabled = v; }
+  /** Enable/disable worktree isolation at runtime. Updates both enabled and alwaysIsolate flags. */
+  setWorktreeEnabled(v: boolean): void {
+    this.worktreeEnabled = v;
+    if (v) {
+      this.worktreeMerge = true;
+      this.worktreeAlwaysIsolate = true;
+    } else {
+      this.worktreeAlwaysIsolate = false;
+      // Clear worktree paths on running agents so they stop using stale worktrees
+      for (const session of this.agentManager.getAll()) {
+        if (session.worktreePath) {
+          session.worktreePath = null;
+          session.worktreeBranch = null;
+        }
+      }
+    }
+  }
   /** Preview info captured from the first dev worker that produces one — not from QA/reviewer */
   private teamPreview: TeamPreview | null = null;
   /** Accumulated changedFiles from all workers in the current team session */
