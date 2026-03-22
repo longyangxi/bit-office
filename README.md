@@ -11,8 +11,6 @@
 
 **Support Claude, Codex, Gemini, Copilot, Cursor, Aider, OpenCode, Pi & Sapling — one team, getting better every project. 🚀**
 
-<!-- test: verified README editable 2026-03-21 -->
-
 
 [Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
 
