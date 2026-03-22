@@ -17,18 +17,15 @@ function resolveServeBin(): { cmd: string; args: (dir: string, port: number) => 
       // Verify it's the expected `serve` by checking its --help output for known flags
       const helpOutput = execSync(`${servePath} --help 2>&1`, { encoding: "utf8", timeout: 5000 });
       if (helpOutput.includes("--listen") || helpOutput.includes("-l")) {
-        console.log(`[PreviewServer] Using verified serve binary: ${servePath}`);
         return {
           cmd: servePath,
           args: (dir, port) => [dir, "-l", String(port), "--no-clipboard"],
         };
       }
-      console.log(`[PreviewServer] Found serve at ${servePath} but it's not the expected npm serve CLI, skipping`);
     }
   } catch { /* not found or validation failed */ }
 
   // 2. Fallback to npx serve
-  console.log(`[PreviewServer] Falling back to npx serve`);
   return {
     cmd: "npx",
     args: (dir, port) => ["serve", dir, "-l", String(port), "--no-clipboard"],
@@ -46,7 +43,7 @@ function killPortProcess(port: number): void {
       for (const pid of pids.split("\n")) {
         try { process.kill(Number(pid), "SIGKILL"); } catch { /* already dead */ }
       }
-      console.log(`[PreviewServer] Killed orphan process(es) on port ${port}: ${pids.replace(/\n/g, ", ")}`);
+      console.log(`[PreviewServer] Killed orphan on :${port} (pids: ${pids.replace(/\n/g, ", ")})`);
     }
   } catch { /* no process on port — expected */ }
 }
@@ -84,50 +81,24 @@ class PreviewServer {
     try {
       const serve = resolveServeBin();
       const serveArgs = serve.args(dir, STATIC_PORT);
-      console.log(`[PreviewServer] Spawning: ${serve.cmd} ${serveArgs.join(" ")}`);
       // detached: true creates a process group so stop() can kill the whole tree
       // (needed for npx wrapper which spawns a child `serve` process).
       // NOT using .unref() — so Node tracks the child and it dies on gateway exit.
       this.process = spawn(serve.cmd, serveArgs, {
-        stdio: ["ignore", "pipe", "pipe"],
+        stdio: ["ignore", "ignore", "pipe"],
         detached: true,
-      });
-      const pid = this.process.pid;
-      console.log(`[PreviewServer] Spawned pid=${pid}`);
-      this.process.stdout?.on("data", (data: Buffer) => {
-        const msg = data.toString().trim();
-        if (msg) console.log(`[PreviewServer] serve stdout (pid=${pid}): ${msg.slice(0, 300)}`);
       });
       this.process.stderr?.on("data", (data: Buffer) => {
         const msg = data.toString().trim();
-        if (msg) console.log(`[PreviewServer] serve stderr (pid=${pid}): ${msg.slice(0, 300)}`);
+        if (msg) console.log(`[PreviewServer] stderr: ${msg.slice(0, 200)}`);
       });
       this.process.on("error", (err) => {
-        console.log(`[PreviewServer] serve ERROR (pid=${pid}): ${err.message}`);
-      });
-      this.process.on("exit", (code, signal) => {
-        console.log(`[PreviewServer] serve EXITED (pid=${pid}): code=${code} signal=${signal}`);
+        console.log(`[PreviewServer] ERROR: ${err.message}`);
       });
       this.currentDir = dir;
       this.isDetached = true;
       const url = `http://localhost:${STATIC_PORT}/${fileName}`;
-      console.log(`[PreviewServer] Serving ${dir} on port ${STATIC_PORT} → ${url}`);
-      // Health check after 3s to verify server is actually listening
-      setTimeout(() => {
-        import("http").then(({ default: http }) => {
-          const req = http.get(`http://localhost:${STATIC_PORT}/`, (res) => {
-            console.log(`[PreviewServer] Health check OK: status=${res.statusCode}`);
-            res.resume();
-          });
-          req.on("error", (err) => {
-            console.log(`[PreviewServer] Health check FAILED (port ${STATIC_PORT} not responding): ${err.message}`);
-          });
-          req.setTimeout(3000, () => {
-            console.log(`[PreviewServer] Health check TIMEOUT (port ${STATIC_PORT})`);
-            req.destroy();
-          });
-        });
-      }, 3000);
+      console.log(`[PreviewServer] Serving ${dir} on :${STATIC_PORT} (pid=${this.process.pid})`);
       return url;
     } catch (e) {
       console.log(`[PreviewServer] Failed to start static serve: ${e}`);
@@ -157,8 +128,6 @@ class PreviewServer {
     if (!isPython) {
       cmd = `${cmd} --port ${port}`;
     }
-    console.log(`[PreviewServer] Command: "${cmd}" (forced port ${port})`);
-
     try {
       // detached: true so stop() can kill the entire process group (shell + children)
       this.process = spawn(cmd, {
@@ -171,7 +140,7 @@ class PreviewServer {
       this.currentDir = cwd;
       this.isDetached = true;
       const url = `http://localhost:${port}`;
-      console.log(`[PreviewServer] Running "${cmd}" in ${cwd}, preview at port ${port}`);
+      console.log(`[PreviewServer] Running "${cmd}" on :${port} (pid=${this.process?.pid})`);
       return url;
     } catch (e) {
       console.log(`[PreviewServer] Failed to run command: ${e}`);
@@ -182,7 +151,6 @@ class PreviewServer {
   /**
    * Mode 3: Launch a desktop/CLI process (no web preview URL).
    * Used for Pygame, Tkinter, Electron, terminal apps, etc.
-   * NOT detached — GUI apps need the login session to access WindowServer (macOS).
    */
   launchProcess(cmd: string, cwd: string): void {
     this.stop();
