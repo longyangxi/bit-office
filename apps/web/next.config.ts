@@ -12,7 +12,8 @@ const withPWA = withPWAInit({
     runtimeCaching: [
       {
         // Preview proxy paths — never cache, always hit the gateway proxy
-        urlPattern: /^\/(preview-static|preview-app)(\/.*)?$/,
+        urlPattern: ({ url }: { url: URL }) =>
+          /^\/(preview-static|preview-app)(\/.*)?$/.test(url.pathname),
         handler: "NetworkOnly",
       },
     ],
