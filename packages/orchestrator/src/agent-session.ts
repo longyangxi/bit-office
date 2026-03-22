@@ -357,6 +357,13 @@ export class AgentSession {
       // Start with git-isolated env (clears GIT_DIR, GIT_WORK_TREE etc.) to prevent
       // worktree cross-contamination, then remove backend-specific vars.
       const cleanEnv = getIsolatedGitEnv() as Record<string, string | undefined>;
+      // Force git (and Claude Code) to treat the worktree as the project root.
+      // Without this, Claude Code tools may traverse up from .worktrees/agent-xxx/
+      // to the main repo and return main-repo absolute paths — causing agents to
+      // accidentally edit files on the main branch instead of their worktree.
+      if (this.worktreePath) {
+        cleanEnv.GIT_WORK_TREE = this.worktreePath;
+      }
       for (const key of this.backend.deleteEnv ?? []) {
         delete cleanEnv[key];
       }
@@ -468,6 +475,7 @@ export class AgentSession {
         console.log(`[Agent ${this.name}] Binary: ${whichPath}, CLAUDECODE=${cleanEnv.CLAUDECODE ?? "unset"}, ENTRYPOINT=${cleanEnv.CLAUDE_CODE_ENTRYPOINT ?? "unset"}`);
       } catch { /* ignore */ }
       console.log(`[Agent ${this.name}] Spawning: ${this.backend.command} ${args.map(a => a.length > 80 ? a.slice(0, 80) + '...' : a).join(' ')}`);
+      console.log(`[Agent ${this.name}] CWD=${cwd}, worktreePath=${this.worktreePath ?? "none"}, GIT_WORK_TREE=${cleanEnv.GIT_WORK_TREE ?? "unset"}`);
 
       // stdin MUST be "ignore" — "pipe" causes Claude Code to hang waiting for input
       // detached: true creates a new process group so we can kill the entire tree on cancel

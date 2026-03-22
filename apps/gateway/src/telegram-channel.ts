@@ -63,6 +63,11 @@ function buildAgentMenu(): AgentMenuItem[] {
 /** TG command -> agentId mapping (commands must be [a-z0-9_], 1-32 chars) */
 const cmdToAgentId = new Map<string, string>();
 
+/** Strip skills suffix from role (e.g. "Frontend Developer — UI, CSS" → "Frontend Developer") */
+function shortRole(role: string): string {
+  return role.split(" — ")[0];
+}
+
 /** Convert an agent ID or name to a valid TG bot command */
 function toTgCommand(agent: AgentMenuItem): string {
   // If the id is already a simple lowercase word (e.g. "alex", "rex"), use it directly
@@ -162,7 +167,7 @@ function rebuildBotCommands() {
     }
     seen.add(cmd);
     cmdToAgentId.set(cmd, a.id);
-    commands.push({ command: cmd, description: `${a.name} - ${a.role}`.slice(0, 256) });
+    commands.push({ command: cmd, description: `${a.name} - ${shortRole(a.role)}`.slice(0, 256) });
   }
   commands.push({ command: "cancel", description: "Cancel current agent task" });
   commands.push({ command: "status", description: "Check agent statuses" });
@@ -241,7 +246,7 @@ export const telegramChannel: Channel = {
         const lines: string[] = [];
         for (const [cmd, agentId] of cmdToAgentId) {
           const a = currentMenu.find((m) => m.id === agentId);
-          if (a) lines.push(`/${cmd} - ${a.name} (${a.role})`);
+          if (a) lines.push(`/${cmd} - ${a.name} (${shortRole(a.role)})`);
         }
         bot!.sendMessage(
           msg.chat.id,
