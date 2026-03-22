@@ -449,6 +449,18 @@ export function mergeWorktree(
 ): MergeResult {
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   try {
+    // Skip merge if agent branch has no changes relative to main
+    const mainHead = gitExec("git rev-parse HEAD", repoRoot);
+    const branchHead = gitExec("git rev-parse HEAD", worktreePath);
+    const worktreeDirty = !!gitExec("git status --porcelain", worktreePath);
+    if (mainHead === branchHead && !worktreeDirty) {
+      // No commits and no uncommitted changes — pure chat, skip merge
+      if (keepAlive) {
+        console.log(`[Worktree] No changes on ${branch}, skipping merge`);
+      }
+      return { success: true, stagedFiles: [] };
+    }
+
     autoCommitWorktree(worktreePath, branch);
     gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
 
