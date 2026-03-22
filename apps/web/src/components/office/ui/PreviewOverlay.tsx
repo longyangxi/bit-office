@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
@@ -86,13 +86,39 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
   onRate: (ratings: Record<string, number>) => void;
 }) {
   const [status, setStatus] = useState<"loading" | "ready">("loading");
+  const [pollInfo, setPollInfo] = useState("");
   const [showRating, setShowRating] = useState(false);
   const [closing, setClosing] = useState(false);
+  const isTauri = useRef(typeof window !== "undefined" && window.location.protocol === "tauri:");
+
+  // In Tauri, iframe onLoad is the readiness signal (fetch doesn't work cross-protocol).
+  const handleIframeLoad = useCallback((e: React.SyntheticEvent<HTMLIFrameElement>) => {
+    (e.target as HTMLIFrameElement).focus();
+    if (isTauri.current && status === "loading") {
+      setPollInfo("tauri — ready (iframe loaded)");
+      setStatus("ready");
+    }
+  }, [status]);
 
   // Poll the preview URL until it responds instead of hardcoded delay.
   // Handles slow npx serve cold starts (first run downloads the package).
+  // In Tauri (tauri:// protocol), fetch to http://localhost always fails due to
+  // cross-protocol restrictions, but the iframe loads fine — we mount the iframe
+  // early (hidden) and use its onLoad event as the readiness signal.
   useEffect(() => {
+    if (isTauri.current) {
+      setStatus("loading");
+      setPollInfo("tauri — waiting for iframe onLoad");
+      // Fallback: if iframe never fires onLoad, show it after 15s anyway
+      const t = setTimeout(() => {
+        setPollInfo("tauri — timeout, showing iframe anyway");
+        setStatus("ready");
+      }, 15_000);
+      return () => clearTimeout(t);
+    }
+
     setStatus("loading");
+    setPollInfo("waiting...");
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 30; // 15 seconds max (500ms interval)
@@ -100,15 +126,21 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
     const poll = () => {
       if (cancelled) return;
       attempts++;
+      setPollInfo(`poll #${attempts}/${maxAttempts} → ${url}`);
       fetch(url, { mode: "no-cors" })
         .then(() => {
-          if (!cancelled) setStatus("ready");
+          if (!cancelled) {
+            setPollInfo(`ready after ${attempts} polls`);
+            setStatus("ready");
+          }
         })
-        .catch(() => {
+        .catch((err) => {
           if (!cancelled && attempts < maxAttempts) {
+            setPollInfo(`poll #${attempts} failed: ${err.message ?? "network error"}`);
             setTimeout(poll, 500);
           } else if (!cancelled) {
             // Timeout — show iframe anyway (server may respond to iframe but not fetch)
+            setPollInfo(`timeout after ${attempts} polls — showing iframe anyway`);
             setStatus("ready");
           }
         });
@@ -165,6 +197,17 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
           }}
         >{"\u2715"}</button>
       </div>
+      {/* Debug bar — shows polling status, target URL, and window origin */}
+      <div style={{
+        height: 22, padding: "0 12px", backgroundColor: "#1a1a2e",
+        borderBottom: "1px solid #333", display: "flex", alignItems: "center",
+        fontFamily: "monospace", fontSize: 10, color: "#888", gap: 12, overflow: "hidden",
+      }}>
+        <span style={{ color: status === "ready" ? "#4ade80" : "#f59e0b" }}>{status}</span>
+        <span style={{ color: "#666", flexShrink: 0 }}>origin: {typeof window !== "undefined" ? window.location.origin : "?"}</span>
+        <span style={{ color: "#666", flexShrink: 0 }}>host: {typeof window !== "undefined" ? window.location.hostname : "?"}</span>
+        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pollInfo}</span>
+      </div>
       <div style={{ flex: 1, position: "relative" }}>
         {status === "loading" && (
           <div style={{
@@ -180,15 +223,19 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
             <style>{`@keyframes preview-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
-        {status === "ready" && (
+        {/* In Tauri: mount iframe early (hidden) so onLoad can signal readiness.
+            Outside Tauri: only mount after fetch-based polling succeeds. */}
+        {(status === "ready" || isTauri.current) && (
           <iframe
             src={url}
             style={{
               width: "100%", height: "100%", border: "none",
-              // Hide iframe when rating popup is visible — iframes can render above overlays in some browsers
-              ...(closing || showRating ? { pointerEvents: "none" as const, visibility: "hidden" as const } : {}),
+              // Hide iframe while loading (Tauri probe) or when rating popup is visible
+              ...(status === "loading" || closing || showRating
+                ? { pointerEvents: "none" as const, visibility: "hidden" as const }
+                : {}),
             }}
-            onLoad={(e) => (e.target as HTMLIFrameElement).focus()}
+            onLoad={handleIframeLoad}
           />
         )}
       </div>
