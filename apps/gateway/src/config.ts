@@ -90,10 +90,16 @@ function resolveDefaultWorkspace(): string {
     return ws;
   }
   // Published mode (npx bit-office): use the directory where the user ran the command
-  // Tauri sidecar runs with cwd="/", fall back to home directory
+  // Tauri sidecar runs with cwd="/", fall back to ~/.bit-office/workspace/
+  // (same as dev mode — keeps agent work out of $HOME root)
   const cwd = process.cwd();
   if (cwd === "/" || cwd === "C:\\") {
-    return process.env.HOME || homedir();
+    const ws = resolve(homedir(), ".bit-office", "workspace");
+    if (!existsSync(ws)) {
+      mkdirSync(ws, { recursive: true });
+      console.log(`[Config] Created default workspace: ${ws}`);
+    }
+    return ws;
   }
   return cwd;
 }

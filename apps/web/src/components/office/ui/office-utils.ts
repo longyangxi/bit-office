@@ -62,7 +62,9 @@ export function linkifyText(children: React.ReactNode): React.ReactNode {
 export function tunnelRewrite(url: string): string {
   if (typeof window === "undefined") return url;
   const host = window.location.hostname;
-  if (host === "localhost" || host === "127.0.0.1") return url;
+  // Local access: localhost, 127.0.0.1, *.localhost (Tauri Windows uses tauri.localhost)
+  // Also detect tauri:// custom protocol (Tauri macOS)
+  if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost") || window.location.protocol === "tauri:") return url;
   const origin = window.location.origin;
   // Static file preview (port 9199) — capture everything after the port (path, query, hash)
   if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9199(?:\/|$|\?|#)/.test(url))

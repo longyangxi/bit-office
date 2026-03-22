@@ -87,19 +87,33 @@ function tgMeta(): CommandMeta {
  * Build a public preview URL for Telegram when tunnel is configured.
  * Rewrites localhost:9199 → tunnelBaseUrl/preview-static/
  * and localhost:9198 → tunnelBaseUrl/preview-app/
- * Returns empty string if no tunnel or no preview URL.
+ * Falls back to previewPath/entryFile when previewUrl is not set (static file previews).
+ * Returns empty string if no tunnel or no preview-able result.
  */
 function buildTunnelPreviewLink(result: any): string {
   if (!config.tunnelBaseUrl || !result) return "";
-  const url: string | undefined = result.previewUrl;
-  if (!url) return "";
   const base = config.tunnelBaseUrl;
-  if (url.includes("localhost:9199") || url.includes("127.0.0.1:9199")) {
-    return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${base}/preview-static`);
+
+  // 1. previewUrl already set (e.g. from previewServer auto-start)
+  const url: string | undefined = result.previewUrl;
+  if (url) {
+    if (url.includes("localhost:9199") || url.includes("127.0.0.1:9199")) {
+      return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${base}/preview-static`);
+    }
+    if (url.includes("localhost:9198") || url.includes("127.0.0.1:9198")) {
+      return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${base}/preview-app`);
+    }
+    return "";
   }
-  if (url.includes("localhost:9198") || url.includes("127.0.0.1:9198")) {
-    return url.replace(/https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${base}/preview-app`);
-  }
+
+  // 2. Static file preview — previewPath or HTML entryFile
+  const fileName = result.previewPath?.split("/").pop()
+    ?? (result.entryFile && /\.html?$/i.test(result.entryFile) ? result.entryFile.split("/").pop() : null);
+  if (fileName) return `${base}/preview-static/${fileName}`;
+
+  // 3. Command preview with port
+  if (result.previewCmd && result.previewPort) return `${base}/preview-app`;
+
   return "";
 }
 
