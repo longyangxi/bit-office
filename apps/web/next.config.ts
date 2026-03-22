@@ -6,6 +6,7 @@ import { readFileSync } from "fs";
 const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
+  navigateFallbackDenylist: [/^\/preview-static/, /^\/preview-app/],
 });
 
 const isDev = process.env.NODE_ENV === "development";

@@ -11,6 +11,14 @@ import * as Ably from "ably";
 import type { Channel, CommandMeta } from "./transport.js";
 import { nanoid } from "nanoid";
 
+/**
+ * Detect requests arriving through Cloudflare Tunnel.
+ * Cloudflare injects CF-Connecting-IP on every proxied request.
+ */
+function isTunnelRequest(req: IncomingMessage): boolean {
+  return !!(req.headers["cf-connecting-ip"] || req.headers["cf-ray"]);
+}
+
 let wss: WebSocketServer | null = null;
 const clients = new Map<WebSocket, { role: UserRole; clientId: string }>();
 let pairCode: string | null = null;
@@ -104,9 +112,9 @@ export const wsChannel: Channel = {
           return;
         }
 
-        // Quick connect — skip pair code for local dev
+        // Quick connect — local-only, never exposed through tunnel
         if (req.method === "GET" && req.url === "/connect") {
-          if (config.ablyApiKey) {
+          if (config.ablyApiKey || isTunnelRequest(req)) {
             res.writeHead(403, { "Content-Type": "application/json" });
             res.end(JSON.stringify({ error: "Quick connect disabled" }));
             return;
