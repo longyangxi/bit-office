@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { randomBytes } from "crypto";
 
@@ -11,10 +11,6 @@ const isDev = process.env.NODE_ENV === "development";
 export const CONFIG_DIR = resolve(homedir(), isDev ? ".open-office-dev" : ".open-office");
 const CONFIG_FILE = resolve(CONFIG_DIR, "config.json");
 
-// Migrate from legacy ~/.bit-office[-dev] to ~/.open-office[-dev]
-const LEGACY_DIR = resolve(homedir(), isDev ? ".bit-office-dev" : ".bit-office");
-// Also handle the case where dev never had a separate dir (old layout used .bit-office for both)
-const LEGACY_SHARED_DIR = resolve(homedir(), ".bit-office");
 
 interface SavedConfig {
   ablyApiKey?: string;
@@ -36,48 +32,6 @@ function ensureConfigDir() {
   }
 }
 
-/**
- * Migrate from legacy ~/.bit-office to ~/.open-office[-dev] with organized layout.
- */
-function migrateDirectoryLayout() {
-  // Step 1: Rename ~/.bit-office → ~/.open-office[-dev] if needed
-  const legacySource = existsSync(LEGACY_DIR) ? LEGACY_DIR
-    : (existsSync(LEGACY_SHARED_DIR) && LEGACY_SHARED_DIR !== CONFIG_DIR) ? LEGACY_SHARED_DIR
-    : null;
-  if (legacySource && !existsSync(CONFIG_DIR)) {
-    renameSync(legacySource, CONFIG_DIR);
-    console.log(`[Config] Renamed ${legacySource} → ${CONFIG_DIR}`);
-  }
-
-  // Step 2: Reorganize internal layout
-  const dataDir = resolve(CONFIG_DIR, "data");
-  // Order matters: move "projects" (history JSONs) before renaming "workspace" → "projects"
-  const moves: [string, string][] = [
-    [resolve(CONFIG_DIR, "projects"), resolve(dataDir, "project-history")],
-    [resolve(CONFIG_DIR, "instances"), resolve(dataDir, "instances")],
-    [resolve(CONFIG_DIR, "memory"), resolve(dataDir, "memory")],
-    [resolve(CONFIG_DIR, "prompts"), resolve(dataDir, "prompts")],
-    [resolve(CONFIG_DIR, "agents.json"), resolve(dataDir, "agents.json")],
-    [resolve(CONFIG_DIR, "workspace"), resolve(CONFIG_DIR, "projects")],
-  ];
-  let migrated = false;
-  for (const [from, to] of moves) {
-    if (existsSync(from) && !existsSync(to)) {
-      mkdirSync(dirname(to), { recursive: true });
-      renameSync(from, to);
-      migrated = true;
-    }
-  }
-  // Remove legacy root-level state files (now instance-scoped under data/instances/)
-  const legacyFiles = ["agent-sessions.json", "session-tokens.json", "team-state.json", "project-events.jsonl"];
-  for (const file of legacyFiles) {
-    const p = resolve(CONFIG_DIR, file);
-    if (existsSync(p)) {
-      try { unlinkSync(p); migrated = true; } catch { /* ignore */ }
-    }
-  }
-  if (migrated) console.log("[Config] Migrated directory layout to new structure");
-}
 
 function loadSavedConfig(): SavedConfig {
   if (!existsSync(CONFIG_FILE)) return {};
@@ -174,7 +128,6 @@ function resolveInstanceDir(gatewayId: string): string {
 
 function buildConfig() {
   ensureConfigDir();
-  migrateDirectoryLayout();
   const saved = loadSavedConfig();
   const gatewayId = resolveGatewayId();
   const instanceDir = resolveInstanceDir(gatewayId);
