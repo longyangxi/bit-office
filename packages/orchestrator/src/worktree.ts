@@ -104,7 +104,6 @@ export interface WorktreeOwnerInfo {
   pid: number;
   startedAt: number;
   agentId: string;
-  taskId: string;
   agentName: string;
   branch: string;
   repoRoot: string;
@@ -252,10 +251,10 @@ function sanitizeBranchSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
-export function getManagedWorktreeBranch(agentName: string, taskId: string): string {
-  const safeTaskId = sanitizeBranchSegment(taskId);
+export function getManagedWorktreeBranch(agentName: string, agentId: string): string {
   const safeAgentName = sanitizeBranchSegment(agentName.toLowerCase().replace(/\s+/g, "-"));
-  return `agent/${safeAgentName}/${safeTaskId}`;
+  const shortId = agentId.replace(/^agent-/, "");
+  return `agent/${safeAgentName}-${shortId}`;
 }
 
 export function resolveGitWorkspaceRoot(workspace: string): string {
@@ -300,7 +299,6 @@ function findWorktreePathForBranch(repoRoot: string, branch: string): string | n
 export function createWorktree(
   workspace: string,
   agentId: string,
-  taskId: string,
   agentName: string,
   owner?: Omit<WorktreeOwnerInfo, "agentId" | "taskId" | "agentName" | "branch" | "repoRoot">,
 ): string | null {
@@ -309,12 +307,11 @@ export function createWorktree(
 
   const worktreeDir = getWorktreeDir(repoRoot);
   if (!existsSync(worktreeDir)) mkdirSync(worktreeDir, { recursive: true });
-  const safeTaskId = sanitizeBranchSegment(taskId);
-  const worktreeName = `${agentId}-${safeTaskId}`;
+  const worktreeName = agentId;
   let worktreePath = path.join(worktreeDir, worktreeName);
-  const branch = getManagedWorktreeBranch(agentName, taskId);
+  const branch = getManagedWorktreeBranch(agentName, agentId);
   const ownerInfo: WorktreeOwnerInfo | undefined = owner
-    ? { ...owner, agentId, taskId, agentName, branch, repoRoot }
+    ? { ...owner, agentId, agentName, branch, repoRoot }
     : undefined;
 
   // Reuse existing worktree if already on the expected branch

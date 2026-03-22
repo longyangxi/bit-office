@@ -316,9 +316,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         startedAt: Number(process.env.BIT_OFFICE_GATEWAY_STARTED_AT) || Date.now(),
       }
       : undefined;
-    const wt = createWorktree(base, agentId, taskId, session.name, owner);
+    const wt = createWorktree(base, agentId, session.name, owner);
     if (wt) {
-      const branch = getManagedWorktreeBranch(session.name, taskId);
+      const branch = getManagedWorktreeBranch(session.name, agentId);
       session.worktreePath = wt;
       session.worktreeBranch = branch;
       // Clear history — can't --resume in a different directory
