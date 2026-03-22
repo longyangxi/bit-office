@@ -1062,12 +1062,6 @@ async function main() {
   // Scope session storage to this gateway instance (prevents Tauri/Web/CLI context contamination)
   setSessionDir(config.instanceDir);
   setStorageRoot(path.join(config.instanceDir, "memory"));
-  runtimeState = registerRuntimeState();
-  process.env.BIT_OFFICE_GATEWAY_ID = config.gatewayId;
-  process.env.BIT_OFFICE_MACHINE_ID = config.machineId;
-  process.env.BIT_OFFICE_INSTANCE_DIR = config.instanceDir;
-  process.env.BIT_OFFICE_GATEWAY_PID = String(runtimeState.pid);
-  process.env.BIT_OFFICE_GATEWAY_STARTED_AT = String(runtimeState.startedAt);
   console.log(`[Gateway] Instance "${config.gatewayId}" → ${config.instanceDir}`);
 
   orc = createOrchestrator({
@@ -1186,6 +1180,13 @@ async function main() {
       }
     }
   }
+
+  runtimeState = registerRuntimeState();
+  process.env.BIT_OFFICE_GATEWAY_ID = config.gatewayId;
+  process.env.BIT_OFFICE_MACHINE_ID = config.machineId;
+  process.env.BIT_OFFICE_INSTANCE_DIR = config.instanceDir;
+  process.env.BIT_OFFICE_GATEWAY_PID = String(runtimeState.pid);
+  process.env.BIT_OFFICE_GATEWAY_STARTED_AT = String(runtimeState.startedAt);
 
   // Events worth archiving in project history (skip noise like status/log/sync)
   const ARCHIVE_EVENT_TYPES = new Set([
