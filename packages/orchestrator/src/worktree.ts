@@ -1,15 +1,44 @@
 import { execSync } from "child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
+import { homedir } from "os";
 
 const TIMEOUT = 5000;
+
+// ---------------------------------------------------------------------------
+// Centralized worktree storage
+// All agent worktrees live under ~/.open-office[-dev]/worktrees/<repo-hash>/
+// This keeps them physically outside any repo, avoiding upward-traversal issues
+// (Claude Code / agents walking up to find project root, CLAUDE.md, etc.).
+// ---------------------------------------------------------------------------
+
+const OPEN_OFFICE_DIR = path.join(homedir(),
+  process.env.NODE_ENV === "development" ? ".open-office-dev" : ".open-office");
+const WORKTREE_BASE_DIR = path.join(OPEN_OFFICE_DIR, "worktrees");
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(hash).toString(36).padStart(6, "0").slice(0, 6);
+}
+
+/** Return the centralized worktree directory for a given repo root. */
+function getWorktreeDir(repoRoot: string): string {
+  const name = path.basename(repoRoot);
+  const hash = simpleHash(repoRoot);
+  return path.join(WORKTREE_BASE_DIR, `${name}-${hash}`);
+}
+
+/** Expose the base dir so gateway can reference it. */
+export function getWorktreeBaseDir(): string {
+  return WORKTREE_BASE_DIR;
+}
 
 // Cached git version (parsed once per process)
 let cachedGitVersion: [number, number, number] | null = null;
 
-/**
- * Parse the git version string (e.g. "git version 2.19.0") into [major, minor, patch].
- */
 function getGitVersion(cwd?: string): [number, number, number] {
   if (cachedGitVersion) return cachedGitVersion;
   try {
@@ -28,9 +57,6 @@ function getGitVersion(cwd?: string): [number, number, number] {
   return [0, 0, 0];
 }
 
-/**
- * Check if the installed git version is >= the given version.
- */
 function gitVersionAtLeast(major: number, minor: number, patch = 0): boolean {
   const [a, b, c] = getGitVersion();
   if (a !== major) return a > major;
@@ -40,8 +66,6 @@ function gitVersionAtLeast(major: number, minor: number, patch = 0): boolean {
 
 // ---------------------------------------------------------------------------
 // Git environment isolation (prevents worktree cross-contamination)
-// Inspired by Aperant's git-isolation.ts — clears env vars that cause
-// one worktree's git commands to accidentally target another repo.
 // ---------------------------------------------------------------------------
 
 const GIT_ENV_VARS_TO_CLEAR = [
@@ -58,11 +82,6 @@ const GIT_ENV_VARS_TO_CLEAR = [
   "GIT_COMMITTER_DATE",
 ] as const;
 
-/**
- * Create a clean environment for git subprocess operations.
- * Removes git-specific env vars that leak between worktrees and sets HUSKY=0
- * to prevent user hooks from interfering with agent-managed commits.
- */
 export function getIsolatedGitEnv(
   baseEnv: NodeJS.ProcessEnv = process.env,
 ): Record<string, string | undefined> {
@@ -74,6 +93,10 @@ export function getIsolatedGitEnv(
   return env;
 }
 
+// ---------------------------------------------------------------------------
+// Owner metadata — lives alongside worktrees in the centralized dir
+// ---------------------------------------------------------------------------
+
 export interface WorktreeOwnerInfo {
   gatewayId: string;
   machineId: string;
@@ -84,6 +107,7 @@ export interface WorktreeOwnerInfo {
   taskId: string;
   agentName: string;
   branch: string;
+  repoRoot: string;
 }
 
 export interface RuntimeOwnerInfo {
@@ -105,8 +129,8 @@ const WORKTREE_OWNER_DIR = ".owners";
 const DEFAULT_RUNTIME_TTL_MS = 60_000;
 
 function getWorktreeOwnerFile(worktreePath: string): string {
-  const root = path.dirname(path.dirname(worktreePath));
-  return path.join(root, ".worktrees", WORKTREE_OWNER_DIR, `${path.basename(worktreePath)}.json`);
+  const worktreeDir = path.dirname(worktreePath);
+  return path.join(worktreeDir, WORKTREE_OWNER_DIR, `${path.basename(worktreePath)}.json`);
 }
 
 function writeWorktreeOwnerFile(worktreePath: string, owner: WorktreeOwnerInfo): void {
@@ -210,11 +234,11 @@ function isGitRepo(cwd: string): boolean {
   }
 }
 
-function gitExec(cmd: string, cwd: string, opts?: { encoding?: "utf-8" }): string {
+function gitExec(cmd: string, cwd: string): string {
   return execSync(cmd, {
     cwd,
-    stdio: opts?.encoding ? "pipe" : "pipe",
-    encoding: opts?.encoding ?? "utf-8",
+    stdio: "pipe",
+    encoding: "utf-8",
     timeout: TIMEOUT,
     env: getIsolatedGitEnv(),
   }).toString().trim();
@@ -234,7 +258,7 @@ export function getManagedWorktreeBranch(agentName: string, taskId: string): str
   return `agent/${safeAgentName}/${safeTaskId}`;
 }
 
-function resolveGitWorkspaceRoot(workspace: string): string {
+export function resolveGitWorkspaceRoot(workspace: string): string {
   try {
     const commonDir = gitExec("git rev-parse --path-format=absolute --git-common-dir", workspace);
     if (commonDir) return path.dirname(commonDir);
@@ -267,6 +291,7 @@ function findWorktreePathForBranch(repoRoot: string, branch: string): string | n
 
 /**
  * Create a git worktree for an agent's task.
+ * Worktrees are stored centrally at ~/.open-office[-dev]/worktrees/<repo-hash>/
  * Returns the worktree path, or null if workspace is not a git repo.
  */
 export function createWorktree(
@@ -274,18 +299,19 @@ export function createWorktree(
   agentId: string,
   taskId: string,
   agentName: string,
-  owner?: Omit<WorktreeOwnerInfo, "agentId" | "taskId" | "agentName" | "branch">,
+  owner?: Omit<WorktreeOwnerInfo, "agentId" | "taskId" | "agentName" | "branch" | "repoRoot">,
 ): string | null {
   if (!isGitRepo(workspace)) return null;
   const repoRoot = resolveGitWorkspaceRoot(workspace);
 
-  const worktreeDir = path.join(repoRoot, ".worktrees");
+  const worktreeDir = getWorktreeDir(repoRoot);
+  if (!existsSync(worktreeDir)) mkdirSync(worktreeDir, { recursive: true });
   const safeTaskId = sanitizeBranchSegment(taskId);
   const worktreeName = `${agentId}-${safeTaskId}`;
   let worktreePath = path.join(worktreeDir, worktreeName);
   const branch = getManagedWorktreeBranch(agentName, taskId);
   const ownerInfo: WorktreeOwnerInfo | undefined = owner
-    ? { ...owner, agentId, taskId, agentName, branch }
+    ? { ...owner, agentId, taskId, agentName, branch, repoRoot }
     : undefined;
 
   // Reuse existing worktree if already on the expected branch
@@ -392,20 +418,13 @@ export interface MergeResult {
   stagedFiles?: string[];
 }
 
-/**
- * Auto-commit any uncommitted changes in a worktree so they can be merged.
- * Returns true if a commit was created (or working tree was already clean).
- */
 function autoCommitWorktree(worktreePath: string, branch: string): boolean {
   try {
-    // Check if there are any changes (staged or unstaged)
     const status = gitExec("git status --porcelain", worktreePath);
-    if (!status) return true; // Already clean
+    if (!status) return true;
 
-    // Stage all changes
     gitExec("git add -A", worktreePath);
 
-    // Commit with a descriptive message
     execSync(`git commit -m "$COMMIT_MSG"`, {
       cwd: worktreePath,
       stdio: "pipe",
@@ -421,9 +440,6 @@ function autoCommitWorktree(worktreePath: string, branch: string): boolean {
   }
 }
 
-/**
- * Merge a worktree branch back to the main branch (squash + auto-commit).
- */
 export function mergeWorktree(
   workspace: string,
   worktreePath: string,
@@ -445,8 +461,6 @@ export function mergeWorktree(
     if (stagedFiles.length > 0) {
       const raw = summary ? summary.split("\n")[0].trim().slice(0, 72) : `merge: ${branch}`;
       const msg = raw || `merge: ${branch}`;
-      // Use env var to pass commit message — avoids shell injection from
-      // backticks, quotes, or other special chars in agent summary output.
       execSync(`git commit -m "$COMMIT_MSG"`, {
         cwd: repoRoot,
         stdio: "pipe",
@@ -458,13 +472,10 @@ export function mergeWorktree(
     }
 
     if (!keepAlive) {
-      // Clean up worktree + branch
       removeWorktreeOwnerFile(worktreePath);
       try { gitExec(`git worktree remove ${shellQuote(worktreePath)}`, repoRoot); } catch { /* already removed */ }
       try { gitExec(`git branch -D ${shellQuote(branch)}`, repoRoot); } catch { /* not found */ }
     } else {
-      // Keep worktree alive for session continuity — reset branch to main repo HEAD
-      // so next task starts from the merged state (avoids forking)
       try {
         const mainHead = gitExec("git rev-parse HEAD", repoRoot);
         gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
@@ -486,16 +497,9 @@ export function mergeWorktree(
   }
 }
 
-/**
- * Check for conflicts (dry run).
- * Uses `git merge-tree --write-tree` on git >= 2.38, otherwise falls back to
- * `git merge --no-commit --no-ff` + `git merge --abort` for older versions
- * (e.g. macOS bundled git 2.19).
- */
 export function checkConflicts(workspace: string, branch: string): string[] {
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   if (gitVersionAtLeast(2, 38)) {
-    // Modern path: pure dry-run, no working tree changes
     try {
       gitExec(`git merge-tree --write-tree HEAD ${shellQuote(branch)}`, repoRoot);
       return [];
@@ -510,21 +514,17 @@ export function checkConflicts(workspace: string, branch: string): string[] {
     }
   }
 
-  // Fallback for git < 2.38: attempt a real merge and immediately abort
   try {
     gitExec(`git merge --no-commit --no-ff ${shellQuote(branch)}`, repoRoot);
-    // Merge succeeded (no conflicts) — abort to undo
     try { gitExec("git merge --abort", repoRoot); } catch { /* ignore */ }
     return [];
-  } catch (err) {
-    // Merge failed — extract conflict files, then abort
+  } catch {
     const conflictFiles: string[] = [];
     try {
       const output = gitExec("git diff --name-only --diff-filter=U", repoRoot);
       if (output) conflictFiles.push(...output.split("\n").filter(Boolean));
     } catch { /* ignore */ }
     try { gitExec("git merge --abort", repoRoot); } catch {
-      // If --abort fails, hard reset as last resort
       try { gitExec("git reset --hard HEAD", repoRoot); } catch { /* ignore */ }
     }
     return conflictFiles;
@@ -535,22 +535,40 @@ export function checkConflicts(workspace: string, branch: string): string[] {
 // Cleanup
 // ---------------------------------------------------------------------------
 
+/**
+ * Resolve the repo root for a worktree path.
+ * Since the worktree is linked to its parent repo, git commands inside it
+ * can resolve back to the main repo — even when the worktree is external.
+ */
+function resolveRepoFromWorktree(worktreePath: string): string | null {
+  if (!existsSync(worktreePath)) return null;
+  try {
+    return resolveGitWorkspaceRoot(worktreePath);
+  } catch {
+    return null;
+  }
+}
+
 export function removeWorktreeOnly(worktreePath: string, workspace?: string): void {
-  const cwd = resolveGitWorkspaceRoot(workspace ?? path.dirname(path.dirname(worktreePath)));
+  const cwd = workspace
+    ? resolveGitWorkspaceRoot(workspace)
+    : (resolveRepoFromWorktree(worktreePath) ?? process.cwd());
   removeWorktreeOwnerFile(worktreePath);
   try { gitExec(`git worktree remove --force ${shellQuote(worktreePath)}`, cwd); } catch { /* already removed */ }
 }
 
 export function removeWorktree(worktreePath: string, branch: string, workspace?: string): void {
-  const cwd = resolveGitWorkspaceRoot(workspace ?? path.dirname(path.dirname(worktreePath)));
+  const cwd = workspace
+    ? resolveGitWorkspaceRoot(workspace)
+    : (resolveRepoFromWorktree(worktreePath) ?? process.cwd());
   removeWorktreeOwnerFile(worktreePath);
   try { gitExec(`git worktree remove --force ${shellQuote(worktreePath)}`, cwd); } catch { /* already removed */ }
   try { gitExec(`git branch -D ${shellQuote(branch)}`, cwd); } catch { /* not found */ }
 }
 
 /**
- * Clean up stale agent worktrees and branches from previous ungraceful shutdowns.
- * Uses owner metadata when available, and falls back to ownedAgentIds for legacy worktrees.
+ * Clean up stale agent worktrees and branches.
+ * Scans ~/.open-office[-dev]/worktrees/<repo-hash>/ for the given workspace.
  */
 export function cleanupStaleWorktrees(
   workspace: string,
@@ -564,43 +582,49 @@ export function cleanupStaleWorktrees(
   // 1. Prune dead worktree metadata
   try { gitExec("git worktree prune", repoRoot); } catch { /* ignore */ }
 
-  // 2. Remove stale .worktrees/* directories we can prove are ours or dead.
+  // 2. Remove stale worktree directories from centralized storage.
   const cleanedBranches = new Set<string>();
-  const cleanedTaskIds = new Set<string>();
-  const worktreeDir = path.join(repoRoot, ".worktrees");
-  try {
-    if (existsSync(worktreeDir)) {
-      const entries: string[] = readdirSync(worktreeDir);
+  const worktreeDir = getWorktreeDir(repoRoot);
+
+  // Also check legacy in-repo .worktrees/ location for migration
+  const legacyWorktreeDir = path.join(repoRoot, ".worktrees");
+  const dirsToScan = [worktreeDir, legacyWorktreeDir];
+
+  for (const dir of dirsToScan) {
+    try {
+      if (!existsSync(dir)) continue;
+      const entries: string[] = readdirSync(dir);
       for (const entry of entries) {
-        const wtPath = path.join(worktreeDir, entry);
+        if (entry === WORKTREE_OWNER_DIR) continue;
+        const wtPath = path.join(dir, entry);
         const owner = readWorktreeOwnerFile(wtPath);
         if (!shouldCleanWorktree(entry, wtPath, owner, options)) continue;
         try {
           removeWorktreeOwnerFile(wtPath);
           gitExec(`git worktree remove --force ${shellQuote(wtPath)}`, repoRoot);
           removed.removedWorktrees.push(entry);
-          if (owner?.branch) {
-            cleanedBranches.add(owner.branch);
-            cleanedTaskIds.add(owner.taskId);
-          } else if (options?.ownedAgentIds) {
-            const matchingId = Array.from(options.ownedAgentIds).find(id => entry.startsWith(`${id}-`));
-            if (matchingId && entry.length > matchingId.length + 1) {
-              cleanedTaskIds.add(entry.slice(matchingId.length + 1));
-            }
-          }
+          if (owner?.branch) cleanedBranches.add(owner.branch);
         } catch { /* still in use */ }
       }
-      // Remove dir if empty
-      try {
-        if (readdirSync(worktreeDir).length === 0) {
-          rmdirSync(worktreeDir);
-        }
-      } catch { /* ignore */ }
-    }
-  } catch { /* ignore */ }
+      // Remove dir if empty (skip base dir)
+      if (dir !== WORKTREE_BASE_DIR) {
+        try {
+          const remaining = readdirSync(dir).filter(e => e !== WORKTREE_OWNER_DIR);
+          if (remaining.length === 0) {
+            // Remove .owners dir then the worktree dir itself
+            const ownersDir = path.join(dir, WORKTREE_OWNER_DIR);
+            if (existsSync(ownersDir)) {
+              try { const files = readdirSync(ownersDir); for (const f of files) unlinkSync(path.join(ownersDir, f)); rmdirSync(ownersDir); } catch { /* ignore */ }
+            }
+            try { rmdirSync(dir); } catch { /* ignore */ }
+          }
+        } catch { /* ignore */ }
+      }
+    } catch { /* ignore */ }
+  }
 
-  // 3. Delete orphaned agent/* branches
-  // When scoped, only delete branches matching worktrees we actually removed.
+  // 3. Delete orphaned agent/* branches.
+  // A branch is orphaned if it's not in activeBranches and not checked out in any worktree.
   try {
     const branchOutput = gitExec('git branch --list "agent/*"', repoRoot);
     if (!branchOutput) return removed;
@@ -615,13 +639,9 @@ export function cleanupStaleWorktrees(
     const branches = branchOutput.split("\n").map(b => b.trim().replace(/^\*\s*/, "")).filter(Boolean);
     for (const branch of branches) {
       if (activeBranches.has(branch) || wtBranches.has(branch)) continue;
-      if (cleanedBranches.size > 0 && !cleanedBranches.has(branch)) {
-        continue;
-      }
-      if (cleanedBranches.size === 0 && options?.ownedAgentIds) {
-        const branchTaskId = branch.split("/").pop();
-        if (!branchTaskId || !cleanedTaskIds.has(branchTaskId)) continue;
-      }
+      // If we cleaned specific worktrees, only delete their branches.
+      // If no worktrees were cleaned (dirs already gone), delete all orphaned branches.
+      if (cleanedBranches.size > 0 && !cleanedBranches.has(branch)) continue;
       try {
         gitExec(`git branch -D ${shellQuote(branch)}`, repoRoot);
         removed.removedBranches.push(branch);

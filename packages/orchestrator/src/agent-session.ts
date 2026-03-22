@@ -55,9 +55,10 @@ type SessionMap = Record<string, string | SessionEntry>;
 /**
  * Session file path is instance-scoped to prevent cross-instance contamination.
  * Set via setSessionDir() from the gateway using its instanceDir config.
- * Falls back to ~/.bit-office/agent-sessions.json for backwards compatibility.
+ * Falls back to ~/.open-office[-dev] for backwards compatibility.
  */
-let _sessionDir: string = path.join(homedir(), ".bit-office");
+let _sessionDir: string = path.join(homedir(),
+  process.env.NODE_ENV === "development" ? ".open-office-dev" : ".open-office");
 
 export function setSessionDir(dir: string) {
   _sessionDir = dir;
@@ -869,7 +870,7 @@ export class AgentSession {
             // Auto-cleanup orphaned worktree + branch on failure
             if (this.worktreePath && this.worktreeBranch) {
               try {
-                removeWorktree(this.worktreePath, this.worktreeBranch);
+                removeWorktree(this.worktreePath, this.worktreeBranch, this.workspace);
                 console.log(`[Agent ${this.name}] Cleaned up worktree branch on failure: ${this.worktreeBranch}`);
               } catch { /* ignore */ }
               this.worktreePath = null;

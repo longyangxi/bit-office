@@ -24,7 +24,7 @@ export async function runSetup(): Promise<void> {
   // Non-interactive: save detected backends and move on
   if (!process.stdin.isTTY) {
     saveConfig({ detectedBackends: detected, defaultBackend: detected[0] ?? "claude", sandboxMode: "full" });
-    console.log("✓ Default config saved to ~/.bit-office/config.json");
+    console.log("✓ Default config saved to config.json");
     console.log("  Run with --setup in a terminal to configure.\n");
     return;
   }
@@ -88,7 +88,7 @@ export async function runSetup(): Promise<void> {
     ...(tunnelBaseUrl ? { tunnelBaseUrl: tunnelBaseUrl.replace(/\/+$/, "") } : {}),
   });
 
-  console.log("\n✓ Config saved to ~/.bit-office/config.json");
+  console.log("\n✓ Config saved to config.json");
   if (ablyApiKey) console.log("  • Ably: enabled");
   console.log(`  • Default AI: ${getBackend(defaultBackend)?.name ?? defaultBackend}`);
   console.log(`  • Permissions: ${sandboxMode === "full" ? "Full access" : "Sandbox"}`);

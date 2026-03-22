@@ -1,16 +1,13 @@
 /**
  * Persist team state to disk so gateway restarts don't lose agents/team/phase.
- * File: ~/.bit-office/team-state.json
+ * File: ~/.open-office[-dev]/data/instances/{id}/team-state.json
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, appendFileSync, readdirSync } from "fs";
 import path from "path";
-import os from "os";
 import type { GatewayEvent } from "@office/shared";
-import { config } from "./config.js";
-
-const BIT_OFFICE_DIR = path.join(os.homedir(), ".bit-office");
-// Projects dir is shared (archives are instance-agnostic)
-const PROJECTS_DIR = path.join(BIT_OFFICE_DIR, "projects");
+import { config, CONFIG_DIR } from "./config.js";
+// Project history dir is shared (archives are instance-agnostic)
+const PROJECTS_DIR = path.join(CONFIG_DIR, "data", "project-history");
 
 // Instance-scoped state files — isolates Tauri / Web / CLI gateway instances
 function getStateFile(): string { return path.join(config.instanceDir, "team-state.json"); }

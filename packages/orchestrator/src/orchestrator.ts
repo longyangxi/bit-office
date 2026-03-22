@@ -162,10 +162,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(agentId);
     // Force-clean worktree + branch on fire
     if (session?.worktreePath && session.worktreeBranch) {
-      const base = session.worktreePath.includes(".worktrees")
-        ? path.dirname(path.dirname(session.worktreePath))
-        : this.workspace;
-      removeWorktree(session.worktreePath, session.worktreeBranch, base);
+      removeWorktree(session.worktreePath, session.worktreeBranch, session.workspaceDir);
       session.worktreePath = null;
       session.worktreeBranch = null;
     }
@@ -269,7 +266,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Worktree isolation: create a branch for each non-leader, non-reviewer agent.
     // When worktree is disabled, agents work directly in the designated directory on the current branch.
     // NOTE: Claude Code's native --worktree flag is incompatible with -p and --resume
-    // (causes exit code 1). All backends use managed worktrees (.worktrees/) instead.
+    // (causes exit code 1). All backends use managed worktrees (~/.open-office[-dev]/worktrees/) instead.
     this.setupWorktreeForAgent(agentId, taskId, repoPath ?? session.workspaceDir);
 
     session.runTask(taskId, prompt, repoPath, teamContext, true /* isUserInitiated */, opts?.phaseOverride);
@@ -346,10 +343,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
-      const base = session.worktreePath.includes(".worktrees")
-        ? path.dirname(path.dirname(session.worktreePath))
-        : this.workspace;
-      const result = mergeWorktree(base, session.worktreePath, session.worktreeBranch);
+      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch);
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -732,11 +726,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const doneSession = this.agentManager.get(agentId);
       if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
-        const base = doneSession.worktreePath.includes(".worktrees")
-          ? path.dirname(path.dirname(doneSession.worktreePath))
-          : this.workspace;
         const summary = event.result?.summary;
-        const result = mergeWorktree(base, doneSession.worktreePath, doneSession.worktreeBranch, true, summary);
+        const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary);
         this.emitEvent({
           type: "worktree:merged",
           agentId,

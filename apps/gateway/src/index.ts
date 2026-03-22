@@ -2,7 +2,7 @@ import { registerChannel, initTransports, publishEvent, destroyTransports, reini
 import { wsChannel, setPairCode, sendToClient } from "./ws-server.js";
 import { ablyChannel } from "./ably-client.js";
 import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "./telegram-channel.js";
-import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
+import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
 import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
@@ -160,7 +160,7 @@ function createUniqueProjectDir(workspace: string, baseName: string): string {
   return fullPath;
 }
 
-const AGENTS_FILE = path.join(os.homedir(), ".bit-office", "agents.json");
+const AGENTS_FILE = path.join(CONFIG_DIR, "data", "agents.json");
 
 function loadAgentDefs(): AgentDefinition[] {
   try {
@@ -1070,7 +1070,7 @@ async function main() {
     defaultBackend: config.defaultBackend,
     worktree: config.worktreeEnabled ? { mergeOnComplete: true, alwaysIsolate: true } : false,
     retry: { maxRetries: 2, escalateToLeader: true },
-    promptsDir: path.join(os.homedir(), ".bit-office", "prompts"),
+    promptsDir: path.join(CONFIG_DIR, "data", "prompts"),
     sandboxMode: config.sandboxMode,
   });
 

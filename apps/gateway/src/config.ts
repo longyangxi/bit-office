@@ -1,14 +1,20 @@
 import "dotenv/config";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "fs";
 import { homedir } from "os";
 import { randomBytes } from "crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const CONFIG_DIR = resolve(homedir(), ".bit-office");
+const isDev = process.env.NODE_ENV === "development";
+export const CONFIG_DIR = resolve(homedir(), isDev ? ".open-office-dev" : ".open-office");
 const CONFIG_FILE = resolve(CONFIG_DIR, "config.json");
+
+// Migrate from legacy ~/.bit-office[-dev] to ~/.open-office[-dev]
+const LEGACY_DIR = resolve(homedir(), isDev ? ".bit-office-dev" : ".bit-office");
+// Also handle the case where dev never had a separate dir (old layout used .bit-office for both)
+const LEGACY_SHARED_DIR = resolve(homedir(), ".bit-office");
 
 interface SavedConfig {
   ablyApiKey?: string;
@@ -28,6 +34,49 @@ function ensureConfigDir() {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true });
   }
+}
+
+/**
+ * Migrate from legacy ~/.bit-office to ~/.open-office[-dev] with organized layout.
+ */
+function migrateDirectoryLayout() {
+  // Step 1: Rename ~/.bit-office → ~/.open-office[-dev] if needed
+  const legacySource = existsSync(LEGACY_DIR) ? LEGACY_DIR
+    : (existsSync(LEGACY_SHARED_DIR) && LEGACY_SHARED_DIR !== CONFIG_DIR) ? LEGACY_SHARED_DIR
+    : null;
+  if (legacySource && !existsSync(CONFIG_DIR)) {
+    renameSync(legacySource, CONFIG_DIR);
+    console.log(`[Config] Renamed ${legacySource} → ${CONFIG_DIR}`);
+  }
+
+  // Step 2: Reorganize internal layout
+  const dataDir = resolve(CONFIG_DIR, "data");
+  // Order matters: move "projects" (history JSONs) before renaming "workspace" → "projects"
+  const moves: [string, string][] = [
+    [resolve(CONFIG_DIR, "projects"), resolve(dataDir, "project-history")],
+    [resolve(CONFIG_DIR, "instances"), resolve(dataDir, "instances")],
+    [resolve(CONFIG_DIR, "memory"), resolve(dataDir, "memory")],
+    [resolve(CONFIG_DIR, "prompts"), resolve(dataDir, "prompts")],
+    [resolve(CONFIG_DIR, "agents.json"), resolve(dataDir, "agents.json")],
+    [resolve(CONFIG_DIR, "workspace"), resolve(CONFIG_DIR, "projects")],
+  ];
+  let migrated = false;
+  for (const [from, to] of moves) {
+    if (existsSync(from) && !existsSync(to)) {
+      mkdirSync(dirname(to), { recursive: true });
+      renameSync(from, to);
+      migrated = true;
+    }
+  }
+  // Remove legacy root-level state files (now instance-scoped under data/instances/)
+  const legacyFiles = ["agent-sessions.json", "session-tokens.json", "team-state.json", "project-events.jsonl"];
+  for (const file of legacyFiles) {
+    const p = resolve(CONFIG_DIR, file);
+    if (existsSync(p)) {
+      try { unlinkSync(p); migrated = true; } catch { /* ignore */ }
+    }
+  }
+  if (migrated) console.log("[Config] Migrated directory layout to new structure");
 }
 
 function loadSavedConfig(): SavedConfig {
@@ -78,23 +127,21 @@ function resolveWebDir(): string {
 }
 
 function resolveDefaultWorkspace(): string {
-  const isDev = process.env.NODE_ENV === "development";
   if (isDev) {
-    // Dev mode: use ~/.bit-office/workspace/ (outside git repo so Claude Code
-    // doesn't resolve to the bit-office source tree as its working directory)
-    const ws = resolve(homedir(), ".bit-office", "workspace");
+    // Dev mode: use ~/.open-office-dev/projects/ (outside git repo so Claude Code
+    // doesn't resolve to the source tree as its working directory)
+    const ws = resolve(CONFIG_DIR, "projects");
     if (!existsSync(ws)) {
       mkdirSync(ws, { recursive: true });
       console.log(`[Config] Created default workspace: ${ws}`);
     }
     return ws;
   }
-  // Published mode (npx bit-office): use the directory where the user ran the command
-  // Tauri sidecar runs with cwd="/", fall back to ~/.bit-office/workspace/
-  // (same as dev mode — keeps agent work out of $HOME root)
+  // Published mode: use the directory where the user ran the command
+  // Tauri sidecar runs with cwd="/", fall back to ~/.open-office/projects/
   const cwd = process.cwd();
   if (cwd === "/" || cwd === "C:\\") {
-    const ws = resolve(homedir(), ".bit-office", "workspace");
+    const ws = resolve(CONFIG_DIR, "projects");
     if (!existsSync(ws)) {
       mkdirSync(ws, { recursive: true });
       console.log(`[Config] Created default workspace: ${ws}`);
@@ -110,7 +157,7 @@ function resolveDefaultWorkspace(): string {
  * - Falls back to "port-{wsPort}" so different ports auto-isolate
  *
  * Each gateway instance gets its own state directory under
- * ~/.bit-office/instances/{gatewayId}/ to prevent cross-instance
+ * ~/.open-office[-dev]/data/instances/{gatewayId}/ to prevent cross-instance
  * context contamination (e.g. Tauri vs Web vs CLI all running separately).
  */
 function resolveGatewayId(): string {
@@ -120,12 +167,14 @@ function resolveGatewayId(): string {
 }
 
 function resolveInstanceDir(gatewayId: string): string {
-  const dir = resolve(CONFIG_DIR, "instances", gatewayId);
+  const dir = resolve(CONFIG_DIR, "data", "instances", gatewayId);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   return dir;
 }
 
 function buildConfig() {
+  ensureConfigDir();
+  migrateDirectoryLayout();
   const saved = loadSavedConfig();
   const gatewayId = resolveGatewayId();
   const instanceDir = resolveInstanceDir(gatewayId);
@@ -133,7 +182,7 @@ function buildConfig() {
     machineId: getOrCreateMachineId(),
     /** Unique identifier for this gateway instance (isolates state from other instances) */
     gatewayId,
-    /** Per-instance state directory: ~/.bit-office/instances/{gatewayId}/ */
+    /** Per-instance state directory: ~/.open-office[-dev]/data/instances/{gatewayId}/ */
     instanceDir,
     defaultWorkspace: (() => {
       const envWs = process.env.WORKSPACE;
