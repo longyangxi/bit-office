@@ -295,8 +295,9 @@ export const wsChannel: Channel = {
           }
           const reqPath = decodeURIComponent((staticMatch[1] || "/").split("?")[0]);
           const filePath = resolve(root, reqPath === "/" ? (previewServer.staticEntry ?? "index.html") : reqPath.slice(1));
-          // Security: prevent path traversal outside root
-          if (!filePath.startsWith(resolve(root))) {
+          // Security: prevent path traversal outside root (trailing sep avoids sibling-prefix bypass)
+          const rootWithSep = resolve(root) + "/";
+          if (filePath !== resolve(root) && !filePath.startsWith(rootWithSep)) {
             res.writeHead(403, { "Content-Type": "text/plain" });
             res.end("Forbidden");
             return;
@@ -338,7 +339,7 @@ export const wsChannel: Channel = {
           return;
         }
 
-        // Command preview: simple reverse proxy to COMMAND_PORT (no auto-restart)
+        // Command preview: reverse proxy to COMMAND_PORT with auto-restart on failure
         const appMatch = url.match(/^\/preview-app(\/.*)?$/);
         if (appMatch) {
           const targetPath = appMatch[1] || "/";
@@ -347,19 +348,35 @@ export const wsChannel: Channel = {
           req.on("data", (c: Buffer) => chunks.push(c));
           req.on("end", () => {
             const body = Buffer.concat(chunks);
-            const proxyReq = httpRequest(
-              { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
-              (proxyRes) => {
-                res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
-                proxyRes.pipe(res, { end: true });
-              },
-            );
-            proxyReq.on("error", () => {
+            const send502 = () => {
               res.writeHead(502, { "Content-Type": "text/plain" });
               res.end("Preview app not running");
-            });
-            if (body.length > 0) proxyReq.write(body);
-            proxyReq.end();
+            };
+            const doProxy = (isRetry: boolean) => {
+              const proxyReq = httpRequest(
+                { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
+                (proxyRes) => {
+                  const status = proxyRes.statusCode ?? 502;
+                  if (status === 502 && !isRetry) {
+                    proxyRes.resume();
+                    previewServer.ensureCommandRunning().then((ok) => ok ? doProxy(true) : send502());
+                    return;
+                  }
+                  res.writeHead(status, proxyRes.headers);
+                  proxyRes.pipe(res, { end: true });
+                },
+              );
+              proxyReq.on("error", () => {
+                if (!isRetry) {
+                  previewServer.ensureCommandRunning().then((ok) => ok ? doProxy(true) : send502());
+                } else {
+                  send502();
+                }
+              });
+              if (body.length > 0) proxyReq.write(body);
+              proxyReq.end();
+            };
+            doProxy(false);
           });
           return;
         }
