@@ -446,6 +446,7 @@ export function mergeWorktree(
   branch: string,
   keepAlive = false,
   summary?: string,
+  agentName?: string,
 ): MergeResult {
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   try {
@@ -471,8 +472,9 @@ export function mergeWorktree(
     } catch { /* ignore */ }
 
     if (stagedFiles.length > 0) {
-      const raw = summary ? summary.split("\n")[0].trim().slice(0, 72) : `merge: ${branch}`;
-      const msg = raw || `merge: ${branch}`;
+      const prefix = agentName ? `${agentName}: ` : "";
+      const raw = summary ? summary.split("\n")[0].trim().slice(0, 72 - prefix.length) : `merge ${branch}`;
+      const msg = `${prefix}${raw || `merge ${branch}`}`;
       execSync(`git commit -m "$COMMIT_MSG"`, {
         cwd: repoRoot,
         stdio: "pipe",

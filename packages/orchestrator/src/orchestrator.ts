@@ -343,7 +343,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
-      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch);
+      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, false, undefined, session.name);
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -727,7 +727,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         const summary = event.result?.summary;
-        const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary);
+        const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name);
         this.emitEvent({
           type: "worktree:merged",
           agentId,
