@@ -35,7 +35,9 @@ export function useSoundEffects(enabled: boolean) {
             playSound("taskDone");
             break;
           case "error":
-            playSound("taskFailed");
+            // Skip error sound for agents transitioning from "done" → "error"
+            // (happens when a reviewer agent is fired/cleaned up, not a real failure)
+            if (prevStatus !== "done") playSound("taskFailed");
             break;
           case "waiting_approval":
             playSound("approval");

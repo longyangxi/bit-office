@@ -317,6 +317,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       // Clear history — can't --resume in a different directory
       session.clearHistory();
       this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
+    } else {
+      console.warn(`[Orchestrator] Worktree creation failed for ${session.name} (${agentId}), falling back to main workspace`);
+      this.emitEvent({
+        type: "team:chat",
+        fromAgentId: agentId,
+        message: `Worktree isolation disabled for ${session.name}: could not create worktree. Agent will work directly in the main workspace.`,
+        messageType: "warning",
+        timestamp: Date.now(),
+      });
     }
   }
 

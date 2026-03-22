@@ -367,17 +367,24 @@ export function cleanupStaleWorktrees(
   try { gitExec("git worktree prune", workspace); } catch { /* ignore */ }
 
   // 2. Remove stale .worktrees/* directories (only ours)
+  // Track extracted taskIds for scoped branch cleanup later.
+  const cleanedTaskIds = new Set<string>();
   const worktreeDir = path.join(workspace, ".worktrees");
   try {
     if (existsSync(worktreeDir)) {
       const entries: string[] = readdirSync(worktreeDir);
       for (const entry of entries) {
         // Skip worktrees that don't belong to this instance
-        if (ownedAgentIds && !Array.from(ownedAgentIds).some(id => entry.startsWith(id))) continue;
+        const matchingId = ownedAgentIds && Array.from(ownedAgentIds).find(id => entry.startsWith(id));
+        if (ownedAgentIds && !matchingId) continue;
         const wtPath = path.join(worktreeDir, entry);
         try {
           gitExec(`git worktree remove --force "${wtPath}"`, workspace);
           removed.removedWorktrees.push(entry);
+          // Extract taskId: worktree name is "{agentId}-{taskId}", strip the known agentId prefix + separator
+          if (matchingId && entry.length > matchingId.length + 1) {
+            cleanedTaskIds.add(entry.slice(matchingId.length + 1));
+          }
         } catch { /* still in use */ }
       }
       // Remove dir if empty
@@ -403,17 +410,13 @@ export function cleanupStaleWorktrees(
       if (m) wtBranches.add(m[1]);
     }
 
-    // Extract taskIds from worktrees we just cleaned up (e.g. "agent-AwdBcw-task-xxx" → "task-xxx")
-    const cleanedTaskIds = new Set(
-      removed.removedWorktrees.map(wt => { const m = wt.match(/(task-\w+)/); return m?.[1]; }).filter(Boolean),
-    );
-
     const branches = branchOutput.split("\n").map(b => b.trim().replace(/^\*\s*/, "")).filter(Boolean);
     for (const branch of branches) {
       if (activeBranches.has(branch) || wtBranches.has(branch)) continue;
-      // When scoped, only delete branches matching our cleaned worktrees
+      // When scoped, only delete branches matching our cleaned worktrees.
+      // Branch format: "agent/{name}/{taskId}" — taskId is the last segment.
       if (ownedAgentIds) {
-        const branchTaskId = branch.match(/(task-\w+)/)?.[1];
+        const branchTaskId = branch.split("/").pop();
         if (!branchTaskId || !cleanedTaskIds.has(branchTaskId)) continue;
       }
       try {
