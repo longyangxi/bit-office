@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
@@ -91,29 +91,20 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
   const [closing, setClosing] = useState(false);
   const isTauri = useRef(typeof window !== "undefined" && window.location.protocol === "tauri:");
 
-  // In Tauri, iframe onLoad is the readiness signal (fetch doesn't work cross-protocol).
-  const handleIframeLoad = useCallback((e: React.SyntheticEvent<HTMLIFrameElement>) => {
-    (e.target as HTMLIFrameElement).focus();
-    if (isTauri.current && status === "loading") {
-      setPollInfo("tauri — ready (iframe loaded)");
-      setStatus("ready");
-    }
-  }, [status]);
-
   // Poll the preview URL until it responds instead of hardcoded delay.
   // Handles slow npx serve cold starts (first run downloads the package).
   // In Tauri (tauri:// protocol), fetch to http://localhost always fails due to
-  // cross-protocol restrictions, but the iframe loads fine — we mount the iframe
-  // early (hidden) and use its onLoad event as the readiness signal.
+  // cross-protocol restrictions. Instead we use a simple delay — the static
+  // server is already running by the time the user clicks preview. The iframe
+  // must NOT be mounted until status="ready" so WebKit loads it fresh.
   useEffect(() => {
     if (isTauri.current) {
       setStatus("loading");
-      setPollInfo("tauri — waiting for iframe onLoad");
-      // Fallback: if iframe never fires onLoad, show it after 15s anyway
+      setPollInfo("tauri — waiting 2s for server");
       const t = setTimeout(() => {
-        setPollInfo("tauri — timeout, showing iframe anyway");
+        setPollInfo("tauri — ready");
         setStatus("ready");
-      }, 15_000);
+      }, 2000);
       return () => clearTimeout(t);
     }
 
@@ -223,19 +214,18 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
             <style>{`@keyframes preview-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
-        {/* In Tauri: mount iframe early (hidden) so onLoad can signal readiness.
-            Outside Tauri: only mount after fetch-based polling succeeds. */}
-        {(status === "ready" || isTauri.current) && (
+        {/* Only mount iframe after readiness confirmed (fetch poll or Tauri delay).
+            Mounting too early causes WebKit to cache the connection-refused error. */}
+        {status === "ready" && (
           <iframe
             src={url}
             style={{
               width: "100%", height: "100%", border: "none",
-              // Hide iframe while loading (Tauri probe) or when rating popup is visible
-              ...(status === "loading" || closing || showRating
+              // Hide iframe when rating popup is visible
+              ...(closing || showRating
                 ? { pointerEvents: "none" as const, visibility: "hidden" as const }
                 : {}),
             }}
-            onLoad={handleIframeLoad}
           />
         )}
       </div>
