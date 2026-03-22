@@ -220,6 +220,14 @@ function gitExec(cmd: string, cwd: string, opts?: { encoding?: "utf-8" }): strin
   }).toString().trim();
 }
 
+function shellQuote(value: string): string {
+  return `'${value.replace(/'/g, `'\\''`)}'`;
+}
+
+function sanitizeBranchSegment(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
 function resolveGitWorkspaceRoot(workspace: string): string {
   try {
     const commonDir = gitExec("git rev-parse --path-format=absolute --git-common-dir", workspace);
@@ -247,9 +255,11 @@ export function createWorktree(
   const repoRoot = resolveGitWorkspaceRoot(workspace);
 
   const worktreeDir = path.join(repoRoot, ".worktrees");
-  const worktreeName = `${agentId}-${taskId}`;
+  const safeTaskId = sanitizeBranchSegment(taskId);
+  const safeAgentName = sanitizeBranchSegment(agentName.toLowerCase().replace(/\s+/g, "-"));
+  const worktreeName = `${agentId}-${safeTaskId}`;
   const worktreePath = path.join(worktreeDir, worktreeName);
-  const branch = `agent/${agentName.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+  const branch = `agent/${safeAgentName}/${safeTaskId}`;
   const ownerInfo: WorktreeOwnerInfo | undefined = owner
     ? { ...owner, agentId, taskId, agentName, branch }
     : undefined;
@@ -264,9 +274,9 @@ export function createWorktree(
           const mainHead = gitExec("git rev-parse HEAD", repoRoot);
           const wtHead = gitExec("git rev-parse HEAD", worktreePath);
           if (wtHead !== mainHead) {
-            const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${wtHead} ${mainHead}`, repoRoot); return true; } catch { return false; } })();
+            const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${shellQuote(wtHead)} ${shellQuote(mainHead)}`, repoRoot); return true; } catch { return false; } })();
             if (isAncestor) {
-              gitExec(`git reset --hard ${mainHead}`, worktreePath);
+              gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
               console.log(`[Worktree] Reusing worktree, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
             } else {
               console.log(`[Worktree] Reusing worktree with unmerged commits, skipping fast-forward`);
@@ -282,7 +292,7 @@ export function createWorktree(
       }
       console.log(`[Worktree] Existing worktree on wrong branch (${currentBranch} != ${branch}), recreating`);
       try {
-        gitExec(`git worktree remove --force "${worktreePath}"`, repoRoot);
+        gitExec(`git worktree remove --force ${shellQuote(worktreePath)}`, repoRoot);
       } catch { /* ignore */ }
     }
   } catch { /* fall through to create */ }
@@ -291,21 +301,21 @@ export function createWorktree(
   try { gitExec("git worktree prune", repoRoot); } catch { /* ignore */ }
 
   try {
-    gitExec(`git worktree add "${worktreePath}" -b "${branch}"`, repoRoot);
+    gitExec(`git worktree add ${shellQuote(worktreePath)} -b ${shellQuote(branch)}`, repoRoot);
     if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
     return worktreePath;
   } catch {
     // Branch may already exist — try attaching to it
     try {
-      gitExec(`git worktree add "${worktreePath}" "${branch}"`, repoRoot);
+      gitExec(`git worktree add ${shellQuote(worktreePath)} ${shellQuote(branch)}`, repoRoot);
       // Fast-forward attached branch to main HEAD to avoid forking
       try {
         const mainHead = gitExec("git rev-parse HEAD", repoRoot);
         const branchHead = gitExec("git rev-parse HEAD", worktreePath);
         if (branchHead !== mainHead) {
-          const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${branchHead} ${mainHead}`, repoRoot); return true; } catch { return false; } })();
+          const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${shellQuote(branchHead)} ${shellQuote(mainHead)}`, repoRoot); return true; } catch { return false; } })();
           if (isAncestor) {
-            gitExec(`git reset --hard ${mainHead}`, worktreePath);
+            gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
             console.log(`[Worktree] Attached to branch ${branch}, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
           } else {
             console.log(`[Worktree] Attached to branch ${branch} with unmerged commits, skipping fast-forward`);
@@ -349,11 +359,13 @@ function autoCommitWorktree(worktreePath: string, branch: string): boolean {
     gitExec("git add -A", worktreePath);
 
     // Commit with a descriptive message
-    const sanitizedBranch = branch.replace(/"/g, '\\"');
-    gitExec(
-      `git commit -m "auto-commit: agent work on ${sanitizedBranch}"`,
-      worktreePath,
-    );
+    execSync(`git commit -m "$COMMIT_MSG"`, {
+      cwd: worktreePath,
+      stdio: "pipe",
+      encoding: "utf-8",
+      timeout: TIMEOUT,
+      env: { ...getIsolatedGitEnv(), COMMIT_MSG: `auto-commit: agent work on ${branch}` },
+    });
     console.log(`[Worktree] Auto-committed uncommitted changes in ${worktreePath}`);
     return true;
   } catch (err) {
@@ -375,7 +387,7 @@ export function mergeWorktree(
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   try {
     autoCommitWorktree(worktreePath, branch);
-    gitExec(`git merge --squash "${branch}"`, repoRoot);
+    gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
 
     let stagedFiles: string[] = [];
     try {
@@ -401,14 +413,14 @@ export function mergeWorktree(
     if (!keepAlive) {
       // Clean up worktree + branch
       removeWorktreeOwnerFile(worktreePath);
-      try { gitExec(`git worktree remove "${worktreePath}"`, repoRoot); } catch { /* already removed */ }
-      try { gitExec(`git branch -D "${branch}"`, repoRoot); } catch { /* not found */ }
+      try { gitExec(`git worktree remove ${shellQuote(worktreePath)}`, repoRoot); } catch { /* already removed */ }
+      try { gitExec(`git branch -D ${shellQuote(branch)}`, repoRoot); } catch { /* not found */ }
     } else {
       // Keep worktree alive for session continuity — reset branch to main repo HEAD
       // so next task starts from the merged state (avoids forking)
       try {
         const mainHead = gitExec("git rev-parse HEAD", repoRoot);
-        gitExec(`git reset --hard ${mainHead}`, worktreePath);
+        gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
       } catch { /* ignore */ }
       console.log(`[Worktree] Merged ${branch}, worktree kept alive for session continuity`);
     }
@@ -438,7 +450,7 @@ export function checkConflicts(workspace: string, branch: string): string[] {
   if (gitVersionAtLeast(2, 38)) {
     // Modern path: pure dry-run, no working tree changes
     try {
-      gitExec(`git merge-tree --write-tree HEAD "${branch}"`, repoRoot);
+      gitExec(`git merge-tree --write-tree HEAD ${shellQuote(branch)}`, repoRoot);
       return [];
     } catch (err) {
       const output = (err as { stdout?: Buffer })?.stdout?.toString() ?? "";
@@ -453,7 +465,7 @@ export function checkConflicts(workspace: string, branch: string): string[] {
 
   // Fallback for git < 2.38: attempt a real merge and immediately abort
   try {
-    gitExec(`git merge --no-commit --no-ff "${branch}"`, repoRoot);
+    gitExec(`git merge --no-commit --no-ff ${shellQuote(branch)}`, repoRoot);
     // Merge succeeded (no conflicts) — abort to undo
     try { gitExec("git merge --abort", repoRoot); } catch { /* ignore */ }
     return [];
@@ -479,14 +491,14 @@ export function checkConflicts(workspace: string, branch: string): string[] {
 export function removeWorktreeOnly(worktreePath: string, workspace?: string): void {
   const cwd = resolveGitWorkspaceRoot(workspace ?? path.dirname(path.dirname(worktreePath)));
   removeWorktreeOwnerFile(worktreePath);
-  try { gitExec(`git worktree remove --force "${worktreePath}"`, cwd); } catch { /* already removed */ }
+  try { gitExec(`git worktree remove --force ${shellQuote(worktreePath)}`, cwd); } catch { /* already removed */ }
 }
 
 export function removeWorktree(worktreePath: string, branch: string, workspace?: string): void {
   const cwd = resolveGitWorkspaceRoot(workspace ?? path.dirname(path.dirname(worktreePath)));
   removeWorktreeOwnerFile(worktreePath);
-  try { gitExec(`git worktree remove --force "${worktreePath}"`, cwd); } catch { /* already removed */ }
-  try { gitExec(`git branch -D "${branch}"`, cwd); } catch { /* not found */ }
+  try { gitExec(`git worktree remove --force ${shellQuote(worktreePath)}`, cwd); } catch { /* already removed */ }
+  try { gitExec(`git branch -D ${shellQuote(branch)}`, cwd); } catch { /* not found */ }
 }
 
 /**
@@ -518,7 +530,7 @@ export function cleanupStaleWorktrees(
         if (!shouldCleanWorktree(entry, wtPath, owner, options)) continue;
         try {
           removeWorktreeOwnerFile(wtPath);
-          gitExec(`git worktree remove --force "${wtPath}"`, repoRoot);
+          gitExec(`git worktree remove --force ${shellQuote(wtPath)}`, repoRoot);
           removed.removedWorktrees.push(entry);
           if (owner?.branch) {
             cleanedBranches.add(owner.branch);
@@ -564,7 +576,7 @@ export function cleanupStaleWorktrees(
         if (!branchTaskId || !cleanedTaskIds.has(branchTaskId)) continue;
       }
       try {
-        gitExec(`git branch -D "${branch}"`, repoRoot);
+        gitExec(`git branch -D ${shellQuote(branch)}`, repoRoot);
         removed.removedBranches.push(branch);
       } catch { /* ignore */ }
     }
