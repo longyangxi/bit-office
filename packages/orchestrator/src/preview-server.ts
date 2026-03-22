@@ -1,9 +1,49 @@
 import { spawn, execSync, type ChildProcess } from "child_process";
-import { existsSync } from "fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "fs";
 import path from "path";
+import { homedir } from "os";
 
 const STATIC_PORT = 9199;
 const COMMAND_PORT = 9198;
+
+/** Persistent state file for preview auto-restart across gateway restarts */
+const DATA_DIR = path.join(
+  homedir(),
+  process.env.NODE_ENV === "development" ? ".open-office-dev" : ".open-office",
+  "data",
+);
+const STATE_FILE = path.join(DATA_DIR, "preview-state.json");
+
+interface PreviewState {
+  mode: "static" | "command";
+  /** For static mode: the full file path that was served */
+  filePath?: string;
+  /** For command mode */
+  cmd?: string;
+  cwd?: string;
+  agentPort?: number;
+}
+
+function loadState(): PreviewState | null {
+  try {
+    if (existsSync(STATE_FILE)) {
+      return JSON.parse(readFileSync(STATE_FILE, "utf8")) as PreviewState;
+    }
+  } catch { /* corrupted or missing */ }
+  return null;
+}
+
+function saveState(state: PreviewState | null): void {
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    if (state) {
+      writeFileSync(STATE_FILE, JSON.stringify(state), "utf8");
+    } else {
+      // Clear state on stop
+      try { writeFileSync(STATE_FILE, "", "utf8"); } catch { /* ok */ }
+    }
+  } catch { /* best effort */ }
+}
 
 /**
  * Resolve the `serve` binary — prefer direct `serve` over `npx serve`
@@ -62,6 +102,8 @@ class PreviewServer {
   private currentDir: string | null = null;
   /** true when spawned with detached:true (needs process-group kill) */
   private isDetached = false;
+  /** Last known state for auto-restart */
+  private lastState: PreviewState | null = null;
 
   /**
    * Mode 1: Serve a static file directory on a fixed port.
@@ -97,6 +139,8 @@ class PreviewServer {
       });
       this.currentDir = dir;
       this.isDetached = true;
+      this.lastState = { mode: "static", filePath };
+      saveState(this.lastState);
       const url = `http://localhost:${STATIC_PORT}/${fileName}`;
       console.log(`[PreviewServer] Serving ${dir} on :${STATIC_PORT} (pid=${this.process.pid})`);
       return url;
@@ -113,6 +157,7 @@ class PreviewServer {
    * Returns the preview URL.
    */
   runCommand(cmd: string, cwd: string, agentPort: number): string | undefined {
+    const originalCmd = cmd; // preserve before port rewriting
     this.stop();
     killPortProcess(COMMAND_PORT);
 
@@ -139,6 +184,8 @@ class PreviewServer {
       });
       this.currentDir = cwd;
       this.isDetached = true;
+      this.lastState = { mode: "command", cmd: originalCmd, cwd, agentPort };
+      saveState(this.lastState);
       const url = `http://localhost:${port}`;
       console.log(`[PreviewServer] Running "${cmd}" on :${port} (pid=${this.process?.pid})`);
       return url;
@@ -191,8 +238,58 @@ class PreviewServer {
       this.process = null;
       this.currentDir = null;
       this.isDetached = false;
+      this.lastState = null;
+      saveState(null);
       console.log(`[PreviewServer] Stopped`);
     }
+  }
+
+  /**
+   * Check if the preview server process is alive by testing port connectivity.
+   */
+  private isPortListening(port: number): boolean {
+    try {
+      const result = execSync(`lsof -ti:${port}`, { encoding: "utf8", timeout: 2000 }).trim();
+      return result.length > 0;
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Ensure the preview server is running. If the process died, auto-restart
+   * using the last known state (persisted to disk).
+   * Returns a promise that resolves after a brief startup delay.
+   */
+  async ensureRunning(port: number): Promise<boolean> {
+    // Already listening — nothing to do
+    if (this.isPortListening(port)) return true;
+
+    // Try to recover from last known state
+    const state = this.lastState ?? loadState();
+    if (!state) {
+      console.log(`[PreviewServer] No saved state to auto-restart from`);
+      return false;
+    }
+
+    console.log(`[PreviewServer] Port :${port} dead — auto-restarting (mode=${state.mode})`);
+
+    let result: string | undefined;
+    if (state.mode === "static" && state.filePath) {
+      result = this.serve(state.filePath);
+    } else if (state.mode === "command" && state.cmd && state.cwd) {
+      result = this.runCommand(state.cmd, state.cwd, state.agentPort ?? 0);
+    }
+
+    if (!result) return false;
+
+    // Wait for the server to become ready (up to 3s)
+    for (let i = 0; i < 6; i++) {
+      await new Promise((r) => setTimeout(r, 500));
+      if (this.isPortListening(port)) return true;
+    }
+    console.log(`[PreviewServer] Auto-restart timed out for :${port}`);
+    return false;
   }
 }
 

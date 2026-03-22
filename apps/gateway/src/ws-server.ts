@@ -3,6 +3,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { CommandSchema } from "@office/shared";
 import type { GatewayEvent, Command, UserRole } from "@office/shared";
 import { config } from "./config.js";
+import { previewServer } from "@bit-office/orchestrator";
 import { networkInterfaces, homedir } from "os";
 import { readFile, stat } from "fs/promises";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
@@ -286,18 +287,37 @@ export const wsChannel: Channel = {
         if (proxyMatch) {
           const targetPort = proxyMatch[1] === "preview-static" ? 9199 : 9198;
           const targetPath = proxyMatch[2] || "/";
-          const proxyReq = httpRequest(
-            { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
-            (proxyRes) => {
-              res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
-              proxyRes.pipe(res, { end: true });
-            },
-          );
-          proxyReq.on("error", () => {
-            res.writeHead(502, { "Content-Type": "text/plain" });
-            res.end("Preview server not running");
+
+          // Buffer request body so we can replay it on retry
+          const chunks: Buffer[] = [];
+          req.on("data", (c: Buffer) => chunks.push(c));
+          req.on("end", () => {
+            const body = Buffer.concat(chunks);
+            const tryProxy = (isRetry: boolean) => {
+              const proxyReq = httpRequest(
+                { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
+                (proxyRes) => {
+                  res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+                  proxyRes.pipe(res, { end: true });
+                },
+              );
+              proxyReq.on("error", async () => {
+                if (!isRetry) {
+                  // Preview server died — attempt auto-restart
+                  const ok = await previewServer.ensureRunning(targetPort);
+                  if (ok) {
+                    tryProxy(true);
+                    return;
+                  }
+                }
+                res.writeHead(502, { "Content-Type": "text/plain" });
+                res.end("Preview server not running");
+              });
+              if (body.length > 0) proxyReq.write(body);
+              proxyReq.end();
+            };
+            tryProxy(false);
           });
-          req.pipe(proxyReq, { end: true });
           return;
         }
 
