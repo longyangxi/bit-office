@@ -2,6 +2,7 @@ import "dotenv/config";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { execSync } from "child_process";
 import { homedir } from "os";
 import { randomBytes } from "crypto";
 
@@ -80,6 +81,18 @@ function resolveWebDir(): string {
   return resolve(__dirname, "../../web/out");
 }
 
+function ensureGitRepo(dir: string) {
+  try {
+    execSync("git rev-parse --is-inside-work-tree", { cwd: dir, stdio: "ignore", timeout: 3000 });
+  } catch {
+    try {
+      execSync("git init", { cwd: dir, stdio: "pipe", timeout: 3000 });
+      execSync('git -c user.name=OpenOffice -c user.email=bot@open-office.local commit --allow-empty -m init', { cwd: dir, stdio: "pipe", timeout: 3000 });
+      console.log(`[Config] Initialized git repo in ${dir}`);
+    } catch { /* ignore */ }
+  }
+}
+
 function resolveDefaultWorkspace(): string {
   if (isDev) {
     // Dev mode: use ~/.open-office-dev/projects/ (outside git repo so Claude Code
@@ -89,6 +102,7 @@ function resolveDefaultWorkspace(): string {
       mkdirSync(ws, { recursive: true });
       console.log(`[Config] Created default workspace: ${ws}`);
     }
+    ensureGitRepo(ws);
     return ws;
   }
   // Published mode: use the directory where the user ran the command
@@ -100,6 +114,7 @@ function resolveDefaultWorkspace(): string {
       mkdirSync(ws, { recursive: true });
       console.log(`[Config] Created default workspace: ${ws}`);
     }
+    ensureGitRepo(ws);
     return ws;
   }
   return cwd;
