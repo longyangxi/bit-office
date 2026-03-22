@@ -12,18 +12,18 @@ function StarRow({ label, icon, value, onChange }: {
 }) {
   const [hover, setHover] = useState(0);
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8, height: 24 }}>
-      <span style={{ width: 100, fontSize: 11, color: TERM_DIM, fontFamily: "monospace" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, height: 28 }}>
+      <span style={{ width: 110, fontSize: "var(--font-size-base)", color: TERM_DIM, fontFamily: "var(--font-mono)" }}>
         {icon} {label}
       </span>
-      <div style={{ display: "flex", gap: 2 }} onMouseLeave={() => setHover(0)}>
+      <div style={{ display: "flex", gap: 3 }} onMouseLeave={() => setHover(0)}>
         {[1, 2, 3, 4, 5].map((n) => (
           <span
             key={n}
             onClick={() => onChange(n === value ? 0 : n)}
             onMouseEnter={() => setHover(n)}
             style={{
-              cursor: "pointer", fontSize: 14, lineHeight: 1,
+              cursor: "pointer", fontSize: 16, lineHeight: 1,
               color: n <= (hover || value) ? TERM_SEM_YELLOW : "rgba(255,255,255,0.15)",
               transition: "color 0.1s",
             }}
@@ -31,7 +31,7 @@ function StarRow({ label, icon, value, onChange }: {
         ))}
       </div>
       {value > 0 && (
-        <span style={{ fontSize: 10, color: "rgba(255,255,255,0.3)", fontFamily: "monospace" }}>{value}/5</span>
+        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-mono)" }}>{value}/5</span>
       )}
     </div>
   );
@@ -45,11 +45,11 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
     <TermModal
       open={true}
       onClose={onSkip}
-      maxWidth={280}
+      maxWidth={340}
       title="Rate this project"
       footer={
         <>
-          <TermButton variant="dim" onClick={onSkip} style={{ padding: "6px 16px", fontSize: 11 }}>Skip</TermButton>
+          <TermButton variant="dim" onClick={onSkip} style={{ padding: "8px 18px" }}>Skip</TermButton>
           <TermButton
             variant="success"
             onClick={() => {
@@ -60,12 +60,12 @@ function RatingPopup({ onSubmit, onSkip, initialRatings }: { onSubmit: (ratings:
               onSubmit(filtered);
             }}
             disabled={!hasRatings}
-            style={{ padding: "6px 16px", fontSize: 11 }}
+            style={{ padding: "8px 18px" }}
           >Submit</TermButton>
         </>
       }
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {RATING_DIMENSIONS.map((d) => (
           <StarRow
             key={d.key}
