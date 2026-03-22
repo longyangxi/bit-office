@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_BG, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
 import TermModal from "./primitives/TermModal";
