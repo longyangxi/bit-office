@@ -58,10 +58,17 @@ html {
   --radius-md: 4px;
   --radius-full: 9999px;
 
-  /* Shadows / Elevation */
-  --shadow-sm: 0 1px 0 var(--term-border-dim);
-  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
-  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.5);
+  /* Shadows / Elevation — 4-tier depth system */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 0 var(--term-border-dim);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.35);
+  --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.4);
+  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-inset-deep: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+
+  /* Surface highlight — subtle top-edge light for raised panels */
+  --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  --highlight-top-strong: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 
   /* Motion */
   --duration-fast: 100ms;
@@ -399,9 +406,21 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
   from { opacity: 0; transform: translateY(40px); }
   to { opacity: 1; transform: translateY(0); }
 }
-/* ── Chat area (clean, no vignette) ── */
+/* ── Chat area — recessed surface with subtle inset shadow ── */
 .term-chat-area {
   background-image: none;
+  box-shadow: var(--shadow-inset);
+}
+/* ── Surface texture — subtle noise for raised panels ── */
+.term-info-bar,
+.btb,
+.tm-container,
+.cp-container,
+.tm-header,
+.tm-footer {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='none'/%3E%3Crect width='1' height='1' x='0' y='0' fill='%23ffffff' fill-opacity='0.012'/%3E%3Crect width='1' height='1' x='2' y='2' fill='%23ffffff' fill-opacity='0.008'/%3E%3C/svg%3E"),
+    linear-gradient(to bottom, rgba(255,255,255,0.02) 0%, transparent 100%);
 }
 /* ── Clean mode: disable all textures and effects ── */
 .term-clean .crt-screen { animation: none !important; }
@@ -434,16 +453,37 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
   font-variant-numeric: tabular-nums;
   letter-spacing: 0 !important;
 }
-/* Info bar — subtle bottom shadow instead of hard border */
+/* Info bar — raised panel feel: gradient bg + bottom shadow + top highlight */
 .term-info-bar {
-  box-shadow: 0 1px 0 var(--term-border-dim);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.3),
+    0 1px 0 var(--term-border-dim),
+    var(--highlight-top);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.025) 0%,
+    transparent 100%
+  );
+  border-bottom: 1px solid var(--term-border);
 }
-/* Input area — top edge glow on focus-within */
+/* Input area — elevated from content with top border + shadow */
 .term-input-area {
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  border-top: 1px solid var(--term-border);
+  box-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.2),
+    var(--highlight-top);
+  background-image: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.015) 0%,
+    transparent 50%
+  );
 }
 .term-input-area:focus-within {
-  box-shadow: inset 0 1px 0 rgba(var(--term-accent-rgb), 0.15);
+  box-shadow:
+    0 -2px 8px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(var(--term-accent-rgb), 0.2);
+  border-top-color: rgba(var(--term-accent-rgb), 0.25);
 }
 
 /* ── Global focus-visible — keyboard accessibility ── */
@@ -470,6 +510,35 @@ textarea:focus-visible {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ── Pane depth — each agent pane is a distinct elevated surface ── */
+/* Agent pane container (the outer div wrapping info-bar + chat + input) */
+[data-scrollbar] {
+  box-shadow: var(--shadow-inset);
+}
+
+/* ── Divider enhancement — visible separator between panes ── */
+/* Vertical pane divider glow on idle */
+.pane-resize::before {
+  content: '';
+  position: absolute;
+  top: 10%;
+  bottom: 10%;
+  left: 1px;
+  width: 3px;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(var(--term-accent-rgb), 0.06) 50%,
+    transparent 100%
+  );
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--duration-normal) ease;
+}
+.pane-resize:hover::before {
+  opacity: 1;
 }
 
 /* ── Modal animation ── */

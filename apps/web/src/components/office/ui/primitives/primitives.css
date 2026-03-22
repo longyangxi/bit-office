@@ -26,14 +26,20 @@
   transition:
     border-color var(--duration-fast) ease,
     color var(--duration-fast) ease,
-    background-color var(--duration-fast) ease;
+    background-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 .tb:hover {
   border-color: var(--term-text);
   color: var(--term-text-bright);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transform: translateY(-0.5px);
 }
 .tb:active {
   opacity: 0.85;
+  transform: translateY(0);
+  box-shadow: none;
 }
 .tb:disabled {
   opacity: 0.4;
@@ -161,7 +167,7 @@
 .tm-container {
   background: var(--term-panel);
   border: 1px solid var(--term-border);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255, 255, 255, 0.03);
   width: 90%;
   max-width: 420px;
   max-height: 90vh;
@@ -173,7 +179,7 @@
 
 .tm-header {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--term-border-dim);
+  border-bottom: 1px solid var(--term-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -181,6 +187,7 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   color: var(--term-text-bright);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .tm-body {
@@ -196,12 +203,13 @@
 
 .tm-footer {
   padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--term-border-dim);
+  border-top: 1px solid var(--term-border);
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   flex-shrink: 0;
+  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.15);
 }
 
 /* Close button inside header */
@@ -310,15 +318,20 @@
   position: relative;
   transition:
     border-color var(--duration-fast) ease,
-    background-color var(--duration-fast) ease;
+    background-color var(--duration-fast) ease,
+    box-shadow var(--duration-fast) ease,
+    transform var(--duration-fast) ease;
 }
 .tac:hover {
   border-color: color-mix(in srgb, var(--term-green) 40%, transparent);
   background: color-mix(in srgb, var(--term-green) 3%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  transform: translateY(-1px);
 }
 .tac-selected {
   border-color: color-mix(in srgb, var(--term-green) 50%, transparent);
   background: color-mix(in srgb, var(--term-green) 5%, transparent);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 /* ============================================================
@@ -354,12 +367,15 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: rgba(10, 10, 14, 0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--term-border-dim);
+  background: rgba(8, 8, 12, 0.92);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  border: 1px solid var(--term-border);
   padding: 3px 4px;
-  box-shadow: var(--shadow-md);
+  box-shadow:
+    var(--shadow-lg),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
 }
 
 .btb-btn {
@@ -427,19 +443,19 @@
    2px top-border accent on info bar indicating agent state
    ============================================================ */
 .ap-status-idle {
-  box-shadow: inset 0 2px 0 var(--term-border);
+  box-shadow: inset 0 2px 0 var(--term-border), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-working {
-  box-shadow: inset 0 2px 0 var(--term-sem-blue);
+  box-shadow: inset 0 2px 0 var(--term-sem-blue), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-blue) 8%, transparent);
 }
 .ap-status-waiting {
-  box-shadow: inset 0 2px 0 var(--term-sem-yellow);
+  box-shadow: inset 0 2px 0 var(--term-sem-yellow), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-yellow) 8%, transparent);
 }
 .ap-status-done {
-  box-shadow: inset 0 2px 0 var(--term-sem-green);
+  box-shadow: inset 0 2px 0 var(--term-sem-green), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-error {
-  box-shadow: inset 0 2px 0 var(--term-sem-red);
+  box-shadow: inset 0 2px 0 var(--term-sem-red), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-red) 8%, transparent);
 }
 
 /* Pulse animation for working state */
@@ -470,7 +486,7 @@
   color: var(--term-text);
   background: var(--term-panel);
   border: 1px solid var(--term-border);
-  box-shadow: var(--shadow-md);
+  box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   cursor: pointer;
   opacity: 0;
   pointer-events: none;
@@ -513,7 +529,7 @@
   max-width: 480px;
   background: var(--term-panel);
   border: 1px solid var(--term-border);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255, 255, 255, 0.03);
   display: flex;
   flex-direction: column;
   max-height: 400px;
@@ -617,14 +633,16 @@
   bottom: 0;
   left: 2px;
   width: 1px;
-  background: var(--term-border-dim);
-  transition: background var(--duration-fast) ease, width var(--duration-fast) ease;
+  background: var(--term-border);
+  box-shadow: -1px 0 3px rgba(0, 0, 0, 0.3), 1px 0 3px rgba(0, 0, 0, 0.3);
+  transition: background var(--duration-fast) ease, width var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
 }
 .pane-resize:hover::after,
 .pane-resize-active::after {
   background: var(--term-green);
   width: 2px;
   left: 1.5px;
+  box-shadow: 0 0 6px rgba(var(--term-accent-rgb), 0.2);
 }
 .pane-resize:hover {
   background: color-mix(in srgb, var(--term-green) 5%, transparent);
