@@ -7,6 +7,16 @@ const withPWA = withPWAInit({
   dest: "public",
   disable: process.env.NODE_ENV === "development",
   navigateFallbackDenylist: [/^\/preview-static/, /^\/preview-app/],
+  extendDefaultRuntimeCaching: true,
+  workboxOptions: {
+    runtimeCaching: [
+      {
+        // Preview proxy paths — never cache, always hit the gateway proxy
+        urlPattern: /^\/(preview-static|preview-app)(\/.*)?$/,
+        handler: "NetworkOnly",
+      },
+    ],
+  },
 });
 
 const isDev = process.env.NODE_ENV === "development";
