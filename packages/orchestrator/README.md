@@ -41,7 +41,7 @@ src/
   config.ts             58 lines  Centralized constants (delegation, timing, preview)
   types.ts             264 lines  All event types, options, payloads
   retry.ts             111 lines  Auto-retry with leader escalation
-  worktree.ts          105 lines  Git worktree create/merge/remove
+  worktree.ts          ~600 lines Git worktree isolation: create/merge/remove/cleanup
   agent-manager.ts      80 lines  Session registry + team lead tracking
   resolve-path.ts       36 lines  4-strategy path resolution for agent-reported paths
   ai-backend.ts         29 lines  AIBackend interface
@@ -130,7 +130,7 @@ Persistent cross-project learning system. Agents improve over time by rememberin
 
 ### How It Works
 
-- Storage: `~/.bit-office/memory/memory.json` (human-readable, persists across restarts)
+- Storage: `~/.open-office[-dev]/data/memory/memory.json` (human-readable, persists across restarts)
 - Memory is **global**, not per-agent — all dev workers in any team share the same learned context
 - Only recurring patterns are injected (count ≥ 2), so one-off issues don't pollute prompts
 - Review patterns are capped at top 20, tech preferences at last 10, project history at last 50
@@ -161,6 +161,82 @@ console.log(store.projectHistory);  // [{ summary: "...", tech: "...", completed
 
 // Reset all memory
 clearMemory();
+```
+
+## Worktree Isolation
+
+When multiple agents work on the same repo, each agent gets its own **git worktree** — a physical copy of the working tree linked to the same repo, on its own branch. This prevents agents from stepping on each other's changes.
+
+### Design Principles
+
+- **One agent = one worktree = one branch.** Worktree and branch are keyed by `agentId`, not `taskId`. This keeps the directory stable across tasks so Claude Code `--resume` works (same CWD).
+- **Worktrees live outside the repo** at `~/.open-office[-dev]/worktrees/<repo-hash>/<agentId>/`. This prevents Claude Code from traversing up to the main repo root.
+- **No persistent forks.** On task completion, changes are squash-merged back to main and the branch is reset to main HEAD. The branch stays at the same point as main — no visual fork in the git graph.
+- **Branch naming:** `agent/<agentName>-<shortId>` (e.g. `agent/nova-pTTERq`). Unique per agent, human-readable.
+
+### Lifecycle
+
+```
+Agent gets task
+  │
+  ├─ worktree exists? ──yes──> Reuse (fast-forward to main HEAD)
+  │
+  └─ no ──> git worktree add ~/.open-office[-dev]/worktrees/<repo>/<agentId>
+            creates branch agent/<name>-<id>
+            session.clearHistory() (can't --resume in new CWD)
+  │
+  v
+Agent works in worktree (commits on its branch)
+  │
+  v
+Task completes (task:done)
+  ├─ Solo agent: squash-merge → main, reset branch to main HEAD (keepAlive)
+  └─ Team worker: merge all at once when team finalizes
+  │
+  v
+Agent removed / task failed
+  └─ git worktree remove + git branch -D (full cleanup)
+```
+
+### Cleanup (GC)
+
+Stale worktrees are cleaned up at **3 points**:
+1. **Gateway startup** — `cleanupStaleWorktrees()` scans centralized worktree dir, removes dead worktrees (owner process not alive), deletes orphaned `agent/*` branches
+2. **Task failure** — agent-session auto-removes its worktree + branch
+3. **Agent fired** — orchestrator force-cleans worktree + branch
+
+Owner metadata (`.owners/<agentId>.json`) tracks which gateway instance owns each worktree, preventing cross-instance cleanup conflicts.
+
+### Configuration
+
+```typescript
+const orc = createOrchestrator({
+  worktree: {
+    mergeOnComplete: true,    // squash-merge on task:done
+    alwaysIsolate: true,      // create worktree even for solo agents
+  },
+  // or: worktree: false      // disable worktree isolation entirely
+});
+```
+
+### Directory Layout
+
+```
+~/.open-office-dev/              # dev mode (release: ~/.open-office/)
+├── config.json
+├── machine-id
+├── data/
+│   ├── instances/               # per-gateway state (logs, sessions, memory)
+│   ├── memory/                  # global memory
+│   ├── project-history/         # archived project records
+│   ├── prompts/                 # custom prompt templates
+│   └── agents.json              # agent definitions
+├── projects/                    # agent working directories (default workspace)
+└── worktrees/                   # centralized worktree storage
+    └── bit-office-a3f2b1/       # grouped by source repo
+        ├── agent-pTTERq/        # one dir per agent (stable across tasks)
+        ├── agent-1gZQUa/
+        └── .owners/             # ownership metadata for GC
 ```
 
 ## Preview Resolution
