@@ -12,8 +12,10 @@ const DATA_DIR = path.join(
   "data",
 );
 const STATE_FILE = path.join(DATA_DIR, "preview-cmd-state.json");
+const STATIC_STATE_FILE = path.join(DATA_DIR, "preview-static-state.json");
 
 interface CmdState { cmd: string; cwd: string; agentPort: number }
+interface StaticState { root: string; entry: string }
 
 function loadCmdState(): CmdState | null {
   try {
@@ -29,6 +31,23 @@ function saveCmdState(state: CmdState | null): void {
   try {
     mkdirSync(DATA_DIR, { recursive: true });
     writeFileSync(STATE_FILE, state ? JSON.stringify(state) : "", "utf8");
+  } catch { /* best effort */ }
+}
+
+function loadStaticState(): StaticState | null {
+  try {
+    if (existsSync(STATIC_STATE_FILE)) {
+      const raw = readFileSync(STATIC_STATE_FILE, "utf8").trim();
+      if (raw) return JSON.parse(raw) as StaticState;
+    }
+  } catch { /* corrupted or missing */ }
+  return null;
+}
+
+function saveStaticState(state: StaticState | null): void {
+  try {
+    mkdirSync(DATA_DIR, { recursive: true });
+    writeFileSync(STATIC_STATE_FILE, state ? JSON.stringify(state) : "", "utf8");
   } catch { /* best effort */ }
 }
 
@@ -86,16 +105,29 @@ class PreviewServer {
     this.stopCommand();
     this._staticRoot = path.dirname(filePath);
     this._staticEntry = path.basename(filePath);
+    saveStaticState({ root: this._staticRoot, entry: this._staticEntry });
     console.log(`[PreviewServer] Static: ${this._staticRoot} (entry: ${this._staticEntry})`);
     return true;
   }
 
-  get staticRoot(): string | null { return this._staticRoot; }
+  get staticRoot(): string | null {
+    // Lazy-restore from disk on first access (survives gateway restart)
+    if (this._staticRoot === null) {
+      const saved = loadStaticState();
+      if (saved && existsSync(path.join(saved.root, saved.entry))) {
+        this._staticRoot = saved.root;
+        this._staticEntry = saved.entry;
+        console.log(`[PreviewServer] Restored static: ${saved.root} (entry: ${saved.entry})`);
+      }
+    }
+    return this._staticRoot;
+  }
   get staticEntry(): string | null { return this._staticEntry; }
 
   clearStatic(): void {
     this._staticRoot = null;
     this._staticEntry = null;
+    saveStaticState(null);
   }
 
   // --- Command mode (spawns child process) ---
@@ -217,12 +249,16 @@ class PreviewServer {
     return false;
   }
 
-  /** Full teardown — stop process, clear static dir, erase persisted state. */
+  /** Teardown — stop command process, clear in-memory state.
+   *  Static state is preserved on disk so it survives gateway restarts
+   *  (the files are still on disk, and lazy-restore will pick them up).
+   *  Command state is also preserved for auto-restart on next launch. */
   shutdown() {
     this.stopCommand();
-    this.clearStatic();
-    this.lastCmdState = null;
-    saveCmdState(null);
+    this._staticRoot = null;
+    this._staticEntry = null;
+    // Intentionally NOT clearing persisted state files —
+    // they enable auto-restore after gateway restart.
     console.log(`[PreviewServer] Shutdown`);
   }
 }

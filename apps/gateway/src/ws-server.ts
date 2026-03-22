@@ -100,7 +100,7 @@ export const wsChannel: Channel = {
   async init(commandHandler: (cmd: Command, meta: CommandMeta) => void): Promise<boolean> {
     onCommand = commandHandler;
 
-    return new Promise((resolve) => {
+    return new Promise((promiseResolve) => {
       const requestHandler = async (req: IncomingMessage, res: ServerResponse) => {
         // CORS headers
         res.setHeader("Access-Control-Allow-Origin", "*");
@@ -288,13 +288,14 @@ export const wsChannel: Channel = {
         const staticMatch = url.match(/^\/preview-static(\/.*)?$/);
         if (staticMatch) {
           const root = previewServer.staticRoot;
+          const entry = previewServer.staticEntry;
           if (!root) {
             res.writeHead(404, { "Content-Type": "text/plain" });
             res.end("No static preview configured");
             return;
           }
           const reqPath = decodeURIComponent((staticMatch[1] || "/").split("?")[0]);
-          const filePath = resolve(root, reqPath === "/" ? (previewServer.staticEntry ?? "index.html") : reqPath.slice(1));
+          const filePath = resolve(root, reqPath === "/" ? (entry ?? "index.html") : reqPath.slice(1));
           // Security: prevent path traversal outside root (trailing sep avoids sibling-prefix bypass)
           const rootWithSep = resolve(root) + "/";
           if (filePath !== resolve(root) && !filePath.startsWith(rootWithSep)) {
@@ -478,7 +479,7 @@ export const wsChannel: Channel = {
 
           console.log(`[WS] Server listening on port ${port}`);
           printLanAddresses();
-          resolve(true);
+          promiseResolve(true);
         });
 
         httpServer.once("error", (err: NodeJS.ErrnoException) => {
@@ -489,7 +490,7 @@ export const wsChannel: Channel = {
             tryListen();
           } else {
             console.error(`[WS] Failed to start server:`, err.message);
-            resolve(false);
+            promiseResolve(false);
           }
         });
       };
@@ -532,6 +533,15 @@ async function serveStatic(req: IncomingMessage, res: ServerResponse) {
     filePath = join(config.webDir, routeMap[url]);
   } else {
     filePath = join(config.webDir, url);
+  }
+
+  // Security: prevent path traversal outside webDir
+  const webRoot = resolve(config.webDir);
+  const resolvedPath = resolve(filePath);
+  if (resolvedPath !== webRoot && !resolvedPath.startsWith(webRoot + "/")) {
+    res.writeHead(403, { "Content-Type": "text/plain" });
+    res.end("Forbidden");
+    return;
   }
 
   try {
