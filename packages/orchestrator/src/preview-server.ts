@@ -6,6 +6,22 @@ const STATIC_PORT = 9199;
 const COMMAND_PORT = 9198;
 
 /**
+ * Kill any process occupying a given port.
+ * Handles orphaned servers from previous gateway sessions that survived restart.
+ */
+function killPortProcess(port: number): void {
+  try {
+    const pids = execSync(`lsof -ti:${port}`, { encoding: "utf8", timeout: 3000 }).trim();
+    if (pids) {
+      for (const pid of pids.split("\n")) {
+        try { process.kill(Number(pid), "SIGKILL"); } catch { /* already dead */ }
+      }
+      console.log(`[PreviewServer] Killed orphan process(es) on port ${port}: ${pids.replace(/\n/g, ", ")}`);
+    }
+  } catch { /* no process on port — expected */ }
+}
+
+/**
  * Global preview server — one at a time.
  * Supports two modes:
  *   1. Static file serving (npx serve) for HTML/CSS/JS and framework build output
@@ -32,11 +48,16 @@ class PreviewServer {
     const fileName = path.basename(filePath);
 
     this.stop();
+    killPortProcess(STATIC_PORT);
 
     try {
       this.process = spawn("npx", ["serve", dir, "-l", String(STATIC_PORT), "--no-clipboard"], {
-        stdio: "ignore",
+        stdio: ["ignore", "ignore", "pipe"],
         detached: true,
+      });
+      this.process.stderr?.on("data", (data: Buffer) => {
+        const msg = data.toString().trim();
+        if (msg) console.log(`[PreviewServer] serve stderr: ${msg.slice(0, 200)}`);
       });
       this.process.unref();
       this.currentDir = dir;
@@ -58,6 +79,7 @@ class PreviewServer {
    */
   runCommand(cmd: string, cwd: string, agentPort: number): string | undefined {
     this.stop();
+    killPortProcess(COMMAND_PORT);
 
     // Always use our controlled port — override agent-specified ports to prevent conflicts.
     const port = COMMAND_PORT;
@@ -122,7 +144,7 @@ class PreviewServer {
     }
   }
 
-  /** Stop the current preview process */
+  /** Stop the current preview process and ensure port is released */
   stop() {
     if (this.process) {
       try {

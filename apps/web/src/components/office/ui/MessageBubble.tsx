@@ -408,7 +408,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         {msg.result && !isTeamMember && !isTeamLead && (hasWebPreview(msg.result) || (onReview && msg.result.changedFiles.length > 0)) && (
           <div style={{ display: "flex", gap: 4, marginTop: 8, alignItems: "center" }}>
             {hasWebPreview(msg.result) && onPreview && (
-              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) setTimeout(() => onPreview(url), r.previewUrl ? 0 : 1500); }} style={previewBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_BLUE; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_BLUE}55`; }}>preview</button>
+              <button className="term-btn" onClick={() => { const r = msg.result!; const cmd = buildPreviewCommand(r); if (cmd) sendCommand(cmd); const url = computePreviewUrl(r); if (url) onPreview(url); }} style={previewBtnStyle} onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_SEM_BLUE; }} onMouseLeave={(e) => { e.currentTarget.style.borderColor = `${TERM_SEM_BLUE}55`; }}>preview</button>
             )}
             {onReview && msg.result.changedFiles.length > 0 && (
               <ReviewButton result={msg.result} onReview={onReview} detectedBackends={detectedBackends ?? []} />

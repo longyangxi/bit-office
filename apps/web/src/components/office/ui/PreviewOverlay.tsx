@@ -89,10 +89,33 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
   const [showRating, setShowRating] = useState(false);
   const [closing, setClosing] = useState(false);
 
+  // Poll the preview URL until it responds instead of hardcoded delay.
+  // Handles slow npx serve cold starts (first run downloads the package).
   useEffect(() => {
     setStatus("loading");
-    const timer = setTimeout(() => setStatus("ready"), 3000);
-    return () => clearTimeout(timer);
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 30; // 15 seconds max (500ms interval)
+
+    const poll = () => {
+      if (cancelled) return;
+      attempts++;
+      fetch(url, { mode: "no-cors" })
+        .then(() => {
+          if (!cancelled) setStatus("ready");
+        })
+        .catch(() => {
+          if (!cancelled && attempts < maxAttempts) {
+            setTimeout(poll, 500);
+          } else if (!cancelled) {
+            // Timeout — show iframe anyway (server may respond to iframe but not fetch)
+            setStatus("ready");
+          }
+        });
+    };
+    // Start polling after a short initial delay (give spawn time to start)
+    const initial = setTimeout(poll, 800);
+    return () => { cancelled = true; clearTimeout(initial); };
   }, [url]);
 
   const handleClose = () => {
