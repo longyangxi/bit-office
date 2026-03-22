@@ -165,6 +165,7 @@ interface QueuedTask {
   repoPath?: string;
   teamContext?: string;
   phaseOverride?: string;
+  isInternal?: boolean;
 }
 
 export interface AgentSessionOpts {
@@ -294,8 +295,13 @@ export class AgentSession {
     }
 
     if (this.process) {
+      if (isUserInitiated && this.taskQueue.length > 0) {
+        // User re-sent while previous message is still pending (e.g. network recovery).
+        // Replace queued user messages with the latest one instead of stacking them up.
+        this.taskQueue = this.taskQueue.filter(t => t.isInternal);
+      }
       const position = this.taskQueue.length + 1;
-      this.taskQueue.push({ taskId, prompt, repoPath, teamContext, phaseOverride });
+      this.taskQueue.push({ taskId, prompt, repoPath, teamContext, phaseOverride, isInternal: !isUserInitiated });
       this.onEvent({
         type: "task:queued",
         agentId: this.agentId,
