@@ -1366,7 +1366,7 @@ function cleanup() {
   try { persistTeamState(); } catch { /* ignore */ }
   outputReader?.detachAll();
   scanner?.stop();
-  previewServer.stop();
+  previewServer.shutdown();
   stopTunnel();
   orc?.destroy();
   destroyTransports();

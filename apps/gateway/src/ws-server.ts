@@ -293,25 +293,35 @@ export const wsChannel: Channel = {
           req.on("data", (c: Buffer) => chunks.push(c));
           req.on("end", () => {
             const body = Buffer.concat(chunks);
+            const attemptRestart = async (onSuccess: () => void, onFail: () => void) => {
+              const ok = await previewServer.ensureRunning(targetPort);
+              if (ok) onSuccess(); else onFail();
+            };
+            const send502 = () => {
+              res.writeHead(502, { "Content-Type": "text/plain" });
+              res.end("Preview server not running");
+            };
             const tryProxy = (isRetry: boolean) => {
               const proxyReq = httpRequest(
                 { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
                 (proxyRes) => {
-                  res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+                  const status = proxyRes.statusCode ?? 502;
+                  if (status === 502 && !isRetry) {
+                    // Upstream returned 502 — drain response, restart, retry
+                    proxyRes.resume();
+                    attemptRestart(() => tryProxy(true), send502);
+                    return;
+                  }
+                  res.writeHead(status, proxyRes.headers);
                   proxyRes.pipe(res, { end: true });
                 },
               );
               proxyReq.on("error", async () => {
                 if (!isRetry) {
-                  // Preview server died — attempt auto-restart
-                  const ok = await previewServer.ensureRunning(targetPort);
-                  if (ok) {
-                    tryProxy(true);
-                    return;
-                  }
+                  attemptRestart(() => tryProxy(true), send502);
+                  return;
                 }
-                res.writeHead(502, { "Content-Type": "text/plain" });
-                res.end("Preview server not running");
+                send502();
               });
               if (body.length > 0) proxyReq.write(body);
               proxyReq.end();

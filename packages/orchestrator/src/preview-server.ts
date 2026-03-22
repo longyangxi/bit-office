@@ -224,7 +224,7 @@ class PreviewServer {
     }
   }
 
-  /** Stop the current preview process and ensure port is released */
+  /** Stop the current preview process. Persisted state is preserved for auto-restart. */
   stop() {
     if (this.process) {
       try {
@@ -238,10 +238,18 @@ class PreviewServer {
       this.process = null;
       this.currentDir = null;
       this.isDetached = false;
-      this.lastState = null;
-      saveState(null);
+      // Note: lastState and disk state intentionally NOT cleared —
+      // ensureRunning() needs them to revive a dead preview server.
       console.log(`[PreviewServer] Stopped`);
     }
+  }
+
+  /** Stop the process AND erase persisted restart state (full teardown). */
+  shutdown() {
+    this.stop();
+    this.lastState = null;
+    saveState(null);
+    console.log(`[PreviewServer] Shutdown — restart state cleared`);
   }
 
   /**
