@@ -915,7 +915,17 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           return { agents, suggestions: newSuggestions };
         }
         case "PREVIEW_READY": {
-          return { agents, pendingPreviewUrl: event.url };
+          // Rewrite localhost URLs when accessed via tunnel
+          const rewritePreview = (u: string) => {
+            if (typeof window === "undefined") return u;
+            const h = window.location.hostname;
+            if (h === "localhost" || h === "127.0.0.1") return u;
+            const o = window.location.origin;
+            return u
+              .replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${o}/preview-static`)
+              .replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${o}/preview-app`);
+          };
+          return { agents, pendingPreviewUrl: rewritePreview(event.url) };
         }
         case "FOLDER_PICKED": {
           const cb = folderPickCallbacks.get(event.requestId);

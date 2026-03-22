@@ -53,12 +53,32 @@ export function linkifyText(children: React.ReactNode): React.ReactNode {
   return parts;
 }
 
+/**
+ * When the app is accessed via tunnel (non-localhost origin), rewrite
+ * localhost preview URLs to go through the gateway's reverse proxy.
+ *   localhost:9199/foo → ${origin}/preview-static/foo
+ *   localhost:9198     → ${origin}/preview-app/
+ */
+export function tunnelRewrite(url: string): string {
+  if (typeof window === "undefined") return url;
+  const host = window.location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") return url;
+  const origin = window.location.origin;
+  // Static file preview (port 9199) — capture everything after the port (path, query, hash)
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9199(?:\/|$|\?|#)/.test(url))
+    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${origin}/preview-static`);
+  // App/command preview (port 9198)
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9198(?:\/|$|\?|#)/.test(url))
+    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${origin}/preview-app`);
+  return url;
+}
+
 /** Compute expected preview URL from result metadata (no server started yet) */
 export function computePreviewUrl(result: { previewUrl?: string; previewCmd?: string; previewPort?: number; previewPath?: string; entryFile?: string }): string | undefined {
-  if (result.previewUrl) return result.previewUrl;
-  if (result.previewCmd && result.previewPort) return "http://localhost:9198";
-  if (result.previewPath) return `http://localhost:9199/${result.previewPath.split("/").pop()}`;
-  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return `http://localhost:9199/${result.entryFile.split("/").pop()}`;
+  if (result.previewUrl) return tunnelRewrite(result.previewUrl);
+  if (result.previewCmd && result.previewPort) return tunnelRewrite("http://localhost:9198");
+  if (result.previewPath) return tunnelRewrite(`http://localhost:9199/${result.previewPath.split("/").pop()}`);
+  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return tunnelRewrite(`http://localhost:9199/${result.entryFile.split("/").pop()}`);
   return undefined;
 }
 

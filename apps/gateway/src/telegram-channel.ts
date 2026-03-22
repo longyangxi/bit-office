@@ -201,6 +201,7 @@ export const telegramChannel: Channel = {
           await bot?.deleteWebHook();
           await new Promise(r => setTimeout(r, 1500));
           await bot?.startPolling();
+          rebuildBotCommands();
           console.log("[Telegram] Took over polling successfully.");
         } catch (retryErr: any) {
           console.error("[Telegram] Failed to take over:", retryErr.message ?? retryErr);
@@ -214,6 +215,9 @@ export const telegramChannel: Channel = {
     rebuildBotCommands();
 
     const botInfo = await bot.getMe();
+
+    // Mark initial connect done — future 409s mean another instance took over, so we yield
+    isInitialConnect = false;
     const agentMenu = buildAgentMenu();
     console.log(`[Telegram] @${botInfo.username} ready (single-bot mode, ${agentMenu.length} agents)`);
 
