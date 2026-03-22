@@ -463,7 +463,21 @@ export function mergeWorktree(
     }
 
     autoCommitWorktree(worktreePath, branch);
-    gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
+
+    // Stash any dirty files in main repo before merge to prevent conflicts
+    // and avoid accidentally including unrelated changes in the merge commit.
+    const mainDirty = !!gitExec("git status --porcelain", repoRoot);
+    if (mainDirty) {
+      gitExec("git stash --include-untracked", repoRoot);
+    }
+
+    try {
+      gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
+    } catch (mergeErr) {
+      // Restore stashed files before re-throwing
+      if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
+      throw mergeErr;
+    }
 
     let stagedFiles: string[] = [];
     try {
@@ -484,6 +498,9 @@ export function mergeWorktree(
       });
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
+
+    // Restore stashed files after successful merge
+    if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
 
     if (!keepAlive) {
       removeWorktreeOwnerFile(worktreePath);
