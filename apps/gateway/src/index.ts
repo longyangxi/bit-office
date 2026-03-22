@@ -465,8 +465,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           previewServer.runCommand(detected.cmd, projectDir, detected.port);
           publishEvent({ type: "PREVIEW_READY", url: "http://localhost:9198" });
         } else {
+          // Built-in static serving: no child process, gateway serves files directly
           console.log(`[Gateway] SERVE_PREVIEW (static): ${cleanPath}`);
-          previewServer.serve(cleanPath);
+          previewServer.setStaticDir(cleanPath);
         }
       }
       break;

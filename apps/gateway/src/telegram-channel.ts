@@ -85,16 +85,16 @@ function tgMeta(): CommandMeta {
 
 /**
  * Build a public preview URL for Telegram when tunnel is configured.
- * Rewrites localhost:9199 → tunnelBaseUrl/preview-static/
- * and localhost:9198 → tunnelBaseUrl/preview-app/
- * Falls back to previewPath/entryFile when previewUrl is not set (static file previews).
+ * Preview routes go through the gateway's HTTP server:
+ *   /preview-static/* — built-in static file serving
+ *   /preview-app/*    — reverse proxy to command-mode server
  * Returns empty string if no tunnel or no preview-able result.
  */
 function buildTunnelPreviewLink(result: any): string {
   if (!config.tunnelBaseUrl || !result) return "";
   const base = config.tunnelBaseUrl;
 
-  // 1. previewUrl already set (e.g. from previewServer auto-start)
+  // 1. previewUrl already set — rewrite legacy localhost URLs
   const url: string | undefined = result.previewUrl;
   if (url) {
     if (url.includes("localhost:9199") || url.includes("127.0.0.1:9199")) {

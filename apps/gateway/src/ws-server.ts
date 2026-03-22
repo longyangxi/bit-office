@@ -281,52 +281,85 @@ export const wsChannel: Channel = {
           return;
         }
 
-        // --- Reverse proxy for preview servers (enables tunnel access via single port) ---
+        // --- Preview routes (built-in static serving + command proxy) ---
         const url = req.url ?? "/";
-        const proxyMatch = url.match(/^\/(preview-static|preview-app)(\/.*)?$/);
-        if (proxyMatch) {
-          const targetPort = proxyMatch[1] === "preview-static" ? 9199 : 9198;
-          const targetPath = proxyMatch[2] || "/";
 
-          // Buffer request body so we can replay it on retry
+        // Static preview: serve files directly from disk (no child process)
+        const staticMatch = url.match(/^\/preview-static(\/.*)?$/);
+        if (staticMatch) {
+          const root = previewServer.staticRoot;
+          if (!root) {
+            res.writeHead(404, { "Content-Type": "text/plain" });
+            res.end("No static preview configured");
+            return;
+          }
+          const reqPath = decodeURIComponent((staticMatch[1] || "/").split("?")[0]);
+          const filePath = resolve(root, reqPath === "/" ? (previewServer.staticEntry ?? "index.html") : reqPath.slice(1));
+          // Security: prevent path traversal outside root
+          if (!filePath.startsWith(resolve(root))) {
+            res.writeHead(403, { "Content-Type": "text/plain" });
+            res.end("Forbidden");
+            return;
+          }
+          try {
+            const fileStat = await stat(filePath);
+            if (!fileStat.isFile()) {
+              res.writeHead(404, { "Content-Type": "text/plain" });
+              res.end("Not found");
+              return;
+            }
+            const ext = extname(filePath).toLowerCase();
+            const mime: Record<string, string> = {
+              ".html": "text/html", ".htm": "text/html",
+              ".css": "text/css", ".js": "application/javascript", ".mjs": "application/javascript",
+              ".json": "application/json", ".xml": "application/xml",
+              ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+              ".gif": "image/gif", ".svg": "image/svg+xml", ".webp": "image/webp", ".avif": "image/avif", ".ico": "image/x-icon",
+              ".woff": "font/woff", ".woff2": "font/woff2", ".ttf": "font/ttf", ".otf": "font/otf", ".eot": "application/vnd.ms-fontobject",
+              ".mp3": "audio/mpeg", ".wav": "audio/wav", ".ogg": "audio/ogg",
+              ".mp4": "video/mp4", ".webm": "video/webm",
+              ".wasm": "application/wasm", ".pdf": "application/pdf", ".zip": "application/zip",
+              ".txt": "text/plain", ".md": "text/markdown", ".csv": "text/csv",
+              ".ts": "application/javascript", ".tsx": "application/javascript", ".jsx": "application/javascript",
+            };
+            const contentType = mime[ext] || "application/octet-stream";
+            const data = await readFile(filePath);
+            res.writeHead(200, {
+              "Content-Type": contentType,
+              "Content-Length": data.length,
+              "Cache-Control": "no-cache",
+              "Access-Control-Allow-Origin": "*",
+            });
+            res.end(data);
+          } catch {
+            res.writeHead(404, { "Content-Type": "text/plain" });
+            res.end("Not found");
+          }
+          return;
+        }
+
+        // Command preview: simple reverse proxy to COMMAND_PORT (no auto-restart)
+        const appMatch = url.match(/^\/preview-app(\/.*)?$/);
+        if (appMatch) {
+          const targetPath = appMatch[1] || "/";
+          const targetPort = previewServer.commandPort;
           const chunks: Buffer[] = [];
           req.on("data", (c: Buffer) => chunks.push(c));
           req.on("end", () => {
             const body = Buffer.concat(chunks);
-            const attemptRestart = async (onSuccess: () => void, onFail: () => void) => {
-              const ok = await previewServer.ensureRunning(targetPort);
-              if (ok) onSuccess(); else onFail();
-            };
-            const send502 = () => {
+            const proxyReq = httpRequest(
+              { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
+              (proxyRes) => {
+                res.writeHead(proxyRes.statusCode ?? 502, proxyRes.headers);
+                proxyRes.pipe(res, { end: true });
+              },
+            );
+            proxyReq.on("error", () => {
               res.writeHead(502, { "Content-Type": "text/plain" });
-              res.end("Preview server not running");
-            };
-            const tryProxy = (isRetry: boolean) => {
-              const proxyReq = httpRequest(
-                { hostname: "127.0.0.1", port: targetPort, path: targetPath, method: req.method, headers: { ...req.headers, host: `127.0.0.1:${targetPort}` } },
-                (proxyRes) => {
-                  const status = proxyRes.statusCode ?? 502;
-                  if (status === 502 && !isRetry) {
-                    // Upstream returned 502 — drain response, restart, retry
-                    proxyRes.resume();
-                    attemptRestart(() => tryProxy(true), send502);
-                    return;
-                  }
-                  res.writeHead(status, proxyRes.headers);
-                  proxyRes.pipe(res, { end: true });
-                },
-              );
-              proxyReq.on("error", async () => {
-                if (!isRetry) {
-                  attemptRestart(() => tryProxy(true), send502);
-                  return;
-                }
-                send502();
-              });
-              if (body.length > 0) proxyReq.write(body);
-              proxyReq.end();
-            };
-            tryProxy(false);
+              res.end("Preview app not running");
+            });
+            if (body.length > 0) proxyReq.write(body);
+            proxyReq.end();
           });
           return;
         }

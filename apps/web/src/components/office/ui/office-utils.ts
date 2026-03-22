@@ -1,5 +1,6 @@
 import React from "react";
 import { sendCommand } from "@/lib/connection";
+import { getGatewayHttpUrl } from "@/lib/storage";
 import { TERM_TEXT } from "./termTheme";
 
 // Check if Enter key is a real submit (not IME confirmation, not Shift/Ctrl+Enter newline)
@@ -54,33 +55,39 @@ export function linkifyText(children: React.ReactNode): React.ReactNode {
 }
 
 /**
- * When the app is accessed via tunnel (non-localhost origin), rewrite
- * localhost preview URLs to go through the gateway's reverse proxy.
- *   localhost:9199/foo → ${origin}/preview-static/foo
- *   localhost:9198     → ${origin}/preview-app/
+ * Get the gateway base URL for preview routes.
+ * All preview URLs go through the gateway's HTTP server:
+ *   /preview-static/* — built-in static file serving (no child process)
+ *   /preview-app/*    — reverse proxy to command-mode server
+ */
+function getPreviewBase(): string {
+  if (typeof window === "undefined") return "";
+  return getGatewayHttpUrl().replace(/\/$/, "");
+}
+
+/**
+ * Rewrite legacy localhost preview URLs to gateway-relative paths.
+ * Handles URLs from agents that still report localhost:9198.
  */
 export function tunnelRewrite(url: string): string {
   if (typeof window === "undefined") return url;
-  const host = window.location.hostname;
-  // Local access: localhost, 127.0.0.1, *.localhost (Tauri Windows uses tauri.localhost)
-  // Also detect tauri:// custom protocol (Tauri macOS)
-  if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".localhost") || window.location.protocol === "tauri:") return url;
-  const origin = window.location.origin;
-  // Static file preview (port 9199) — capture everything after the port (path, query, hash)
-  if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9199(?:\/|$|\?|#)/.test(url))
-    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${origin}/preview-static`);
-  // App/command preview (port 9198)
+  const base = getPreviewBase();
+  // App/command preview (port 9198) → gateway proxy
   if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9198(?:\/|$|\?|#)/.test(url))
-    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${origin}/preview-app`);
+    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9198/, `${base}/preview-app`);
+  // Legacy static preview URLs (port 9199) → gateway built-in serving
+  if (/^https?:\/\/(?:localhost|127\.0\.0\.1):9199(?:\/|$|\?|#)/.test(url))
+    return url.replace(/^https?:\/\/(?:localhost|127\.0\.0\.1):9199/, `${base}/preview-static`);
   return url;
 }
 
 /** Compute expected preview URL from result metadata (no server started yet) */
 export function computePreviewUrl(result: { previewUrl?: string; previewCmd?: string; previewPort?: number; previewPath?: string; entryFile?: string }): string | undefined {
+  const base = getPreviewBase();
   if (result.previewUrl) return tunnelRewrite(result.previewUrl);
-  if (result.previewCmd && result.previewPort) return tunnelRewrite("http://localhost:9198");
-  if (result.previewPath) return tunnelRewrite(`http://localhost:9199/${result.previewPath.split("/").pop()}`);
-  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return tunnelRewrite(`http://localhost:9199/${result.entryFile.split("/").pop()}`);
+  if (result.previewCmd && result.previewPort) return `${base}/preview-app`;
+  if (result.previewPath) return `${base}/preview-static/${result.previewPath.split("/").pop()}`;
+  if (result.entryFile && /\.html?$/i.test(result.entryFile)) return `${base}/preview-static/${result.entryFile.split("/").pop()}`;
   return undefined;
 }
 
