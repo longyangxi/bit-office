@@ -5,7 +5,7 @@ import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "
 import { config, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -19,6 +19,7 @@ import { ExternalOutputReader } from "./external-output-reader.js";
 import { installFileLogger } from "./file-logger.js";
 import { startTunnel, stopTunnel, isTunnelRunning } from "./tunnel.js";
 import { loadTeamState, saveTeamState, clearTeamState, type TeamState, type PersistedAgent, bufferEvent, archiveProject, resetProjectBuffer, setProjectName, listProjects, loadProject, loadProjectBuffer, rateProject } from "./team-state.js";
+import { clearRuntimeState, registerRuntimeState } from "./runtime-state.js";
 
 // Register all channels — each one self-activates if configured
 registerChannel(wsChannel);
@@ -28,6 +29,7 @@ registerChannel(telegramChannel);
 let orc: Orchestrator;
 let scanner: ProcessScanner | null = null;
 let outputReader: ExternalOutputReader | null = null;
+let runtimeState: RuntimeOwnerInfo | null = null;
 
 /** Track external agents so PING can broadcast them */
 const externalAgents = new Map<string, { agentId: string; name: string; backendId: string; pid: number; cwd: string | null; startedAt: number; status: "working" | "idle" }>();
@@ -1060,6 +1062,12 @@ async function main() {
   // Scope session storage to this gateway instance (prevents Tauri/Web/CLI context contamination)
   setSessionDir(config.instanceDir);
   setStorageRoot(path.join(config.instanceDir, "memory"));
+  runtimeState = registerRuntimeState();
+  process.env.BIT_OFFICE_GATEWAY_ID = config.gatewayId;
+  process.env.BIT_OFFICE_MACHINE_ID = config.machineId;
+  process.env.BIT_OFFICE_INSTANCE_DIR = config.instanceDir;
+  process.env.BIT_OFFICE_GATEWAY_PID = String(runtimeState.pid);
+  process.env.BIT_OFFICE_GATEWAY_STARTED_AT = String(runtimeState.startedAt);
   console.log(`[Gateway] Instance "${config.gatewayId}" → ${config.instanceDir}`);
 
   orc = createOrchestrator({
@@ -1171,7 +1179,10 @@ async function main() {
     }
     for (const repo of repos) {
       if (existsSync(repo)) {
-        cleanupStaleWorktrees(repo, new Set(), ownedAgentIds);
+        cleanupStaleWorktrees(repo, new Set(), {
+          ownedAgentIds,
+          currentOwner: runtimeState ?? undefined,
+        });
       }
     }
   }
@@ -1358,12 +1369,14 @@ function cleanup() {
   stopTunnel();
   orc?.destroy();
   destroyTransports();
+  clearRuntimeState();
   process.exit(0);
 }
 process.on("SIGINT", cleanup);
 process.on("SIGTERM", cleanup);
 process.on("SIGHUP", cleanup);
 process.on("beforeExit", () => { try { persistTeamState(); } catch { /* ignore */ } });
+process.on("exit", () => { clearRuntimeState(); });
 
 // Orphan detection: if parent process dies (e.g. tsx watch killed), exit gracefully.
 // ppid becomes 1 (launchd/init) when parent is gone.
@@ -1390,4 +1403,7 @@ process.on("unhandledRejection", (reason) => {
   console.error("[Gateway] Unhandled rejection (gateway stays alive):", reason);
 });
 
-main().catch(console.error);
+main().catch((err) => {
+  clearRuntimeState();
+  console.error(err);
+});

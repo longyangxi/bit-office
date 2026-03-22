@@ -1,5 +1,5 @@
 import { execSync } from "child_process";
-import { existsSync, readdirSync, rmdirSync } from "fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from "fs";
 import path from "path";
 
 const TIMEOUT = 5000;
@@ -74,6 +74,124 @@ export function getIsolatedGitEnv(
   return env;
 }
 
+export interface WorktreeOwnerInfo {
+  gatewayId: string;
+  machineId: string;
+  instanceDir: string;
+  pid: number;
+  startedAt: number;
+  agentId: string;
+  taskId: string;
+  agentName: string;
+  branch: string;
+}
+
+export interface RuntimeOwnerInfo {
+  gatewayId: string;
+  machineId: string;
+  instanceDir: string;
+  pid: number;
+  startedAt: number;
+  heartbeatAt: number;
+}
+
+export interface CleanupWorktreeOptions {
+  ownedAgentIds?: Set<string>;
+  currentOwner?: RuntimeOwnerInfo;
+  runtimeTtlMs?: number;
+}
+
+const WORKTREE_OWNER_DIR = ".owners";
+const DEFAULT_RUNTIME_TTL_MS = 60_000;
+
+function getWorktreeOwnerFile(worktreePath: string): string {
+  const root = path.dirname(path.dirname(worktreePath));
+  return path.join(root, ".worktrees", WORKTREE_OWNER_DIR, `${path.basename(worktreePath)}.json`);
+}
+
+function writeWorktreeOwnerFile(worktreePath: string, owner: WorktreeOwnerInfo): void {
+  try {
+    const file = getWorktreeOwnerFile(worktreePath);
+    const dir = path.dirname(file);
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+    writeFileSync(file, JSON.stringify(owner, null, 2), "utf-8");
+  } catch (err) {
+    console.warn(`[Worktree] Failed to write owner file for ${worktreePath}: ${(err as Error).message}`);
+  }
+}
+
+function removeWorktreeOwnerFile(worktreePath: string): void {
+  try {
+    unlinkSync(getWorktreeOwnerFile(worktreePath));
+  } catch { /* ignore */ }
+}
+
+function readWorktreeOwnerFile(worktreePath: string): WorktreeOwnerInfo | null {
+  try {
+    const raw = JSON.parse(readFileSync(getWorktreeOwnerFile(worktreePath), "utf-8"));
+    if (!raw || typeof raw !== "object") return null;
+    if (typeof raw.agentId !== "string" || typeof raw.branch !== "string" || typeof raw.instanceDir !== "string") {
+      return null;
+    }
+    return raw as WorktreeOwnerInfo;
+  } catch {
+    return null;
+  }
+}
+
+function readRuntimeOwnerFile(instanceDir: string): RuntimeOwnerInfo | null {
+  try {
+    const file = path.join(instanceDir, "runtime.json");
+    const raw = JSON.parse(readFileSync(file, "utf-8"));
+    if (!raw || typeof raw !== "object") return null;
+    if (typeof raw.pid !== "number" || typeof raw.heartbeatAt !== "number" || typeof raw.startedAt !== "number") {
+      return null;
+    }
+    return raw as RuntimeOwnerInfo;
+  } catch {
+    return null;
+  }
+}
+
+function isPidAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isRuntimeAlive(runtime: RuntimeOwnerInfo | null, ttlMs: number): boolean {
+  if (!runtime) return false;
+  if (!isPidAlive(runtime.pid)) return false;
+  return Date.now() - runtime.heartbeatAt <= ttlMs;
+}
+
+function shouldCleanWorktree(
+  entry: string,
+  wtPath: string,
+  owner: WorktreeOwnerInfo | null,
+  options: CleanupWorktreeOptions | undefined,
+): boolean {
+  const ownedAgentIds = options?.ownedAgentIds;
+  if (owner) {
+    const current = options?.currentOwner;
+    if (current
+      && owner.gatewayId === current.gatewayId
+      && owner.instanceDir === current.instanceDir
+      && owner.startedAt === current.startedAt) {
+      return true;
+    }
+    const ttlMs = options?.runtimeTtlMs ?? DEFAULT_RUNTIME_TTL_MS;
+    return !isRuntimeAlive(readRuntimeOwnerFile(owner.instanceDir), ttlMs);
+  }
+
+  if (!ownedAgentIds) return false;
+  return Array.from(ownedAgentIds).some(id => entry.startsWith(`${id}-`) || path.basename(wtPath) === id);
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -115,6 +233,7 @@ export function createWorktree(
   agentId: string,
   taskId: string,
   agentName: string,
+  owner?: Omit<WorktreeOwnerInfo, "agentId" | "taskId" | "agentName" | "branch">,
 ): string | null {
   if (!isGitRepo(workspace)) return null;
 
@@ -122,6 +241,9 @@ export function createWorktree(
   const worktreeName = `${agentId}-${taskId}`;
   const worktreePath = path.join(worktreeDir, worktreeName);
   const branch = `agent/${agentName.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+  const ownerInfo: WorktreeOwnerInfo | undefined = owner
+    ? { ...owner, agentId, taskId, agentName, branch }
+    : undefined;
 
   // Reuse existing worktree if already on the expected branch
   try {
@@ -146,6 +268,7 @@ export function createWorktree(
         } catch {
           console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
         }
+        if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
         return worktreePath;
       }
       console.log(`[Worktree] Existing worktree on wrong branch (${currentBranch} != ${branch}), recreating`);
@@ -160,6 +283,7 @@ export function createWorktree(
 
   try {
     gitExec(`git worktree add "${worktreePath}" -b "${branch}"`, workspace);
+    if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
     return worktreePath;
   } catch {
     // Branch may already exist — try attaching to it
@@ -183,6 +307,7 @@ export function createWorktree(
       } catch {
         console.log(`[Worktree] Attached to existing branch: ${branch}`);
       }
+      if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
       return worktreePath;
     } catch (err) {
       console.error(`[Worktree] Failed to create worktree: ${(err as Error).message}`);
@@ -265,6 +390,7 @@ export function mergeWorktree(
 
     if (!keepAlive) {
       // Clean up worktree + branch
+      removeWorktreeOwnerFile(worktreePath);
       try { gitExec(`git worktree remove "${worktreePath}"`, workspace); } catch { /* already removed */ }
       try { gitExec(`git branch -D "${branch}"`, workspace); } catch { /* not found */ }
     } else {
@@ -341,24 +467,25 @@ export function checkConflicts(workspace: string, branch: string): string[] {
 
 export function removeWorktreeOnly(worktreePath: string, workspace?: string): void {
   const cwd = workspace ?? path.dirname(path.dirname(worktreePath));
+  removeWorktreeOwnerFile(worktreePath);
   try { gitExec(`git worktree remove --force "${worktreePath}"`, cwd); } catch { /* already removed */ }
 }
 
 export function removeWorktree(worktreePath: string, branch: string, workspace?: string): void {
   const cwd = workspace ?? path.dirname(path.dirname(worktreePath));
+  removeWorktreeOwnerFile(worktreePath);
   try { gitExec(`git worktree remove --force "${worktreePath}"`, cwd); } catch { /* already removed */ }
   try { gitExec(`git branch -D "${branch}"`, cwd); } catch { /* not found */ }
 }
 
 /**
  * Clean up stale agent worktrees and branches from previous ungraceful shutdowns.
- * @param ownedAgentIds — if provided, only remove worktrees/branches belonging to
- *   these agents. This prevents one gateway instance from deleting another's worktrees.
+ * Uses owner metadata when available, and falls back to ownedAgentIds for legacy worktrees.
  */
 export function cleanupStaleWorktrees(
   workspace: string,
   activeBranches: Set<string> = new Set(),
-  ownedAgentIds?: Set<string>,
+  options?: CleanupWorktreeOptions,
 ): { removedBranches: string[]; removedWorktrees: string[] } {
   const removed = { removedBranches: [] as string[], removedWorktrees: [] as string[] };
   if (!isGitRepo(workspace)) return removed;
@@ -366,24 +493,29 @@ export function cleanupStaleWorktrees(
   // 1. Prune dead worktree metadata
   try { gitExec("git worktree prune", workspace); } catch { /* ignore */ }
 
-  // 2. Remove stale .worktrees/* directories (only ours)
-  // Track extracted taskIds for scoped branch cleanup later.
+  // 2. Remove stale .worktrees/* directories we can prove are ours or dead.
+  const cleanedBranches = new Set<string>();
   const cleanedTaskIds = new Set<string>();
   const worktreeDir = path.join(workspace, ".worktrees");
   try {
     if (existsSync(worktreeDir)) {
       const entries: string[] = readdirSync(worktreeDir);
       for (const entry of entries) {
-        // Skip worktrees that don't belong to this instance
-        const matchingId = ownedAgentIds && Array.from(ownedAgentIds).find(id => entry.startsWith(id));
-        if (ownedAgentIds && !matchingId) continue;
         const wtPath = path.join(worktreeDir, entry);
+        const owner = readWorktreeOwnerFile(wtPath);
+        if (!shouldCleanWorktree(entry, wtPath, owner, options)) continue;
         try {
+          removeWorktreeOwnerFile(wtPath);
           gitExec(`git worktree remove --force "${wtPath}"`, workspace);
           removed.removedWorktrees.push(entry);
-          // Extract taskId: worktree name is "{agentId}-{taskId}", strip the known agentId prefix + separator
-          if (matchingId && entry.length > matchingId.length + 1) {
-            cleanedTaskIds.add(entry.slice(matchingId.length + 1));
+          if (owner?.branch) {
+            cleanedBranches.add(owner.branch);
+            cleanedTaskIds.add(owner.taskId);
+          } else if (options?.ownedAgentIds) {
+            const matchingId = Array.from(options.ownedAgentIds).find(id => entry.startsWith(`${id}-`));
+            if (matchingId && entry.length > matchingId.length + 1) {
+              cleanedTaskIds.add(entry.slice(matchingId.length + 1));
+            }
           }
         } catch { /* still in use */ }
       }
@@ -397,8 +529,7 @@ export function cleanupStaleWorktrees(
   } catch { /* ignore */ }
 
   // 3. Delete orphaned agent/* branches
-  // When scoped (ownedAgentIds), only delete branches whose taskId matches
-  // a worktree we just removed — this avoids deleting other instances' branches.
+  // When scoped, only delete branches matching worktrees we actually removed.
   try {
     const branchOutput = gitExec('git branch --list "agent/*"', workspace);
     if (!branchOutput) return removed;
@@ -413,9 +544,10 @@ export function cleanupStaleWorktrees(
     const branches = branchOutput.split("\n").map(b => b.trim().replace(/^\*\s*/, "")).filter(Boolean);
     for (const branch of branches) {
       if (activeBranches.has(branch) || wtBranches.has(branch)) continue;
-      // When scoped, only delete branches matching our cleaned worktrees.
-      // Branch format: "agent/{name}/{taskId}" — taskId is the last segment.
-      if (ownedAgentIds) {
+      if (cleanedBranches.size > 0 && !cleanedBranches.has(branch)) {
+        continue;
+      }
+      if (cleanedBranches.size === 0 && options?.ownedAgentIds) {
         const branchTaskId = branch.split("/").pop();
         if (!branchTaskId || !cleanedTaskIds.has(branchTaskId)) continue;
       }

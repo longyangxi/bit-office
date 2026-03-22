@@ -309,7 +309,17 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     const base = repoPath ?? session.workspaceDir;
-    const wt = createWorktree(base, agentId, taskId, session.name);
+    const instanceDir = process.env.BIT_OFFICE_INSTANCE_DIR;
+    const owner = instanceDir
+      ? {
+        gatewayId: process.env.BIT_OFFICE_GATEWAY_ID ?? "unknown",
+        machineId: process.env.BIT_OFFICE_MACHINE_ID ?? "unknown",
+        instanceDir,
+        pid: Number(process.env.BIT_OFFICE_GATEWAY_PID) || process.pid,
+        startedAt: Number(process.env.BIT_OFFICE_GATEWAY_STARTED_AT) || Date.now(),
+      }
+      : undefined;
+    const wt = createWorktree(base, agentId, taskId, session.name, owner);
     if (wt) {
       const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
       session.worktreePath = wt;
