@@ -6,6 +6,36 @@ const STATIC_PORT = 9199;
 const COMMAND_PORT = 9198;
 
 /**
+ * Resolve the `serve` binary — prefer direct `serve` over `npx serve`
+ * because npx/npm may not be installed (e.g. node installed via standalone binary).
+ */
+function resolveServeBin(): { cmd: string; args: (dir: string, port: number) => string[] } {
+  // 1. Try direct `serve` — validate it's the npm @vercel/serve CLI (supports --help)
+  try {
+    const servePath = execSync("which serve", { encoding: "utf8", timeout: 3000 }).trim();
+    if (servePath) {
+      // Verify it's the expected `serve` by checking its --help output for known flags
+      const helpOutput = execSync(`${servePath} --help 2>&1`, { encoding: "utf8", timeout: 5000 });
+      if (helpOutput.includes("--listen") || helpOutput.includes("-l")) {
+        console.log(`[PreviewServer] Using verified serve binary: ${servePath}`);
+        return {
+          cmd: servePath,
+          args: (dir, port) => [dir, "-l", String(port), "--no-clipboard"],
+        };
+      }
+      console.log(`[PreviewServer] Found serve at ${servePath} but it's not the expected npm serve CLI, skipping`);
+    }
+  } catch { /* not found or validation failed */ }
+
+  // 2. Fallback to npx serve
+  console.log(`[PreviewServer] Falling back to npx serve`);
+  return {
+    cmd: "npx",
+    args: (dir, port) => ["serve", dir, "-l", String(port), "--no-clipboard"],
+  };
+}
+
+/**
  * Kill any process occupying a given port.
  * Handles orphaned servers from previous gateway sessions that survived restart.
  */
@@ -33,6 +63,7 @@ function killPortProcess(port: number): void {
 class PreviewServer {
   private process: ChildProcess | null = null;
   private currentDir: string | null = null;
+  /** true when spawned with detached:true (needs process-group kill) */
   private isDetached = false;
 
   /**
@@ -51,19 +82,52 @@ class PreviewServer {
     killPortProcess(STATIC_PORT);
 
     try {
-      this.process = spawn("npx", ["serve", dir, "-l", String(STATIC_PORT), "--no-clipboard"], {
-        stdio: ["ignore", "ignore", "pipe"],
+      const serve = resolveServeBin();
+      const serveArgs = serve.args(dir, STATIC_PORT);
+      console.log(`[PreviewServer] Spawning: ${serve.cmd} ${serveArgs.join(" ")}`);
+      // detached: true creates a process group so stop() can kill the whole tree
+      // (needed for npx wrapper which spawns a child `serve` process).
+      // NOT using .unref() — so Node tracks the child and it dies on gateway exit.
+      this.process = spawn(serve.cmd, serveArgs, {
+        stdio: ["ignore", "pipe", "pipe"],
         detached: true,
+      });
+      const pid = this.process.pid;
+      console.log(`[PreviewServer] Spawned pid=${pid}`);
+      this.process.stdout?.on("data", (data: Buffer) => {
+        const msg = data.toString().trim();
+        if (msg) console.log(`[PreviewServer] serve stdout (pid=${pid}): ${msg.slice(0, 300)}`);
       });
       this.process.stderr?.on("data", (data: Buffer) => {
         const msg = data.toString().trim();
-        if (msg) console.log(`[PreviewServer] serve stderr: ${msg.slice(0, 200)}`);
+        if (msg) console.log(`[PreviewServer] serve stderr (pid=${pid}): ${msg.slice(0, 300)}`);
       });
-      this.process.unref();
+      this.process.on("error", (err) => {
+        console.log(`[PreviewServer] serve ERROR (pid=${pid}): ${err.message}`);
+      });
+      this.process.on("exit", (code, signal) => {
+        console.log(`[PreviewServer] serve EXITED (pid=${pid}): code=${code} signal=${signal}`);
+      });
       this.currentDir = dir;
       this.isDetached = true;
       const url = `http://localhost:${STATIC_PORT}/${fileName}`;
-      console.log(`[PreviewServer] Serving ${dir} on port ${STATIC_PORT}`);
+      console.log(`[PreviewServer] Serving ${dir} on port ${STATIC_PORT} → ${url}`);
+      // Health check after 3s to verify server is actually listening
+      setTimeout(() => {
+        import("http").then(({ default: http }) => {
+          const req = http.get(`http://localhost:${STATIC_PORT}/`, (res) => {
+            console.log(`[PreviewServer] Health check OK: status=${res.statusCode}`);
+            res.resume();
+          });
+          req.on("error", (err) => {
+            console.log(`[PreviewServer] Health check FAILED (port ${STATIC_PORT} not responding): ${err.message}`);
+          });
+          req.setTimeout(3000, () => {
+            console.log(`[PreviewServer] Health check TIMEOUT (port ${STATIC_PORT})`);
+            req.destroy();
+          });
+        });
+      }, 3000);
       return url;
     } catch (e) {
       console.log(`[PreviewServer] Failed to start static serve: ${e}`);
@@ -96,6 +160,7 @@ class PreviewServer {
     console.log(`[PreviewServer] Command: "${cmd}" (forced port ${port})`);
 
     try {
+      // detached: true so stop() can kill the entire process group (shell + children)
       this.process = spawn(cmd, {
         shell: true,
         cwd,
@@ -103,7 +168,6 @@ class PreviewServer {
         detached: true,
         env: { ...process.env, PORT: String(port) },
       });
-      this.process.unref();
       this.currentDir = cwd;
       this.isDetached = true;
       const url = `http://localhost:${port}`;
@@ -128,9 +192,10 @@ class PreviewServer {
         shell: true,
         cwd,
         stdio: ["ignore", "ignore", "pipe"],
+        detached: true,
       });
       this.currentDir = cwd;
-      this.isDetached = false;
+      this.isDetached = true;
       console.log(`[PreviewServer] Launched "${cmd}" in ${cwd} (pid=${this.process.pid})`);
       this.process.stderr?.on("data", (data: Buffer) => {
         const msg = data.toString().trim();
@@ -148,14 +213,13 @@ class PreviewServer {
   stop() {
     if (this.process) {
       try {
+        // Kill entire process group (shell + children) when detached
         if (this.isDetached && this.process.pid) {
           process.kill(-this.process.pid, "SIGTERM");
         } else {
           this.process.kill("SIGTERM");
         }
-      } catch {
-        try { this.process.kill("SIGTERM"); } catch { /* already dead */ }
-      }
+      } catch { /* already dead */ }
       this.process = null;
       this.currentDir = null;
       this.isDetached = false;

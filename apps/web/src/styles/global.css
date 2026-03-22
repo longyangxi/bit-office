@@ -1,3 +1,11 @@
+html, body {
+  overflow: hidden;
+  height: 100%;
+}
+html {
+  background: #16122a;
+}
+
 :root {
   /* ── Office scene (pixel art, warm purple) ── */
   --office-bg: #16122a;

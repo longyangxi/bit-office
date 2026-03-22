@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, mergeWorktree, removeWorktree } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -321,7 +321,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       : undefined;
     const wt = createWorktree(base, agentId, taskId, session.name, owner);
     if (wt) {
-      const branch = `agent/${session.name.toLowerCase().replace(/\s+/g, "-")}/${taskId}`;
+      const branch = getManagedWorktreeBranch(session.name, taskId);
       session.worktreePath = wt;
       session.worktreeBranch = branch;
       // Clear history — can't --resume in a different directory

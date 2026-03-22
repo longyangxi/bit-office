@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { TERM_BG, TERM_BORDER, TERM_GREEN, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
@@ -86,30 +86,58 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
   onRate: (ratings: Record<string, number>) => void;
 }) {
   const [status, setStatus] = useState<"loading" | "ready">("loading");
-  const [pollInfo, setPollInfo] = useState("");
   const [showRating, setShowRating] = useState(false);
   const [closing, setClosing] = useState(false);
   const isTauri = useRef(typeof window !== "undefined" && window.location.protocol === "tauri:");
+  // Tauri retry: mount/unmount iframe cycle to force WebKit fresh requests.
+  // "mount" = iframe rendered, "unmount" = iframe removed (forces fresh load on next mount).
+  const [tauriMounted, setTauriMounted] = useState(false);
+  const tauriLoadedRef = useRef(false);
+  const tauriRetryRef = useRef(0);
+  const maxTauriRetries = 15; // ~30s worst case (2s each cycle)
+
+  const handleTauriLoad = useCallback(() => {
+    tauriLoadedRef.current = true;
+  }, []);
+
+  // Tauri retry loop: mount iframe → wait 2s for onLoad → if no onLoad, unmount
+  // and remount to force WebKit to make a fresh request (avoids cached errors).
+  useEffect(() => {
+    if (!isTauri.current || status !== "ready") return;
+    if (tauriLoadedRef.current) return; // already loaded, stop retrying
+    const t = setTimeout(() => {
+      if (tauriLoadedRef.current) return;
+      tauriRetryRef.current++;
+      if (tauriRetryRef.current >= maxTauriRetries) {
+        tauriLoadedRef.current = true; // stop cycling
+        return;
+      }
+      // Unmount iframe, then remount after a brief gap
+      setTauriMounted(false);
+      setTimeout(() => setTauriMounted(true), 200);
+    }, 2000);
+    return () => clearTimeout(t);
+  }, [status, tauriMounted]);
 
   // Poll the preview URL until it responds instead of hardcoded delay.
   // Handles slow npx serve cold starts (first run downloads the package).
   // In Tauri (tauri:// protocol), fetch to http://localhost always fails due to
-  // cross-protocol restrictions. Instead we use a simple delay — the static
-  // server is already running by the time the user clicks preview. The iframe
-  // must NOT be mounted until status="ready" so WebKit loads it fresh.
+  // cross-protocol restrictions. We skip fetch and use an iframe mount/unmount
+  // retry cycle — each mount forces WebKit to make a fresh request.
   useEffect(() => {
     if (isTauri.current) {
+      tauriLoadedRef.current = false;
+      tauriRetryRef.current = 0;
       setStatus("loading");
-      setPollInfo("tauri — waiting 2s for server");
+      // Initial delay before first mount attempt
       const t = setTimeout(() => {
-        setPollInfo("tauri — ready");
         setStatus("ready");
-      }, 2000);
+        setTauriMounted(true);
+      }, 1500);
       return () => clearTimeout(t);
     }
 
     setStatus("loading");
-    setPollInfo("waiting...");
     let cancelled = false;
     let attempts = 0;
     const maxAttempts = 30; // 15 seconds max (500ms interval)
@@ -117,21 +145,14 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
     const poll = () => {
       if (cancelled) return;
       attempts++;
-      setPollInfo(`poll #${attempts}/${maxAttempts} → ${url}`);
       fetch(url, { mode: "no-cors" })
         .then(() => {
-          if (!cancelled) {
-            setPollInfo(`ready after ${attempts} polls`);
-            setStatus("ready");
-          }
+          if (!cancelled) setStatus("ready");
         })
-        .catch((err) => {
+        .catch(() => {
           if (!cancelled && attempts < maxAttempts) {
-            setPollInfo(`poll #${attempts} failed: ${err.message ?? "network error"}`);
             setTimeout(poll, 500);
           } else if (!cancelled) {
-            // Timeout — show iframe anyway (server may respond to iframe but not fetch)
-            setPollInfo(`timeout after ${attempts} polls — showing iframe anyway`);
             setStatus("ready");
           }
         });
@@ -188,17 +209,6 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
           }}
         >{"\u2715"}</button>
       </div>
-      {/* Debug bar — shows polling status, target URL, and window origin */}
-      <div style={{
-        height: 22, padding: "0 12px", backgroundColor: "#1a1a2e",
-        borderBottom: "1px solid #333", display: "flex", alignItems: "center",
-        fontFamily: "monospace", fontSize: 10, color: "#888", gap: 12, overflow: "hidden",
-      }}>
-        <span style={{ color: status === "ready" ? "#4ade80" : "#f59e0b" }}>{status}</span>
-        <span style={{ color: "#666", flexShrink: 0 }}>origin: {typeof window !== "undefined" ? window.location.origin : "?"}</span>
-        <span style={{ color: "#666", flexShrink: 0 }}>host: {typeof window !== "undefined" ? window.location.hostname : "?"}</span>
-        <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pollInfo}</span>
-      </div>
       <div style={{ flex: 1, position: "relative" }}>
         {status === "loading" && (
           <div style={{
@@ -214,11 +224,12 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
             <style>{`@keyframes preview-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
-        {/* Only mount iframe after readiness confirmed (fetch poll or Tauri delay).
-            Mounting too early causes WebKit to cache the connection-refused error. */}
-        {status === "ready" && (
+        {/* Mount iframe after readiness confirmed. In Tauri, tauriMounted controls
+            a mount/unmount cycle that forces WebKit to make fresh requests on retry. */}
+        {status === "ready" && (isTauri.current ? tauriMounted : true) && (
           <iframe
             src={url}
+            onLoad={isTauri.current ? handleTauriLoad : undefined}
             style={{
               width: "100%", height: "100%", border: "none",
               // Hide iframe when rating popup is visible

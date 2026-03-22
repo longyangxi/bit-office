@@ -228,12 +228,37 @@ function sanitizeBranchSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
 }
 
+export function getManagedWorktreeBranch(agentName: string, taskId: string): string {
+  const safeTaskId = sanitizeBranchSegment(taskId);
+  const safeAgentName = sanitizeBranchSegment(agentName.toLowerCase().replace(/\s+/g, "-"));
+  return `agent/${safeAgentName}/${safeTaskId}`;
+}
+
 function resolveGitWorkspaceRoot(workspace: string): string {
   try {
     const commonDir = gitExec("git rev-parse --path-format=absolute --git-common-dir", workspace);
     if (commonDir) return path.dirname(commonDir);
   } catch { /* ignore */ }
   return workspace;
+}
+
+function findWorktreePathForBranch(repoRoot: string, branch: string): string | null {
+  try {
+    const output = gitExec("git worktree list --porcelain", repoRoot);
+    let currentPath: string | null = null;
+    for (const line of output.split("\n")) {
+      if (line.startsWith("worktree ")) {
+        currentPath = line.slice("worktree ".length).trim();
+        continue;
+      }
+      if (line.startsWith("branch ") && currentPath) {
+        const currentBranch = line.slice("branch refs/heads/".length).trim();
+        if (currentBranch === branch) return currentPath;
+      }
+      if (!line.trim()) currentPath = null;
+    }
+  } catch { /* ignore */ }
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -256,10 +281,9 @@ export function createWorktree(
 
   const worktreeDir = path.join(repoRoot, ".worktrees");
   const safeTaskId = sanitizeBranchSegment(taskId);
-  const safeAgentName = sanitizeBranchSegment(agentName.toLowerCase().replace(/\s+/g, "-"));
   const worktreeName = `${agentId}-${safeTaskId}`;
-  const worktreePath = path.join(worktreeDir, worktreeName);
-  const branch = `agent/${safeAgentName}/${safeTaskId}`;
+  let worktreePath = path.join(worktreeDir, worktreeName);
+  const branch = getManagedWorktreeBranch(agentName, taskId);
   const ownerInfo: WorktreeOwnerInfo | undefined = owner
     ? { ...owner, agentId, taskId, agentName, branch }
     : undefined;
@@ -299,6 +323,29 @@ export function createWorktree(
 
   // Prune stale worktree references before creating
   try { gitExec("git worktree prune", repoRoot); } catch { /* ignore */ }
+
+  const attachedWorktreePath = findWorktreePathForBranch(repoRoot, branch);
+  if (attachedWorktreePath && attachedWorktreePath !== worktreePath) {
+    if (existsSync(attachedWorktreePath) && isGitRepo(attachedWorktreePath)) {
+      if (ownerInfo) writeWorktreeOwnerFile(attachedWorktreePath, ownerInfo);
+      console.log(`[Worktree] Reusing branch ${branch} already attached at ${attachedWorktreePath}`);
+      return attachedWorktreePath;
+    }
+    try { gitExec("git worktree prune", repoRoot); } catch { /* ignore */ }
+  }
+
+  if (existsSync(worktreePath) && !isGitRepo(worktreePath)) {
+    try { rmdirSync(worktreePath); } catch { /* ignore */ }
+    if (existsSync(worktreePath)) {
+      for (let i = 1; i <= 20; i++) {
+        const candidate = path.join(worktreeDir, `${worktreeName}-${i}`);
+        if (!existsSync(candidate)) {
+          worktreePath = candidate;
+          break;
+        }
+      }
+    }
+  }
 
   try {
     gitExec(`git worktree add ${shellQuote(worktreePath)} -b ${shellQuote(branch)}`, repoRoot);

@@ -126,13 +126,51 @@ fn main() {
 
                     // Append common CLI tool paths that .zshrc might add but login shell misses
                     let home = std::env::var("HOME").unwrap_or_default();
-                    let extra_paths = [
+                    // Detect NVM's current node bin directory (NVM is loaded in .bashrc, not login shell)
+                    let nvm_bin = std::fs::read_to_string(format!("{}/.nvm/alias/default", home))
+                        .ok()
+                        .filter(|s| !s.trim().is_empty())
+                        .and_then(|alias| {
+                            let v = alias.trim().to_string();
+                            // Resolve alias like "22" → find matching version dir
+                            let versions_dir = format!("{}/.nvm/versions/node", home);
+                            if let Ok(entries) = std::fs::read_dir(&versions_dir) {
+                                let mut matches: Vec<String> = entries
+                                    .filter_map(|e| e.ok())
+                                    .map(|e| e.file_name().to_string_lossy().to_string())
+                                    .filter(|name| name.starts_with(&format!("v{}", v)) || name == &format!("v{}", v))
+                                    .collect();
+                                matches.sort();
+                                matches.last().map(|m| format!("{}/{}/bin", versions_dir, m))
+                            } else {
+                                None
+                            }
+                        })
+                        .or_else(|| {
+                            // Fallback: pick the latest installed version
+                            let versions_dir = format!("{}/.nvm/versions/node", home);
+                            std::fs::read_dir(&versions_dir).ok().and_then(|entries| {
+                                let mut versions: Vec<String> = entries
+                                    .filter_map(|e| e.ok())
+                                    .map(|e| e.file_name().to_string_lossy().to_string())
+                                    .filter(|n| n.starts_with('v'))
+                                    .collect();
+                                versions.sort();
+                                versions.last().map(|v| format!("{}/{}/bin", versions_dir, v))
+                            })
+                        });
+
+                    let mut extra_paths = vec![
                         format!("{}/.local/bin", home),         // claude, pip, pipx
                         format!("{}/.local/share/pnpm", home),  // pnpm global
                         format!("{}/.cargo/bin", home),         // rust/cargo
                         "/opt/homebrew/bin".to_string(),        // homebrew (arm64)
                         "/usr/local/bin".to_string(),           // homebrew (x86)
                     ];
+                    if let Some(nvm_path) = nvm_bin {
+                        println!("[desktop] NVM node bin: {}", nvm_path);
+                        extra_paths.insert(0, nvm_path);        // NVM node/npm/npx
+                    }
                     for p in &extra_paths {
                         if !base.split(':').any(|e| e == p) && std::path::Path::new(p).is_dir() {
                             base.push(':');

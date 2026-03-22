@@ -16,7 +16,7 @@ export type { ParsedResult } from "./output-parser.js";
 export { CONFIG } from "./config.js";
 export { getMemoryContext, getMemoryStore, clearMemory, recordReviewFeedback, recordProjectCompletion, recordProjectRatings, recordTechPreference, commitSession, buildRecoveryContext, getRecoveryString, getAgentL0, getWorkState, updateWorkState, clearAgentWorkState, setStorageRoot } from "./memory.js";
 export type { ReviewPattern, ProjectRecord } from "./memory.js";
-export { createWorktree, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts, cleanupStaleWorktrees, getIsolatedGitEnv } from "./worktree.js";
+export { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts, cleanupStaleWorktrees, getIsolatedGitEnv } from "./worktree.js";
 export type { CleanupWorktreeOptions, MergeResult, RuntimeOwnerInfo, WorktreeOwnerInfo } from "./worktree.js";
 export type { AIBackend, BuildArgsOpts, BackendStability, GuardType } from "./ai-backend.js";
 export type { TeamPhaseInfo } from "./phase-machine.js";

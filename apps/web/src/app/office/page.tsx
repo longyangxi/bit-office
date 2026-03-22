@@ -57,15 +57,17 @@ const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalet
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const cbRef = useRef(onLoadMore);
+  cbRef.current = onLoadMore;
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const io = new IntersectionObserver(([entry]) => {
-      if (entry.isIntersecting) onLoadMore();
-    }, { threshold: 0 });
+      if (entry.isIntersecting) cbRef.current();
+    }, { threshold: 0, rootMargin: "100px 0px 0px 0px" });
     io.observe(el);
     return () => io.disconnect();
-  }, [onLoadMore]);
+  }, []);
   return <div ref={ref} style={{ height: 1, flexShrink: 0 }} />;
 }
 
@@ -175,6 +177,8 @@ export default function OfficePage() {
   const suggestions = useOfficeStore(s => s.suggestions);
   const detectedBackends = useOfficeStore(s => s.detectedBackends);
   const agentLogLines = useOfficeStore(s => s.agentLogLines);
+  // Subscribe so component re-renders when loadMoreMessages() updates the count
+  const visibleMessageCount = useOfficeStore(s => s.visibleMessageCount); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   // Stable refs — these functions never change identity, no need to trigger re-renders
   const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages } = useOfficeStore.getState();
