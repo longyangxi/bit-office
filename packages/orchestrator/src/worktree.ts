@@ -260,8 +260,11 @@ export function getManagedWorktreeBranch(agentName: string, taskId: string): str
 
 export function resolveGitWorkspaceRoot(workspace: string): string {
   try {
-    const commonDir = gitExec("git rev-parse --path-format=absolute --git-common-dir", workspace);
-    if (commonDir) return path.dirname(commonDir);
+    const commonDir = gitExec("git rev-parse --git-common-dir", workspace);
+    if (commonDir) {
+      const abs = path.isAbsolute(commonDir) ? commonDir : path.resolve(workspace, commonDir);
+      return path.dirname(abs);
+    }
   } catch { /* ignore */ }
   return workspace;
 }
