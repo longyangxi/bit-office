@@ -1,7 +1,8 @@
 import { memo, useCallback, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_BG, TERM_SURFACE, TERM_HOVER } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_BG, TERM_SURFACE, TERM_HOVER } from "./termTheme";
+import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
@@ -75,37 +76,82 @@ const StableAgentPane = memo(function StableAgentPane({
 
   return (
     <>
-      {/* Inline avatar header for this pane */}
-      {meta && (
-        <div className="term-info-bar" style={{
-          display: "flex", alignItems: "center", gap: 8,
-          padding: "5px 12px",
-          background: TERM_PANEL,
-          flexShrink: 0,
-        }}>
-          <div style={{ position: "relative", width: 24, height: 28, overflow: "hidden", borderRadius: 2, flexShrink: 0 }}>
-            <div style={{ marginTop: -1 }}>
-              <SpriteAvatar palette={meta.palette} zoom={1.5} ready={assetsReady ?? false} />
+      {/* Inline avatar header for this pane (console mode only) */}
+      {meta && (() => {
+        const statusKey = data.status ?? "idle";
+        const cfg = getStatusConfig()[statusKey] ?? getStatusConfig().idle;
+        const backendName = data.backend ? (BACKEND_OPTIONS.find((b) => b.id === data.backend)?.name ?? data.backend) : null;
+        const roleName = data.role?.split("\u2014")[0]?.trim();
+        const statusColor = data.busy ? TERM_GREEN
+          : statusKey === "waiting_approval" ? TERM_SEM_YELLOW
+          : statusKey === "error" ? TERM_SEM_RED
+          : statusKey === "done" ? TERM_SEM_GREEN
+          : TERM_BORDER;
+        return (
+          <div className="term-info-bar" style={{
+            display: "flex", alignItems: "center", gap: 8,
+            padding: "5px 12px",
+            background: TERM_PANEL,
+            flexShrink: 0,
+          }}>
+            {/* Avatar with status ring */}
+            <div style={{
+              position: "relative", width: 26, height: 30,
+              overflow: "hidden", borderRadius: 3, flexShrink: 0,
+              border: `1.5px solid ${statusColor}`,
+              transition: "border-color 0.3s ease",
+            }}>
+              <div style={{ marginTop: -1 }}>
+                <SpriteAvatar palette={meta.palette} zoom={1.6} ready={assetsReady ?? false} />
+              </div>
+              {data.busy && (
+                <span style={{
+                  position: "absolute", top: 1, right: 1,
+                  width: 5, height: 5, borderRadius: "50%",
+                  backgroundColor: TERM_GREEN,
+                  boxShadow: `0 0 4px ${TERM_GREEN}40`,
+                  animation: "px-pulse-gold 1.5s ease infinite",
+                }} />
+              )}
             </div>
-            {data.busy && (
+            {/* Name · Backend · Role */}
+            <div style={{
+              display: "flex", alignItems: "center", gap: 0,
+              overflow: "hidden", whiteSpace: "nowrap", minWidth: 0,
+              fontFamily: TERM_FONT,
+            }}>
               <span style={{
-                position: "absolute", top: 0, right: 0,
-                width: 5, height: 5, borderRadius: "50%",
-                backgroundColor: TERM_GREEN,
-                boxShadow: `0 0 4px ${TERM_GREEN}40`,
-              }} />
-            )}
-            {meta.isTeamLead && (
-              <span style={{ position: "absolute", top: -2, left: -1, fontSize: 7, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
-            )}
+                fontSize: TERM_SIZE, color: TERM_TEXT_BRIGHT, fontWeight: 600,
+                letterSpacing: "-0.01em", flexShrink: 0,
+              }}>{meta.name}</span>
+              {meta.isTeamLead && (
+                <span style={{
+                  fontSize: 8, fontFamily: TERM_FONT,
+                  color: TERM_SEM_YELLOW, fontWeight: 700,
+                  padding: "0 3px", lineHeight: "14px", marginLeft: 5,
+                  border: `1px solid ${TERM_SEM_YELLOW}40`,
+                  borderRadius: 3, flexShrink: 0,
+                }}>LEAD</span>
+              )}
+              {backendName && (
+                <>
+                  <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
+                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_DIM, flexShrink: 0 }}>{backendName}</span>
+                </>
+              )}
+              {roleName && (
+                <>
+                  <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
+                  <span style={{
+                    fontSize: TERM_SIZE - 1, color: TERM_DIM, opacity: 0.7,
+                    overflow: "hidden", textOverflow: "ellipsis",
+                  }}>{roleName}</span>
+                </>
+              )}
+            </div>
           </div>
-          <span style={{
-            fontSize: TERM_SIZE, color: TERM_TEXT_BRIGHT,
-            fontFamily: TERM_FONT, letterSpacing: "-0.01em",
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          }}>{meta.name}</span>
-        </div>
-      )}
+        );
+      })()}
       <AgentPane
         agentId={agentId}
         name={data.name}
@@ -158,6 +204,7 @@ const StableAgentPane = memo(function StableAgentPane({
         onApplyReviewFixes={onApplyReviewFixes}
         onDismissReview={onDismissReview}
         scrollFrozen={scrollFrozen}
+        hideInfoRole={!!meta}
       />
     </>
   );

@@ -137,6 +137,8 @@ export interface AgentPaneProps {
   onDismissReview?: () => void;
   /** When true, all scroll management is frozen (e.g. during CSS width transition) */
   scrollFrozen?: boolean;
+  /** Hide role/backend in info bar (shown in console header instead) */
+  hideInfoRole?: boolean;
 }
 
 /** Memoized message list — decoupled from input state so typing doesn't re-render messages */
@@ -326,7 +328,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
-    scrollFrozen,
+    scrollFrozen, hideInfoRole,
   } = props;
 
   const statusConfig = getStatusConfig();
@@ -398,9 +400,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         fontSize: 12, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, letterSpacing: "-0.01em" }}>
-          {role?.split("\u2014")[0]?.trim()}
-        </span>
+        {!hideInfoRole && (
+          <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, letterSpacing: "-0.01em" }}>
+            {role?.split("\u2014")[0]?.trim()}
+          </span>
+        )}
         {(cwd || workDir) && (
           <span className="term-path-scroll" style={{
             color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.6,
