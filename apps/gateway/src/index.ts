@@ -1234,6 +1234,8 @@ async function main() {
   orc.on("agent:activity", forwardEvent);
   orc.on("worktree:created", forwardEvent);
   orc.on("worktree:merged", forwardEvent);
+  orc.on("worktree:ready", forwardEvent);
+  orc.on("autoMerge:updated", forwardEvent);
   orc.on("token:update", forwardEvent);
   orc.on("agent:created", forwardEvent);
   orc.on("agent:fired", forwardEvent);

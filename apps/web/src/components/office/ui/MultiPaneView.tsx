@@ -20,6 +20,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onEndProject, onSuggest, onPreview, onReview, detectedBackends,
   onLoadMore, onPasteImage, onPasteText, onDropImage,
   reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
+  onToggleAutoMerge, onMerge, onRevert,
   scrollFrozen,
 }: {
   agentId: string;
@@ -55,6 +56,9 @@ const StableAgentPane = memo(function StableAgentPane({
   onReviewerLoadMore?: () => void;
   onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
+  onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
+  onMerge?: (agentId: string) => void;
+  onRevert?: (agentId: string) => void;
   scrollFrozen?: boolean;
 }) {
   // Stable callbacks — useRef + useCallback pattern avoids creating new references
@@ -201,6 +205,11 @@ const StableAgentPane = memo(function StableAgentPane({
         onDropImage={handleDropImage}
         reviewerOverlay={reviewerOverlay}
         onReviewerLoadMore={onReviewerLoadMore}
+        autoMerge={data.autoMerge}
+        pendingMerge={data.pendingMerge}
+        onToggleAutoMerge={onToggleAutoMerge ? (val) => onToggleAutoMerge(agentId, val) : undefined}
+        onMerge={onMerge ? () => onMerge(agentId) : undefined}
+        onRevert={onRevert ? () => onRevert(agentId) : undefined}
         onApplyReviewFixes={onApplyReviewFixes}
         onDismissReview={onDismissReview}
         scrollFrozen={scrollFrozen}
@@ -232,6 +241,8 @@ interface AgentData {
   lastLogLine: string | null;
   busy: boolean;
   pid?: number | null;
+  autoMerge?: boolean;
+  pendingMerge?: boolean;
 }
 
 export interface MultiPaneViewProps {
@@ -270,6 +281,10 @@ export interface MultiPaneViewProps {
   onReviewerLoadMore?: (agentId: string) => void;
   onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
+  // Merge controls
+  onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
+  onMerge?: (agentId: string) => void;
+  onRevert?: (agentId: string) => void;
   /** Freeze scroll management during CSS width transitions */
   scrollFrozen?: boolean;
   /** Agent metadata for inline avatar headers (console mode) */
@@ -328,6 +343,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onHire,
     showTeamControls,
     teamBusy,
+    onToggleAutoMerge,
+    onMerge,
+    onRevert,
     onStopTeam,
     onFireTeam,
   } = props;
@@ -606,6 +624,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                       onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                       onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
                       onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                      onToggleAutoMerge={onToggleAutoMerge}
+                      onMerge={onMerge}
+                      onRevert={onRevert}
                       scrollFrozen={scrollFrozen}
                     />
                   </div>

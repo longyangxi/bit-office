@@ -1729,6 +1729,8 @@ export default function OfficePage() {
                     lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
                     busy: ag.status === "working" || ag.status === "waiting_approval",
                     pid: ag.pid,
+                    autoMerge: ag.autoMerge,
+                    pendingMerge: ag.pendingMerge,
                   };
                 }}
                 paneOffset={paneOffset}
@@ -1800,6 +1802,9 @@ export default function OfficePage() {
                 onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onApplyReviewFixes={handleApplyReviewFixes}
                 onDismissReview={handleDismissReview}
+                onToggleAutoMerge={(agentId, val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId, autoMerge: val })}
+                onMerge={(agentId) => sendCommand({ type: "MERGE_WORKTREE", agentId })}
+                onRevert={(agentId) => sendCommand({ type: "REVERT_WORKTREE", agentId })}
                 scrollFrozen={scrollFrozen}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
