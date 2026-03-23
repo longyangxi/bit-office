@@ -912,10 +912,28 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         break;
       }
       const sourceAgent = orc.getAgent(sourceAgentId);
-      // Resolve reviewer cwd: prefer source agent's workDir, but fall back if it no longer exists
-      // (e.g. worktree was cleaned up between task completion and review click)
-      const rawCwd = agentWorkDirs.get(sourceAgentId) ?? projectDir;
-      const cwd = (rawCwd && existsSync(rawCwd)) ? rawCwd : config.defaultWorkspace;
+      // Resolve reviewer cwd: prefer source agent's workDir, then projectDir, then default.
+      // projectDir from the agent may be relative (e.g. "color-mixer") — resolve against
+      // the source agent's workDir to get an absolute path.
+      const agentWorkDir = agentWorkDirs.get(sourceAgentId);
+      let cwd: string;
+      if (agentWorkDir && existsSync(agentWorkDir)) {
+        // If projectDir is relative, join it with the agent's workDir
+        if (projectDir && !path.isAbsolute(projectDir)) {
+          const joined = path.join(agentWorkDir, projectDir);
+          cwd = existsSync(joined) ? joined : agentWorkDir;
+        } else {
+          cwd = agentWorkDir;
+        }
+      } else if (projectDir) {
+        // No agentWorkDir — resolve projectDir against defaultWorkspace
+        const absProjectDir = path.isAbsolute(projectDir) ? projectDir : path.join(config.defaultWorkspace, projectDir);
+        cwd = existsSync(absProjectDir) ? absProjectDir : config.defaultWorkspace;
+      } else {
+        cwd = config.defaultWorkspace;
+      }
+      // Final safety: ensure cwd is absolute and exists
+      if (!path.isAbsolute(cwd) || !existsSync(cwd)) cwd = config.defaultWorkspace;
       const reviewerBackendId = reviewBackend ?? sourceAgent?.backend ?? config.defaultBackend;
 
       // Run git diff to get actual changes — much cheaper than reviewer reading entire files
