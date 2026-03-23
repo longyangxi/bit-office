@@ -5,7 +5,7 @@ import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "
 import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, cleanupStaleWorktrees, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -1137,8 +1137,10 @@ async function main() {
       if (agent.autoMerge !== undefined) {
         orc.setAgentAutoMerge(agent.agentId, agent.autoMerge);
       }
-      // Never restore old worktree state — stale worktrees are cleaned up on startup
-      // and fresh ones are created when agents start new tasks (if worktree is enabled).
+      // Restore worktree path/branch if the worktree directory still exists
+      if (agent.worktreePath && agent.worktreeBranch) {
+        orc.restoreAgentWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
+      }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {
         agentWorkDirs.set(agent.agentId, agent.workDir);
@@ -1184,34 +1186,14 @@ async function main() {
     }
   }
 
+  // Detect worktrees with pending changes after all agents are restored
+  orc.detectPendingMerges();
+
   // Sync hired agents to Telegram after restore
   syncHiredAgentsToTelegram();
 
-  // GC: clean up stale worktrees/branches from previous sessions.
-  // Only clean worktrees belonging to THIS instance's agents to avoid
-  // destroying worktrees owned by other gateway instances sharing the workspace.
-  {
-    const ownedAgentIds = new Set(savedState.agents.map(a => a.agentId));
-    const repos = new Set<string>();
-    repos.add(config.defaultWorkspace);
-    const cwd = process.cwd();
-    if (cwd !== "/" && cwd !== config.defaultWorkspace) repos.add(cwd);
-    if (savedState.team?.projectDir && existsSync(savedState.team.projectDir)) {
-      repos.add(savedState.team.projectDir);
-    }
-    for (const agent of savedState.agents) {
-      const repo = agent.workDir ?? config.defaultWorkspace;
-      repos.add(repo);
-    }
-    for (const repo of repos) {
-      if (existsSync(repo)) {
-        cleanupStaleWorktrees(repo, new Set(), {
-          ownedAgentIds,
-          currentOwner: runtimeState ?? undefined,
-        });
-      }
-    }
-  }
+  // Worktree cleanup is handled per-agent on FIRE_AGENT — no startup GC needed.
+  // Startup GC was removed because it could destroy worktrees with pending unmerged changes.
 
   runtimeState = registerRuntimeState();
   process.env.BIT_OFFICE_GATEWAY_ID = config.gatewayId;

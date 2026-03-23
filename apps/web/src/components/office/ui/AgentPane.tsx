@@ -954,6 +954,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 )}
                 {/* Merge controls — shown for solo agents with worktree */}
+                {isOwner && !teamId && !isTeamMember && (
+                  <div style={{ color: "#666", fontSize: 10, fontFamily: TERM_FONT, padding: "2px 0" }}>
+                    [debug] pending={String(!!pendingMerge)} auto={String(!!autoMerge)}
+                  </div>
+                )}
                 {isOwner && !teamId && !isTeamMember && (pendingMerge || onToggleAutoMerge) && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,

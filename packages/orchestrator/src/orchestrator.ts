@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -531,6 +531,32 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       session.pendingMerge = false;
     }
     return result;
+  }
+
+  /** Detect and set pendingMerge for agents whose worktree has unmerged changes (e.g. after restart) */
+  detectPendingMerges(): void {
+    for (const session of this.agentManager.getAll()) {
+      if (session.worktreePath && session.worktreeBranch && !session.teamId) {
+        if (worktreeHasPendingChanges(session.workspaceDir, session.worktreePath)) {
+          session.pendingMerge = true;
+          this.emitEvent({
+            type: "worktree:ready",
+            agentId: session.agentId,
+            taskId: "restore",
+            branch: session.worktreeBranch,
+          });
+          console.log(`[Worktree] Detected pending changes for ${session.name} on ${session.worktreeBranch}`);
+        }
+      }
+    }
+  }
+
+  /** Restore worktree state for an agent (used on gateway restart) */
+  restoreAgentWorktree(agentId: string, worktreePath: string, worktreeBranch: string): void {
+    const session = this.agentManager.get(agentId);
+    if (!session) return;
+    session.worktreePath = worktreePath;
+    session.worktreeBranch = worktreeBranch;
   }
 
   /** Toggle auto-merge for a specific agent */

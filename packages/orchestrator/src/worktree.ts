@@ -409,6 +409,32 @@ export function createWorktree(
 }
 
 // ---------------------------------------------------------------------------
+// Detection
+// ---------------------------------------------------------------------------
+
+/**
+ * Check if a worktree branch has uncommitted changes or commits ahead of main.
+ * Used on startup to detect pending merges.
+ */
+export function worktreeHasPendingChanges(workspace: string, worktreePath: string): boolean {
+  try {
+    if (!existsSync(worktreePath)) return false;
+    const repoRoot = resolveGitWorkspaceRoot(workspace);
+    const mainHead = gitExec("git rev-parse HEAD", repoRoot);
+    const branchHead = gitExec("git rev-parse HEAD", worktreePath);
+    const dirty = !!gitExec("git status --porcelain", worktreePath);
+    if (dirty) return true;
+    if (mainHead !== branchHead) {
+      const ahead = gitExec(`git log ${shellQuote(mainHead)}..HEAD --oneline`, worktreePath);
+      if (ahead) return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Revert
 // ---------------------------------------------------------------------------
 
