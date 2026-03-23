@@ -528,7 +528,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             title="Hire"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 8, padding: "16px 48px", height: 60,
+              gap: 8, padding: "16px 24px", height: 60,
               border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
               backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
               fontSize: 14, fontFamily: TERM_FONT, fontWeight: 500, letterSpacing: "0.5px",
