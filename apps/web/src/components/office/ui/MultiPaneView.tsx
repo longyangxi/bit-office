@@ -359,11 +359,11 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   // ── Scroll-snap pagination ──
   const viewportRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [currentPage, setCurrentPage] = useState(() =>
-    Math.max(0, Math.floor(paneOffset / MAX_VISIBLE))
-  );
+  // Always start on page 0 when component mounts (e.g. fullscreen open)
+  const [currentPage, setCurrentPage] = useState(0);
   // Guard: skip scroll events caused by programmatic scrollTo
-  const programmaticScrollRef = useRef(false);
+  // Use a counter so nested/overlapping programmatic scrolls are safe
+  const programmaticScrollRef = useRef(0);
   const mountedRef = useRef(false);
   // Track internally-set offset to break goToPage→paneOffset effect loop
   const internalOffsetRef = useRef<number | null>(null);
@@ -381,25 +381,33 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   }
 
   // Scroll viewport to a target page (shared helper)
-  const scrollToPage = useCallback((page: number, smooth: boolean) => {
+  // Uses "instant" behavior to avoid race conditions with scroll-snap.
+  // scroll-snap: x mandatory already provides visual snapping, so smooth
+  // JS scrolling fights with it and causes snap-back bugs.
+  const scrollToPage = useCallback((page: number, _smooth?: boolean) => {
     const vp = viewportRef.current;
     if (!vp || vp.clientWidth === 0) return;
     const targetScroll = page * vp.clientWidth;
     if (Math.abs(vp.scrollLeft - targetScroll) <= 2) return;
-    programmaticScrollRef.current = true;
-    vp.scrollTo({ left: targetScroll, behavior: smooth ? "smooth" : "instant" as ScrollBehavior });
-    // Clear guard after scroll settles (smooth ~300ms, instant ~ frame)
-    setTimeout(() => { programmaticScrollRef.current = false; }, smooth ? 350 : 50);
+    programmaticScrollRef.current += 1;
+    vp.scrollTo({ left: targetScroll, behavior: "instant" as ScrollBehavior });
+    // Clear guard after layout settles (instant scroll = 1-2 frames)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        programmaticScrollRef.current = Math.max(0, programmaticScrollRef.current - 1);
+      });
+    });
   }, []);
 
-  // On mount: instant-scroll to the correct page (no flash)
+  // On mount: always scroll to page 0 and reset parent offset
   useEffect(() => {
     if (mountedRef.current) return;
     mountedRef.current = true;
-    const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
-    // Always scroll on mount — even to page 0 — to ensure scroll-snap
-    // container is at the correct position after CSS transitions
-    requestAnimationFrame(() => scrollToPage(targetPage, false));
+    // Always start at first page when entering console/fullscreen mode
+    setCurrentPage(0);
+    internalOffsetRef.current = 0;
+    onPaneOffsetChange(0);
+    requestAnimationFrame(() => scrollToPage(0));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -416,15 +424,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     internalOffsetRef.current = null;
     const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
     setCurrentPage(targetPage);
-    scrollToPage(targetPage, true);
+    scrollToPage(targetPage);
   }, [paneOffset, totalPages, scrollToPage]);
 
   // Detect page from user scroll (debounced), skip programmatic scrolls
   const handleScroll = useCallback(() => {
-    if (programmaticScrollRef.current) return;
+    if (programmaticScrollRef.current > 0) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
-      if (programmaticScrollRef.current) return;
+      if (programmaticScrollRef.current > 0) return;
       const vp = viewportRef.current;
       if (!vp || vp.clientWidth === 0) return;
       const page = Math.round(vp.scrollLeft / vp.clientWidth);
@@ -446,7 +454,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   // Navigate to a specific page (dots, arrows, etc.)
   const goToPage = useCallback((page: number) => {
     setCurrentPage(page);
-    scrollToPage(page, true);
+    scrollToPage(page);
     const newOffset = page * MAX_VISIBLE;
     internalOffsetRef.current = newOffset; // prevent paneOffset effect from double-scrolling
     onPaneOffsetChange(newOffset);
