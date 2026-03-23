@@ -93,6 +93,7 @@ export const AgentCreatedEvent = z.object({
   workDir: z.string().optional(),
   startedAt: z.number().optional(),
   autoMerge: z.boolean().optional(),
+  pendingMerge: z.boolean().optional(),
 });
 
 export const AgentFiredEvent = z.object({

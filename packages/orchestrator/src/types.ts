@@ -158,6 +158,7 @@ export interface AgentCreatedEvent {
   isTeamLead?: boolean;
   teamId?: string;
   autoMerge?: boolean;
+  pendingMerge?: boolean;
 }
 
 export interface AgentFiredEvent {

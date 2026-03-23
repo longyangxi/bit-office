@@ -684,6 +684,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           isTeamLead: agent.isTeamLead || undefined,
           teamId: agent.teamId,
           workDir: agentWorkDirs.get(agent.agentId) ?? config.defaultWorkspace,
+          autoMerge: agent.autoMerge,
+          pendingMerge: agent.pendingMerge,
         });
         publishEvent({
           type: "AGENT_STATUS",

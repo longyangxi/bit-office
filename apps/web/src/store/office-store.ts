@@ -484,6 +484,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               workDir: event.workDir ?? existing.workDir,
               startedAt: event.startedAt ?? existing.startedAt,
               autoMerge: event.autoMerge ?? existing.autoMerge,
+              pendingMerge: event.pendingMerge ?? existing.pendingMerge,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -500,6 +501,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.workDir = event.workDir;
             agent.startedAt = event.startedAt;
             agent.autoMerge = event.autoMerge;
+            agent.pendingMerge = event.pendingMerge;
             if (saved) {
               agent.messages = saved.messages;
             }
