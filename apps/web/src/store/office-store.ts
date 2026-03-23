@@ -77,6 +77,7 @@ interface AgentState {
   _tokenBaseline?: { inputTokens: number; outputTokens: number };
   autoMerge?: boolean;
   pendingMerge?: boolean;
+  lastMergeCommit?: string | null;
 }
 
 export interface TeamChatMessage {
@@ -485,6 +486,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               startedAt: event.startedAt ?? existing.startedAt,
               autoMerge: event.autoMerge ?? existing.autoMerge,
               pendingMerge: event.pendingMerge ?? existing.pendingMerge,
+              lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : existing.lastMergeCommit,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -502,6 +504,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.startedAt = event.startedAt;
             agent.autoMerge = event.autoMerge;
             agent.pendingMerge = event.pendingMerge;
+            agent.lastMergeCommit = event.lastMergeCommit;
             if (saved) {
               agent.messages = saved.messages;
             }
@@ -962,7 +965,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "WORKTREE_MERGED": {
           const agent = agents.get(event.agentId);
-          if (agent) agents.set(event.agentId, { ...agent, pendingMerge: false });
+          if (agent) agents.set(event.agentId, {
+            ...agent,
+            pendingMerge: false,
+            lastMergeCommit: event.success ? (event.commitHash ?? agent.lastMergeCommit) : agent.lastMergeCommit,
+          });
           break;
         }
         case "WORKTREE_REVERTED": {

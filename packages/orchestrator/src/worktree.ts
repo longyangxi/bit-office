@@ -378,6 +378,33 @@ export function createWorktree(
 }
 
 // ---------------------------------------------------------------------------
+// Undo merge
+// ---------------------------------------------------------------------------
+
+/**
+ * Undo a merge commit on main by creating a revert commit.
+ * Works even if other commits came after — creates a new "reverse" commit.
+ */
+export function undoMergeCommit(workspace: string, commitHash: string): { success: boolean; message?: string } {
+  try {
+    const repoRoot = resolveGitWorkspaceRoot(workspace);
+    execSync(`git revert --no-edit ${shellQuote(commitHash)}`, {
+      cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: TIMEOUT,
+      env: getIsolatedGitEnv(),
+    });
+    console.log(`[Worktree] Reverted merge commit ${commitHash.slice(0, 7)} on main`);
+    return { success: true };
+  } catch (err) {
+    // Revert conflict — abort and report
+    try {
+      gitExec("git revert --abort", resolveGitWorkspaceRoot(workspace));
+    } catch { /* ignore */ }
+    console.error(`[Worktree] Failed to revert merge commit ${commitHash.slice(0, 7)}: ${(err as Error).message}`);
+    return { success: false, message: `Revert conflict — manual resolution needed` };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Sync to main
 // ---------------------------------------------------------------------------
 
@@ -500,6 +527,7 @@ export function revertWorktreeCommit(workspace: string, worktreePath: string): R
 
 export interface MergeResult {
   success: boolean;
+  commitHash?: string;
   conflictFiles?: string[];
   stagedFiles?: string[];
 }
@@ -614,6 +642,9 @@ export function mergeWorktree(
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
 
+    // Get the merge commit hash
+    const mergeCommitHash = stagedFiles.length > 0 ? gitExec("git rev-parse HEAD", repoRoot) : undefined;
+
     // Restore stashed files after successful merge
     if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
 
@@ -629,7 +660,7 @@ export function mergeWorktree(
       console.log(`[Worktree] Merged ${branch}, worktree kept alive for session continuity`);
     }
 
-    return { success: true, stagedFiles };
+    return { success: true, commitHash: mergeCommitHash, stagedFiles };
   } catch (err) {
     console.error(`[Worktree] Merge failed for ${branch}:`, (err as Error).message);
     let conflictFiles: string[] = [];

@@ -132,6 +132,7 @@ export interface WorktreeMergedEvent {
   taskId: string;
   branch: string;
   success: boolean;
+  commitHash?: string;
   conflictFiles?: string[];
   stagedFiles?: string[];
 }

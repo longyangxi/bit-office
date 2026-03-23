@@ -1731,6 +1731,7 @@ export default function OfficePage() {
                     pid: ag.pid,
                     autoMerge: ag.autoMerge,
                     pendingMerge: ag.pendingMerge,
+                    lastMergeCommit: ag.lastMergeCommit,
                   };
                 }}
                 paneOffset={paneOffset}
@@ -1805,6 +1806,7 @@ export default function OfficePage() {
                 onToggleAutoMerge={(agentId, val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId, autoMerge: val })}
                 onMerge={(agentId) => sendCommand({ type: "MERGE_WORKTREE", agentId })}
                 onRevert={(agentId) => sendCommand({ type: "REVERT_WORKTREE", agentId })}
+                onUndoMerge={(agentId) => sendCommand({ type: "UNDO_MERGE", agentId })}
                 scrollFrozen={scrollFrozen}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
@@ -1871,9 +1873,11 @@ export default function OfficePage() {
                   onPreview={setPreviewUrl}
                   autoMerge={ag.autoMerge}
                   pendingMerge={ag.pendingMerge}
+                  lastMergeCommit={ag.lastMergeCommit}
                   onToggleAutoMerge={(val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId: selectedAgent, autoMerge: val })}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
+                  onUndoMerge={() => sendCommand({ type: "UNDO_MERGE", agentId: selectedAgent })}
                   onReview={(result, backend) => handleReview(selectedAgent, result, backend)}
                   detectedBackends={detectedBackends}
                   onLoadMore={() => loadMoreMessages(selectedAgent)}

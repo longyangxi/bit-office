@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -477,6 +477,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       worktreeBranch: s.worktreeBranch,
       autoMerge: s.autoMerge,
       pendingMerge: s.pendingMerge,
+      lastMergeCommit: s.lastMergeCommit,
     }));
   }
 
@@ -499,6 +500,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
     if (result.success) {
       session.pendingMerge = false;
+      session.lastMergeCommit = result.commitHash ?? null;
     }
     this.emitEvent({
       type: "worktree:merged",
@@ -506,6 +508,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       taskId: "manual",
       branch: session.worktreeBranch,
       success: result.success,
+      commitHash: result.commitHash,
       conflictFiles: result.conflictFiles,
       stagedFiles: result.stagedFiles,
     });
@@ -562,6 +565,19 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (!session) return;
     session.worktreePath = worktreePath;
     session.worktreeBranch = worktreeBranch;
+  }
+
+  /** Undo the last merge from an agent (revert the merge commit on main) */
+  undoAgentMerge(agentId: string): { success: boolean; message?: string } {
+    const session = this.agentManager.get(agentId);
+    if (!session?.lastMergeCommit) {
+      return { success: false, message: "No merge to undo" };
+    }
+    const result = undoMergeCommit(session.workspaceDir, session.lastMergeCommit);
+    if (result.success) {
+      session.lastMergeCommit = null;
+    }
+    return result;
   }
 
   /** Toggle auto-merge for a specific agent */

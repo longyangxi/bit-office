@@ -20,7 +20,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onEndProject, onSuggest, onPreview, onReview, detectedBackends,
   onLoadMore, onPasteImage, onPasteText, onDropImage,
   reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
-  onToggleAutoMerge, onMerge, onRevert,
+  onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
   scrollFrozen,
 }: {
   agentId: string;
@@ -59,6 +59,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
+  onUndoMerge?: (agentId: string) => void;
   scrollFrozen?: boolean;
 }) {
   // Stable callbacks — useRef + useCallback pattern avoids creating new references
@@ -207,9 +208,11 @@ const StableAgentPane = memo(function StableAgentPane({
         onReviewerLoadMore={onReviewerLoadMore}
         autoMerge={data.autoMerge}
         pendingMerge={data.pendingMerge}
+        lastMergeCommit={data.lastMergeCommit}
         onToggleAutoMerge={onToggleAutoMerge ? (val) => onToggleAutoMerge(agentId, val) : undefined}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
+        onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
         onApplyReviewFixes={onApplyReviewFixes}
         onDismissReview={onDismissReview}
         scrollFrozen={scrollFrozen}
@@ -243,6 +246,7 @@ interface AgentData {
   pid?: number | null;
   autoMerge?: boolean;
   pendingMerge?: boolean;
+  lastMergeCommit?: string | null;
 }
 
 export interface MultiPaneViewProps {
@@ -285,6 +289,7 @@ export interface MultiPaneViewProps {
   onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
+  onUndoMerge?: (agentId: string) => void;
   /** Freeze scroll management during CSS width transitions */
   scrollFrozen?: boolean;
   /** Agent metadata for inline avatar headers (console mode) */
@@ -346,6 +351,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onToggleAutoMerge,
     onMerge,
     onRevert,
+    onUndoMerge,
     onStopTeam,
     onFireTeam,
   } = props;
@@ -627,6 +633,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                       onToggleAutoMerge={onToggleAutoMerge}
                       onMerge={onMerge}
                       onRevert={onRevert}
+                      onUndoMerge={onUndoMerge}
                       scrollFrozen={scrollFrozen}
                     />
                   </div>

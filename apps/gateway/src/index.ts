@@ -309,7 +309,7 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return null;
     case "worktree:merged":
       console.log(`[Worktree] Squash-merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""}${e.stagedFiles?.length ? ` staged=${e.stagedFiles.length} files` : ""})`);
-      return { type: "WORKTREE_MERGED", agentId: e.agentId, branch: e.branch, success: e.success };
+      return { type: "WORKTREE_MERGED", agentId: e.agentId, branch: e.branch, success: e.success, commitHash: e.commitHash };
     case "worktree:ready":
       console.log(`[Worktree] Branch ${e.branch} ready for manual merge (agent ${e.agentId})`);
       return { type: "WORKTREE_READY", agentId: e.agentId, taskId: e.taskId, branch: e.branch };
@@ -686,6 +686,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           workDir: agentWorkDirs.get(agent.agentId) ?? config.defaultWorkspace,
           autoMerge: agent.autoMerge,
           pendingMerge: agent.pendingMerge,
+          lastMergeCommit: agent.lastMergeCommit,
         });
         publishEvent({
           type: "AGENT_STATUS",
@@ -1046,6 +1047,14 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         commitsAhead: revertResult.commitsAhead,
         message: revertResult.message,
       });
+      break;
+    }
+    case "UNDO_MERGE": {
+      console.log(`[Gateway] Undo merge requested for agent: ${parsed.agentId}`);
+      const undoResult = orc.undoAgentMerge(parsed.agentId);
+      if (!undoResult.success) {
+        publishEvent({ type: "TEAM_CHAT", fromAgentId: parsed.agentId, message: undoResult.message ?? "Undo merge failed", messageType: "warning", timestamp: Date.now() });
+      }
       break;
     }
     case "TOGGLE_AUTO_MERGE": {

@@ -134,9 +134,11 @@ export interface AgentPaneProps {
   detectedBackends?: string[];
   autoMerge?: boolean;
   pendingMerge?: boolean;
+  lastMergeCommit?: string | null;
   onToggleAutoMerge?: (autoMerge: boolean) => void;
   onMerge?: () => void;
   onRevert?: () => void;
+  onUndoMerge?: () => void;
   // Review overlay — reviewer pane rendered on top of this agent
   reviewerOverlay?: ReviewerOverlayData | null;
   onReviewerLoadMore?: () => void;
@@ -334,7 +336,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
-    autoMerge, pendingMerge, onToggleAutoMerge, onMerge, onRevert,
+    autoMerge, pendingMerge, lastMergeCommit, onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
     scrollFrozen, hideInfoRole,
   } = props;
@@ -982,6 +984,18 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                           fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
                         }}
                       >revert</button>
+                    )}
+                    {!pendingMerge && lastMergeCommit && onUndoMerge && (
+                      <button
+                        onClick={onUndoMerge}
+                        disabled={busy}
+                        style={{
+                          padding: "3px 10px", border: `1px solid ${TERM_SEM_RED}40`,
+                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_SEM_RED, fontSize: 12,
+                          cursor: busy ? "not-allowed" : "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
+                        }}
+                      >undo merge</button>
                     )}
                     {onToggleAutoMerge && (
                       <label style={{ display: "flex", alignItems: "center", gap: 4, color: TERM_DIM, cursor: "pointer", marginLeft: "auto" }}>

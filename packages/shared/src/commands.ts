@@ -171,6 +171,11 @@ export const MergeWorktreeCommand = z.object({
   agentId: z.string(),
 });
 
+export const UndoMergeCommand = z.object({
+  type: z.literal("UNDO_MERGE"),
+  agentId: z.string(),
+});
+
 export const RevertWorktreeCommand = z.object({
   type: z.literal("REVERT_WORKTREE"),
   agentId: z.string(),
@@ -220,6 +225,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
   UpdateAgencyAgentsCommand,
   RequestReviewCommand,
   MergeWorktreeCommand,
+  UndoMergeCommand,
   RevertWorktreeCommand,
   ToggleAutoMergeCommand,
   GetConfigCommand,
@@ -252,6 +258,7 @@ export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand
 export type RequestReviewCommand = z.infer<typeof RequestReviewCommand>;
 export type GetConfigCommand = z.infer<typeof GetConfigCommand>;
 export type MergeWorktreeCommand = z.infer<typeof MergeWorktreeCommand>;
+export type UndoMergeCommand = z.infer<typeof UndoMergeCommand>;
 export type RevertWorktreeCommand = z.infer<typeof RevertWorktreeCommand>;
 export type ToggleAutoMergeCommand = z.infer<typeof ToggleAutoMergeCommand>;
 export type SaveConfigCommand = z.infer<typeof SaveConfigCommand>;
