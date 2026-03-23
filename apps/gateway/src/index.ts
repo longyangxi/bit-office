@@ -1052,7 +1052,16 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     case "UNDO_MERGE": {
       console.log(`[Gateway] Undo merge requested for agent: ${parsed.agentId}`);
       const undoResult = orc.undoAgentMerge(parsed.agentId);
-      if (!undoResult.success) {
+      if (undoResult.success) {
+        // Tell UI the new lastMergeCommit (next in stack, or null)
+        const agent = orc.getAllAgents().find(a => a.agentId === parsed.agentId);
+        publishEvent({
+          type: "AUTO_MERGE_UPDATED",
+          agentId: parsed.agentId,
+          autoMerge: agent?.autoMerge ?? false,
+          lastMergeCommit: agent?.lastMergeCommit ?? null,
+        });
+      } else {
         publishEvent({ type: "TEAM_CHAT", fromAgentId: parsed.agentId, message: undoResult.message ?? "Undo merge failed", messageType: "warning", timestamp: Date.now() });
       }
       break;

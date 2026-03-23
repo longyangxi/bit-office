@@ -258,6 +258,7 @@ export const AutoMergeUpdatedEvent = z.object({
   type: z.literal("AUTO_MERGE_UPDATED"),
   agentId: z.string(),
   autoMerge: z.boolean(),
+  lastMergeCommit: z.string().nullable().optional(),
 });
 
 export const BackendsAvailableEvent = z.object({

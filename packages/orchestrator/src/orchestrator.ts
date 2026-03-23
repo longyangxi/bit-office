@@ -480,7 +480,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       worktreeBranch: s.worktreeBranch,
       autoMerge: s.autoMerge,
       pendingMerge: s.pendingMerge,
-      lastMergeCommit: s.lastMergeCommit,
+      lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1] : null,
     }));
   }
 
@@ -503,7 +503,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
     if (result.success) {
       session.pendingMerge = false;
-      session.lastMergeCommit = result.commitHash ?? null;
+      if (result.commitHash) session.mergeCommitStack.push(result.commitHash);
     }
     this.emitEvent({
       type: "worktree:merged",
@@ -573,12 +573,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   /** Undo the last merge from an agent (revert the merge commit on main) */
   undoAgentMerge(agentId: string): { success: boolean; message?: string } {
     const session = this.agentManager.get(agentId);
-    if (!session?.lastMergeCommit) {
+    if (!session?.mergeCommitStack.length) {
       return { success: false, message: "No merge to undo" };
     }
-    const result = undoMergeCommit(session.workspaceDir, session.lastMergeCommit);
+    const commitHash = session.mergeCommitStack[session.mergeCommitStack.length - 1];
+    const result = undoMergeCommit(session.workspaceDir, commitHash);
     if (result.success) {
-      session.lastMergeCommit = null;
+      session.mergeCommitStack.pop();
     }
     return result;
   }
@@ -849,12 +850,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           // Auto-merge: merge immediately as before
           const summary = event.result?.summary;
           const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name);
+          if (result.success && result.commitHash) {
+            doneSession.mergeCommitStack.push(result.commitHash);
+          }
           this.emitEvent({
             type: "worktree:merged",
             agentId,
             taskId: event.taskId,
             branch: doneSession.worktreeBranch,
             success: result.success,
+            commitHash: result.commitHash,
             conflictFiles: result.conflictFiles,
             stagedFiles: result.stagedFiles,
           });

@@ -981,7 +981,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "AUTO_MERGE_UPDATED": {
           const agent = agents.get(event.agentId);
-          if (agent) agents.set(event.agentId, { ...agent, autoMerge: event.autoMerge });
+          if (agent) agents.set(event.agentId, {
+            ...agent,
+            autoMerge: event.autoMerge,
+            lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : agent.lastMergeCommit,
+          });
           break;
         }
         case "PROJECT_DATA": {

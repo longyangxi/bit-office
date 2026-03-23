@@ -254,8 +254,8 @@ export class AgentSession {
   autoMerge = false;
   /** True when task is done and worktree has unmerged changes awaiting manual merge */
   pendingMerge = false;
-  /** Commit hash of the last successful merge to main (for undo) */
-  lastMergeCommit: string | null = null;
+  /** Stack of merge commit hashes on main (for multi-level undo) */
+  mergeCommitStack: string[] = [];
 
   /** Current working directory of the running task */
   get currentWorkingDir(): string | null { return this.currentCwd; }
