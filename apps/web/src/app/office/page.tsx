@@ -1522,8 +1522,8 @@ export default function OfficePage() {
             {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}
             {!consoleMode && (
             <div style={{
-              display: "flex", alignItems: "center", gap: 10,
-              padding: "10px 14px", minHeight: 56,
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "8px 12px", minHeight: 64,
               borderBottom: `1px solid ${TERM_BORDER_DIM}`,
               background: TERM_PANEL,
               overflowX: "auto", overflowY: "hidden",
@@ -1537,102 +1537,162 @@ export default function OfficePage() {
               {activeAgentList.map((agent, idx) => {
                 const isActive = selectedAgent === agent.agentId;
                 const agentState = agents.get(agent.agentId);
-                const agentBusy = agentState?.status === "working";
+                const statusKey = agentState?.status ?? agent.status ?? "idle";
+                const cfg = getStatusConfig()[statusKey] ?? getStatusConfig().idle;
+                const agentBusy = statusKey === "working";
+                const isWaiting = statusKey === "waiting_approval";
+                const isError = statusKey === "error";
+                const isDone = statusKey === "done";
                 const isLead = !!agentState?.isTeamLead;
+                // Ring color based on status
+                const ringColor = agentBusy ? TERM_GREEN
+                  : isWaiting ? TERM_SEM_YELLOW
+                  : isError ? TERM_SEM_RED
+                  : isDone ? TERM_SEM_GREEN
+                  : TERM_BORDER;
                 return (
                   <button
                     key={agent.agentId}
                     onClick={() => { setSelectedAgent(agent.agentId); setChatOpen(true); }}
-                    title={`${agent.name}\n${agent.role}\n${(getStatusConfig()[agent.status] ?? getStatusConfig().idle).label}`}
+                    title={`${agent.name} - ${cfg.label}`}
                     style={{
-                      display: "flex", flexDirection: "column", alignItems: "center",
-                      padding: "6px 10px 4px", gap: 2,
-                      border: "none", cursor: "pointer",
-                      backgroundColor: isActive ? `${TERM_GREEN}10` : "transparent",
-                      borderBottom: isActive ? `2px solid ${TERM_GREEN}` : "2px solid transparent",
-                      borderRadius: "4px 4px 0 0",
+                      display: "flex", flexDirection: "row", alignItems: "center",
+                      padding: "6px 12px 6px 6px", gap: 10,
+                      border: `1px solid ${isActive ? TERM_GREEN : TERM_BORDER_DIM}`,
+                      cursor: "pointer",
+                      backgroundColor: isActive ? `${TERM_GREEN}12` : "transparent",
+                      borderRadius: 6,
                       flexShrink: 0, position: "relative",
-                      transition: "all 0.15s",
+                      transition: "all 0.2s ease",
+                      outline: "none",
                     }}
-                    onMouseEnter={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = `${TERM_GREEN}08`; }}
-                    onMouseLeave={(e) => { if (!isActive) e.currentTarget.style.backgroundColor = "transparent"; }}
+                    onMouseEnter={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`;
+                        e.currentTarget.style.borderColor = TERM_BORDER;
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (!isActive) {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.borderColor = TERM_BORDER_DIM;
+                      }
+                    }}
                   >
-                    <div style={{ position: "relative", width: 28, height: 34, overflow: "hidden", borderRadius: 2 }}>
-                      <div style={{ marginTop: -1, marginLeft: 0 }}>
-                        <SpriteAvatar palette={agent.palette ?? 0} zoom={1.75} ready={assetsReady} />
+                    {/* Avatar with status ring */}
+                    <div style={{
+                      position: "relative", width: 34, height: 40,
+                      overflow: "hidden", borderRadius: 4, flexShrink: 0,
+                      border: `2px solid ${ringColor}`,
+                      boxShadow: agentBusy ? `0 0 6px ${TERM_GREEN}30` : isWaiting ? `0 0 6px ${TERM_SEM_YELLOW}25` : "none",
+                      transition: "border-color 0.3s ease, box-shadow 0.3s ease",
+                    }}>
+                      <div style={{ marginTop: -1, marginLeft: 1 }}>
+                        <SpriteAvatar palette={agent.palette ?? 0} zoom={2} ready={assetsReady} />
                       </div>
                       {agentBusy && (
                         <span style={{
-                          position: "absolute", top: 0, right: 0,
+                          position: "absolute", top: 2, right: 2,
                           width: 6, height: 6, borderRadius: "50%",
-                          backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}`,
+                          backgroundColor: TERM_GREEN,
+                          boxShadow: `0 0 4px ${TERM_GREEN}`,
                           animation: "px-pulse-gold 1.5s ease infinite",
                         }} />
                       )}
-                      {isLead && (
-                        <span style={{ position: "absolute", top: -2, left: -1, fontSize: 8, color: TERM_SEM_YELLOW }}>{"\u2605"}</span>
-                      )}
                     </div>
-                    <span style={{
-                      fontSize: 9, color: isActive ? TERM_TEXT_BRIGHT : TERM_DIM,
-                      fontFamily: TERM_FONT, maxWidth: 48,
-                      overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                    }}>{agent.name}</span>
+                    {/* Name + Role + Status */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <span style={{
+                          fontSize: 11, fontWeight: 600,
+                          color: isActive ? TERM_TEXT_BRIGHT : TERM_TEXT,
+                          fontFamily: TERM_FONT, maxWidth: 80,
+                          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          letterSpacing: "-0.01em",
+                        }}>{agent.name}</span>
+                        {isLead && (
+                          <span style={{
+                            fontSize: 8, fontFamily: TERM_FONT,
+                            color: TERM_SEM_YELLOW, fontWeight: 700,
+                            padding: "0 3px", lineHeight: "14px",
+                            border: `1px solid ${TERM_SEM_YELLOW}40`,
+                            borderRadius: 3, flexShrink: 0,
+                          }}>LEAD</span>
+                        )}
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                        {agent.role && (
+                          <span style={{
+                            fontSize: 9, color: TERM_DIM,
+                            fontFamily: TERM_FONT, maxWidth: 70,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>{agent.role}</span>
+                        )}
+                        <span style={{
+                          width: 5, height: 5, borderRadius: "50%",
+                          backgroundColor: cfg.color, flexShrink: 0,
+                          boxShadow: agentBusy ? `0 0 4px ${cfg.color}80` : "none",
+                        }} />
+                      </div>
+                    </div>
                   </button>
                 );
               })}
               {/* Hire button inline with agents */}
               {isOwner && expandedSection === "agents" && (
-                <button onClick={() => setShowHireModal(true)} title="Hire Team"
+                <button onClick={() => setShowHireModal(true)} title="Hire Agent"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 40, height: "80%", flexShrink: 0,
-                    border: `1px dashed ${TERM_GREEN}50`, cursor: "pointer",
-                    backgroundColor: "transparent", color: TERM_GREEN,
-                    fontSize: 16, fontFamily: TERM_FONT,
-                    transition: "all 0.15s",
+                    gap: 4, padding: "6px 14px", height: 52, flexShrink: 0,
+                    border: `1px dashed ${TERM_BORDER}`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_DIM,
+                    fontSize: 11, fontFamily: TERM_FONT,
+                    borderRadius: 6, transition: "all 0.2s ease",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; }}
-                >+</button>
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
+                ><span style={{ fontSize: 14, lineHeight: 1 }}>+</span> hire</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}
               {isOwner && expandedSection === "team" && !hasTeam && (
                 <button onClick={() => setShowHireTeamModal(true)} title="Hire Team"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    width: 40, height: "80%", flexShrink: 0,
-                    border: `1px dashed ${TERM_GREEN}50`, cursor: "pointer",
-                    backgroundColor: "transparent", color: TERM_GREEN,
-                    fontSize: 16, fontFamily: TERM_FONT,
-                    transition: "all 0.15s",
+                    gap: 4, padding: "6px 14px", height: 52, flexShrink: 0,
+                    border: `1px dashed ${TERM_BORDER}`, cursor: "pointer",
+                    backgroundColor: "transparent", color: TERM_DIM,
+                    fontSize: 11, fontFamily: TERM_FONT,
+                    borderRadius: 6, transition: "all 0.2s ease",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}15`; e.currentTarget.style.borderColor = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; }}
-                >+</button>
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
+                ><span style={{ fontSize: 14, lineHeight: 1 }}>+</span> hire team</button>
               )}
               {isOwner && expandedSection === "team" && hasTeam && teamBusy && (
                 <button onClick={handleStopTeam} title="Stop Team Work"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, padding: "0 10px", height: "80%",
+                    flexShrink: 0, padding: "6px 14px", height: 52,
                     border: `1px solid ${TERM_SEM_YELLOW}60`, cursor: "pointer",
-                    backgroundColor: `${TERM_SEM_YELLOW}15`, color: TERM_SEM_YELLOW,
+                    backgroundColor: `${TERM_SEM_YELLOW}10`, color: TERM_SEM_YELLOW,
                     fontSize: 10, fontFamily: TERM_FONT,
+                    borderRadius: 6, transition: "all 0.2s ease",
                   }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}20`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}10`; }}
                 >stop</button>
               )}
               {isOwner && expandedSection === "team" && hasTeam && (
                 <button onClick={handleFireTeam} title="Fire Team"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, padding: "0 10px", height: "80%",
+                    flexShrink: 0, padding: "6px 14px", height: 52,
                     border: `1px solid ${TERM_SEM_RED}30`, cursor: "pointer",
                     backgroundColor: "transparent", color: TERM_SEM_RED,
                     fontSize: 10, fontFamily: TERM_FONT,
-                    transition: "all 0.15s", opacity: 0.7,
+                    borderRadius: 6, transition: "all 0.2s ease", opacity: 0.7,
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}15`; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}12`; }}
                   onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.backgroundColor = "transparent"; }}
                 >fire</button>
               )}
