@@ -19,7 +19,7 @@ import { ExternalOutputReader } from "./external-output-reader.js";
 import { installFileLogger } from "./file-logger.js";
 import { startTunnel, stopTunnel, isTunnelRunning } from "./tunnel.js";
 import { loadTeamState, saveTeamState, clearTeamState, type TeamState, type PersistedAgent, bufferEvent, archiveProject, resetProjectBuffer, setProjectName, listProjects, loadProject, loadProjectBuffer, rateProject } from "./team-state.js";
-import { clearRuntimeState, registerRuntimeState } from "./runtime-state.js";
+import { clearRuntimeState, killPreviousInstances, registerRuntimeState } from "./runtime-state.js";
 
 // Register all channels — each one self-activates if configured
 registerChannel(wsChannel);
@@ -383,32 +383,13 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       break;
     }
     case "RUN_TASK": {
-      let agent = orc.getAgent(parsed.agentId);
-      if (!agent && parsed.name) {
-        // Fallback auto-create (team state should normally restore agents on startup)
-        const backendId = parsed.backend ?? config.defaultBackend;
-        const isLead = !!(parsed.role && /lead/i.test(parsed.role));
-        console.log(`[Gateway] Auto-creating agent for RUN_TASK: ${parsed.agentId} backend=${backendId} isLead=${isLead}`);
-        orc.createAgent({
-          agentId: parsed.agentId,
-          name: parsed.name,
-          role: parsed.role ?? "",
-          personality: parsed.personality,
-          backend: backendId,
-          teamId: parsed.teamId,
-          resumeHistory: true,
-        });
-        agent = orc.getAgent(parsed.agentId);
-        if (isLead && agent) {
-          orc.setTeamLead(parsed.agentId);
-          if (!orc.getTeamPhase(parsed.agentId)) {
-            const teamId = `team-${parsed.agentId}`;
-            orc.setTeamPhase(teamId, "create", parsed.agentId);
-          }
-        }
-        persistTeamState();
+      const agent = orc.getAgent(parsed.agentId);
+      if (!agent) {
+        console.warn(`[Gateway] RUN_TASK rejected: agent "${parsed.agentId}" not found (was it fired?)`);
+        publishEvent({ type: "TASK_FAILED", agentId: parsed.agentId, taskId: parsed.taskId ?? "", error: `Agent "${parsed.name ?? parsed.agentId}" is not hired. Please hire the agent first.` });
+        break;
       }
-      if (agent) {
+      {
         console.log(`[Gateway] RUN_TASK: agent=${parsed.agentId}, isLead=${orc.isTeamLead(parsed.agentId)}, hasTeam=${orc.getAllAgents().length > 1}`);
 
         // Phase override from orchestrator's PhaseMachine (handles complete→execute automatically)
@@ -423,13 +404,6 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         }
         const effectiveRepoPath = parsed.repoPath || agentWorkDirs.get(parsed.agentId);
         orc.runTask(parsed.agentId, parsed.taskId, finalPrompt, { repoPath: effectiveRepoPath, phaseOverride });
-      } else {
-        publishEvent({
-          type: "TASK_FAILED",
-          agentId: parsed.agentId,
-          taskId: parsed.taskId,
-          error: "Agent not found. Create it first.",
-        });
       }
       break;
     }
@@ -1035,6 +1009,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
 // ---------------------------------------------------------------------------
 
 async function main() {
+  // Kill any orphaned previous gateway instances (all instance dirs) before starting
+  killPreviousInstances();
+
   // Install file logger early — tee all console output to gateway.log
   installFileLogger(config.instanceDir);
 
@@ -1361,8 +1338,17 @@ async function main() {
   }
 }
 
+let cleanupCalled = false;
 function cleanup() {
+  if (cleanupCalled) return;
+  cleanupCalled = true;
   console.log("[Gateway] Shutting down...");
+  // Force exit after 5s if cleanup hangs (e.g. agent subprocess won't die)
+  const forceTimer = setTimeout(() => {
+    console.error("[Gateway] Cleanup timed out after 5s, forcing exit");
+    process.exit(1);
+  }, 5000);
+  forceTimer.unref();
   // Save state before destroying agents
   try { persistTeamState(); } catch { /* ignore */ }
   outputReader?.detachAll();
