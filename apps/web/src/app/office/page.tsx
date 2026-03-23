@@ -1136,11 +1136,12 @@ export default function OfficePage() {
     };
   }, [agents, getVisibleMessages, reviewResultText]);
 
-  // Scroll to bottom when console mode toggles (width change causes content reflow)
+  // Reset pagination and scroll when console mode toggles
   const prevConsoleModeRef = useRef(consoleMode);
   useEffect(() => {
     if (prevConsoleModeRef.current === consoleMode) return;
     prevConsoleModeRef.current = consoleMode;
+    if (consoleMode) setPaneOffset(0);
     const timer = setTimeout(() => {
       chatEndRef.current?.scrollIntoView({ block: "end", behavior: "instant" });
       wasAtBottomRef.current = true;

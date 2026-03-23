@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import type { AgentPaneProps, ReviewerOverlayData } from "./AgentPane";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_BG, TERM_SURFACE, TERM_HOVER } from "./termTheme";
+import type { ReviewerOverlayData } from "./AgentPane";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_GREEN } from "./termTheme";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
@@ -205,15 +205,11 @@ const StableAgentPane = memo(function StableAgentPane({
         onDropImage={handleDropImage}
         reviewerOverlay={reviewerOverlay}
         onReviewerLoadMore={onReviewerLoadMore}
-        autoMerge={data.autoMerge}
-        pendingMerge={data.pendingMerge}
-        lastMergeCommit={data.lastMergeCommit}
-        lastMergeMessage={data.lastMergeMessage}
+        onApplyReviewFixes={onApplyReviewFixes}
+        onDismissReview={onDismissReview}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
         onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
-        onApplyReviewFixes={onApplyReviewFixes}
-        onDismissReview={onDismissReview}
         scrollFrozen={scrollFrozen}
         hideInfoRole={!!meta}
       />
@@ -356,17 +352,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onFireTeam,
   } = props;
 
-  // ── Scroll-snap pagination ──
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Always start on page 0 when component mounts (e.g. fullscreen open)
+  // ── Simple state-driven pagination ──
+  // currentPage=0 on every fresh mount (conditional render guarantees remount).
+  // NO mount effects — just useState(0). Conditional render guarantees fresh mount.
   const [currentPage, setCurrentPage] = useState(0);
-  // Guard: skip scroll events caused by programmatic scrollTo
-  // Use a counter so nested/overlapping programmatic scrolls are safe
-  const programmaticScrollRef = useRef(0);
-  const mountedRef = useRef(false);
-  // Track internally-set offset to break goToPage→paneOffset effect loop
-  const internalOffsetRef = useRef<number | null>(null);
+  // Track slide direction for animation: "left" = next page, "right" = prev page
+  const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   // ── Pane resize logic (within a page) ──
   const [paneWidths, setPaneWidths] = useState<number[]>([]);
@@ -380,115 +372,97 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     pages.push(openPanes.slice(i, i + MAX_VISIBLE));
   }
 
-  // Scroll viewport to a target page (shared helper)
-  // Uses "instant" behavior to avoid race conditions with scroll-snap.
-  // scroll-snap: x mandatory already provides visual snapping, so smooth
-  // JS scrolling fights with it and causes snap-back bugs.
-  const scrollToPage = useCallback((page: number, _smooth?: boolean) => {
-    const vp = viewportRef.current;
-    if (!vp || vp.clientWidth === 0) return;
-    const targetScroll = page * vp.clientWidth;
-    if (Math.abs(vp.scrollLeft - targetScroll) <= 2) return;
-    programmaticScrollRef.current += 1;
-    vp.scrollTo({ left: targetScroll, behavior: "instant" as ScrollBehavior });
-    // Clear guard after layout settles (instant scroll = 1-2 frames)
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        programmaticScrollRef.current = Math.max(0, programmaticScrollRef.current - 1);
-      });
+  // Clamp currentPage when panes change
+  const clampedPage = Math.max(0, Math.min(currentPage, totalPages - 1));
+  if (clampedPage !== currentPage) {
+    setCurrentPage(clampedPage);
+    onPaneOffsetChange(clampedPage * MAX_VISIBLE);
+  }
+
+  // Blur any auto-focused input after mount and page changes.
+  // AgentPane auto-focuses its textarea on mount — override this so
+  // keyboard arrows work for pagination immediately.
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (document.activeElement instanceof HTMLElement &&
+          (document.activeElement.tagName === "INPUT" || document.activeElement.tagName === "TEXTAREA")) {
+        document.activeElement.blur();
+      }
+    }, 50);
+    return () => clearTimeout(t);
+  }, [currentPage]);
+
+  const goToPage = useCallback((page: number) => {
+    const clamped = Math.max(0, Math.min(page, totalPages - 1));
+    setCurrentPage(prev => {
+      if (prev === clamped) return prev;
+      setSlideDir(clamped > prev ? "left" : "right");
+      return clamped;
     });
-  }, []);
-
-  // On mount: always scroll to page 0 and reset parent offset
-  useEffect(() => {
-    if (mountedRef.current) return;
-    mountedRef.current = true;
-    // Always start at first page when entering console/fullscreen mode
-    setCurrentPage(0);
-    internalOffsetRef.current = 0;
-    onPaneOffsetChange(0);
-    requestAnimationFrame(() => scrollToPage(0));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Scroll to page when paneOffset changes from parent (after mount)
-  // Skip when the change originated internally (goToPage already scrolled)
-  useEffect(() => {
-    if (!mountedRef.current) return;
-    if (totalPages <= 1) return;
-    // If this offset was set by goToPage, skip the redundant scroll
-    if (internalOffsetRef.current === paneOffset) {
-      internalOffsetRef.current = null;
-      return;
-    }
-    internalOffsetRef.current = null;
-    const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
-    setCurrentPage(targetPage);
-    scrollToPage(targetPage);
-  }, [paneOffset, totalPages, scrollToPage]);
-
-  // Detect page from user scroll (debounced), skip programmatic scrolls
-  const handleScroll = useCallback(() => {
-    if (programmaticScrollRef.current > 0) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      if (programmaticScrollRef.current > 0) return;
-      const vp = viewportRef.current;
-      if (!vp || vp.clientWidth === 0) return;
-      const page = Math.round(vp.scrollLeft / vp.clientWidth);
-      const clamped = Math.max(0, Math.min(page, totalPages - 1));
-      setCurrentPage(clamped);
-      const newOffset = clamped * MAX_VISIBLE;
-      internalOffsetRef.current = newOffset; // prevent paneOffset effect feedback
-      onPaneOffsetChange(newOffset);
-    }, 80);
+    onPaneOffsetChange(clamped * MAX_VISIBLE);
   }, [totalPages, onPaneOffsetChange]);
 
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-    };
-  }, []);
-
-  // Navigate to a specific page (dots, arrows, etc.)
-  const goToPage = useCallback((page: number) => {
-    setCurrentPage(page);
-    scrollToPage(page);
-    const newOffset = page * MAX_VISIBLE;
-    internalOffsetRef.current = newOffset; // prevent paneOffset effect from double-scrolling
-    onPaneOffsetChange(newOffset);
-  }, [onPaneOffsetChange, scrollToPage]);
-
-  // Keyboard navigation: left/right arrow keys to switch pages
+  // Keyboard navigation
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      // Don't hijack arrows when user is in an input/textarea
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
       if (totalPages <= 1) return;
-
-      if (e.key === "ArrowLeft") {
-        e.preventDefault();
-        goToPage(Math.max(0, currentPage - 1));
-      } else if (e.key === "ArrowRight") {
-        e.preventDefault();
-        goToPage(Math.min(totalPages - 1, currentPage + 1));
-      }
+      if (e.key === "ArrowLeft") { e.preventDefault(); goToPage(currentPage - 1); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); goToPage(currentPage + 1); }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
   }, [currentPage, totalPages, goToPage]);
 
+  // Mouse wheel pagination: scroll to change pages.
+  // Skips when mouse is over a scrollable area (chat messages, code blocks, etc.)
+  const wheelCooldown = useRef(false);
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || totalPages <= 1) return;
+    const handleWheel = (e: WheelEvent) => {
+      // Walk up from target — if any ancestor can scroll, let the browser handle it
+      let node = e.target as HTMLElement | null;
+      while (node && node !== el) {
+        if (node.tagName === "TEXTAREA" || node.tagName === "INPUT") return;
+        const { overflowY } = getComputedStyle(node);
+        if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) return;
+        node = node.parentElement;
+      }
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      if (Math.abs(delta) < 30) return;
+      if (wheelCooldown.current) return;
+      wheelCooldown.current = true;
+      setTimeout(() => { wheelCooldown.current = false; }, 400);
+      if (delta > 0) goToPage(currentPage + 1);
+      else goToPage(currentPage - 1);
+    };
+    el.addEventListener("wheel", handleWheel, { passive: true });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [currentPage, totalPages, goToPage]);
+
+  // Touch swipe support
+  const touchRef = useRef<{ startX: number; startY: number } | null>(null);
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY };
+  }, []);
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchRef.current || totalPages <= 1) return;
+    const dx = e.changedTouches[0].clientX - touchRef.current.startX;
+    const dy = e.changedTouches[0].clientY - touchRef.current.startY;
+    touchRef.current = null;
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return; // too short or vertical
+    if (dx < 0) goToPage(currentPage + 1); // swipe left → next
+    else goToPage(currentPage - 1); // swipe right → prev
+  }, [currentPage, totalPages, goToPage]);
+
   // Pane resize within a page
   const startResize = useCallback((index: number, e: React.MouseEvent) => {
     e.preventDefault();
-    // Find the page container for the current page
-    const vp = viewportRef.current;
-    if (!vp) return;
-    const pageEl = vp.children[currentPage] as HTMLElement | undefined;
-    if (!pageEl) return;
-    const containerW = pageEl.getBoundingClientRect().width;
+    const el = containerRef.current;
+    if (!el) return;
+    const containerW = el.getBoundingClientRect().width;
     const count = Math.min(pages[currentPage]?.length ?? 0, MAX_VISIBLE);
     const currentWidths = paneWidths.length === count ? [...paneWidths] : Array(count).fill(1 / count);
     dragRef.current = { index, startX: e.clientX, startWidths: currentWidths, containerW };
@@ -577,143 +551,134 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     ? paneWidths
     : Array(activePaneCount).fill(1 / Math.max(1, activePaneCount));
 
+  const pagePanes = pages[currentPage] ?? [];
+
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
-      {/* Scroll-snap viewport */}
+      {/* Only render the current page — simple and bulletproof */}
       <div
-        ref={viewportRef}
-        className="mpv-viewport"
-        onScroll={handleScroll}
+        key={currentPage}
+        ref={containerRef}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className={slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade"}
+        style={{ display: "flex", flex: 1, minHeight: 0 }}
       >
-        {pages.map((pagePanes, pageIdx) => (
-          <div key={pageIdx} className="mpv-page">
-            {pagePanes.map((agentId, i) => {
-              const data = getAgentData(agentId);
-              if (!data) return null;
-              const meta = agentMeta?.find(m => m.agentId === agentId);
-              // Only apply resize flex on current page
-              const isCurrentPage = pageIdx === currentPage;
-              const flex = isCurrentPage && flexValues[i] != null
-                ? `${flexValues[i]} 1 0%` : "1 1 0%";
-              return (
-                <div key={agentId} style={{ display: "contents" }}>
-                  {/* Resize handle between panes */}
-                  {i > 0 && isCurrentPage && (
-                    <div
-                      className={`pane-resize${dragRef.current?.index === i - 1 ? " pane-resize-active" : ""}`}
-                      onMouseDown={(e) => startResize(i - 1, e)}
-                    />
-                  )}
-                  <div
-                    style={{
-                      flex,
-                      minWidth: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      position: "relative",
-                      ...(i === 0 ? {
-                        borderLeft: `1px solid ${TERM_BORDER}`,
-                        boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
-                      } : {}),
-                    }}
-                  >
-                    {/* Floating hire button on last pane of last page */}
-                    {showHireButton && onHire && pageIdx === pages.length - 1 && i === pagePanes.length - 1 && (
-                      <button
-                        onClick={onHire}
-                        title="Hire"
-                        aria-label="Hire"
-                        className="mpv-hire-float"
-                      >
-                        <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> {hireLabel}
-                      </button>
-                    )}
-                    <StableAgentPane
-                      agentId={agentId}
-                      data={data}
-                      meta={meta}
-                      assetsReady={assetsReady}
-                      panePrompts={panePrompts}
-                      onPanePromptChange={onPanePromptChange}
-                      isOwner={isOwner}
-                      isCollaborator={isCollaborator}
-                      isSpectator={isSpectator}
-                      panePendingImages={panePendingImages}
-                      onPanePendingImagesChange={onPanePendingImagesChange}
-                      suggestions={suggestions}
-                      suggestText={suggestText}
-                      onSuggestTextChange={onSuggestTextChange}
-                      onSubmit={onSubmit}
-                      onCancel={onCancel}
-                      onFire={onFire}
-                      onApproval={onApproval}
-                      onApprovePlan={onApprovePlan}
-                      onQuickApprove={onQuickApprove}
-                      onEndProject={onEndProject}
-                      onSuggest={onSuggest}
-                      onPreview={onPreview}
-                      onReview={onReview}
-                      detectedBackends={detectedBackends}
-                      onLoadMore={onLoadMore}
-                      onPasteImage={onPasteImage}
-                      onPasteText={onPasteText}
-                      onDropImage={onDropImage}
-                      reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
-                      onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
-                      onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
-                      onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
-                      onMerge={onMerge}
-                      onRevert={onRevert}
-                      onUndoMerge={onUndoMerge}
-                      scrollFrozen={scrollFrozen}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Trailing team controls on last page */}
-            {pageIdx === pages.length - 1 && hasTrailingControls && (
+        {pagePanes.map((agentId, i) => {
+          const data = getAgentData(agentId);
+          if (!data) return null;
+          const meta = agentMeta?.find(m => m.agentId === agentId);
+          const flex = flexValues[i] != null ? `${flexValues[i]} 1 0%` : "1 1 0%";
+          return (
+            <div key={agentId} style={{ display: "contents" }}>
+              {i > 0 && (
+                <div
+                  className={`pane-resize${dragRef.current?.index === i - 1 ? " pane-resize-active" : ""}`}
+                  onMouseDown={(e) => startResize(i - 1, e)}
+                />
+              )}
               <div
                 style={{
-                  display: "flex", flexDirection: "column",
-                  alignItems: "center", justifyContent: "center",
-                  gap: 8, padding: "0 16px",
-                  borderLeft: pagePanes.length > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
-                  minWidth: 60, flexShrink: 0,
+                  flex,
+                  minWidth: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  ...(i === 0 ? {
+                    borderLeft: `1px solid ${TERM_BORDER}`,
+                    boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
+                  } : {}),
                 }}
               >
-                {showTeamControls && teamBusy && onStopTeam && (
-                  <button
-                    onClick={onStopTeam}
-                    title="Stop Team Work"
-                    style={{
-                      padding: "6px 12px",
-                      border: `1px solid ${TERM_DIM}`, cursor: "pointer",
-                      backgroundColor: "transparent", color: TERM_SEM_YELLOW,
-                      fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-                    }}
-                  >stop</button>
+                {showHireButton && onHire && currentPage === pages.length - 1 && i === pagePanes.length - 1 && (
+                  <button onClick={onHire} title="Hire" aria-label="Hire" className="mpv-hire-float">
+                    <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> {hireLabel}
+                  </button>
                 )}
-                {showTeamControls && onFireTeam && (
-                  <button
-                    onClick={onFireTeam}
-                    title="Fire Team"
-                    style={{
-                      padding: "6px 12px",
-                      border: `1px solid ${TERM_DIM}`, cursor: "pointer",
-                      backgroundColor: "transparent", color: TERM_DIM,
-                      fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-                      transition: "color 0.15s",
-                    }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
-                  >fire</button>
-                )}
+                <StableAgentPane
+                  agentId={agentId}
+                  data={data}
+                  meta={meta}
+                  assetsReady={assetsReady}
+                  panePrompts={panePrompts}
+                  onPanePromptChange={onPanePromptChange}
+                  isOwner={isOwner}
+                  isCollaborator={isCollaborator}
+                  isSpectator={isSpectator}
+                  panePendingImages={panePendingImages}
+                  onPanePendingImagesChange={onPanePendingImagesChange}
+                  suggestions={suggestions}
+                  suggestText={suggestText}
+                  onSuggestTextChange={onSuggestTextChange}
+                  onSubmit={onSubmit}
+                  onCancel={onCancel}
+                  onFire={onFire}
+                  onApproval={onApproval}
+                  onApprovePlan={onApprovePlan}
+                  onQuickApprove={onQuickApprove}
+                  onEndProject={onEndProject}
+                  onSuggest={onSuggest}
+                  onPreview={onPreview}
+                  onReview={onReview}
+                  detectedBackends={detectedBackends}
+                  onLoadMore={onLoadMore}
+                  onPasteImage={onPasteImage}
+                  onPasteText={onPasteText}
+                  onDropImage={onDropImage}
+                  reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
+                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
+                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
+                  onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                  onMerge={onMerge}
+                  onRevert={onRevert}
+                  onUndoMerge={onUndoMerge}
+                  scrollFrozen={scrollFrozen}
+                />
               </div>
+            </div>
+          );
+        })}
+
+        {/* Trailing team controls on last page */}
+        {hasTrailingControls && (
+          <div
+            style={{
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: 8, padding: "0 16px",
+              borderLeft: pagePanes.length > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
+              minWidth: 60, flexShrink: 0,
+            }}
+          >
+            {showTeamControls && teamBusy && onStopTeam && (
+              <button
+                onClick={onStopTeam}
+                title="Stop Team Work"
+                style={{
+                  padding: "6px 12px",
+                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_SEM_YELLOW,
+                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+                }}
+              >stop</button>
+            )}
+            {showTeamControls && onFireTeam && (
+              <button
+                onClick={onFireTeam}
+                title="Fire Team"
+                style={{
+                  padding: "6px 12px",
+                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
+                  backgroundColor: "transparent", color: TERM_DIM,
+                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
+                  transition: "color 0.15s",
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+              >fire</button>
             )}
           </div>
-        ))}
+        )}
       </div>
 
       {/* Bottom bar: page dots + hire button */}

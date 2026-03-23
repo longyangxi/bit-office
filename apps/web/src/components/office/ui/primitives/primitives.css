@@ -620,27 +620,29 @@
 }
 
 /* ============================================================
-   SCROLL-SNAP VIEWPORT — .mpv-viewport / .mpv-page
-   Horizontal swipe pagination for multi-pane agent view
+   MULTI-PANE PAGE TRANSITIONS
+   key={currentPage} triggers remount → animation plays
    ============================================================ */
-.mpv-viewport {
-  display: flex;
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  /* scroll-behavior handled programmatically to avoid flash on mount */
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-  flex: 1;
-  min-height: 0;
+.mpv-page-fade {
+  animation: mpv-fade-in 0.15s ease-out;
 }
-.mpv-viewport::-webkit-scrollbar {
-  display: none;
+.mpv-slide-left {
+  animation: mpv-slide-in-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
-.mpv-page {
-  flex: 0 0 100%;
-  scroll-snap-align: start;
-  display: flex;
-  min-height: 0;
+.mpv-slide-right {
+  animation: mpv-slide-in-right 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@keyframes mpv-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes mpv-slide-in-left {
+  from { transform: translateX(30%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes mpv-slide-in-right {
+  from { transform: translateX(-30%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
 }
 
 /* Page indicator dots */
