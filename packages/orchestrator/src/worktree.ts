@@ -416,6 +416,14 @@ export function undoMergeCommit(workspace: string, commitHash: string): { succes
   }
 }
 
+/** Reset a worktree branch to match the current main HEAD (used after undo merge to eliminate fork). */
+export function resetWorktreeToMain(workspace: string, worktreePath: string): void {
+  if (!existsSync(worktreePath) || !isGitRepo(worktreePath)) return;
+  const repoRoot = resolveGitWorkspaceRoot(workspace);
+  const mainHead = gitExec("git rev-parse HEAD", repoRoot);
+  gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
+}
+
 // ---------------------------------------------------------------------------
 // Sync to main
 // ---------------------------------------------------------------------------

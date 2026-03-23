@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -572,7 +572,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     session.worktreeBranch = worktreeBranch;
   }
 
-  /** Undo the last merge from an agent (revert the merge commit on main) */
+  /** Undo the last merge from an agent (reset the merge commit on main) */
   undoAgentMerge(agentId: string): { success: boolean; message?: string } {
     const session = this.agentManager.get(agentId);
     if (!session?.mergeCommitStack.length) {
@@ -582,6 +582,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = undoMergeCommit(session.workspaceDir, entry.hash);
     if (result.success) {
       session.mergeCommitStack.pop();
+      // Sync agent worktree to new main HEAD to eliminate branch fork
+      if (session.worktreePath) {
+        try {
+          resetWorktreeToMain(session.workspaceDir, session.worktreePath);
+          console.log(`[Worktree] Synced ${session.name}'s worktree to main after undo merge`);
+        } catch (err) {
+          console.warn(`[Worktree] Failed to sync worktree after undo merge: ${(err as Error).message}`);
+        }
+      }
     }
     return result;
   }
