@@ -721,7 +721,7 @@
   display: flex;
   align-items: center;
   gap: 5px;
-  padding: 8px 16px;
+  padding: 4px 30px;
   border: 1px solid color-mix(in srgb, var(--term-green) 32%, transparent);
   border-radius: 6px;
   background: color-mix(in srgb, var(--term-green) 7%, transparent);
