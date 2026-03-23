@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, pushWorktreeBranch, deleteRemoteBranch } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -163,6 +163,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(agentId);
     // Force-clean worktree + branch on fire
     if (session?.worktreePath && session.worktreeBranch) {
+      deleteRemoteBranch(session.workspaceDir, session.worktreeBranch);
       removeWorktree(session.worktreePath, session.worktreeBranch, session.workspaceDir);
       session.worktreePath = null;
       session.worktreeBranch = null;
@@ -499,6 +500,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
     if (result.success) {
       session.pendingMerge = false;
+      // Clean up remote branch after successful merge
+      deleteRemoteBranch(session.workspaceDir, session.worktreeBranch);
     }
     this.emitEvent({
       type: "worktree:merged",
@@ -852,7 +855,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             });
           }
         } else {
-          // Deferred merge: signal that worktree is ready for manual merge
+          // Deferred merge: push branch to origin for review, then signal ready
+          pushWorktreeBranch(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch);
           doneSession.pendingMerge = true;
           this.emitEvent({
             type: "worktree:ready",

@@ -378,6 +378,41 @@ export function createWorktree(
 }
 
 // ---------------------------------------------------------------------------
+// Push branch to remote
+// ---------------------------------------------------------------------------
+
+/**
+ * Push the agent's worktree branch to origin so it's visible on GitHub for review/testing.
+ * Uses force-push since the branch may have been rebased.
+ */
+export function pushWorktreeBranch(workspace: string, worktreePath: string, branch: string): boolean {
+  try {
+    const repoRoot = resolveGitWorkspaceRoot(workspace);
+    // Auto-commit any dirty files first
+    autoCommitWorktree(worktreePath, branch);
+    gitExec(`git push origin ${shellQuote(branch)} --force`, repoRoot);
+    console.log(`[Worktree] Pushed branch ${branch} to origin`);
+    return true;
+  } catch (err) {
+    console.warn(`[Worktree] Failed to push ${branch} to origin: ${(err as Error).message}`);
+    return false;
+  }
+}
+
+/**
+ * Delete a remote branch on origin (cleanup after merge or fire).
+ */
+export function deleteRemoteBranch(workspace: string, branch: string): void {
+  try {
+    const repoRoot = resolveGitWorkspaceRoot(workspace);
+    gitExec(`git push origin --delete ${shellQuote(branch)}`, repoRoot);
+    console.log(`[Worktree] Deleted remote branch ${branch}`);
+  } catch {
+    // Branch may not exist on remote — ignore
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Sync to main
 // ---------------------------------------------------------------------------
 
