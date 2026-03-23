@@ -1,7 +1,7 @@
 {
   "name": "bit-office-root",
   "private": true,
-  "version": "0.1.41",
+  "version": "0.1.48",
   "scripts": {
     "dev": "pnpm --filter bit-office dev & pnpm --filter web dev",
     "dev:web": "pnpm --filter web dev",
