@@ -1531,7 +1531,14 @@ export default function OfficePage() {
 
             {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}
             {!consoleMode && (
-            <div style={{
+            <div
+              onWheel={(e) => {
+                // Convert vertical scroll to horizontal scroll for the agent bar
+                if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+                  e.currentTarget.scrollLeft += e.deltaY;
+                }
+              }}
+              style={{
               display: "flex", alignItems: "center", gap: 8,
               padding: "8px 12px", minHeight: 64,
               borderBottom: `1px solid ${TERM_BORDER_DIM}`,
