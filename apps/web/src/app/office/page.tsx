@@ -1841,7 +1841,14 @@ export default function OfficePage() {
                 onDismissReview={handleDismissReview}
                 onMerge={(agentId) => sendCommand({ type: "MERGE_WORKTREE", agentId })}
                 onRevert={(agentId) => sendCommand({ type: "REVERT_WORKTREE", agentId })}
-                onUndoMerge={(agentId) => sendCommand({ type: "UNDO_MERGE", agentId })}
+                onUndoMerge={async (agentId) => {
+                  const ag = agents.get(agentId);
+                  const hash = ag?.lastMergeCommit?.slice(0, 7) ?? "???";
+                  const msg = ag?.lastMergeMessage || "merge commit";
+                  if (await confirm(`Undo merge ${hash}?\n"${msg}"\n\nThis will remove the merge commit from main.`)) {
+                    sendCommand({ type: "UNDO_MERGE", agentId });
+                  }
+                }}
                 scrollFrozen={scrollFrozen}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
@@ -1913,7 +1920,14 @@ export default function OfficePage() {
                   lastMergeMessage={ag.lastMergeMessage}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
-                  onUndoMerge={() => sendCommand({ type: "UNDO_MERGE", agentId: selectedAgent })}
+                  onUndoMerge={async () => {
+                    const ag = agents.get(selectedAgent);
+                    const hash = ag?.lastMergeCommit?.slice(0, 7) ?? "???";
+                    const msg = ag?.lastMergeMessage || "merge commit";
+                    if (await confirm(`Undo merge ${hash}?\n"${msg}"\n\nThis will remove the merge commit from main.`)) {
+                      sendCommand({ type: "UNDO_MERGE", agentId: selectedAgent });
+                    }
+                  }}
                   onReview={(result, backend) => handleReview(selectedAgent, result, backend)}
                   detectedBackends={detectedBackends}
                   onLoadMore={() => loadMoreMessages(selectedAgent)}

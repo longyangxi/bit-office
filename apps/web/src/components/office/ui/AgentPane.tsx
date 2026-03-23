@@ -928,13 +928,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     {!pendingMerge && lastMergeCommit && onUndoMerge && (
                       <button
                         className="term-btn"
-                        onClick={() => {
-                          const shortHash = lastMergeCommit.slice(0, 7);
-                          const msg = lastMergeMessage || "merge commit";
-                          if (window.confirm(`Undo merge ${shortHash}?\n\n"${msg}"\n\nThis will revert the changes on main.`)) {
-                            onUndoMerge();
-                          }
-                        }}
+                        onClick={onUndoMerge}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
                           padding: "5px 14px", border: `1px solid ${TERM_SEM_RED}40`,
