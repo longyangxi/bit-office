@@ -463,6 +463,10 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                   minWidth: 0,
                   display: "flex",
                   flexDirection: "column",
+                  ...(i === 0 ? {
+                    borderLeft: `1px solid ${TERM_BORDER}`,
+                    boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
+                  } : {}),
                 }}
               >
               <StableAgentPane

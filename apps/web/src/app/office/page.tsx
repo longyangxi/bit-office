@@ -1506,7 +1506,7 @@ export default function OfficePage() {
           </div>
           </div>
           {/* ── Main content area ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, paddingLeft: consoleMode ? 36 : undefined, border: consoleMode ? `1px solid ${TERM_BORDER}` : undefined, borderLeft: consoleMode ? `1px solid ${TERM_BORDER}` : undefined, borderRadius: consoleMode ? 8 : undefined, boxShadow: consoleMode ? `inset 1px 0 0 rgba(255,255,255,0.04), -2px 0 6px rgba(0,0,0,0.3)` : undefined }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, paddingLeft: consoleMode ? 36 : undefined }}>
 
           {(() => {
             // Get the active agent list based on current tab (exclude temp reviewers)
