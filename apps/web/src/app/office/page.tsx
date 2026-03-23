@@ -14,7 +14,6 @@ import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX } from "@/components/office/constants";
 import { useEditorActions } from "@/hooks/useEditorActions";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
-import { useAblyLoader } from "@/hooks/useAblyLoader";
 
 import type { SceneAdapter } from "@/components/office/scene/SceneAdapter";
 import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
@@ -54,6 +53,7 @@ const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal
 const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
 const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
+const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
 function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
@@ -167,7 +167,6 @@ const tempReviewerIds = new Set<string>();
 const agentWorkDirMap = new Map<string, string>();
 
 export default function OfficePage() {
-  useAblyLoader(); // Register ably transport before any connect() call
   const router = useRouter();
   // Reactive state — re-render when these change
   const agents = useOfficeStore(s => s.agents);
@@ -1180,6 +1179,7 @@ export default function OfficePage() {
 
   return (
     <div style={{ height: "100vh", width: "100vw", position: "relative", overflow: "hidden", display: "flex", backgroundColor: TERM_BG }}>
+      <AblyLoader />
       {/* Game Scene — fills remaining space after sidebar, centered */}
       {sceneVisible && !consoleMode && <div style={{ flex: 1, position: "relative", minWidth: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", marginRight: "calc(min(40vw, 800px) + 30px)" }}>
         {/* Loading overlay — fades out to reveal scene */}
@@ -1818,6 +1818,7 @@ export default function OfficePage() {
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
                 showHireButton={isOwner && (expandedSection === "agents" || (expandedSection === "team" && !hasTeam))}
+                hireLabel={expandedSection === "team" ? "hire team" : "hire"}
                 onHire={() => expandedSection === "team" ? setShowHireTeamModal(true) : setShowHireModal(true)}
                 showTeamControls={isOwner && expandedSection === "team" && hasTeam}
                 teamBusy={teamBusy}

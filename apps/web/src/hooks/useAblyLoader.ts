@@ -4,11 +4,10 @@ import { useEffect } from "react";
 import { registerAblyTransport } from "@/lib/connection";
 
 /**
- * Lazily loads ably-client and registers it as the ably transport.
- * Must be called before any connect() with mode "ably".
- * This hook exists solely to keep ably out of the SSR module graph.
+ * Invisible component that lazily loads ably-client and registers it.
+ * MUST be loaded via next/dynamic with ssr:false to keep ably out of SSR bundle.
  */
-export function useAblyLoader() {
+export default function AblyLoader() {
   useEffect(() => {
     let mounted = true;
     import("@/lib/ably-client").then((mod) => {
@@ -21,4 +20,5 @@ export function useAblyLoader() {
     });
     return () => { mounted = false; };
   }, []);
+  return null;
 }

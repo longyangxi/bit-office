@@ -296,6 +296,7 @@ export interface MultiPaneViewProps {
   assetsReady?: boolean;
   /** Show hire/create button after last pane */
   showHireButton?: boolean;
+  hireLabel?: string;
   onHire?: () => void;
   /** Team controls (stop/fire) shown after last pane */
   showTeamControls?: boolean;
@@ -344,6 +345,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     agentMeta,
     assetsReady,
     showHireButton,
+    hireLabel = "hire",
     onHire,
     showTeamControls,
     teamBusy,
@@ -553,7 +555,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
           >
-            <span style={{ fontSize: 14, lineHeight: "1" }}>+</span> hire
+            <span style={{ fontSize: 14, lineHeight: "1" }}>+</span> {hireLabel}
           </button>
         ) : (
           "No agents active"
@@ -615,7 +617,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                         aria-label="Hire"
                         className="mpv-hire-float"
                       >
-                        <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> hire
+                        <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> {hireLabel}
                       </button>
                     )}
                     <StableAgentPane
