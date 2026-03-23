@@ -471,6 +471,11 @@ export class AgentSession {
       console.log(`[Agent ${this.name}] Spawning: ${this.backend.command} ${args.map(a => a.length > 80 ? a.slice(0, 80) + '...' : a).join(' ')}`);
       console.log(`[Agent ${this.name}] CWD=${cwd}, worktreePath=${this.worktreePath ?? "none"}`);
 
+      // Pre-flight: ensure cwd exists (spawn ENOENT is misleading when cwd is missing)
+      if (!existsSync(cwd)) {
+        throw Object.assign(new Error(`Working directory "${cwd}" does not exist`), { code: "ECWDMISSING" });
+      }
+
       // stdin MUST be "ignore" — "pipe" causes Claude Code to hang waiting for input
       // detached: true creates a new process group so we can kill the entire tree on cancel
       this.process = spawn(this.backend.command, args, {
@@ -894,9 +899,22 @@ export class AgentSession {
         this.process = null;
         this.currentTaskId = null;
         this.setStatus("error");
-        const errorMsg = (err as NodeJS.ErrnoException).code === "ENOENT"
-          ? `"${this.backend.command}" not found. Please install it and make sure it's in your PATH.`
-          : err.message;
+        // ENOENT can mean either: (a) the binary doesn't exist, or (b) the cwd doesn't exist.
+        // Node.js unhelpfully reports both cases as ENOENT with err.path = binary.
+        let errorMsg: string;
+        if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+          const cwdExists = this.currentCwd ? existsSync(this.currentCwd) : false;
+          const binaryExists = existsSync(this.backend.command);
+          if (!cwdExists) {
+            errorMsg = `Working directory "${this.currentCwd}" does not exist. The project may have been moved or deleted.`;
+          } else if (!binaryExists) {
+            errorMsg = `"${this.backend.command}" not found. Please install it and make sure it's in your PATH.`;
+          } else {
+            errorMsg = `ENOENT spawning "${this.backend.command}" in "${this.currentCwd}" — file exists but spawn failed (check permissions or symlinks).`;
+          }
+        } else {
+          errorMsg = err.message;
+        }
         this.onEvent({
           type: "task:failed",
           agentId: this.agentId,
