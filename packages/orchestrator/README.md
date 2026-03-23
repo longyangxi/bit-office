@@ -171,15 +171,16 @@ When multiple agents work on the same repo, each agent gets its own **git worktr
 
 - **One agent = one worktree = one branch.** Worktree and branch are keyed by `agentId`, not `taskId`. This keeps the directory stable across tasks so Claude Code `--resume` works (same CWD).
 - **Worktrees live outside the repo** at `~/.open-office[-dev]/worktrees/<repo-hash>/<agentId>/`. This prevents Claude Code from traversing up to the main repo root.
-- **No persistent forks.** On task completion, changes are squash-merged back to main and the branch is reset to main HEAD. The branch stays at the same point as main — no visual fork in the git graph.
 - **Branch naming:** `agent/<agentName>-<shortId>` (e.g. `agent/nova-pTTERq`). Unique per agent, human-readable.
+- **Branches are local only** — never pushed to remote. Visible in SourceTree/git tools via shared `.git`.
 
 ### Lifecycle
 
 ```
 Agent gets task
   │
-  ├─ worktree exists? ──yes──> Reuse (fast-forward to main HEAD)
+  ├─ worktree exists? ──yes──> syncWorktreeToMain (rebase onto latest main)
+  │                             skipped if pendingMerge=true
   │
   └─ no ──> git worktree add ~/.open-office[-dev]/worktrees/<repo>/<agentId>
             creates branch agent/<name>-<id>
@@ -190,33 +191,102 @@ Agent works in worktree (commits on its branch)
   │
   v
 Task completes (task:done)
-  ├─ Solo agent: squash-merge → main, reset branch to main HEAD (keepAlive)
+  ├─ autoMerge=true (default):
+  │    auto-commit → squash-merge → main
+  │    reset branch to main HEAD (keepAlive)
+  │    commitHash pushed to mergeCommitStack (for undo)
+  │
+  ├─ autoMerge=false (deferred):
+  │    auto-commit → set pendingMerge=true
+  │    UI shows merge/revert buttons, user decides when to merge
+  │
   └─ Team worker: merge all at once when team finalizes
   │
   v
-Agent removed / task failed
+Agent removed (fired)
   └─ git worktree remove + git branch -D (full cleanup)
 ```
 
-### Cleanup (GC)
+### Merge Control (per-agent)
 
-Stale worktrees are cleaned up at **3 points**:
-1. **Gateway startup** — `cleanupStaleWorktrees()` scans centralized worktree dir, removes dead worktrees (owner process not alive), deletes orphaned `agent/*` branches
-2. **Task failure** — agent-session auto-removes its worktree + branch
-3. **Agent fired** — orchestrator force-cleans worktree + branch
+Each agent has a per-agent `autoMerge` toggle (default: **true**) in the UI chat area.
 
-Owner metadata (`.owners/<agentId>.json`) tracks which gateway instance owns each worktree, preventing cross-instance cleanup conflicts.
+**Auto-merge flow (default):**
+1. Task completes → auto-commit + squash-merge to main → record commitHash
+2. Test the changes in the running app
+3. If broken → click **undo merge** (red button, shows confirmation with commit hash + message)
+4. Can undo multiple merges — each undo pops one from the commit stack
+
+**Deferred merge flow (autoMerge=false):**
+1. Task completes → auto-commit to agent branch → `pendingMerge=true`
+2. UI shows **merge to main** (green) + **revert** (yellow) buttons
+3. **revert** = `git reset --hard HEAD~1` on agent branch (undo last agent commit, can click multiple times)
+4. **merge to main** = squash-merge when ready
+5. After merge, **undo merge** button appears (same as auto-merge flow)
+
+**UI Controls (chat input area, both sidebar and console mode):**
+- **merge to main** (green): squash-merge agent branch → main
+- **revert** (yellow): undo last agent commit on branch (pre-merge)
+- **undo merge** (red): `git revert <commitHash>` on main (post-merge, with confirmation dialog)
+- **auto-merge** checkbox: toggle per-agent autoMerge preference
+- All buttons disabled while agent is working
+
+### Conflict Resolution
+
+Conflicts are resolved automatically — no user intervention needed.
+
+| Scenario | Strategy | Rationale |
+|----------|----------|-----------|
+| **Sync (before task)** | `-X theirs` (main wins) | Agent hasn't started new work; main is authoritative |
+| **Merge (to main)** | `-X ours` (agent wins) | Agent's changes are the content being merged |
+
+Both follow the same 3-tier approach:
+1. Clean rebase (no auto-resolve)
+2. If conflicts → rebase with strategy (`-X theirs` or `-X ours`)
+3. If still fails → report error
+
+### Dirty Files Safety
+
+All merge/undo operations stash uncommitted files on main before operating, and restore them after:
+- `mergeWorktree`: stash → merge → pop (on both success and failure paths)
+- `undoMergeCommit`: stash → revert → pop (via try/finally)
+
+### Cleanup
+
+Worktrees are cleaned up only when an agent is **fired** (`removeAgent`). No startup GC — worktrees carry meaningful unmerged state that must survive gateway restarts. On restart, `detectPendingMerges()` scans existing worktrees and sets `pendingMerge=true` if they have uncommitted changes or commits ahead of main.
+
+### Commands & Events
+
+| Command | Params | Description |
+|---------|--------|-------------|
+| `MERGE_WORKTREE` | agentId | Manually merge agent's worktree to main |
+| `REVERT_WORKTREE` | agentId | Undo last commit on agent's branch |
+| `UNDO_MERGE` | agentId | Revert the last merge commit on main |
+| `TOGGLE_AUTO_MERGE` | agentId, autoMerge | Toggle per-agent auto-merge |
+
+| Event | Key Fields | Description |
+|-------|------------|-------------|
+| `worktree:created` | agentId, worktreePath, branch | Git worktree created |
+| `worktree:merged` | agentId, success, commitHash?, commitMessage? | Worktree squash-merged to main |
+| `worktree:ready` | agentId, branch | Worktree has changes ready for manual merge |
+| `autoMerge:updated` | agentId, autoMerge, lastMergeCommit? | Per-agent merge preference changed |
+
+**State persistence:**
+- `autoMerge`: persisted in `team-state.json`, restored on restart
+- `pendingMerge`: reconstructed from git state on restart via `detectPendingMerges()`
+- `mergeCommitStack`: runtime-only (lost on restart — undo not available after restart)
 
 ### Configuration
 
 ```typescript
 const orc = createOrchestrator({
   worktree: {
-    mergeOnComplete: true,    // squash-merge on task:done
+    mergeOnComplete: true,    // enable worktree merge infrastructure
     alwaysIsolate: true,      // create worktree even for solo agents
   },
   // or: worktree: false      // disable worktree isolation entirely
 });
+// Per-agent: session.autoMerge (default: true)
 ```
 
 ### Directory Layout
@@ -394,7 +464,9 @@ if (state.projectDir) orc.setTeamProjectDir(state.projectDir);
 | `team:chat` | fromAgentId, message, messageType | Team communication |
 | `team:phase` | teamId, phase, leadAgentId | Phase transition |
 | `worktree:created` | agentId, worktreePath, branch | Git worktree created |
-| `worktree:merged` | agentId, success, conflictFiles? | Git worktree merged |
+| `worktree:merged` | agentId, success, commitHash?, commitMessage? | Worktree squash-merged to main |
+| `worktree:ready` | agentId, branch | Worktree ready for manual merge |
+| `autoMerge:updated` | agentId, autoMerge, lastMergeCommit? | Per-agent merge preference changed |
 
 ## Configuration
 

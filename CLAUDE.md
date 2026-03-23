@@ -23,34 +23,9 @@
 - `projects/` — default agent workspace (team projects created here)
 - `worktrees/<repo-hash>/<agentId>/` — centralized worktree isolation
 
-## Worktree Isolation
-- One agent = one worktree = one branch (keyed by agentId, not taskId)
-- Worktrees stored outside repo at `~/.open-office[-dev]/worktrees/` to prevent path traversal
-- Cleanup: on fire agent only (no startup GC — worktrees carry unmerged state)
-
-## Merge Control (per-agent)
-- **autoMerge** (default: off): per-agent toggle in UI chat area
-- **Off (deferred merge)**: task:done → auto-commit to agent branch → set `pendingMerge=true` → UI shows merge/revert buttons
-- **On (auto-merge)**: task:done → squash-merge to main immediately (legacy behavior)
-- **Before each task**: `syncWorktreeToMain()` rebases agent branch onto latest main (skipped if pendingMerge=true to avoid losing unmerged work). Conflicts auto-resolved with main priority (`-X theirs`) since agent hasn't started new work yet.
-- **Merge conflicts**: clean rebase attempted first; if conflicts, auto-resolved with agent priority (`-X ours` — agent's changes preserved). Dirty files on main are stashed/restored around all merge and undo operations.
-
-### UI Controls (chat input area, both sidebar and console mode)
-- **merge to main** (green): squash-merge agent branch → main, records commitHash
-- **revert** (yellow): `git reset --hard HEAD~1` on agent branch (pre-merge, undo last agent commit)
-- **undo merge** (red): `git revert <commitHash>` on main (post-merge, one-level undo)
-- **auto-merge** checkbox: toggle per-agent autoMerge preference
-- All buttons disabled while agent is working
-
-### Commands & Events
-- Commands: `MERGE_WORKTREE`, `REVERT_WORKTREE`, `UNDO_MERGE`, `TOGGLE_AUTO_MERGE`
-- Events: `WORKTREE_READY`, `WORKTREE_MERGED` (with commitHash), `WORKTREE_REVERTED`, `AUTO_MERGE_UPDATED`
-- State: `autoMerge` persisted in team-state.json; `pendingMerge` reconstructed on restart via `detectPendingMerges()`; `lastMergeCommit` is runtime-only (lost on restart)
-
-### Agent branches
-- Branches are local only (not pushed to remote)
-- Visible in SourceTree/git tools (click commit in graph, don't checkout — checkout fails because worktree holds the branch)
-- To browse agent files: `cd ~/.open-office[-dev]/worktrees/<repo-hash>/<agentId>/`
+## Worktree Isolation & Merge Control
+- One agent = one worktree = one branch, with per-agent auto-merge (default: on) + undo merge
+- See `packages/orchestrator/README.md` → "Worktree Isolation" for full documentation
 
 ## Key Node Mode
 Only 4 key events shown in UI: TASK_STARTED, APPROVAL_NEEDED, TASK_DONE, TASK_FAILED.

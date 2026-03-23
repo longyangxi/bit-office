@@ -250,8 +250,8 @@ export class AgentSession {
   worktreeBranch: string | null = null;
   /** Use backend-native worktree isolation (e.g. Claude Code --worktree) */
   useNativeWorktree = false;
-  /** When false (default), completed worktree changes wait for manual merge instead of auto-merging */
-  autoMerge = false;
+  /** When true (default), task:done auto-merges to main; when false, waits for manual merge */
+  autoMerge = true;
   /** True when task is done and worktree has unmerged changes awaiting manual merge */
   pendingMerge = false;
   /** Stack of merge commits on main (for multi-level undo) */
