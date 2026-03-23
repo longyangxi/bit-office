@@ -136,14 +136,14 @@ const StableAgentPane = memo(function StableAgentPane({
               {backendName && (
                 <>
                   <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
-                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_TEXT, opacity: 0.7, flexShrink: 0 }}>{backendName}</span>
+                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_TEXT_BRIGHT, opacity: 0.6, flexShrink: 0 }}>{backendName}</span>
                 </>
               )}
               {roleName && (
                 <>
                   <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
                   <span style={{
-                    fontSize: TERM_SIZE - 1, color: TERM_TEXT, opacity: 0.55,
+                    fontSize: TERM_SIZE - 1, color: TERM_TEXT_BRIGHT, opacity: 0.45,
                     overflow: "hidden", textOverflow: "ellipsis",
                   }}>{roleName}</span>
                 </>
