@@ -1022,8 +1022,9 @@ export default function OfficePage() {
     // that never updates (reviewResultText !== null blocks re-entry).
     const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
     if (reviewer.status === "error" && reviewMessages.length === 0) {
-      // Error with no output — allow dismissal with fallback text
-      setReviewResultText("(Review failed — reviewer encountered an error)");
+      // Error with no output — extract the actual error from system messages
+      const sysError = reviewer.messages.filter(m => m.role === "system" && m.text).map(m => m.text).join("\n");
+      setReviewResultText(sysError || "(Review failed — reviewer encountered an error)");
     } else if (reviewMessages.length > 0) {
       // Normal completion — use last agent message
       setReviewResultText(reviewMessages[reviewMessages.length - 1].text || "(No issues found)");

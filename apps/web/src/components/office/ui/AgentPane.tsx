@@ -577,7 +577,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            <span style={{ color: TERM_SEM_GREEN }}>done</span>
+            <span style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_SEM_GREEN }}>
+              {reviewerOverlay.status === "error" ? "error" : "done"}
+            </span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.name}
             </span>
@@ -594,47 +596,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
             {(() => {
-              const allMsgs = reviewerOverlay.visibleMessages;
-              const reviewMsgs = allMsgs.filter(m => m.role !== "user" && m.text);
-
-              // ── DEBUG LOG (temporary) ──
-              const debugInfo = {
-                totalMsgs: allMsgs.length,
-                filteredMsgs: reviewMsgs.length,
-                status: reviewerOverlay.status,
-                busy: reviewerOverlay.busy,
-                reviewDone: reviewerOverlay.reviewDone,
-                hasReviewResultText: !!reviewerOverlay.reviewResultText,
-                reviewResultTextPreview: reviewerOverlay.reviewResultText?.slice(0, 80) ?? "(null)",
-                msgs: allMsgs.map(m => ({
-                  id: m.id.slice(-20),
-                  role: m.role,
-                  textLen: m.text?.length ?? 0,
-                  textPreview: m.text?.slice(0, 60) ?? "(empty)",
-                })),
-              };
-              console.log("[ReviewOverlay Phase2] debug:", debugInfo);
-              // ── END DEBUG ──
-
+              const reviewMsgs = reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text);
               if (reviewMsgs.length > 0) {
                 return reviewMsgs.map(msg => (
                   <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
                 ));
               }
-              // Fallback: show reviewResultText directly when messages are unavailable
+              // Fallback: show reviewResultText directly (covers error messages,
+              // race conditions where TASK_DONE clears streaming msg before render, etc.)
               if (reviewerOverlay.reviewResultText) {
                 return (
-                  <div style={{ color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
+                  <div style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
                     {reviewerOverlay.reviewResultText}
                   </div>
                 );
               }
               return (
                 <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0" }}>
-                  <div style={{ marginBottom: 8 }}>(No review content)</div>
-                  <pre style={{ color: TERM_SEM_YELLOW, fontSize: 9, fontFamily: TERM_FONT, opacity: 0.8, whiteSpace: "pre-wrap", wordBreak: "break-all", lineHeight: 1.5 }}>
-                    {JSON.stringify(debugInfo, null, 2)}
-                  </pre>
+                  (No review content)
                 </div>
               );
             })()}
