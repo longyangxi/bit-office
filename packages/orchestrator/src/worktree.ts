@@ -421,7 +421,13 @@ export function resetWorktreeToMain(workspace: string, worktreePath: string): vo
   if (!existsSync(worktreePath) || !isGitRepo(worktreePath)) return;
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   const mainHead = gitExec("git rev-parse HEAD", repoRoot);
-  gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
+  const dirty = !!gitExec("git status --porcelain", worktreePath);
+  if (dirty) gitExec("git stash --include-untracked", worktreePath);
+  try {
+    gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
+  } finally {
+    if (dirty) try { gitExec("git stash pop", worktreePath); } catch { /* ignore */ }
+  }
 }
 
 // ---------------------------------------------------------------------------
