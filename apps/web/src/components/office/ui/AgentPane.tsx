@@ -974,8 +974,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo Merge</button>
                     )}
-                    <div className="term-input-well" style={{ flex: 1 }}>
-                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
+                    <div className="term-input-well" style={{ flex: 1, display: "flex", alignItems: "center" }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 8px", flexShrink: 0 }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}
