@@ -528,11 +528,11 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             title="Hire"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 6, padding: "12px 28px",
+              gap: 8, padding: "14px 36px",
               border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
               backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
-              fontSize: 12, fontFamily: TERM_FONT, fontWeight: 500,
-              borderRadius: 6, transition: "all 0.2s ease",
+              fontSize: 13, fontFamily: TERM_FONT, fontWeight: 500,
+              borderRadius: 8, transition: "all 0.2s ease",
             }}
             onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}25`; e.currentTarget.style.borderColor = `${TERM_GREEN}90`; e.currentTarget.style.color = TERM_GREEN; }}
             onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
