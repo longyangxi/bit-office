@@ -236,7 +236,9 @@ const VERSION_PROBES: Record<string, string> = {
   sapling: "sp --version 2>&1 | grep -iq sapling",
 };
 
-/** Check which AI CLI tools are installed on this machine */
+/** Check which AI CLI tools are installed on this machine.
+ *  Also resolves each detected backend's command to its absolute path
+ *  so that spawn() works even if the child process env has a different PATH. */
 export function detectBackends(): string[] {
   const detected: string[] = [];
   for (const backend of backends) {
@@ -249,6 +251,14 @@ export function detectBackends(): string[] {
         // Distinctive name — `which` is sufficient
         execSync(`which ${backend.command}`, { stdio: "ignore", timeout: 3000 });
       }
+      // Resolve absolute path so spawn() doesn't depend on child env PATH
+      try {
+        const absPath = execSync(`which ${backend.command}`, { encoding: "utf-8", timeout: 3000 }).trim();
+        if (absPath && absPath.startsWith("/")) {
+          backend.command = absPath;
+          console.log(`[backends] ${backend.id}: resolved to ${absPath}`);
+        }
+      } catch { /* keep relative command as fallback */ }
       detected.push(backend.id);
     } catch {
       // not installed or wrong binary
