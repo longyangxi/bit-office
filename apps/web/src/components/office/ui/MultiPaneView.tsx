@@ -90,7 +90,7 @@ const StableAgentPane = memo(function StableAgentPane({
         return (
           <div className="term-info-bar" style={{
             display: "flex", alignItems: "center", gap: 8,
-            padding: "5px 12px",
+            padding: "8px 12px",
             background: TERM_PANEL,
             flexShrink: 0,
           }}>
@@ -136,14 +136,14 @@ const StableAgentPane = memo(function StableAgentPane({
               {backendName && (
                 <>
                   <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
-                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_DIM, flexShrink: 0 }}>{backendName}</span>
+                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_TEXT, opacity: 0.7, flexShrink: 0 }}>{backendName}</span>
                 </>
               )}
               {roleName && (
                 <>
                   <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
                   <span style={{
-                    fontSize: TERM_SIZE - 1, color: TERM_DIM, opacity: 0.7,
+                    fontSize: TERM_SIZE - 1, color: TERM_TEXT, opacity: 0.55,
                     overflow: "hidden", textOverflow: "ellipsis",
                   }}>{roleName}</span>
                 </>
@@ -463,6 +463,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                   minWidth: 0,
                   display: "flex",
                   flexDirection: "column",
+                  ...(i === 0 ? {
+                    boxShadow: `inset 1px 0 0 rgba(255,255,255,0.04), inset 2px 0 0 rgba(0,0,0,0.3)`,
+                  } : {}),
                 }}
               >
               <StableAgentPane

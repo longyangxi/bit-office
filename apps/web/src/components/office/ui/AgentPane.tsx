@@ -407,7 +407,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         )}
         {(cwd || workDir) && (
           <span className="term-path-scroll" style={{
-            color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.6,
+            color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.85,
             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
             direction: "rtl", textAlign: "left",
           }} title={cwd ?? workDir ?? ""}>
@@ -415,7 +415,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           </span>
         )}
         <span style={{ flex: 1 }} />
-        <span style={{ color: TERM_DIM, flexShrink: 0, opacity: 0.8 }}>{cfg.label}</span>
+        <span style={{ color: TERM_TEXT, flexShrink: 0, opacity: 0.65 }}>{cfg.label}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <button
