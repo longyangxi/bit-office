@@ -401,20 +401,15 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, letterSpacing: "-0.01em" }}>
           {role?.split("\u2014")[0]?.trim()}
         </span>
-        {(cwd || workDir) && (() => {
-          const fullPath = cwd ?? workDir ?? "";
-          // Show tail portion when space is limited — keep last 2-3 segments
-          const segments = fullPath.replace(/\/+$/, "").split("/");
-          const shortPath = segments.length > 3 ? "\u2026/" + segments.slice(-3).join("/") : fullPath;
-          return (
-            <span className="term-path-scroll" style={{
-              color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.6,
-              direction: "rtl", textAlign: "left", unicodeBidi: "plaintext",
-            }} title={fullPath}>
-              {shortPath}
-            </span>
-          );
-        })()}
+        {(cwd || workDir) && (
+          <span className="term-path-scroll" style={{
+            color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.6,
+            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+            direction: "rtl", textAlign: "left",
+          }} title={cwd ?? workDir ?? ""}>
+            <bdi>{cwd ?? workDir}</bdi>
+          </span>
+        )}
         <span style={{ flex: 1 }} />
         <span style={{ color: TERM_DIM, flexShrink: 0, opacity: 0.8 }}>{cfg.label}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
