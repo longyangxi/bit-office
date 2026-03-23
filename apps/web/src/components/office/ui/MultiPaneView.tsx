@@ -209,6 +209,7 @@ const StableAgentPane = memo(function StableAgentPane({
         autoMerge={data.autoMerge}
         pendingMerge={data.pendingMerge}
         lastMergeCommit={data.lastMergeCommit}
+        lastMergeMessage={data.lastMergeMessage}
         onToggleAutoMerge={onToggleAutoMerge ? (val) => onToggleAutoMerge(agentId, val) : undefined}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
@@ -247,6 +248,7 @@ interface AgentData {
   autoMerge?: boolean;
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
+  lastMergeMessage?: string | null;
 }
 
 export interface MultiPaneViewProps {

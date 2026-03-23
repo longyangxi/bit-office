@@ -535,6 +535,7 @@ export function revertWorktreeCommit(workspace: string, worktreePath: string): R
 export interface MergeResult {
   success: boolean;
   commitHash?: string;
+  commitMessage?: string;
   conflictFiles?: string[];
   stagedFiles?: string[];
 }
@@ -649,8 +650,13 @@ export function mergeWorktree(
       console.log(`[Worktree] Squash-merged and committed ${branch} (${stagedFiles.length} files)`);
     }
 
-    // Get the merge commit hash
-    const mergeCommitHash = stagedFiles.length > 0 ? gitExec("git rev-parse HEAD", repoRoot) : undefined;
+    // Get the merge commit hash and message
+    let mergeCommitHash: string | undefined;
+    let mergeCommitMessage: string | undefined;
+    if (stagedFiles.length > 0) {
+      mergeCommitHash = gitExec("git rev-parse HEAD", repoRoot);
+      try { mergeCommitMessage = gitExec("git log -1 --format=%s", repoRoot); } catch { /* ignore */ }
+    }
 
     // Restore stashed files after successful merge
     if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
@@ -667,7 +673,7 @@ export function mergeWorktree(
       console.log(`[Worktree] Merged ${branch}, worktree kept alive for session continuity`);
     }
 
-    return { success: true, commitHash: mergeCommitHash, stagedFiles };
+    return { success: true, commitHash: mergeCommitHash, commitMessage: mergeCommitMessage, stagedFiles };
   } catch (err) {
     console.error(`[Worktree] Merge failed for ${branch}:`, (err as Error).message);
     let conflictFiles: string[] = [];

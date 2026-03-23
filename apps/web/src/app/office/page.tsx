@@ -1732,6 +1732,7 @@ export default function OfficePage() {
                     autoMerge: ag.autoMerge,
                     pendingMerge: ag.pendingMerge,
                     lastMergeCommit: ag.lastMergeCommit,
+                    lastMergeMessage: ag.lastMergeMessage,
                   };
                 }}
                 paneOffset={paneOffset}
@@ -1874,6 +1875,7 @@ export default function OfficePage() {
                   autoMerge={ag.autoMerge}
                   pendingMerge={ag.pendingMerge}
                   lastMergeCommit={ag.lastMergeCommit}
+                  lastMergeMessage={ag.lastMergeMessage}
                   onToggleAutoMerge={(val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId: selectedAgent, autoMerge: val })}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}

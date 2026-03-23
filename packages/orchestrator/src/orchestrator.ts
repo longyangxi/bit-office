@@ -480,7 +480,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       worktreeBranch: s.worktreeBranch,
       autoMerge: s.autoMerge,
       pendingMerge: s.pendingMerge,
-      lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1] : null,
+      lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].hash : null,
+      lastMergeMessage: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].message : null,
     }));
   }
 
@@ -503,7 +504,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
     if (result.success) {
       session.pendingMerge = false;
-      if (result.commitHash) session.mergeCommitStack.push(result.commitHash);
+      if (result.commitHash) session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
     }
     this.emitEvent({
       type: "worktree:merged",
@@ -512,6 +513,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       branch: session.worktreeBranch,
       success: result.success,
       commitHash: result.commitHash,
+      commitMessage: result.commitMessage,
       conflictFiles: result.conflictFiles,
       stagedFiles: result.stagedFiles,
     });
@@ -576,8 +578,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (!session?.mergeCommitStack.length) {
       return { success: false, message: "No merge to undo" };
     }
-    const commitHash = session.mergeCommitStack[session.mergeCommitStack.length - 1];
-    const result = undoMergeCommit(session.workspaceDir, commitHash);
+    const entry = session.mergeCommitStack[session.mergeCommitStack.length - 1];
+    const result = undoMergeCommit(session.workspaceDir, entry.hash);
     if (result.success) {
       session.mergeCommitStack.pop();
     }
@@ -851,7 +853,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           const summary = event.result?.summary;
           const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name);
           if (result.success && result.commitHash) {
-            doneSession.mergeCommitStack.push(result.commitHash);
+            doneSession.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
           }
           this.emitEvent({
             type: "worktree:merged",

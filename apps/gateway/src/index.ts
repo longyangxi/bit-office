@@ -309,7 +309,7 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return null;
     case "worktree:merged":
       console.log(`[Worktree] Squash-merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""}${e.stagedFiles?.length ? ` staged=${e.stagedFiles.length} files` : ""})`);
-      return { type: "WORKTREE_MERGED", agentId: e.agentId, branch: e.branch, success: e.success, commitHash: e.commitHash };
+      return { type: "WORKTREE_MERGED", agentId: e.agentId, branch: e.branch, success: e.success, commitHash: e.commitHash, commitMessage: e.commitMessage };
     case "worktree:ready":
       console.log(`[Worktree] Branch ${e.branch} ready for manual merge (agent ${e.agentId})`);
       return { type: "WORKTREE_READY", agentId: e.agentId, taskId: e.taskId, branch: e.branch };
@@ -687,6 +687,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           autoMerge: agent.autoMerge,
           pendingMerge: agent.pendingMerge,
           lastMergeCommit: agent.lastMergeCommit,
+          lastMergeMessage: agent.lastMergeMessage,
         });
         publishEvent({
           type: "AGENT_STATUS",
@@ -1060,6 +1061,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           agentId: parsed.agentId,
           autoMerge: agent?.autoMerge ?? false,
           lastMergeCommit: agent?.lastMergeCommit ?? null,
+          lastMergeMessage: agent?.lastMergeMessage ?? null,
         });
       } else {
         publishEvent({ type: "TEAM_CHAT", fromAgentId: parsed.agentId, message: undoResult.message ?? "Undo merge failed", messageType: "warning", timestamp: Date.now() });

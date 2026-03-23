@@ -78,6 +78,7 @@ interface AgentState {
   autoMerge?: boolean;
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
+  lastMergeMessage?: string | null;
 }
 
 export interface TeamChatMessage {
@@ -487,6 +488,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               autoMerge: event.autoMerge ?? existing.autoMerge,
               pendingMerge: event.pendingMerge ?? existing.pendingMerge,
               lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : existing.lastMergeCommit,
+              lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : existing.lastMergeMessage,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -505,6 +507,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.autoMerge = event.autoMerge;
             agent.pendingMerge = event.pendingMerge;
             agent.lastMergeCommit = event.lastMergeCommit;
+            agent.lastMergeMessage = event.lastMergeMessage;
             if (saved) {
               agent.messages = saved.messages;
             }
@@ -969,6 +972,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             ...agent,
             pendingMerge: false,
             lastMergeCommit: event.success ? (event.commitHash ?? agent.lastMergeCommit) : agent.lastMergeCommit,
+            lastMergeMessage: event.success ? (event.commitMessage ?? agent.lastMergeMessage) : agent.lastMergeMessage,
           });
           break;
         }
@@ -985,6 +989,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             ...agent,
             autoMerge: event.autoMerge,
             lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : agent.lastMergeCommit,
+            lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : agent.lastMergeMessage,
           });
           break;
         }

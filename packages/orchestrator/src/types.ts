@@ -133,6 +133,7 @@ export interface WorktreeMergedEvent {
   branch: string;
   success: boolean;
   commitHash?: string;
+  commitMessage?: string;
   conflictFiles?: string[];
   stagedFiles?: string[];
 }

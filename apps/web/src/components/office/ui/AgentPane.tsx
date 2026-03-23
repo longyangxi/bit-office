@@ -135,6 +135,7 @@ export interface AgentPaneProps {
   autoMerge?: boolean;
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
+  lastMergeMessage?: string | null;
   onToggleAutoMerge?: (autoMerge: boolean) => void;
   onMerge?: () => void;
   onRevert?: () => void;
@@ -336,7 +337,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
-    autoMerge, pendingMerge, lastMergeCommit, onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
+    autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
     scrollFrozen, hideInfoRole,
   } = props;
@@ -987,7 +988,13 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     )}
                     {!pendingMerge && lastMergeCommit && onUndoMerge && (
                       <button
-                        onClick={onUndoMerge}
+                        onClick={() => {
+                          const shortHash = lastMergeCommit.slice(0, 7);
+                          const msg = lastMergeMessage || "merge commit";
+                          if (window.confirm(`Undo merge ${shortHash}?\n\n"${msg}"\n\nThis will revert the changes on main.`)) {
+                            onUndoMerge();
+                          }
+                        }}
                         disabled={busy}
                         style={{
                           padding: "3px 10px", border: `1px solid ${TERM_SEM_RED}40`,
