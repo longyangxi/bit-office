@@ -912,7 +912,10 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         break;
       }
       const sourceAgent = orc.getAgent(sourceAgentId);
-      const cwd = agentWorkDirs.get(sourceAgentId) ?? projectDir ?? config.defaultWorkspace;
+      // Resolve reviewer cwd: prefer source agent's workDir, but fall back if it no longer exists
+      // (e.g. worktree was cleaned up between task completion and review click)
+      const rawCwd = agentWorkDirs.get(sourceAgentId) ?? projectDir;
+      const cwd = (rawCwd && existsSync(rawCwd)) ? rawCwd : config.defaultWorkspace;
       const reviewerBackendId = reviewBackend ?? sourceAgent?.backend ?? config.defaultBackend;
 
       // Run git diff to get actual changes — much cheaper than reviewer reading entire files
