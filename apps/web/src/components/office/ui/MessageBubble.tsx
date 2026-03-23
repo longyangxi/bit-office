@@ -236,13 +236,16 @@ function ReviewButton({ result, onReview, detectedBackends }: {
             return (
               <button
                 key={b.id}
-                onClick={() => { setOpen(false); onReview(result, b.id); }}
+                disabled={!available}
+                onClick={() => { if (!available) return; setOpen(false); onReview(result, b.id); }}
                 style={{
                   display: "flex", alignItems: "center", gap: 8, width: "100%",
-                  padding: "6px 10px", border: "none", cursor: "pointer",
+                  padding: "6px 10px", border: "none",
+                  cursor: available ? "pointer" : "not-allowed",
                   backgroundColor: "transparent", textAlign: "left",
                   fontFamily: TERM_FONT, fontSize: TERM_SIZE,
                   color: available ? TERM_TEXT : TERM_DIM,
+                  opacity: available ? 1 : 0.4,
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
                 onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
