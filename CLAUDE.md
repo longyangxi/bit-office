@@ -32,8 +32,8 @@
 - **autoMerge** (default: off): per-agent toggle in UI chat area
 - **Off (deferred merge)**: task:done → auto-commit to agent branch → set `pendingMerge=true` → UI shows merge/revert buttons
 - **On (auto-merge)**: task:done → squash-merge to main immediately (legacy behavior)
-- **Before each task**: `syncWorktreeToMain()` rebases agent branch onto latest main (skipped if pendingMerge=true to avoid losing unmerged work)
-- **Merge conflicts**: clean rebase attempted; if conflicts, merge fails with error (no silent auto-resolve)
+- **Before each task**: `syncWorktreeToMain()` rebases agent branch onto latest main (skipped if pendingMerge=true to avoid losing unmerged work). Conflicts auto-resolved with main priority (`-X theirs`) since agent hasn't started new work yet.
+- **Merge conflicts**: clean rebase attempted first; if conflicts, auto-resolved with agent priority (`-X ours` — agent's changes preserved). Dirty files on main are stashed/restored around all merge and undo operations.
 
 ### UI Controls (chat input area, both sidebar and console mode)
 - **merge to main** (green): squash-merge agent branch → main, records commitHash
