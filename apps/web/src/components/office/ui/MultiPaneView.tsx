@@ -138,19 +138,21 @@ const StableAgentPane = memo(function StableAgentPane({
                 }}>LEAD</span>
               )}
               {backendName && (
-                <>
-                  <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
-                  <span style={{ fontSize: TERM_SIZE - 1, color: TERM_TEXT_BRIGHT, opacity: 0.6, flexShrink: 0 }}>{backendName}</span>
-                </>
+                <span style={{
+                  fontSize: 9, color: TERM_TEXT_BRIGHT, opacity: 0.55, flexShrink: 0,
+                  padding: "1px 6px", marginLeft: 6,
+                  background: `${TERM_DIM}18`, borderRadius: 3,
+                  letterSpacing: "0.02em",
+                }}>{backendName}</span>
               )}
               {roleName && (
-                <>
-                  <span style={{ color: TERM_DIM, margin: "0 6px", opacity: 0.5, fontSize: 10, flexShrink: 0 }}>{"\u00b7"}</span>
-                  <span style={{
-                    fontSize: TERM_SIZE - 1, color: TERM_TEXT_BRIGHT, opacity: 0.45,
-                    overflow: "hidden", textOverflow: "ellipsis",
-                  }}>{roleName}</span>
-                </>
+                <span style={{
+                  fontSize: 9, color: TERM_TEXT_BRIGHT, opacity: 0.4, flexShrink: 0,
+                  padding: "1px 6px", marginLeft: 4,
+                  background: `${TERM_DIM}10`, borderRadius: 3,
+                  overflow: "hidden", textOverflow: "ellipsis",
+                  letterSpacing: "0.02em",
+                }}>{roleName}</span>
               )}
             </div>
           </div>
@@ -696,7 +698,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          padding: "5px 12px",
+          padding: "6px 12px",
           fontFamily: TERM_FONT,
           fontSize: TERM_SIZE - 1,
           color: TERM_DIM,
@@ -704,7 +706,8 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           flexShrink: 0,
           position: "relative",
           gap: 8,
-          boxShadow: `0 -3px 6px -2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`,
+          borderTop: `1px solid ${TERM_BORDER_DIM}`,
+          boxShadow: `0 -3px 8px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
         }}
       >
         {/* Center: page indicator dots */}

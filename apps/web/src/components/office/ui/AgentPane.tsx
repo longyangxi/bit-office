@@ -415,17 +415,29 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             {role?.split("\u2014")[0]?.trim()}
           </span>
         )}
-        {(cwd || workDir) && (
-          <span className="term-path-scroll" style={{
-            color: TERM_TEXT, flexShrink: 1, minWidth: 0, opacity: 0.6,
-            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-            direction: "rtl", textAlign: "left",
-          }} title={cwd ?? workDir ?? ""}>
-            <bdi>{cwd ?? workDir}</bdi>
-          </span>
-        )}
+        {(cwd || workDir) && (() => {
+          const raw = cwd ?? workDir ?? "";
+          // Show shortened path: ~/…/last-two-segments
+          const parts = raw.replace(/^\/Users\/[^/]+/, "~").split("/");
+          const short = parts.length > 3 ? `${parts[0]}/\u2026/${parts.slice(-2).join("/")}` : parts.join("/");
+          return (
+            <span className="term-path-scroll" style={{
+              color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.7,
+              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              fontSize: TERM_SIZE - 1,
+            }} title={raw}>
+              {short}
+            </span>
+          );
+        })()}
         <span style={{ flex: 1 }} />
-        <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, opacity: 0.5 }}>{cfg.label}</span>
+        <span style={{
+          color: cfg.color, flexShrink: 0, fontSize: 9,
+          padding: "2px 7px", borderRadius: 3,
+          background: `${cfg.color}14`, border: `1px solid ${cfg.color}25`,
+          letterSpacing: "0.04em", fontWeight: 500,
+          textTransform: "uppercase",
+        }}>{cfg.label.replace("...", "")}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <button
@@ -656,7 +668,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Messages */}
           <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
             <div ref={scrollContainerRef} data-scrollbar className="term-dotgrid term-chat-area" style={{
-              flex: 1, overflowY: "auto", padding: "10px 14px",
+              flex: 1, overflowY: "auto", padding: "14px 14px 10px",
               display: "flex", flexDirection: "column",
               minHeight: 0,
             }}>
