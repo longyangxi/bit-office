@@ -930,6 +930,70 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     />
                     </div>
                   </div>
+                ) : !busy && isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
+                    {pendingMerge && onMerge && (
+                      <button
+                        className="term-btn"
+                        onClick={onMerge}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
+                          backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0,
+                        }}
+                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6M4 3v10M4 13l4-4 4 0"/></svg>Merge</button>
+                    )}
+                    {pendingMerge && onRevert && (
+                      <button
+                        className="term-btn"
+                        onClick={onRevert}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "5px 14px", border: `1px solid ${TERM_SEM_YELLOW}40`,
+                          backgroundColor: "transparent", color: TERM_SEM_YELLOW, fontSize: TERM_SIZE, cursor: "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0,
+                        }}
+                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Revert</button>
+                    )}
+                    {!pendingMerge && lastMergeCommit && onUndoMerge && (
+                      <button
+                        className="term-btn"
+                        onClick={() => {
+                          const shortHash = lastMergeCommit.slice(0, 7);
+                          const msg = lastMergeMessage || "merge commit";
+                          if (window.confirm(`Undo merge ${shortHash}?\n\n"${msg}"\n\nThis will revert the changes on main.`)) {
+                            onUndoMerge();
+                          }
+                        }}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: 5,
+                          padding: "5px 14px", border: `1px solid ${TERM_SEM_RED}40`,
+                          backgroundColor: "transparent", color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0,
+                        }}
+                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo Merge</button>
+                    )}
+                    <div className="term-input-well" style={{ flex: 1 }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
+                    <textarea
+                      ref={inputRef}
+                      rows={1}
+                      className="term-input"
+                      value={prompt}
+                      onPaste={onPasteText}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
+                      placeholder="send a new task..."
+                      style={{
+                        flex: 1, padding: "5px 6px", border: "none",
+                        backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
+                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
+                      }}
+                    />
+                    </div>
+                  </div>
                 ) : (
                   <div className="term-input-well">
                     <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
@@ -953,56 +1017,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                       autoFocus
                     />
-                  </div>
-                )}
-                {/* Merge controls — shown for solo agents with worktree */}
-                {isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) && (
-                  <div style={{
-                    display: "flex", alignItems: "center", gap: 8,
-                    padding: "4px 0 0", fontFamily: TERM_FONT, fontSize: 12,
-                  }}>
-                    {pendingMerge && onMerge && (
-                      <button
-                        onClick={onMerge}
-                        disabled={busy}
-                        style={{
-                          padding: "3px 10px", border: `1px solid ${TERM_GREEN}60`,
-                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_GREEN, fontSize: 12,
-                          cursor: busy ? "not-allowed" : "pointer",
-                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
-                        }}
-                      >merge to main</button>
-                    )}
-                    {pendingMerge && onRevert && (
-                      <button
-                        onClick={onRevert}
-                        disabled={busy}
-                        style={{
-                          padding: "3px 10px", border: `1px solid ${TERM_SEM_YELLOW}40`,
-                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_SEM_YELLOW, fontSize: 12,
-                          cursor: busy ? "not-allowed" : "pointer",
-                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
-                        }}
-                      >revert</button>
-                    )}
-                    {!pendingMerge && lastMergeCommit && onUndoMerge && (
-                      <button
-                        onClick={() => {
-                          const shortHash = lastMergeCommit.slice(0, 7);
-                          const msg = lastMergeMessage || "merge commit";
-                          if (window.confirm(`Undo merge ${shortHash}?\n\n"${msg}"\n\nThis will revert the changes on main.`)) {
-                            onUndoMerge();
-                          }
-                        }}
-                        disabled={busy}
-                        style={{
-                          padding: "3px 10px", border: `1px solid ${TERM_SEM_RED}40`,
-                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_SEM_RED, fontSize: 12,
-                          cursor: busy ? "not-allowed" : "pointer",
-                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
-                        }}
-                      >undo merge</button>
-                    )}
                   </div>
                 )}
               </div>
