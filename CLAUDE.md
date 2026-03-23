@@ -23,9 +23,13 @@
 - `projects/` — default agent workspace (team projects created here)
 - `worktrees/<repo-hash>/<agentId>/` — centralized worktree isolation
 
-## Worktree Isolation & Merge Control
-- One agent = one worktree = one branch, with per-agent auto-merge (default: on) + undo merge
-- See `packages/orchestrator/README.md` → "Worktree Isolation" for full documentation
+## Worktree Isolation
+- One agent = one worktree = one branch (keyed by agentId, not taskId)
+- Worktrees stored outside repo at `~/.open-office[-dev]/worktrees/` to prevent path traversal
+- On task:done: auto-merge to main (default), with per-agent toggle + undo merge
+- Before each task: auto-rebase onto latest main, conflicts auto-resolved
+- Cleanup: on fire agent only (no startup GC)
+- Full docs: `packages/orchestrator/README.md` → "Worktree Isolation"
 
 ## Key Node Mode
 Only 4 key events shown in UI: TASK_STARTED, APPROVAL_NEEDED, TASK_DONE, TASK_FAILED.
