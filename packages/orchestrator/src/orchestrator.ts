@@ -552,14 +552,32 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const session of this.agentManager.getAll()) {
       if (session.worktreePath && session.worktreeBranch && !session.teamId) {
         if (worktreeHasPendingChanges(session.workspaceDir, session.worktreePath)) {
-          session.pendingMerge = true;
-          this.emitEvent({
-            type: "worktree:ready",
-            agentId: session.agentId,
-            taskId: "restore",
-            branch: session.worktreeBranch,
-          });
-          console.log(`[Worktree] Detected pending changes for ${session.name} on ${session.worktreeBranch}`);
+          if (this.worktreeMerge && session.autoMerge) {
+            // Auto-merge agents: merge immediately instead of showing pending UI
+            const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
+            if (result.success && result.commitHash) {
+              session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
+            }
+            this.emitEvent({
+              type: "worktree:merged",
+              agentId: session.agentId,
+              taskId: "restore",
+              branch: session.worktreeBranch,
+              success: result.success,
+              commitHash: result.commitHash,
+              commitMessage: result.commitMessage,
+            });
+            console.log(`[Worktree] Auto-merged pending changes for ${session.name} on ${session.worktreeBranch} (success=${result.success})`);
+          } else {
+            session.pendingMerge = true;
+            this.emitEvent({
+              type: "worktree:ready",
+              agentId: session.agentId,
+              taskId: "restore",
+              branch: session.worktreeBranch,
+            });
+            console.log(`[Worktree] Detected pending changes for ${session.name} on ${session.worktreeBranch}`);
+          }
         }
       }
     }
