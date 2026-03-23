@@ -1533,10 +1533,29 @@ export default function OfficePage() {
             {!consoleMode && (
             <div
               onWheel={(e) => {
-                // Convert vertical scroll to horizontal scroll for the agent bar
                 if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
                   e.currentTarget.scrollLeft += e.deltaY;
                 }
+              }}
+              onMouseDown={(e) => {
+                // Drag-to-scroll: only on the bar background, not on agent buttons
+                if ((e.target as HTMLElement).closest("button")) return;
+                const el = e.currentTarget;
+                const startX = e.clientX;
+                const startScroll = el.scrollLeft;
+                el.style.cursor = "grabbing";
+                el.style.userSelect = "none";
+                const onMove = (ev: MouseEvent) => {
+                  el.scrollLeft = startScroll - (ev.clientX - startX);
+                };
+                const onUp = () => {
+                  el.style.cursor = "";
+                  el.style.userSelect = "";
+                  document.removeEventListener("mousemove", onMove);
+                  document.removeEventListener("mouseup", onUp);
+                };
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
               }}
               style={{
               display: "flex", alignItems: "center", gap: 8,
@@ -1545,6 +1564,7 @@ export default function OfficePage() {
               background: TERM_PANEL,
               overflowX: "auto", overflowY: "hidden",
               scrollbarWidth: "none",
+              cursor: "grab",
             }}>
               {activeAgentList.length === 0 && expandedSection === "external" && (
                 <div style={{ padding: "12px 10px", color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
