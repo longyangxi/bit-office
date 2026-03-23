@@ -319,25 +319,10 @@ export function createWorktree(
     if (existsSync(worktreePath) && isGitRepo(worktreePath)) {
       const currentBranch = gitExec("git branch --show-current", worktreePath);
       if (currentBranch === branch) {
-        // Fast-forward worktree to main HEAD so agent doesn't fork
-        try {
-          const mainHead = gitExec("git rev-parse HEAD", repoRoot);
-          const wtHead = gitExec("git rev-parse HEAD", worktreePath);
-          if (wtHead !== mainHead) {
-            const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${shellQuote(wtHead)} ${shellQuote(mainHead)}`, repoRoot); return true; } catch { return false; } })();
-            if (isAncestor) {
-              gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
-              console.log(`[Worktree] Reusing worktree, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
-            } else {
-              console.log(`[Worktree] Reusing worktree with unmerged commits, skipping fast-forward`);
-            }
-          } else {
-            console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
-          }
-        } catch {
-          console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
-        }
+        // Sync worktree to latest main (fast-forward or rebase)
+        syncWorktreeToMain(workspace, worktreePath);
         if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
+        console.log(`[Worktree] Reusing existing worktree: ${worktreePath} (branch: ${branch})`);
         return worktreePath;
       }
       console.log(`[Worktree] Existing worktree on wrong branch (${currentBranch} != ${branch}), recreating`);
@@ -381,30 +366,60 @@ export function createWorktree(
     // Branch may already exist — try attaching to it
     try {
       gitExec(`git worktree add ${shellQuote(worktreePath)} ${shellQuote(branch)}`, repoRoot);
-      // Fast-forward attached branch to main HEAD to avoid forking
-      try {
-        const mainHead = gitExec("git rev-parse HEAD", repoRoot);
-        const branchHead = gitExec("git rev-parse HEAD", worktreePath);
-        if (branchHead !== mainHead) {
-          const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${shellQuote(branchHead)} ${shellQuote(mainHead)}`, repoRoot); return true; } catch { return false; } })();
-          if (isAncestor) {
-            gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
-            console.log(`[Worktree] Attached to branch ${branch}, fast-forwarded to main HEAD: ${mainHead.slice(0, 7)}`);
-          } else {
-            console.log(`[Worktree] Attached to branch ${branch} with unmerged commits, skipping fast-forward`);
-          }
-        } else {
-          console.log(`[Worktree] Attached to existing branch: ${branch}`);
-        }
-      } catch {
-        console.log(`[Worktree] Attached to existing branch: ${branch}`);
-      }
+      syncWorktreeToMain(workspace, worktreePath);
+      console.log(`[Worktree] Attached to existing branch: ${branch}`);
       if (ownerInfo) writeWorktreeOwnerFile(worktreePath, ownerInfo);
       return worktreePath;
     } catch (err) {
       console.error(`[Worktree] Failed to create worktree: ${(err as Error).message}`);
       return null;
     }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Sync to main
+// ---------------------------------------------------------------------------
+
+/**
+ * Ensure a worktree branch is up-to-date with main before agent starts working.
+ * If the branch is behind main, fast-forward. If it has commits ahead, rebase.
+ * Conflicts are auto-resolved with `-X theirs` (main wins for conflicting hunks).
+ */
+export function syncWorktreeToMain(workspace: string, worktreePath: string): void {
+  if (!existsSync(worktreePath) || !isGitRepo(worktreePath)) return;
+  const repoRoot = resolveGitWorkspaceRoot(workspace);
+  try {
+    // Auto-commit any dirty files before rebase to avoid losing work
+    autoCommitWorktree(worktreePath, gitExec("git branch --show-current", worktreePath));
+
+    const mainHead = gitExec("git rev-parse HEAD", repoRoot);
+    const wtHead = gitExec("git rev-parse HEAD", worktreePath);
+    if (wtHead === mainHead) return; // already up to date
+
+    const isAncestor = (() => { try { gitExec(`git merge-base --is-ancestor ${shellQuote(wtHead)} ${shellQuote(mainHead)}`, repoRoot); return true; } catch { return false; } })();
+    if (isAncestor) {
+      // Branch is behind main — fast-forward
+      gitExec(`git reset --hard ${shellQuote(mainHead)}`, worktreePath);
+      console.log(`[Worktree] Synced worktree to main HEAD (fast-forward): ${mainHead.slice(0, 7)}`);
+    } else {
+      // Branch has commits ahead — rebase onto main
+      try {
+        gitExec(`git rebase ${shellQuote(mainHead)}`, worktreePath);
+        console.log(`[Worktree] Synced worktree to main HEAD (rebase): ${mainHead.slice(0, 7)}`);
+      } catch {
+        try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
+        try {
+          gitExec(`git rebase -X theirs ${shellQuote(mainHead)}`, worktreePath);
+          console.log(`[Worktree] Synced worktree to main HEAD (rebase, auto-resolved conflicts): ${mainHead.slice(0, 7)}`);
+        } catch {
+          try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
+          console.warn(`[Worktree] Failed to sync worktree to main — agent will work from diverged branch`);
+        }
+      }
+    }
+  } catch (err) {
+    console.warn(`[Worktree] syncWorktreeToMain failed: ${(err as Error).message}`);
   }
 }
 
@@ -544,10 +559,39 @@ export function mergeWorktree(
 
     try {
       gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
-    } catch (mergeErr) {
-      // Restore stashed files before re-throwing
-      if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
-      throw mergeErr;
+    } catch {
+      // Squash-merge conflict — try rebasing agent branch onto main first, then retry
+      gitExec("git reset --hard HEAD", repoRoot); // clean up failed merge state
+      console.log(`[Worktree] Squash-merge conflict on ${branch}, attempting rebase onto main...`);
+      let rebased = false;
+      try {
+        gitExec(`git rebase ${shellQuote(mainHead)}`, worktreePath);
+        rebased = true;
+        console.log(`[Worktree] Rebased ${branch} onto main successfully`);
+      } catch {
+        try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
+        // Retry with theirs strategy — keep main's version for conflicting hunks,
+        // agent's non-conflicting changes are preserved
+        try {
+          gitExec(`git rebase -X theirs ${shellQuote(mainHead)}`, worktreePath);
+          rebased = true;
+          console.log(`[Worktree] Rebased ${branch} onto main (auto-resolved conflicts)`);
+        } catch {
+          try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
+        }
+      }
+      if (rebased) {
+        // Retry squash-merge after successful rebase
+        try {
+          gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
+        } catch (retryErr) {
+          if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
+          throw retryErr;
+        }
+      } else {
+        if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
+        throw new Error(`Merge conflict on ${branch} — rebase also failed`);
+      }
     }
 
     let stagedFiles: string[] = [];

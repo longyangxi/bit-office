@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -296,7 +296,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private setupWorktreeForAgent(agentId: string, taskId: string, repoPath?: string): void {
     if (!this.worktreeEnabled) return;
     const session = this.agentManager.get(agentId);
-    if (!session || session.worktreePath) return;
+    if (!session) return;
+    // If worktree already exists, sync it to latest main before agent starts working
+    if (session.worktreePath) {
+      syncWorktreeToMain(session.workspaceDir, session.worktreePath);
+      return;
+    }
     if (this.agentManager.isTeamLead(agentId)) return;
     if (session.role.toLowerCase().includes("review")) return;
 
