@@ -23,6 +23,7 @@ interface SavedConfig {
   defaultBackend?: string;
   sandboxMode?: "full" | "safe";
   worktreeEnabled?: boolean;
+  autoMergeEnabled?: boolean;
   tunnelBaseUrl?: string;
   tunnelToken?: string;
 }
@@ -176,6 +177,7 @@ function buildConfig() {
     defaultBackend: saved.defaultBackend ?? "claude",
     sandboxMode: (saved.sandboxMode ?? "full") as "full" | "safe",
     worktreeEnabled: saved.worktreeEnabled ?? true,
+    autoMergeEnabled: saved.autoMergeEnabled ?? true,
     tunnelBaseUrl: (process.env.TUNNEL_BASE_URL || saved.tunnelBaseUrl || "").replace(/\/+$/, "") || undefined,
     tunnelToken: process.env.TUNNEL_TOKEN || saved.tunnelToken || undefined,
   };

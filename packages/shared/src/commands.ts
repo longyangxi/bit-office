@@ -162,6 +162,7 @@ export const SaveConfigCommand = z.object({
   telegramBotToken: z.string().optional(),
   telegramAllowedUsers: z.array(z.string()).optional(),
   worktreeEnabled: z.boolean().optional(),
+  autoMergeEnabled: z.boolean().optional(),
   tunnelToken: z.string().optional(),
   tunnelBaseUrl: z.string().optional(),
 });

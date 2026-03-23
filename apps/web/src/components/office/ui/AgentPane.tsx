@@ -136,7 +136,6 @@ export interface AgentPaneProps {
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
-  onToggleAutoMerge?: (autoMerge: boolean) => void;
   onMerge?: () => void;
   onRevert?: () => void;
   onUndoMerge?: () => void;
@@ -337,7 +336,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
-    autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
+    autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, onMerge, onRevert, onUndoMerge,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
     scrollFrozen, hideInfoRole,
   } = props;
@@ -957,7 +956,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 )}
                 {/* Merge controls — shown for solo agents with worktree */}
-                {isOwner && !teamId && !isTeamMember && (pendingMerge || onToggleAutoMerge) && (
+                {isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) && (
                   <div style={{
                     display: "flex", alignItems: "center", gap: 8,
                     padding: "4px 0 0", fontFamily: TERM_FONT, fontSize: 12,
@@ -1003,17 +1002,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                           fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
                         }}
                       >undo merge</button>
-                    )}
-                    {onToggleAutoMerge && (
-                      <label style={{ display: "flex", alignItems: "center", gap: 4, color: TERM_DIM, cursor: "pointer", marginLeft: "auto" }}>
-                        <input
-                          type="checkbox"
-                          checked={!!autoMerge}
-                          onChange={(e) => onToggleAutoMerge(e.target.checked)}
-                          style={{ accentColor: TERM_GREEN }}
-                        />
-                        auto-merge
-                      </label>
                     )}
                   </div>
                 )}

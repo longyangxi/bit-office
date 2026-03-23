@@ -377,6 +377,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         teamId: parsed.teamId,
         workDir,
       });
+      // Apply global auto-merge setting to new agent
+      orc.setAgentAutoMerge(parsed.agentId, config.autoMergeEnabled ?? true);
       persistTeamState();
       break;
     }
@@ -855,6 +857,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         telegramAllowedUsers: config.telegramAllowedUsers,
         telegramConnected: tgConnected,
         worktreeEnabled: orc.isWorktreeEnabled,
+        autoMergeEnabled: config.autoMergeEnabled,
         tunnelBaseUrl: config.tunnelBaseUrl ?? "",
         tunnelToken: config.tunnelToken ? config.tunnelToken.slice(0, 10) + "..." : "",
         tunnelRunning: isTunnelRunning(),
@@ -869,6 +872,14 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         if (parsed.worktreeEnabled !== undefined) {
           updates.worktreeEnabled = parsed.worktreeEnabled;
           orc.setWorktreeEnabled(parsed.worktreeEnabled);
+        }
+        if (parsed.autoMergeEnabled !== undefined) {
+          updates.autoMergeEnabled = parsed.autoMergeEnabled;
+          config.autoMergeEnabled = parsed.autoMergeEnabled;
+          // Apply to all existing agents
+          for (const agent of orc.getAllAgents()) {
+            orc.setAgentAutoMerge(agent.agentId, parsed.autoMergeEnabled);
+          }
         }
         if (parsed.tunnelBaseUrl !== undefined) updates.tunnelBaseUrl = parsed.tunnelBaseUrl || undefined;
         if (parsed.tunnelToken !== undefined) updates.tunnelToken = parsed.tunnelToken || undefined;

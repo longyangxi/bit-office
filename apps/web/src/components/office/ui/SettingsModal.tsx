@@ -35,6 +35,7 @@ export default function SettingsModal({
   const [tgConnected, setTgConnected] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [worktreeOn, setWorktreeOn] = useState(true)
+  const [autoMergeOn, setAutoMergeOn] = useState(true)
   const [tunnelToken, setTunnelToken] = useState('')
   const [tunnelBaseUrl, setTunnelBaseUrl] = useState('')
   const [tunnelRunning, setTunnelRunning] = useState(false)
@@ -57,6 +58,7 @@ export default function SettingsModal({
       setTgUsers(configData.telegramAllowedUsers?.join(', ') ?? '')
       setTgConnected(configData.telegramConnected ?? false)
       setWorktreeOn(configData.worktreeEnabled ?? true)
+      setAutoMergeOn(configData.autoMergeEnabled ?? true)
       setTunnelToken(configData.tunnelToken ?? '')
       setTunnelBaseUrl(configData.tunnelBaseUrl ?? '')
       setTunnelRunning(configData.tunnelRunning ?? false)
@@ -107,6 +109,12 @@ export default function SettingsModal({
     const next = !worktreeOn
     setWorktreeOn(next)
     sendCommand({ type: "SAVE_CONFIG", worktreeEnabled: next })
+  }
+
+  const toggleAutoMerge = () => {
+    const next = !autoMergeOn
+    setAutoMergeOn(next)
+    sendCommand({ type: "SAVE_CONFIG", autoMergeEnabled: next })
   }
 
   const handleSaveTelegram = () => {
@@ -301,6 +309,16 @@ export default function SettingsModal({
         <span>Agent Isolation</span>
         <span style={checkboxStyle(worktreeOn)}>
           {worktreeOn ? '\u2713' : ''}
+        </span>
+      </button>
+      <button
+        onClick={toggleAutoMerge}
+        style={menuItemBase}
+        title="Auto-merge agent changes to main on task completion. Turn off to review before merging."
+      >
+        <span>Auto-merge</span>
+        <span style={checkboxStyle(autoMergeOn)}>
+          {autoMergeOn ? '\u2713' : ''}
         </span>
       </button>
       <button onClick={toggleSound} style={menuItemBase}>

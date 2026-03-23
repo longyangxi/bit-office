@@ -134,7 +134,7 @@ interface OfficeStore {
   pendingPreviewUrl: string | null;
   agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
   configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
-  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
+  configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
   connected: boolean;
   hydrated: boolean;
@@ -953,7 +953,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           return { agents, detectedBackends: event.backends };
         }
         case "CONFIG_LOADED": {
-          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected, worktreeEnabled: event.worktreeEnabled, tunnelBaseUrl: event.tunnelBaseUrl, tunnelToken: event.tunnelToken, tunnelRunning: event.tunnelRunning } };
+          return { agents, configData: { telegramBotToken: event.telegramBotToken, telegramAllowedUsers: event.telegramAllowedUsers, telegramConnected: event.telegramConnected, worktreeEnabled: event.worktreeEnabled, autoMergeEnabled: event.autoMergeEnabled, tunnelBaseUrl: event.tunnelBaseUrl, tunnelToken: event.tunnelToken, tunnelRunning: event.tunnelRunning } };
         }
         case "CONFIG_SAVED": {
           return { agents, configResult: { success: event.success, message: event.message, telegramConnected: event.telegramConnected, tunnelRunning: event.tunnelRunning } };

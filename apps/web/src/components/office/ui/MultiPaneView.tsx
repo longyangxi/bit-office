@@ -20,7 +20,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onEndProject, onSuggest, onPreview, onReview, detectedBackends,
   onLoadMore, onPasteImage, onPasteText, onDropImage,
   reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
-  onToggleAutoMerge, onMerge, onRevert, onUndoMerge,
+  onMerge, onRevert, onUndoMerge,
   scrollFrozen,
 }: {
   agentId: string;
@@ -56,7 +56,6 @@ const StableAgentPane = memo(function StableAgentPane({
   onReviewerLoadMore?: () => void;
   onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
-  onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
   onUndoMerge?: (agentId: string) => void;
@@ -210,7 +209,6 @@ const StableAgentPane = memo(function StableAgentPane({
         pendingMerge={data.pendingMerge}
         lastMergeCommit={data.lastMergeCommit}
         lastMergeMessage={data.lastMergeMessage}
-        onToggleAutoMerge={onToggleAutoMerge ? (val) => onToggleAutoMerge(agentId, val) : undefined}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
         onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
@@ -288,7 +286,6 @@ export interface MultiPaneViewProps {
   onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
   // Merge controls
-  onToggleAutoMerge?: (agentId: string, autoMerge: boolean) => void;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
   onUndoMerge?: (agentId: string) => void;
@@ -350,7 +347,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onHire,
     showTeamControls,
     teamBusy,
-    onToggleAutoMerge,
     onMerge,
     onRevert,
     onUndoMerge,
@@ -644,7 +640,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                       onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                       onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
                       onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
-                      onToggleAutoMerge={onToggleAutoMerge}
                       onMerge={onMerge}
                       onRevert={onRevert}
                       onUndoMerge={onUndoMerge}

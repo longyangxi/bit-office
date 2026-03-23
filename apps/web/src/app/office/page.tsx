@@ -1809,7 +1809,6 @@ export default function OfficePage() {
                 onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onApplyReviewFixes={handleApplyReviewFixes}
                 onDismissReview={handleDismissReview}
-                onToggleAutoMerge={(agentId, val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId, autoMerge: val })}
                 onMerge={(agentId) => sendCommand({ type: "MERGE_WORKTREE", agentId })}
                 onRevert={(agentId) => sendCommand({ type: "REVERT_WORKTREE", agentId })}
                 onUndoMerge={(agentId) => sendCommand({ type: "UNDO_MERGE", agentId })}
@@ -1881,7 +1880,6 @@ export default function OfficePage() {
                   pendingMerge={ag.pendingMerge}
                   lastMergeCommit={ag.lastMergeCommit}
                   lastMergeMessage={ag.lastMergeMessage}
-                  onToggleAutoMerge={(val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId: selectedAgent, autoMerge: val })}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
                   onUndoMerge={() => sendCommand({ type: "UNDO_MERGE", agentId: selectedAgent })}
