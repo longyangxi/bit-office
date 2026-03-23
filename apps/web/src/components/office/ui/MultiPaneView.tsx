@@ -363,6 +363,8 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   // Guard: skip scroll events caused by programmatic scrollTo
   const programmaticScrollRef = useRef(false);
   const mountedRef = useRef(false);
+  // Track internally-set offset to break goToPage→paneOffset effect loop
+  const internalOffsetRef = useRef<number | null>(null);
 
   // ── Pane resize logic (within a page) ──
   const [paneWidths, setPaneWidths] = useState<number[]>([]);
@@ -393,17 +395,23 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     if (mountedRef.current) return;
     mountedRef.current = true;
     const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
-    if (targetPage > 0) {
-      // Use rAF to ensure layout is complete before scrolling
-      requestAnimationFrame(() => scrollToPage(targetPage, false));
-    }
+    // Always scroll on mount — even to page 0 — to ensure scroll-snap
+    // container is at the correct position after CSS transitions
+    requestAnimationFrame(() => scrollToPage(targetPage, false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Scroll to page when paneOffset changes from parent (after mount)
+  // Skip when the change originated internally (goToPage already scrolled)
   useEffect(() => {
     if (!mountedRef.current) return;
     if (totalPages <= 1) return;
+    // If this offset was set by goToPage, skip the redundant scroll
+    if (internalOffsetRef.current === paneOffset) {
+      internalOffsetRef.current = null;
+      return;
+    }
+    internalOffsetRef.current = null;
     const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
     setCurrentPage(targetPage);
     scrollToPage(targetPage, true);
@@ -420,7 +428,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       const page = Math.round(vp.scrollLeft / vp.clientWidth);
       const clamped = Math.max(0, Math.min(page, totalPages - 1));
       setCurrentPage(clamped);
-      onPaneOffsetChange(clamped * MAX_VISIBLE);
+      const newOffset = clamped * MAX_VISIBLE;
+      internalOffsetRef.current = newOffset; // prevent paneOffset effect feedback
+      onPaneOffsetChange(newOffset);
     }, 80);
   }, [totalPages, onPaneOffsetChange]);
 
@@ -435,7 +445,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const goToPage = useCallback((page: number) => {
     setCurrentPage(page);
     scrollToPage(page, true);
-    onPaneOffsetChange(page * MAX_VISIBLE);
+    const newOffset = page * MAX_VISIBLE;
+    internalOffsetRef.current = newOffset; // prevent paneOffset effect from double-scrolling
+    onPaneOffsetChange(newOffset);
   }, [onPaneOffsetChange, scrollToPage]);
 
   // Keyboard navigation: left/right arrow keys to switch pages
