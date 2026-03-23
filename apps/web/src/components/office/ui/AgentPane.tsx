@@ -78,6 +78,8 @@ export interface ReviewerOverlayData {
   busy: boolean;
   /** Set when review is complete — null means still working */
   reviewDone: boolean;
+  /** The resolved review result text (fallback when messages are empty) */
+  reviewResultText?: string | null;
 }
 
 export interface AgentPaneProps {
@@ -532,7 +534,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               minHeight: 0, maxHeight: 120,
               backgroundColor: TERM_BG,
             }}>
-              {reviewerOverlay.visibleMessages.filter(m => m.role === "agent" && m.text).map((msg) => (
+              {reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text).map((msg) => (
                 <div key={msg.id} style={{
                   fontSize: TERM_SIZE, color: TERM_DIM, lineHeight: 1.65,
                   fontFamily: TERM_FONT, marginBottom: 4,
@@ -592,12 +594,23 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
             {(() => {
-              const agentMsgs = reviewerOverlay.visibleMessages.filter(m => m.role === "agent" && m.text);
-              return agentMsgs.length > 0 ? (
-                agentMsgs.map(msg => (
+              const reviewMsgs = reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text);
+              if (reviewMsgs.length > 0) {
+                return reviewMsgs.map(msg => (
                   <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
-                ))
-              ) : (
+                ));
+              }
+              // Fallback: show reviewResultText directly when messages are unavailable
+              // (race between AGENT_STATUS:done → useEffect sets reviewResultText and
+              //  TASK_DONE → replaces streaming msg; or reviewer failed with system-role error only)
+              if (reviewerOverlay.reviewResultText) {
+                return (
+                  <div style={{ color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
+                    {reviewerOverlay.reviewResultText}
+                  </div>
+                );
+              }
+              return (
                 <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0" }}>
                   (No review content)
                 </div>

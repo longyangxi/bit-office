@@ -1125,6 +1125,7 @@ export default function OfficePage() {
       lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
       busy: reviewResultText === null,
       reviewDone: reviewResultText !== null,
+      reviewResultText: reviewResultText ?? undefined,
     };
   }, [agents, getVisibleMessages, reviewResultText]);
 
