@@ -509,10 +509,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         /* Phase 1: Small window covering only the input area — shows role + "..." + streaming thoughts */
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-          maxHeight: "40%",
+          minHeight: 80, maxHeight: "40%",
           display: "flex", flexDirection: "column",
-          background: TERM_PANEL,
-          boxShadow: "0 -4px 12px -2px rgba(0,0,0,0.5)",
+          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
+          borderTop: `1.5px solid ${TERM_SEM_PURPLE}30`,
+          boxShadow: `0 -4px 12px -2px rgba(0,0,0,0.5), inset 0 1px 0 ${TERM_SEM_PURPLE}12`,
           fontFamily: TERM_FONT, fontSize: TERM_SIZE,
           animation: "review-overlay-in 0.3s ease-out",
         }}>
@@ -520,13 +521,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "8px 12px",
-            boxShadow: "0 2px 4px -1px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.4)",
+            boxShadow: `0 2px 4px -1px rgba(0,0,0,0.3), inset 0 -1px 0 ${TERM_SEM_PURPLE}18`,
             flexShrink: 0,
           }}>
+            <span style={{ color: TERM_SEM_PURPLE, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_PURPLE}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.role?.split("\u2014")[0]?.trim() || reviewerOverlay.name}
             </span>
-            <span className="working-dots" style={{ color: TERM_DIM }}>
+            <span className="working-dots" style={{ color: TERM_SEM_PURPLE }}>
               <span className="working-dots-mid" />
             </span>
             <span style={{ flex: 1 }} />
@@ -552,7 +554,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             <div data-scrollbar style={{
               flex: 1, overflowY: "auto", padding: "8px 12px",
               minHeight: 0, maxHeight: 120,
-              backgroundColor: TERM_BG,
+              backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
             }}>
               {reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text).map((msg) => (
                 <div key={msg.id} style={{
@@ -584,19 +586,21 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
           height: "65%", minHeight: 200,
           display: "flex", flexDirection: "column",
-          backgroundColor: TERM_BG,
-          boxShadow: "0 -4px 12px -2px rgba(0,0,0,0.5)",
+          backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
+          borderTop: `1.5px solid ${TERM_SEM_PURPLE}30`,
+          boxShadow: `0 -4px 12px -2px rgba(0,0,0,0.5), inset 0 1px 0 ${TERM_SEM_PURPLE}12`,
           animation: "review-slide-up 0.25s ease-out",
         }}>
           {/* Header bar */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
-            background: TERM_PANEL,
-            boxShadow: "0 3px 6px -2px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)",
+            background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
+            boxShadow: `0 3px 6px -2px rgba(0,0,0,0.4), inset 0 -1px 0 ${TERM_SEM_PURPLE}18, inset 0 1px 0 rgba(255,255,255,0.03)`,
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
+            <span style={{ color: TERM_SEM_PURPLE, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_PURPLE}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
             <span style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_SEM_GREEN }}>
               {reviewerOverlay.status === "error" ? "error" : "done"}
             </span>
@@ -613,7 +617,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div data-scrollbar className="term-dotgrid term-chat-area" style={{
             flex: 1, overflowY: "auto", padding: "10px 14px",
             display: "flex", flexDirection: "column",
-            minHeight: 0, backgroundColor: TERM_BG,
+            minHeight: 0, backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
           }}>
             {(() => {
               const reviewMsgs = reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text);
