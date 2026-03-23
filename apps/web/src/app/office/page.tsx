@@ -981,11 +981,16 @@ export default function OfficePage() {
   const activeAgentIds = (expandedSection === "agents" ? soloAgents
     : expandedSection === "team" ? teamAgents
     : externalAgents).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
+  // Sync open panes whenever agent list changes
   useEffect(() => {
     if (!consoleMode) return;
     setOpenPanes(activeAgentIds ? activeAgentIds.split(",") : []);
+  }, [consoleMode, activeAgentIds]);
+  // Reset page offset ONLY on tab switch or entering console mode
+  useEffect(() => {
+    if (!consoleMode) return;
     setPaneOffset(0);
-  }, [consoleMode, expandedSection, activeAgentIds]);
+  }, [consoleMode, expandedSection]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {

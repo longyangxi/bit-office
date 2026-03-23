@@ -706,3 +706,32 @@
 .pane-resize:hover {
   background: color-mix(in srgb, var(--term-green) 4%, transparent);
 }
+
+/* ============================================================
+   FLOATING HIRE BUTTON — .mpv-hire-float
+   Dashed button floating at top-right of last pane
+   ============================================================ */
+.mpv-hire-float {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 10px;
+  border: 1px dashed var(--term-border);
+  background: color-mix(in srgb, var(--term-panel) 85%, transparent);
+  backdrop-filter: blur(4px);
+  color: var(--term-green-dim);
+  font-size: 11px;
+  font-family: var(--font-mono);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.mpv-hire-float:hover {
+  background: color-mix(in srgb, var(--term-green) 8%, transparent);
+  border-color: var(--term-green);
+  color: var(--term-green);
+}

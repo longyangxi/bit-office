@@ -388,7 +388,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     if (Math.abs(vp.scrollLeft - targetScroll) <= 2) return;
     programmaticScrollRef.current = true;
     vp.scrollTo({ left: targetScroll, behavior: smooth ? "smooth" : "instant" as ScrollBehavior });
-    // Clear guard after scroll settles (smooth ≈300ms, instant ≈ frame)
+    // Clear guard after scroll settles (smooth ~300ms, instant ~ frame)
     setTimeout(() => { programmaticScrollRef.current = false; }, smooth ? 350 : 50);
   }, []);
 
@@ -442,7 +442,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onPaneOffsetChange(page * MAX_VISIBLE);
   }, [onPaneOffsetChange, scrollToPage]);
 
-  // Keyboard navigation: ← → arrow keys to switch pages
+  // Keyboard navigation: left/right arrow keys to switch pages
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       // Don't hijack arrows when user is in an input/textarea
@@ -533,19 +533,19 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         {showHireButton && onHire ? (
           <button
             onClick={onHire}
-            title="Hire Team"
+            title="Hire"
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               gap: 6, padding: "12px 28px",
-              border: `1px solid ${TERM_DIM}`, cursor: "pointer",
-              backgroundColor: "transparent", color: TERM_TEXT,
-              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-              transition: "border-color 0.15s",
+              border: `1px dashed ${TERM_BORDER}`, cursor: "pointer",
+              backgroundColor: "transparent", color: TERM_DIM,
+              fontSize: 11, fontFamily: TERM_FONT,
+              transition: "all 0.2s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_TEXT_BRIGHT; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; e.currentTarget.style.color = TERM_TEXT; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
           >
-            <span>+ hire team</span>
+            <span style={{ fontSize: 14, lineHeight: "1" }}>+</span> hire
           </button>
         ) : (
           "No agents active"
@@ -592,12 +592,24 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                       minWidth: 0,
                       display: "flex",
                       flexDirection: "column",
+                      position: "relative",
                       ...(i === 0 ? {
                         borderLeft: `1px solid ${TERM_BORDER}`,
                         boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
                       } : {}),
                     }}
                   >
+                    {/* Floating hire button on last pane of last page */}
+                    {showHireButton && onHire && pageIdx === pages.length - 1 && i === pagePanes.length - 1 && (
+                      <button
+                        onClick={onHire}
+                        title="Hire"
+                        aria-label="Hire"
+                        className="mpv-hire-float"
+                      >
+                        <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> hire
+                      </button>
+                    )}
                     <StableAgentPane
                       agentId={agentId}
                       data={data}
@@ -719,32 +731,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           </div>
         )}
 
-        {/* Right: hire team button */}
-        {showHireButton && onHire && (
-          <button
-            onClick={onHire}
-            title="Hire Team"
-            aria-label="Hire Team"
-            style={{
-              position: "absolute",
-              right: 10,
-              display: "flex", alignItems: "center", gap: 4,
-              padding: "4px 12px",
-              height: 24,
-              border: `1px solid ${TERM_DIM}`,
-              cursor: "pointer",
-              backgroundColor: "transparent",
-              color: TERM_TEXT,
-              fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-              transition: "border-color 0.15s",
-              whiteSpace: "nowrap" as const,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_TEXT_BRIGHT; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_DIM; e.currentTarget.style.color = TERM_TEXT; }}
-          >
-            <span>+ hire</span>
-          </button>
-        )}
       </div>
     </div>
   );
