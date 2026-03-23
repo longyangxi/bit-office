@@ -390,7 +390,11 @@ export function pushWorktreeBranch(workspace: string, worktreePath: string, bran
     const repoRoot = resolveGitWorkspaceRoot(workspace);
     // Auto-commit any dirty files first
     autoCommitWorktree(worktreePath, branch);
-    gitExec(`git push origin ${shellQuote(branch)} --force`, repoRoot);
+    // Use longer timeout for network operations
+    execSync(`git push origin ${shellQuote(branch)} --force`, {
+      cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: 30000,
+      env: getIsolatedGitEnv(),
+    });
     console.log(`[Worktree] Pushed branch ${branch} to origin`);
     return true;
   } catch (err) {
@@ -405,7 +409,10 @@ export function pushWorktreeBranch(workspace: string, worktreePath: string, bran
 export function deleteRemoteBranch(workspace: string, branch: string): void {
   try {
     const repoRoot = resolveGitWorkspaceRoot(workspace);
-    gitExec(`git push origin --delete ${shellQuote(branch)}`, repoRoot);
+    execSync(`git push origin --delete ${shellQuote(branch)}`, {
+      cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: 30000,
+      env: getIsolatedGitEnv(),
+    });
     console.log(`[Worktree] Deleted remote branch ${branch}`);
   } catch {
     // Branch may not exist on remote — ignore

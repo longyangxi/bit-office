@@ -535,8 +535,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       return { success: false, commitsAhead: -1, message: "Agent is working" };
     }
     const result = revertWorktreeCommit(session.workspaceDir, session.worktreePath);
-    if (result.success && result.commitsAhead === 0) {
-      session.pendingMerge = false;
+    if (result.success) {
+      if (result.commitsAhead === 0) {
+        session.pendingMerge = false;
+        deleteRemoteBranch(session.workspaceDir, session.worktreeBranch);
+      } else {
+        // Push updated branch so remote reflects the revert
+        pushWorktreeBranch(session.workspaceDir, session.worktreePath, session.worktreeBranch);
+      }
     }
     return result;
   }
