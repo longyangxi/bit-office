@@ -403,7 +403,10 @@ export function undoMergeCommit(workspace: string, commitHash: string): { succes
         return { success: true, method: "reset" };
       } else {
         // Fallback — other commits exist after this one, use revert
-        execSync(`git revert --no-edit ${shellQuote(fullTarget)}`, {
+        // Detect merge commits (2+ parents) — git revert requires -m 1 for those
+        const parentCount = gitExec(`git cat-file -p ${shellQuote(fullTarget)}`, repoRoot).split("\n").filter(l => l.startsWith("parent ")).length;
+        const mergeFlag = parentCount > 1 ? " -m 1" : "";
+        execSync(`git revert --no-edit${mergeFlag} ${shellQuote(fullTarget)}`, {
           cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: TIMEOUT,
           env: getIsolatedGitEnv(),
         });
