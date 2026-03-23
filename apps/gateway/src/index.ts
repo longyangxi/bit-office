@@ -51,6 +51,7 @@ function persistTeamState() {
       worktreePath: a.worktreePath,
       worktreeBranch: a.worktreeBranch,
       autoMerge: a.autoMerge,
+      mergeCommitStack: a.mergeCommitStack.length > 0 ? a.mergeCommitStack : undefined,
     }));
 
   let team: TeamState["team"] = null;
@@ -1173,6 +1174,10 @@ async function main() {
       // Restore worktree path/branch if the worktree directory still exists
       if (agent.worktreePath && agent.worktreeBranch) {
         orc.restoreAgentWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
+      }
+      // Restore merge commit history for undo-merge support across restarts
+      if (agent.mergeCommitStack?.length) {
+        orc.restoreAgentMergeHistory(agent.agentId, agent.mergeCommitStack);
       }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {

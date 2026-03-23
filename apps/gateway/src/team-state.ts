@@ -26,6 +26,7 @@ export interface PersistedAgent {
   worktreePath?: string | null;
   worktreeBranch?: string | null;
   autoMerge?: boolean;
+  mergeCommitStack?: { hash: string; message: string }[];
 }
 
 export interface PersistedTeam {

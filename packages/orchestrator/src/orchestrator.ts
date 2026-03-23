@@ -482,6 +482,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       pendingMerge: s.pendingMerge,
       lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].hash : null,
       lastMergeMessage: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].message : null,
+      mergeCommitStack: s.mergeCommitStack,
     }));
   }
 
@@ -572,6 +573,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     session.worktreeBranch = worktreeBranch;
   }
 
+  /** Restore merge commit history for an agent (used on gateway restart) */
+  restoreAgentMergeHistory(agentId: string, stack: { hash: string; message: string }[]): void {
+    const session = this.agentManager.get(agentId);
+    if (!session) return;
+    session.mergeCommitStack = stack;
+  }
+
   /** Undo the last merge from an agent (reset the merge commit on main) */
   undoAgentMerge(agentId: string): { success: boolean; message?: string } {
     const session = this.agentManager.get(agentId);
@@ -582,8 +590,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const result = undoMergeCommit(session.workspaceDir, entry.hash);
     if (result.success) {
       session.mergeCommitStack.pop();
-      // Sync agent worktree to new main HEAD to eliminate branch fork
-      if (session.worktreePath) {
+      // Sync agent worktree to new main HEAD to eliminate branch fork (only needed for reset)
+      if (result.method === "reset" && session.worktreePath) {
         try {
           resetWorktreeToMain(session.workspaceDir, session.worktreePath);
           console.log(`[Worktree] Synced ${session.name}'s worktree to main after undo merge`);

@@ -382,35 +382,40 @@ export function createWorktree(
 // ---------------------------------------------------------------------------
 
 /**
- * Undo a merge commit on main by resetting HEAD.
- * Only allowed when the target commit is the current HEAD — if other commits
- * came after, the operation is refused to avoid data loss.
+ * Undo a merge commit on main.
+ * - If the commit is the current HEAD → git reset --hard (clean removal).
+ * - If other commits came after → git revert (creates a reverse commit).
  */
-export function undoMergeCommit(workspace: string, commitHash: string): { success: boolean; message?: string } {
+export function undoMergeCommit(workspace: string, commitHash: string): { success: boolean; message?: string; method?: "reset" | "revert" } {
   try {
     const repoRoot = resolveGitWorkspaceRoot(workspace);
-    // Safety: only allow reset when commitHash IS the current HEAD
-    const currentHead = gitExec("git rev-parse HEAD", repoRoot);
-    if (!currentHead.startsWith(commitHash) && !commitHash.startsWith(currentHead.slice(0, commitHash.length))) {
-      // Full hash comparison
-      const fullTarget = gitExec(`git rev-parse ${shellQuote(commitHash)}`, repoRoot);
-      const fullHead = gitExec("git rev-parse HEAD", repoRoot);
-      if (fullTarget !== fullHead) {
-        console.warn(`[Worktree] Cannot undo merge ${commitHash.slice(0, 7)} — HEAD is ${fullHead.slice(0, 7)}, other commits exist after this merge`);
-        return { success: false, message: `Cannot undo — other commits exist after this merge. Only the most recent commit on main can be removed.` };
-      }
-    }
-    // Stash dirty files to prevent loss during reset
+    const fullTarget = gitExec(`git rev-parse ${shellQuote(commitHash)}`, repoRoot);
+    const fullHead = gitExec("git rev-parse HEAD", repoRoot);
+    const isHead = fullTarget === fullHead;
+
     const dirty = !!gitExec("git status --porcelain", repoRoot);
     if (dirty) gitExec("git stash --include-untracked", repoRoot);
     try {
-      gitExec("git reset --hard HEAD~1", repoRoot);
+      if (isHead) {
+        // Clean removal — commit disappears from history
+        gitExec("git reset --hard HEAD~1", repoRoot);
+        console.log(`[Worktree] Reset merge commit ${commitHash.slice(0, 7)} on main (hard reset)`);
+        return { success: true, method: "reset" };
+      } else {
+        // Fallback — other commits exist after this one, use revert
+        execSync(`git revert --no-edit ${shellQuote(fullTarget)}`, {
+          cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: TIMEOUT,
+          env: getIsolatedGitEnv(),
+        });
+        console.log(`[Worktree] Reverted merge commit ${commitHash.slice(0, 7)} on main (revert — newer commits exist)`);
+        return { success: true, method: "revert" };
+      }
     } finally {
       if (dirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
     }
-    console.log(`[Worktree] Reset merge commit ${commitHash.slice(0, 7)} on main (hard reset)`);
-    return { success: true };
   } catch (err) {
+    // Revert conflict — abort and report
+    try { gitExec("git revert --abort", resolveGitWorkspaceRoot(workspace)); } catch { /* ignore */ }
     console.error(`[Worktree] Failed to undo merge commit ${commitHash.slice(0, 7)}: ${(err as Error).message}`);
     return { success: false, message: `Failed to undo merge — ${(err as Error).message}` };
   }
