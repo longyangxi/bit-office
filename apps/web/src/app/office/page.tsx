@@ -14,6 +14,7 @@ import { TILE_SIZE, ZOOM_MIN, ZOOM_MAX } from "@/components/office/constants";
 import { useEditorActions } from "@/hooks/useEditorActions";
 import { useEditorKeyboard } from "@/hooks/useEditorKeyboard";
 import { useSoundEffects } from "@/hooks/useSoundEffects";
+import { useAblyLoader } from "@/hooks/useAblyLoader";
 
 import type { SceneAdapter } from "@/components/office/scene/SceneAdapter";
 import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
@@ -166,6 +167,7 @@ const tempReviewerIds = new Set<string>();
 const agentWorkDirMap = new Map<string, string>();
 
 export default function OfficePage() {
+  useAblyLoader(); // Register ably transport before any connect() call
   const router = useRouter();
   // Reactive state — re-render when these change
   const agents = useOfficeStore(s => s.agents);
