@@ -1621,12 +1621,12 @@ export default function OfficePage() {
                         )}
                       </div>
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                        {agent.role && (
+                        {(agentState?.backend || agent.backend) && (
                           <span style={{
                             fontSize: 9, color: TERM_DIM,
                             fontFamily: TERM_FONT, maxWidth: 70,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                          }}>{agent.role}</span>
+                          }}>{BACKEND_OPTIONS.find((b) => b.id === (agentState?.backend || agent.backend))?.name ?? (agentState?.backend || agent.backend)}</span>
                         )}
                         <span style={{
                           width: 5, height: 5, borderRadius: "50%",
