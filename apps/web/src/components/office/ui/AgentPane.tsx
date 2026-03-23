@@ -594,15 +594,34 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             minHeight: 0, backgroundColor: TERM_BG,
           }}>
             {(() => {
-              const reviewMsgs = reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text);
+              const allMsgs = reviewerOverlay.visibleMessages;
+              const reviewMsgs = allMsgs.filter(m => m.role !== "user" && m.text);
+
+              // ── DEBUG LOG (temporary) ──
+              const debugInfo = {
+                totalMsgs: allMsgs.length,
+                filteredMsgs: reviewMsgs.length,
+                status: reviewerOverlay.status,
+                busy: reviewerOverlay.busy,
+                reviewDone: reviewerOverlay.reviewDone,
+                hasReviewResultText: !!reviewerOverlay.reviewResultText,
+                reviewResultTextPreview: reviewerOverlay.reviewResultText?.slice(0, 80) ?? "(null)",
+                msgs: allMsgs.map(m => ({
+                  id: m.id.slice(-20),
+                  role: m.role,
+                  textLen: m.text?.length ?? 0,
+                  textPreview: m.text?.slice(0, 60) ?? "(empty)",
+                })),
+              };
+              console.log("[ReviewOverlay Phase2] debug:", debugInfo);
+              // ── END DEBUG ──
+
               if (reviewMsgs.length > 0) {
                 return reviewMsgs.map(msg => (
                   <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
                 ));
               }
               // Fallback: show reviewResultText directly when messages are unavailable
-              // (race between AGENT_STATUS:done → useEffect sets reviewResultText and
-              //  TASK_DONE → replaces streaming msg; or reviewer failed with system-role error only)
               if (reviewerOverlay.reviewResultText) {
                 return (
                   <div style={{ color: TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
@@ -612,7 +631,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               }
               return (
                 <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0" }}>
-                  (No review content)
+                  <div style={{ marginBottom: 8 }}>(No review content)</div>
+                  <pre style={{ color: TERM_SEM_YELLOW, fontSize: 9, fontFamily: TERM_FONT, opacity: 0.8, whiteSpace: "pre-wrap", wordBreak: "break-all", lineHeight: 1.5 }}>
+                    {JSON.stringify(debugInfo, null, 2)}
+                  </pre>
                 </div>
               );
             })()}
