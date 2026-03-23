@@ -63,12 +63,17 @@ html {
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35), 0 4px 16px rgba(0, 0, 0, 0.25);
   --shadow-lg: 0 4px 12px rgba(0, 0, 0, 0.4), 0 8px 32px rgba(0, 0, 0, 0.35);
   --shadow-xl: 0 8px 24px rgba(0, 0, 0, 0.5), 0 16px 48px rgba(0, 0, 0, 0.4);
-  --shadow-inset: inset 0 1px 3px rgba(0, 0, 0, 0.25);
-  --shadow-inset-deep: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  --shadow-inset: inset 0 2px 4px rgba(0, 0, 0, 0.3), inset 0 -1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-inset-deep: inset 0 3px 8px rgba(0, 0, 0, 0.4), inset 0 -1px 3px rgba(0, 0, 0, 0.2);
 
   /* Surface highlight — subtle top-edge light for raised panels */
   --highlight-top: inset 0 1px 0 rgba(255, 255, 255, 0.03);
   --highlight-top-strong: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  /* Separator system — structural vs content dividers */
+  --separator-groove-dark: rgba(0, 0, 0, 0.5);
+  --separator-groove-light: rgba(255, 255, 255, 0.04);
+  --separator-subtle: rgba(255, 255, 255, 0.025);
 
   /* Motion */
   --duration-fast: 100ms;
@@ -453,25 +458,27 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
   font-variant-numeric: tabular-nums;
   letter-spacing: 0 !important;
 }
-/* Info bar — raised panel feel: gradient bg + bottom shadow + top highlight */
+/* Info bar — raised panel: shadow-fade replaces hard border */
 .term-info-bar {
   box-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.3),
-    0 1px 0 var(--term-border-dim),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
     var(--highlight-top);
   background-image: linear-gradient(
     to bottom,
     rgba(255, 255, 255, 0.025) 0%,
     transparent 100%
   );
-  border-bottom: 1px solid var(--term-border);
+  border-bottom: none;
 }
-/* Input area — elevated from content with top border + shadow */
+/* Input area — elevated from content with shadow-fade, no hard border */
 .term-input-area {
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
-  border-top: 1px solid var(--term-border);
+  transition: box-shadow 0.2s ease;
+  border-top: none;
   box-shadow:
-    0 -2px 8px rgba(0, 0, 0, 0.2),
+    0 -3px 8px -2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 var(--separator-groove-light),
     var(--highlight-top);
   background-image: linear-gradient(
     to bottom,
@@ -481,9 +488,9 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 }
 .term-input-area:focus-within {
   box-shadow:
-    0 -2px 8px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(var(--term-accent-rgb), 0.2);
-  border-top-color: rgba(var(--term-accent-rgb), 0.25);
+    0 -3px 8px -2px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(var(--term-accent-rgb), 0.15),
+    var(--highlight-top);
 }
 
 /* ── Global focus-visible — keyboard accessibility ── */
@@ -518,19 +525,19 @@ textarea:focus-visible {
   box-shadow: var(--shadow-inset);
 }
 
-/* ── Divider enhancement — visible separator between panes ── */
-/* Vertical pane divider glow on idle */
+/* ── Divider enhancement — groove depth between panes ── */
+/* Subtle center glow on hover */
 .pane-resize::before {
   content: '';
   position: absolute;
-  top: 10%;
-  bottom: 10%;
-  left: 1px;
-  width: 3px;
+  top: 8%;
+  bottom: 8%;
+  left: 0;
+  width: 5px;
   background: linear-gradient(
     to bottom,
     transparent 0%,
-    rgba(var(--term-accent-rgb), 0.06) 50%,
+    rgba(var(--term-accent-rgb), 0.05) 50%,
     transparent 100%
   );
   pointer-events: none;

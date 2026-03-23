@@ -272,7 +272,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
     <div style={{
       padding: "8px 12px",
       background: TERM_PANEL,
-      borderTop: `1px solid ${TERM_BORDER_DIM}`,
+      boxShadow: "0 -3px 6px -2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
       fontFamily: TERM_FONT, flexShrink: 0,
     }}>
       {/* Feedback input */}
@@ -431,7 +431,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Compact info header */}
           <div style={{
             padding: "8px 12px",
-            boxShadow: `0 1px 0 ${TERM_BORDER_DIM}`,
+            boxShadow: `0 3px 6px -2px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)`,
             background: TERM_PANEL,
             flexShrink: 0,
           }}>
@@ -483,7 +483,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           maxHeight: "40%",
           display: "flex", flexDirection: "column",
           background: TERM_PANEL,
-          borderTop: `1px solid ${TERM_BORDER}`,
+          boxShadow: "0 -4px 12px -2px rgba(0,0,0,0.5)",
           fontFamily: TERM_FONT, fontSize: TERM_SIZE,
           animation: "review-overlay-in 0.3s ease-out",
         }}>
@@ -491,7 +491,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 12px",
-            borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+            boxShadow: "0 2px 4px -1px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.4)",
             flexShrink: 0,
           }}>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
@@ -556,7 +556,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           height: "65%", minHeight: 200,
           display: "flex", flexDirection: "column",
           backgroundColor: TERM_BG,
-          borderTop: `1px solid ${TERM_BORDER}`,
+          boxShadow: "0 -4px 12px -2px rgba(0,0,0,0.5)",
           animation: "review-slide-up 0.25s ease-out",
         }}>
           {/* Header bar */}
@@ -564,7 +564,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             display: "flex", alignItems: "center", gap: 8,
             padding: "6px 14px",
             background: TERM_PANEL,
-            borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+            boxShadow: "0 3px 6px -2px rgba(0,0,0,0.4), inset 0 -1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)",
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
@@ -667,8 +667,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Suggestion feed (visible to owner and collaborator) */}
           {!isSpectator && suggestions.length > 0 && (
             <div data-scrollbar style={{
-              padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+              padding: "6px 10px",
               backgroundColor: TERM_BG, maxHeight: 120, overflowY: "auto",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03), 0 -2px 4px rgba(0,0,0,0.2)",
             }}>
               <div style={{ fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
               {suggestions.slice(-10).map((s, i) => (
@@ -682,8 +683,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Pending image previews */}
           {pendingImages.length > 0 && (
             <div style={{
-              padding: "6px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+              padding: "6px 10px",
               backgroundColor: TERM_BG, display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.03), 0 -2px 4px rgba(0,0,0,0.2)",
             }}>
               {pendingImages.map((img, i) => (
                 <div key={i} style={{ position: "relative", display: "inline-block" }}>
@@ -714,9 +716,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             if (isSpectator) {
               return (
                 <div style={{
-                  padding: "8px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+                  padding: "8px 10px",
                   backgroundColor: TERM_SURFACE, flexShrink: 0,
                   fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, textAlign: "center",
+                  boxShadow: "0 -3px 6px -2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
                 }}>
                   Watching — read-only mode
                 </div>
@@ -727,9 +730,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             if (isCollaborator) {
               return (
                 <div style={{
-                  padding: "8px 10px", borderTop: `1px solid ${TERM_BORDER_DIM}`,
+                  padding: "8px 10px",
                   background: TERM_PANEL,
                   flexShrink: 0,
+                  boxShadow: "0 -3px 6px -2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
                 }}>
                   <div style={{ display: "flex", gap: 6 }}>
                     <textarea
@@ -765,7 +769,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             return (
               <div className="term-input-area" style={{
                 padding: "8px 12px",
-                borderTop: `1px solid ${TERM_BORDER_DIM}`,
                 background: TERM_PANEL,
                 flexShrink: 0,
               }}>

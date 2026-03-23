@@ -516,7 +516,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           flexShrink: 0,
           position: "relative",
           gap: 8,
-          boxShadow: `0 -1px 0 ${TERM_BORDER_DIM}`,
+          boxShadow: `0 -3px 6px -2px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)`,
         }}
       >
         {/* Center: pagination controls */}

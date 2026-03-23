@@ -179,7 +179,7 @@
 
 .tm-header {
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--term-border);
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -187,7 +187,10 @@
   font-family: var(--font-mono);
   font-size: var(--font-size-base);
   color: var(--term-text-bright);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    0 3px 6px -2px rgba(0, 0, 0, 0.4),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 
 .tm-body {
@@ -203,13 +206,15 @@
 
 .tm-footer {
   padding: var(--space-3) var(--space-4);
-  border-top: 1px solid var(--term-border);
+  border-top: none;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-2);
   flex-shrink: 0;
-  box-shadow: 0 -1px 3px rgba(0, 0, 0, 0.15);
+  box-shadow:
+    0 -3px 6px -2px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 var(--separator-groove-light);
 }
 
 /* Close button inside header */
@@ -617,6 +622,7 @@
 /* ============================================================
    RESIZE HANDLE — .pane-resize (draggable divider between panes)
    ============================================================ */
+/* Pane resize handle — groove divider (dark edge + light highlight) */
 .pane-resize {
   width: 5px;
   cursor: col-resize;
@@ -626,6 +632,7 @@
   z-index: 5;
   transition: background var(--duration-fast) ease;
 }
+/* Dark groove edge */
 .pane-resize::after {
   content: '';
   position: absolute;
@@ -633,17 +640,20 @@
   bottom: 0;
   left: 2px;
   width: 1px;
-  background: var(--term-border);
-  box-shadow: -1px 0 3px rgba(0, 0, 0, 0.3), 1px 0 3px rgba(0, 0, 0, 0.3);
-  transition: background var(--duration-fast) ease, width var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
+  background: var(--separator-groove-dark, rgba(0, 0, 0, 0.5));
+  box-shadow:
+    1px 0 0 var(--separator-groove-light, rgba(255, 255, 255, 0.04)),
+    -2px 0 6px rgba(0, 0, 0, 0.25),
+     2px 0 6px rgba(0, 0, 0, 0.25);
+  transition: background var(--duration-fast) ease, box-shadow var(--duration-fast) ease;
 }
 .pane-resize:hover::after,
 .pane-resize-active::after {
   background: var(--term-green);
-  width: 2px;
-  left: 1.5px;
-  box-shadow: 0 0 6px rgba(var(--term-accent-rgb), 0.2);
+  box-shadow:
+    1px 0 0 rgba(255, 255, 255, 0.06),
+    0 0 8px rgba(var(--term-accent-rgb), 0.15);
 }
 .pane-resize:hover {
-  background: color-mix(in srgb, var(--term-green) 5%, transparent);
+  background: color-mix(in srgb, var(--term-green) 4%, transparent);
 }
