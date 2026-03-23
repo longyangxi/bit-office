@@ -497,7 +497,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Header: name + dots + dismiss */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
-            padding: "6px 12px",
+            padding: "8px 12px",
             boxShadow: "0 2px 4px -1px rgba(0,0,0,0.3), inset 0 -1px 0 rgba(0,0,0,0.4)",
             flexShrink: 0,
           }}>
@@ -528,7 +528,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Scrollable streaming thoughts — only shown when reviewer has messages */}
           {reviewerOverlay.visibleMessages.length > 0 && (
             <div data-scrollbar style={{
-              flex: 1, overflowY: "auto", padding: "6px 12px",
+              flex: 1, overflowY: "auto", padding: "8px 12px",
               minHeight: 0, maxHeight: 120,
               backgroundColor: TERM_BG,
             }}>
@@ -547,7 +547,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           {/* Fallback hint when no messages yet */}
           {reviewerOverlay.visibleMessages.length === 0 && (
             <div style={{
-              padding: "6px 12px", color: TERM_DIM, fontSize: TERM_SIZE,
+              padding: "8px 12px", color: TERM_DIM, fontSize: TERM_SIZE,
               fontFamily: TERM_FONT,
             }}>
               {reviewerOverlay.lastLogLine?.slice(0, 80) || "Reviewing code changes..."}
