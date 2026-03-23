@@ -627,7 +627,7 @@
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
+  /* scroll-behavior handled programmatically to avoid flash on mount */
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   flex: 1;

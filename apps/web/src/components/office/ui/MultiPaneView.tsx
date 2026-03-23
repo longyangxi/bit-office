@@ -335,7 +335,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   // ── Scroll-snap pagination ──
   const viewportRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [currentPage, setCurrentPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(() =>
+    Math.max(0, Math.floor(paneOffset / MAX_VISIBLE))
+  );
+  // Guard: skip scroll events caused by programmatic scrollTo
+  const programmaticScrollRef = useRef(false);
+  const mountedRef = useRef(false);
 
   // ── Pane resize logic (within a page) ──
   const [paneWidths, setPaneWidths] = useState<number[]>([]);
@@ -349,27 +354,45 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     pages.push(openPanes.slice(i, i + MAX_VISIBLE));
   }
 
-  // Sync currentPage from parent paneOffset
-  const derivedPage = Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1);
-  if (derivedPage >= 0 && derivedPage !== currentPage && totalPages > 0) {
-    setCurrentPage(derivedPage);
-  }
-
-  // Scroll to page when paneOffset changes from parent
-  useEffect(() => {
+  // Scroll viewport to a target page (shared helper)
+  const scrollToPage = useCallback((page: number, smooth: boolean) => {
     const vp = viewportRef.current;
-    if (!vp || totalPages <= 1) return;
-    const targetPage = Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1);
-    const targetScroll = targetPage * vp.clientWidth;
-    if (Math.abs(vp.scrollLeft - targetScroll) > 2) {
-      vp.scrollTo({ left: targetScroll, behavior: "smooth" });
-    }
-  }, [paneOffset, totalPages]);
+    if (!vp || vp.clientWidth === 0) return;
+    const targetScroll = page * vp.clientWidth;
+    if (Math.abs(vp.scrollLeft - targetScroll) <= 2) return;
+    programmaticScrollRef.current = true;
+    vp.scrollTo({ left: targetScroll, behavior: smooth ? "smooth" : "instant" as ScrollBehavior });
+    // Clear guard after scroll settles (smooth ≈300ms, instant ≈ frame)
+    setTimeout(() => { programmaticScrollRef.current = false; }, smooth ? 350 : 50);
+  }, []);
 
-  // Detect page from scroll position (debounced)
+  // On mount: instant-scroll to the correct page (no flash)
+  useEffect(() => {
+    if (mountedRef.current) return;
+    mountedRef.current = true;
+    const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
+    if (targetPage > 0) {
+      // Use rAF to ensure layout is complete before scrolling
+      requestAnimationFrame(() => scrollToPage(targetPage, false));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Scroll to page when paneOffset changes from parent (after mount)
+  useEffect(() => {
+    if (!mountedRef.current) return;
+    if (totalPages <= 1) return;
+    const targetPage = Math.max(0, Math.min(Math.floor(paneOffset / MAX_VISIBLE), totalPages - 1));
+    setCurrentPage(targetPage);
+    scrollToPage(targetPage, true);
+  }, [paneOffset, totalPages, scrollToPage]);
+
+  // Detect page from user scroll (debounced), skip programmatic scrolls
   const handleScroll = useCallback(() => {
+    if (programmaticScrollRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
+      if (programmaticScrollRef.current) return;
       const vp = viewportRef.current;
       if (!vp || vp.clientWidth === 0) return;
       const page = Math.round(vp.scrollLeft / vp.clientWidth);
@@ -386,6 +409,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     };
   }, []);
 
+  // Navigate to a specific page (dots, arrows, etc.)
+  const goToPage = useCallback((page: number) => {
+    setCurrentPage(page);
+    scrollToPage(page, true);
+    onPaneOffsetChange(page * MAX_VISIBLE);
+  }, [onPaneOffsetChange, scrollToPage]);
+
   // Keyboard navigation: ← → arrow keys to switch pages
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
@@ -396,24 +426,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        onPaneOffsetChange(Math.max(0, (currentPage - 1)) * MAX_VISIBLE);
+        goToPage(Math.max(0, currentPage - 1));
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        onPaneOffsetChange(Math.min(totalPages - 1, currentPage + 1) * MAX_VISIBLE);
+        goToPage(Math.min(totalPages - 1, currentPage + 1));
       }
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [currentPage, totalPages, onPaneOffsetChange]);
-
-  // Navigate to a specific page
-  const goToPage = useCallback((page: number) => {
-    const vp = viewportRef.current;
-    if (vp) {
-      vp.scrollTo({ left: page * vp.clientWidth, behavior: "smooth" });
-    }
-    onPaneOffsetChange(page * MAX_VISIBLE);
-  }, [onPaneOffsetChange]);
+  }, [currentPage, totalPages, goToPage]);
 
   // Pane resize within a page
   const startResize = useCallback((index: number, e: React.MouseEvent) => {
