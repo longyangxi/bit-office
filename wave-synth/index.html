@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wave Synth</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+  header {
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #21262d;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: #58a6ff;
+  }
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    margin-left: auto;
+  }
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .control-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #8b949e;
+  }
+  select, input[type=range] {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #c9d1d9;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    outline: none;
+  }
+  select:focus, input[type=range]:focus {
+    border-color: #58a6ff;
+  }
+  input[type=range] {
+    width: 80px;
+    cursor: pointer;
+    accent-color: #58a6ff;
+  }
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #1f6feb33;
+    color: #58a6ff;
+    border: 1px solid #1f6feb55;
+  }
+  canvas {
+    flex: 1;
+    display: block;
+    cursor: crosshair;
+  }
+  #hint {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #484f58;
+    pointer-events: none;
+    transition: opacity 0.5s;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>WAVE SYNTH</h1>
+  <span class="badge">interactive</span>
+  <div class="controls">
+    <div class="control-group">
+      <label>Wave</label>
+      <select id="waveType">
+        <option value="sine">Sine</option>
+        <option value="cosine">Cosine</option>
+        <option value="sawtooth">Sawtooth</option>
+        <option value="square">Square</option>
+        <option value="triangle">Triangle</option>
+      </select>
+    </div>
+    <div class="control-group">
+      <label>Layers</label>
+      <input type="range" id="layers" min="1" max="12" value="5">
+    </div>
+    <div class="control-group">
+      <label>Speed</label>
+      <input type="range" id="speed" min="1" max="100" value="30">
+    </div>
+    <div class="control-group">
+      <label>Color</label>
+      <select id="palette">
+        <option value="ocean">Ocean</option>
+        <option value="sunset">Sunset</option>
+        <option value="neon">Neon</option>
+        <option value="mono">Mono</option>
+      </select>
+    </div>
+  </div>
+</header>
+<canvas id="c"></canvas>
+<div id="hint">Move mouse to interact with waves</div>
+<script>
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H;
+
+function resize() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight - 53;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const mouse = { x: W / 2, y: H / 2, active: false };
+canvas.addEventListener('mousemove', e => {
+  mouse.x = e.clientX;
+  mouse.y = e.clientY - 53;
+  mouse.active = true;
+  document.getElementById('hint').style.opacity = '0';
+});
+canvas.addEventListener('mouseleave', () => { mouse.active = false; });
+
+const palettes = {
+  ocean:  (i, n) => `hsla(${200 + i * (40/n)}, 75%, ${50 + i * 3}%, `,
+  sunset: (i, n) => `hsla(${350 + i * (60/n)}, 80%, ${50 + i * 2}%, `,
+  neon:   (i, n) => `hsla(${(i * 360/n) % 360}, 100%, 60%, `,
+  mono:   (i, n) => `hsla(210, 5%, ${40 + i * 5}%, `,
+};
+
+const waveFns = {
+  sine:     (x) => Math.sin(x),
+  cosine:   (x) => Math.cos(x),
+  sawtooth: (x) => 2 * (x / (2 * Math.PI) - Math.floor(0.5 + x / (2 * Math.PI))),
+  square:   (x) => Math.sign(Math.sin(x)),
+  triangle: (x) => 2 * Math.abs(2 * (x / (2 * Math.PI) - Math.floor(x / (2 * Math.PI) + 0.5))) - 1,
+};
+
+function animate(t) {
+  const waveType = document.getElementById('waveType').value;
+  const numLayers = parseInt(document.getElementById('layers').value);
+  const speedVal = parseInt(document.getElementById('speed').value) / 1000;
+  const palette = document.getElementById('palette').value;
+  const colorFn = palettes[palette];
+  const waveFn = waveFns[waveType];
+
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  const centerY = H / 2;
+
+  for (let i = 0; i < numLayers; i++) {
+    const freq = 0.003 + i * 0.002;
+    const amp = (H * 0.12) * (1 - i * 0.05);
+    const phase = t * speedVal * (1 + i * 0.3) + i * 0.8;
+    const yOffset = (i - numLayers / 2) * 18;
+
+    ctx.beginPath();
+    ctx.moveTo(0, H);
+
+    for (let x = 0; x <= W; x += 2) {
+      let y = centerY + yOffset;
+      let val = waveFn(x * freq + phase) * amp;
+
+      // Mouse interaction - ripple effect
+      if (mouse.active) {
+        const dx = x - mouse.x;
+        const dy = centerY + yOffset - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const influence = Math.max(0, 1 - dist / 250);
+        val += Math.sin(dist * 0.03 - t * 0.005) * 40 * influence;
+      }
+
+      y += val;
+      ctx.lineTo(x, y);
+    }
+
+    ctx.lineTo(W, H);
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, centerY - amp + yOffset, 0, centerY + amp + yOffset);
+    grad.addColorStop(0, colorFn(i, numLayers) + '0.35)');
+    grad.addColorStop(0.5, colorFn(i, numLayers) + '0.15)');
+    grad.addColorStop(1, colorFn(i, numLayers) + '0.02)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Stroke on top
+    ctx.beginPath();
+    for (let x = 0; x <= W; x += 2) {
+      let y = centerY + yOffset;
+      let val = waveFn(x * freq + phase) * amp;
+      if (mouse.active) {
+        const dx = x - mouse.x;
+        const dy = centerY + yOffset - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const influence = Math.max(0, 1 - dist / 250);
+        val += Math.sin(dist * 0.03 - t * 0.005) * 40 * influence;
+      }
+      y += val;
+      x === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.strokeStyle = colorFn(i, numLayers) + '0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // Glow dots at mouse intersection
+  if (mouse.active) {
+    for (let i = 0; i < 6; i++) {
+      const angle = (t * 0.002 + i * Math.PI / 3);
+      const r = 8 + Math.sin(t * 0.003 + i) * 4;
+      ctx.beginPath();
+      ctx.arc(
+        mouse.x + Math.cos(angle) * r,
+        mouse.y + Math.sin(angle) * r,
+        2, 0, Math.PI * 2
+      );
+      ctx.fillStyle = colorFn(i, 6) + '0.8)';
+      ctx.fill();
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
