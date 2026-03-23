@@ -388,10 +388,17 @@ export function createWorktree(
 export function undoMergeCommit(workspace: string, commitHash: string): { success: boolean; message?: string } {
   try {
     const repoRoot = resolveGitWorkspaceRoot(workspace);
-    execSync(`git revert --no-edit ${shellQuote(commitHash)}`, {
-      cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: TIMEOUT,
-      env: getIsolatedGitEnv(),
-    });
+    // Stash dirty files to prevent conflicts during revert
+    const dirty = !!gitExec("git status --porcelain", repoRoot);
+    if (dirty) gitExec("git stash --include-untracked", repoRoot);
+    try {
+      execSync(`git revert --no-edit ${shellQuote(commitHash)}`, {
+        cwd: repoRoot, stdio: "pipe", encoding: "utf-8", timeout: TIMEOUT,
+        env: getIsolatedGitEnv(),
+      });
+    } finally {
+      if (dirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
+    }
     console.log(`[Worktree] Reverted merge commit ${commitHash.slice(0, 7)} on main`);
     return { success: true };
   } catch (err) {
@@ -591,6 +598,7 @@ export function mergeWorktree(
       // Squash-merge conflict — try rebasing agent branch onto main first, then retry
       gitExec("git reset --hard HEAD", repoRoot); // clean up failed merge state
       console.log(`[Worktree] Squash-merge conflict on ${branch}, attempting rebase onto main...`);
+      // Try clean rebase (no auto-resolve) then retry merge
       let rebased = false;
       try {
         gitExec(`git rebase ${shellQuote(mainHead)}`, worktreePath);
@@ -598,18 +606,9 @@ export function mergeWorktree(
         console.log(`[Worktree] Rebased ${branch} onto main successfully`);
       } catch {
         try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
-        // Retry with theirs strategy — keep main's version for conflicting hunks,
-        // agent's non-conflicting changes are preserved
-        try {
-          gitExec(`git rebase -X theirs ${shellQuote(mainHead)}`, worktreePath);
-          rebased = true;
-          console.log(`[Worktree] Rebased ${branch} onto main (auto-resolved conflicts)`);
-        } catch {
-          try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
-        }
+        // Rebase has conflicts — do NOT auto-resolve with -X theirs as it silently drops agent work
       }
       if (rebased) {
-        // Retry squash-merge after successful rebase
         try {
           gitExec(`git merge --squash ${shellQuote(branch)}`, repoRoot);
         } catch (retryErr) {
@@ -618,7 +617,7 @@ export function mergeWorktree(
         }
       } else {
         if (mainDirty) try { gitExec("git stash pop", repoRoot); } catch { /* ignore */ }
-        throw new Error(`Merge conflict on ${branch} — rebase also failed`);
+        throw new Error(`Merge conflict on ${branch} — manual resolution needed`);
       }
     }
 

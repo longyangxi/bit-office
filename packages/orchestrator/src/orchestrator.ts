@@ -298,8 +298,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(agentId);
     if (!session) return;
     // If worktree already exists, sync it to latest main before agent starts working
+    // Skip sync if agent has pending unmerged changes — rebase could silently lose them
     if (session.worktreePath) {
-      syncWorktreeToMain(session.workspaceDir, session.worktreePath);
+      if (!session.pendingMerge) {
+        syncWorktreeToMain(session.workspaceDir, session.worktreePath);
+      }
       return;
     }
     if (this.agentManager.isTeamLead(agentId)) return;
