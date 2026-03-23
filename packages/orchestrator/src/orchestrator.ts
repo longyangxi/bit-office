@@ -862,6 +862,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             branch: doneSession.worktreeBranch,
             success: result.success,
             commitHash: result.commitHash,
+            commitMessage: result.commitMessage,
             conflictFiles: result.conflictFiles,
             stagedFiles: result.stagedFiles,
           });

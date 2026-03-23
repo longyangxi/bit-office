@@ -899,37 +899,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                     >Close Project</button>
                   </div>
-                ) : awaitingApproval && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
-                    <button
-                      className="term-btn"
-                      onClick={onQuickApprove}
-                      style={{
-                        padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                        backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
-                        fontFamily: TERM_FONT, flexShrink: 0,
-                      }}
-                    >approve</button>
-                    <div className="term-input-well" style={{ flex: 1 }}>
-                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
-                    <textarea
-                      ref={inputRef}
-                      rows={1}
-                      className="term-input"
-                      value={prompt}
-                      onPaste={onPasteText}
-                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
-                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
-                      placeholder="or give feedback..."
-                      style={{
-                        flex: 1, padding: "5px 6px", border: "none",
-                        backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
-                        resize: "none", lineHeight: "20px",
-                      }}
-                    />
-                    </div>
-                  </div>
                 ) : !busy && isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) ? (
                   <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
                     {pendingMerge && onMerge && (
@@ -985,6 +954,37 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
                       onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
                       placeholder="send a new task..."
+                      style={{
+                        flex: 1, padding: "5px 6px", border: "none",
+                        backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
+                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        resize: "none", lineHeight: "20px",
+                      }}
+                    />
+                    </div>
+                  </div>
+                ) : awaitingApproval && !busy ? (
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
+                    <button
+                      className="term-btn"
+                      onClick={onQuickApprove}
+                      style={{
+                        padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
+                        backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                        fontFamily: TERM_FONT, flexShrink: 0,
+                      }}
+                    >approve</button>
+                    <div className="term-input-well" style={{ flex: 1 }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
+                    <textarea
+                      ref={inputRef}
+                      rows={1}
+                      className="term-input"
+                      value={prompt}
+                      onPaste={onPasteText}
+                      onChange={(e) => { onPromptChange(e.target.value); autoResize(e.currentTarget); }}
+                      onKeyDown={(e) => { if (isRealEnter(e)) { e.preventDefault(); onSubmit(); } }}
+                      placeholder="or give feedback..."
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
