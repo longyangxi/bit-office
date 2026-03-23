@@ -783,7 +783,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 ) : cardPhase === "execute" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                    <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
+                    <div className="term-input-well">
                       <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                       <textarea
                         ref={inputRef}
@@ -813,17 +813,18 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     )}
                   </div>
                 ) : cardPhase === "design" && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
                     <button
                       className="term-btn"
                       onClick={onApprovePlan}
                       style={{
                         padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
                         backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
-                        fontFamily: TERM_FONT,
+                        fontFamily: TERM_FONT, flexShrink: 0,
                       }}
                     >approve</button>
-                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                    <div className="term-input-well" style={{ flex: 1 }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}
@@ -840,10 +841,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         resize: "none", lineHeight: "20px",
                       }}
                     />
+                    </div>
                   </div>
                 ) : cardPhase === "complete" && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
-                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
+                    <div className="term-input-well" style={{ flex: 1 }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}
@@ -860,6 +863,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         resize: "none", lineHeight: "20px",
                       }}
                     />
+                    </div>
                     <button
                       onClick={onEndProject}
                       style={{
@@ -870,17 +874,18 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     >Close Project</button>
                   </div>
                 ) : awaitingApproval && !busy ? (
-                  <div style={{ display: "flex", gap: 6, alignItems: "flex-end", borderTop: "none", padding: "4px 8px" }}>
+                  <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
                     <button
                       className="term-btn"
                       onClick={onQuickApprove}
                       style={{
                         padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
                         backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
-                        fontFamily: TERM_FONT,
+                        fontFamily: TERM_FONT, flexShrink: 0,
                       }}
                     >approve</button>
-                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>&gt;</span>
+                    <div className="term-input-well" style={{ flex: 1 }}>
+                    <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 6px" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}
@@ -897,9 +902,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         resize: "none", lineHeight: "20px",
                       }}
                     />
+                    </div>
                   </div>
                 ) : (
-                  <div style={{ display: "flex", gap: 0, alignItems: "flex-end", borderTop: "none" }}>
+                  <div className="term-input-well">
                     <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
