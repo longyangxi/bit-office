@@ -474,8 +474,10 @@ export function worktreeHasPendingChanges(workspace: string, worktreePath: strin
     const dirty = !!gitExec("git status --porcelain", worktreePath);
     if (dirty) return true;
     if (mainHead !== branchHead) {
-      const ahead = gitExec(`git log ${shellQuote(mainHead)}..HEAD --oneline`, worktreePath);
-      if (ahead) return true;
+      // After squash merge, commit hashes diverge but content may be identical.
+      // Check actual diff to avoid false positives.
+      const diff = gitExec(`git diff ${shellQuote(mainHead)}..HEAD`, worktreePath);
+      if (diff) return true;
     }
     return false;
   } catch {
