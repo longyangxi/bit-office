@@ -207,6 +207,10 @@ const StableAgentPane = memo(function StableAgentPane({
         onReviewerLoadMore={onReviewerLoadMore}
         onApplyReviewFixes={onApplyReviewFixes}
         onDismissReview={onDismissReview}
+        autoMerge={data.autoMerge}
+        pendingMerge={data.pendingMerge}
+        lastMergeCommit={data.lastMergeCommit}
+        lastMergeMessage={data.lastMergeMessage}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
         onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
@@ -629,9 +633,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                   onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
                   onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
                   onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
-                  onMerge={onMerge}
-                  onRevert={onRevert}
-                  onUndoMerge={onUndoMerge}
+                  autoMerge={data.autoMerge}
+                  pendingMerge={data.pendingMerge}
+                  lastMergeCommit={data.lastMergeCommit}
+                  lastMergeMessage={data.lastMergeMessage}
+                  onMerge={onMerge ? () => onMerge(agentId) : undefined}
+                  onRevert={onRevert ? () => onRevert(agentId) : undefined}
+                  onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
                   scrollFrozen={scrollFrozen}
                 />
               </div>
