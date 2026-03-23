@@ -620,6 +620,55 @@
 }
 
 /* ============================================================
+   SCROLL-SNAP VIEWPORT — .mpv-viewport / .mpv-page
+   Horizontal swipe pagination for multi-pane agent view
+   ============================================================ */
+.mpv-viewport {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  flex: 1;
+  min-height: 0;
+}
+.mpv-viewport::-webkit-scrollbar {
+  display: none;
+}
+.mpv-page {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+  display: flex;
+  min-height: 0;
+}
+
+/* Page indicator dots */
+.mpv-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 8px;
+}
+.mpv-dot {
+  width: 4px;
+  height: 3px;
+  border-radius: 1.5px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: var(--term-green-dim);
+  opacity: 0.4;
+  transition: width 0.25s ease, opacity 0.25s ease, background 0.25s ease;
+}
+.mpv-dot-active {
+  width: 16px;
+  opacity: 1;
+  background: var(--term-text);
+}
+
+/* ============================================================
    RESIZE HANDLE — .pane-resize (draggable divider between panes)
    ============================================================ */
 /* Pane resize handle — groove divider (dark edge + light highlight) */
