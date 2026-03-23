@@ -529,15 +529,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             style={{
               display: "flex", alignItems: "center", justifyContent: "center",
               gap: 6, padding: "12px 28px",
-              border: `1px dashed ${TERM_BORDER}`, cursor: "pointer",
-              backgroundColor: "transparent", color: TERM_DIM,
-              fontSize: 11, fontFamily: TERM_FONT,
-              transition: "all 0.2s ease",
+              border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
+              backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
+              fontSize: 12, fontFamily: TERM_FONT, fontWeight: 500,
+              borderRadius: 6, transition: "all 0.2s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}25`; e.currentTarget.style.borderColor = `${TERM_GREEN}90`; e.currentTarget.style.color = TERM_GREEN; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
           >
-            <span style={{ fontSize: 14, lineHeight: "1" }}>+</span> {hireLabel}
+            <span style={{ fontSize: 15, lineHeight: "1" }}>+</span> {hireLabel}
           </button>
         ) : (
           "No agents active"
