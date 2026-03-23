@@ -409,6 +409,51 @@ export function createWorktree(
 }
 
 // ---------------------------------------------------------------------------
+// Revert
+// ---------------------------------------------------------------------------
+
+export interface RevertResult {
+  success: boolean;
+  commitId?: string;
+  message?: string;
+  commitsAhead: number;
+}
+
+/**
+ * Revert the last commit on an agent's worktree branch (git reset --hard HEAD~1).
+ * Returns the new HEAD commit and how many commits are still ahead of main.
+ */
+export function revertWorktreeCommit(workspace: string, worktreePath: string): RevertResult {
+  const repoRoot = resolveGitWorkspaceRoot(workspace);
+  try {
+    // Check how many commits this branch is ahead of main
+    const mainHead = gitExec("git rev-parse HEAD", repoRoot);
+    const branchHead = gitExec("git rev-parse HEAD", worktreePath);
+    if (mainHead === branchHead) {
+      return { success: false, message: "No commits to revert — branch is at main HEAD", commitsAhead: 0 };
+    }
+
+    // Count commits ahead
+    const logOutput = gitExec(`git log ${shellQuote(mainHead)}..HEAD --oneline`, worktreePath);
+    const ahead = logOutput ? logOutput.split("\n").length : 0;
+    if (ahead === 0) {
+      return { success: false, message: "No commits to revert", commitsAhead: 0 };
+    }
+
+    // Reset to previous commit
+    gitExec("git reset --hard HEAD~1", worktreePath);
+    const newHead = gitExec("git rev-parse --short HEAD", worktreePath);
+    const remaining = ahead - 1;
+    console.log(`[Worktree] Reverted last commit in ${worktreePath}, now at ${newHead} (${remaining} ahead of main)`);
+
+    return { success: true, commitId: newHead, commitsAhead: remaining };
+  } catch (err) {
+    console.error(`[Worktree] Revert failed in ${worktreePath}: ${(err as Error).message}`);
+    return { success: false, message: (err as Error).message, commitsAhead: -1 };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Merge
 // ---------------------------------------------------------------------------
 

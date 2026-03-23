@@ -50,6 +50,7 @@ function persistTeamState() {
       workDir: agentWorkDirs.get(a.agentId),
       worktreePath: a.worktreePath,
       worktreeBranch: a.worktreeBranch,
+      autoMerge: a.autoMerge,
     }));
 
   let team: TeamState["team"] = null;
@@ -276,7 +277,7 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return { type: "TASK_QUEUED", agentId: e.agentId, taskId: e.taskId, prompt: e.prompt, position: e.position };
     case "agent:created":
       syncHiredAgentsToTelegram();
-      return { type: "AGENT_CREATED", agentId: e.agentId, name: e.name, role: e.role, palette: e.palette, personality: e.personality, backend: e.backend, isTeamLead: e.isTeamLead || undefined, teamId: e.teamId, workDir: agentWorkDirs.get(e.agentId) ?? config.defaultWorkspace };
+      return { type: "AGENT_CREATED", agentId: e.agentId, name: e.name, role: e.role, palette: e.palette, personality: e.personality, backend: e.backend, isTeamLead: e.isTeamLead || undefined, teamId: e.teamId, workDir: agentWorkDirs.get(e.agentId) ?? config.defaultWorkspace, autoMerge: e.autoMerge };
     case "agent:fired":
       syncHiredAgentsToTelegram();
       return { type: "AGENT_FIRED", agentId: e.agentId };
@@ -308,7 +309,12 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return null;
     case "worktree:merged":
       console.log(`[Worktree] Squash-merged branch ${e.branch} for agent ${e.agentId} (success=${e.success}${e.conflictFiles?.length ? ` conflicts=${e.conflictFiles.join(",")}` : ""}${e.stagedFiles?.length ? ` staged=${e.stagedFiles.length} files` : ""})`);
-      return null;
+      return { type: "WORKTREE_MERGED", agentId: e.agentId, branch: e.branch, success: e.success };
+    case "worktree:ready":
+      console.log(`[Worktree] Branch ${e.branch} ready for manual merge (agent ${e.agentId})`);
+      return { type: "WORKTREE_READY", agentId: e.agentId, taskId: e.taskId, branch: e.branch };
+    case "autoMerge:updated":
+      return { type: "AUTO_MERGE_UPDATED", agentId: e.agentId, autoMerge: e.autoMerge };
     case "agent:activity":
       console.log(`[Activity] ${e.agentName} [${e.phase}]: ${e.intent.slice(0, 80)}`);
       return null;
@@ -1022,6 +1028,29 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       console.log(`[Gateway] Review requested: ${reviewerAgentId} reviewing ${sourceAgentId} (${changedFiles.length} files, diff=${diff.length}ch)`);
       break;
     }
+    case "MERGE_WORKTREE": {
+      console.log(`[Gateway] Manual merge requested for agent: ${parsed.agentId}`);
+      orc.mergeAgentWorktree(parsed.agentId);
+      break;
+    }
+    case "REVERT_WORKTREE": {
+      console.log(`[Gateway] Revert requested for agent: ${parsed.agentId}`);
+      const revertResult = orc.revertAgentWorktree(parsed.agentId);
+      publishEvent({
+        type: "WORKTREE_REVERTED",
+        agentId: parsed.agentId,
+        success: revertResult.success,
+        commitId: revertResult.commitId,
+        commitsAhead: revertResult.commitsAhead,
+        message: revertResult.message,
+      });
+      break;
+    }
+    case "TOGGLE_AUTO_MERGE": {
+      console.log(`[Gateway] Toggle autoMerge for agent ${parsed.agentId}: ${parsed.autoMerge}`);
+      orc.setAgentAutoMerge(parsed.agentId, parsed.autoMerge);
+      break;
+    }
   }
 }
 
@@ -1103,6 +1132,10 @@ async function main() {
       });
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
+      }
+      // Restore per-agent autoMerge preference
+      if (agent.autoMerge !== undefined) {
+        orc.setAgentAutoMerge(agent.agentId, agent.autoMerge);
       }
       // Never restore old worktree state — stale worktrees are cleaned up on startup
       // and fresh ones are created when agents start new tasks (if worktree is enabled).

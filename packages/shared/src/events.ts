@@ -92,6 +92,7 @@ export const AgentCreatedEvent = z.object({
   cwd: z.string().optional(),
   workDir: z.string().optional(),
   startedAt: z.number().optional(),
+  autoMerge: z.boolean().optional(),
 });
 
 export const AgentFiredEvent = z.object({
@@ -227,6 +228,35 @@ export const AgencyAgentsUpdatedEvent = z.object({
   count: z.number().optional(),
 });
 
+export const WorktreeReadyEvent = z.object({
+  type: z.literal("WORKTREE_READY"),
+  agentId: z.string(),
+  taskId: z.string(),
+  branch: z.string(),
+});
+
+export const WorktreeMergedEvent = z.object({
+  type: z.literal("WORKTREE_MERGED"),
+  agentId: z.string(),
+  branch: z.string(),
+  success: z.boolean(),
+});
+
+export const WorktreeRevertedEvent = z.object({
+  type: z.literal("WORKTREE_REVERTED"),
+  agentId: z.string(),
+  success: z.boolean(),
+  commitId: z.string().optional(),
+  commitsAhead: z.number(),
+  message: z.string().optional(),
+});
+
+export const AutoMergeUpdatedEvent = z.object({
+  type: z.literal("AUTO_MERGE_UPDATED"),
+  agentId: z.string(),
+  autoMerge: z.boolean(),
+});
+
 export const BackendsAvailableEvent = z.object({
   type: z.literal("BACKENDS_AVAILABLE"),
   backends: z.array(z.string()),
@@ -279,6 +309,10 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   BackendsAvailableEvent,
   ConfigLoadedEvent,
   ConfigSavedEvent,
+  WorktreeReadyEvent,
+  WorktreeMergedEvent,
+  WorktreeRevertedEvent,
+  AutoMergeUpdatedEvent,
 ]);
 
 export type TokenUsage = z.infer<typeof TokenUsage>;
@@ -310,4 +344,8 @@ export type AgencyAgentsUpdatedEvent = z.infer<typeof AgencyAgentsUpdatedEvent>;
 export type BackendsAvailableEvent = z.infer<typeof BackendsAvailableEvent>;
 export type ConfigLoadedEvent = z.infer<typeof ConfigLoadedEvent>;
 export type ConfigSavedEvent = z.infer<typeof ConfigSavedEvent>;
+export type WorktreeReadyEvent = z.infer<typeof WorktreeReadyEvent>;
+export type WorktreeMergedEvent = z.infer<typeof WorktreeMergedEvent>;
+export type WorktreeRevertedEvent = z.infer<typeof WorktreeRevertedEvent>;
+export type AutoMergeUpdatedEvent = z.infer<typeof AutoMergeUpdatedEvent>;
 export type GatewayEvent = z.infer<typeof GatewayEventSchema>;

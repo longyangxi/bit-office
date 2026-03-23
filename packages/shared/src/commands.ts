@@ -166,6 +166,22 @@ export const SaveConfigCommand = z.object({
   tunnelBaseUrl: z.string().optional(),
 });
 
+export const MergeWorktreeCommand = z.object({
+  type: z.literal("MERGE_WORKTREE"),
+  agentId: z.string(),
+});
+
+export const RevertWorktreeCommand = z.object({
+  type: z.literal("REVERT_WORKTREE"),
+  agentId: z.string(),
+});
+
+export const ToggleAutoMergeCommand = z.object({
+  type: z.literal("TOGGLE_AUTO_MERGE"),
+  agentId: z.string(),
+  autoMerge: z.boolean(),
+});
+
 export const RequestReviewCommand = z.object({
   type: z.literal("REQUEST_REVIEW"),
   /** Frontend-generated reviewer agent ID (so frontend can set up overlay immediately) */
@@ -203,6 +219,9 @@ export const CommandSchema = z.discriminatedUnion("type", [
   LoadProjectCommand,
   UpdateAgencyAgentsCommand,
   RequestReviewCommand,
+  MergeWorktreeCommand,
+  RevertWorktreeCommand,
+  ToggleAutoMergeCommand,
   GetConfigCommand,
   SaveConfigCommand,
 ]);
@@ -232,5 +251,8 @@ export type LoadProjectCommand = z.infer<typeof LoadProjectCommand>;
 export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand>;
 export type RequestReviewCommand = z.infer<typeof RequestReviewCommand>;
 export type GetConfigCommand = z.infer<typeof GetConfigCommand>;
+export type MergeWorktreeCommand = z.infer<typeof MergeWorktreeCommand>;
+export type RevertWorktreeCommand = z.infer<typeof RevertWorktreeCommand>;
+export type ToggleAutoMergeCommand = z.infer<typeof ToggleAutoMergeCommand>;
 export type SaveConfigCommand = z.infer<typeof SaveConfigCommand>;
 export type Command = z.infer<typeof CommandSchema>;

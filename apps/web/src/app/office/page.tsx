@@ -1864,6 +1864,11 @@ export default function OfficePage() {
                   onEndProject={handleEndProject}
                   onSuggest={handleSuggest}
                   onPreview={setPreviewUrl}
+                  autoMerge={ag.autoMerge}
+                  pendingMerge={ag.pendingMerge}
+                  onToggleAutoMerge={(val) => sendCommand({ type: "TOGGLE_AUTO_MERGE", agentId: selectedAgent, autoMerge: val })}
+                  onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
+                  onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
                   onReview={(result, backend) => handleReview(selectedAgent, result, backend)}
                   detectedBackends={detectedBackends}
                   onLoadMore={() => loadMoreMessages(selectedAgent)}

@@ -132,6 +132,11 @@ export interface AgentPaneProps {
   onQuickApprove?: () => void;
   onReview?: (result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => void;
   detectedBackends?: string[];
+  autoMerge?: boolean;
+  pendingMerge?: boolean;
+  onToggleAutoMerge?: (autoMerge: boolean) => void;
+  onMerge?: () => void;
+  onRevert?: () => void;
   // Review overlay — reviewer pane rendered on top of this agent
   reviewerOverlay?: ReviewerOverlayData | null;
   onReviewerLoadMore?: () => void;
@@ -329,6 +334,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
+    autoMerge, pendingMerge, onToggleAutoMerge, onMerge, onRevert,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
     scrollFrozen, hideInfoRole,
   } = props;
@@ -945,6 +951,49 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                       autoFocus
                     />
+                  </div>
+                )}
+                {/* Merge controls — shown for solo agents with worktree */}
+                {isOwner && !teamId && !isTeamMember && (pendingMerge || onToggleAutoMerge) && (
+                  <div style={{
+                    display: "flex", alignItems: "center", gap: 8,
+                    padding: "4px 0 0", fontFamily: TERM_FONT, fontSize: 12,
+                  }}>
+                    {pendingMerge && onMerge && (
+                      <button
+                        onClick={onMerge}
+                        disabled={busy}
+                        style={{
+                          padding: "3px 10px", border: `1px solid ${TERM_GREEN}60`,
+                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_GREEN, fontSize: 12,
+                          cursor: busy ? "not-allowed" : "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
+                        }}
+                      >merge to main</button>
+                    )}
+                    {pendingMerge && onRevert && (
+                      <button
+                        onClick={onRevert}
+                        disabled={busy}
+                        style={{
+                          padding: "3px 10px", border: `1px solid ${TERM_SEM_YELLOW}40`,
+                          backgroundColor: "transparent", color: busy ? TERM_DIM : TERM_SEM_YELLOW, fontSize: 12,
+                          cursor: busy ? "not-allowed" : "pointer",
+                          fontFamily: TERM_FONT, flexShrink: 0, opacity: busy ? 0.5 : 1,
+                        }}
+                      >revert</button>
+                    )}
+                    {onToggleAutoMerge && (
+                      <label style={{ display: "flex", alignItems: "center", gap: 4, color: TERM_DIM, cursor: "pointer", marginLeft: "auto" }}>
+                        <input
+                          type="checkbox"
+                          checked={!!autoMerge}
+                          onChange={(e) => onToggleAutoMerge(e.target.checked)}
+                          style={{ accentColor: TERM_GREEN }}
+                        />
+                        auto-merge
+                      </label>
+                    )}
                   </div>
                 )}
               </div>

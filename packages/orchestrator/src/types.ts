@@ -157,6 +157,7 @@ export interface AgentCreatedEvent {
   backend?: string;
   isTeamLead?: boolean;
   teamId?: string;
+  autoMerge?: boolean;
 }
 
 export interface AgentFiredEvent {
@@ -186,6 +187,19 @@ export interface TeamPhaseChangedEvent {
   leadAgentId: string;
 }
 
+export interface WorktreeReadyEvent {
+  type: "worktree:ready";
+  agentId: string;
+  taskId: string;
+  branch: string;
+}
+
+export interface AutoMergeUpdatedEvent {
+  type: "autoMerge:updated";
+  agentId: string;
+  autoMerge: boolean;
+}
+
 export interface TokenUpdateEvent {
   type: "token:update";
   agentId: string;
@@ -212,7 +226,9 @@ export type OrchestratorEvent =
   | AgentFiredEvent
   | TaskResultReturnedEvent
   | TeamPhaseChangedEvent
-  | TokenUpdateEvent;
+  | TokenUpdateEvent
+  | WorktreeReadyEvent
+  | AutoMergeUpdatedEvent;
 
 // ---------------------------------------------------------------------------
 // Event map for typed EventEmitter
@@ -232,6 +248,8 @@ export interface OrchestratorEventMap {
   "task:queued": [TaskQueuedEvent];
   "worktree:created": [WorktreeCreatedEvent];
   "worktree:merged": [WorktreeMergedEvent];
+  "worktree:ready": [WorktreeReadyEvent];
+  "autoMerge:updated": [AutoMergeUpdatedEvent];
   "agent:activity": [AgentActivityEvent];
   "agent:created": [AgentCreatedEvent];
   "agent:fired": [AgentFiredEvent];

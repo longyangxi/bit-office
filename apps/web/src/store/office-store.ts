@@ -75,6 +75,8 @@ interface AgentState {
   tokenUsage: { inputTokens: number; outputTokens: number };
   /** Accumulated token baseline from completed tasks (live TOKEN_UPDATE adds on top) */
   _tokenBaseline?: { inputTokens: number; outputTokens: number };
+  autoMerge?: boolean;
+  pendingMerge?: boolean;
 }
 
 export interface TeamChatMessage {
@@ -481,6 +483,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               cwd: event.cwd ?? existing.cwd,
               workDir: event.workDir ?? existing.workDir,
               startedAt: event.startedAt ?? existing.startedAt,
+              autoMerge: event.autoMerge ?? existing.autoMerge,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -496,6 +499,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.cwd = event.cwd;
             agent.workDir = event.workDir;
             agent.startedAt = event.startedAt;
+            agent.autoMerge = event.autoMerge;
             if (saved) {
               agent.messages = saved.messages;
             }
@@ -948,6 +952,28 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "PROJECT_LIST": {
           return { agents, projectList: event.projects };
+        }
+        case "WORKTREE_READY": {
+          const agent = agents.get(event.agentId);
+          if (agent) agents.set(event.agentId, { ...agent, pendingMerge: true });
+          break;
+        }
+        case "WORKTREE_MERGED": {
+          const agent = agents.get(event.agentId);
+          if (agent) agents.set(event.agentId, { ...agent, pendingMerge: false });
+          break;
+        }
+        case "WORKTREE_REVERTED": {
+          const agent = agents.get(event.agentId);
+          if (agent && event.commitsAhead === 0) {
+            agents.set(event.agentId, { ...agent, pendingMerge: false });
+          }
+          break;
+        }
+        case "AUTO_MERGE_UPDATED": {
+          const agent = agents.get(event.agentId);
+          if (agent) agents.set(event.agentId, { ...agent, autoMerge: event.autoMerge });
+          break;
         }
         case "PROJECT_DATA": {
           return {

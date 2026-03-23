@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -150,6 +150,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       backend: backend.id,
       isTeamLead: this.agentManager.isTeamLead(opts.agentId),
       teamId: opts.teamId,
+      autoMerge: session.autoMerge,
     });
     this.emitEvent({
       type: "agent:status",
@@ -469,7 +470,75 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       teamId: s.teamId,
       worktreePath: s.worktreePath,
       worktreeBranch: s.worktreeBranch,
+      autoMerge: s.autoMerge,
+      pendingMerge: s.pendingMerge,
     }));
+  }
+
+  /** Manually merge an agent's worktree branch back to main */
+  mergeAgentWorktree(agentId: string): { success: boolean; conflictFiles?: string[] } {
+    const session = this.agentManager.get(agentId);
+    if (!session?.worktreePath || !session.worktreeBranch) {
+      return { success: false };
+    }
+    if (session.status === "working") {
+      this.emitEvent({
+        type: "team:chat",
+        fromAgentId: agentId,
+        message: `Cannot merge while ${session.name} is working. Wait for the task to finish first.`,
+        messageType: "warning",
+        timestamp: Date.now(),
+      });
+      return { success: false };
+    }
+    const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name);
+    if (result.success) {
+      session.pendingMerge = false;
+    }
+    this.emitEvent({
+      type: "worktree:merged",
+      agentId,
+      taskId: "manual",
+      branch: session.worktreeBranch,
+      success: result.success,
+      conflictFiles: result.conflictFiles,
+      stagedFiles: result.stagedFiles,
+    });
+    if (!result.success) {
+      const conflictList = result.conflictFiles?.length ? `: ${result.conflictFiles.join(", ")}` : "";
+      this.emitEvent({
+        type: "team:chat",
+        fromAgentId: agentId,
+        message: `Merge conflict — ${session.name}'s changes could not be merged to main${conflictList}. Manual resolution needed.`,
+        messageType: "warning",
+        timestamp: Date.now(),
+      });
+    }
+    return { success: result.success, conflictFiles: result.conflictFiles };
+  }
+
+  /** Revert the last commit on an agent's worktree branch */
+  revertAgentWorktree(agentId: string): { success: boolean; commitId?: string; commitsAhead: number; message?: string } {
+    const session = this.agentManager.get(agentId);
+    if (!session?.worktreePath || !session.worktreeBranch) {
+      return { success: false, commitsAhead: -1, message: "No worktree" };
+    }
+    if (session.status === "working") {
+      return { success: false, commitsAhead: -1, message: "Agent is working" };
+    }
+    const result = revertWorktreeCommit(session.workspaceDir, session.worktreePath);
+    if (result.success && result.commitsAhead === 0) {
+      session.pendingMerge = false;
+    }
+    return result;
+  }
+
+  /** Toggle auto-merge for a specific agent */
+  setAgentAutoMerge(agentId: string, autoMerge: boolean): void {
+    const session = this.agentManager.get(agentId);
+    if (!session) return;
+    session.autoMerge = autoMerge;
+    this.emitEvent({ type: "autoMerge:updated", agentId, autoMerge });
   }
 
   getTeamRoster(): string {
@@ -724,29 +793,41 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       // - Solo agents: merge changes back but keep worktree alive for session continuity.
       //   Worktree is only cleaned up when agent is removed or gateway restarts (GC).
       const doneSession = this.agentManager.get(agentId);
-      if (this.worktreeMerge && doneSession?.worktreePath && doneSession.worktreeBranch
+      if (doneSession?.worktreePath && doneSession.worktreeBranch
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
-        const summary = event.result?.summary;
-        const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name);
-        this.emitEvent({
-          type: "worktree:merged",
-          agentId,
-          taskId: event.taskId,
-          branch: doneSession.worktreeBranch,
-          success: result.success,
-          conflictFiles: result.conflictFiles,
-          stagedFiles: result.stagedFiles,
-        });
-        if (!result.success) {
-          const conflictList = result.conflictFiles?.length
-            ? `: ${result.conflictFiles.join(", ")}`
-            : "";
+        if (this.worktreeMerge && doneSession.autoMerge) {
+          // Auto-merge: merge immediately as before
+          const summary = event.result?.summary;
+          const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name);
           this.emitEvent({
-            type: "team:chat",
-            fromAgentId: agentId,
-            message: `Merge conflict — ${doneSession.name}'s changes could not be merged to main${conflictList}. Manual resolution needed.`,
-            messageType: "warning",
-            timestamp: Date.now(),
+            type: "worktree:merged",
+            agentId,
+            taskId: event.taskId,
+            branch: doneSession.worktreeBranch,
+            success: result.success,
+            conflictFiles: result.conflictFiles,
+            stagedFiles: result.stagedFiles,
+          });
+          if (!result.success) {
+            const conflictList = result.conflictFiles?.length
+              ? `: ${result.conflictFiles.join(", ")}`
+              : "";
+            this.emitEvent({
+              type: "team:chat",
+              fromAgentId: agentId,
+              message: `Merge conflict — ${doneSession.name}'s changes could not be merged to main${conflictList}. Manual resolution needed.`,
+              messageType: "warning",
+              timestamp: Date.now(),
+            });
+          }
+        } else {
+          // Deferred merge: signal that worktree is ready for manual merge
+          doneSession.pendingMerge = true;
+          this.emitEvent({
+            type: "worktree:ready",
+            agentId,
+            taskId: event.taskId,
+            branch: doneSession.worktreeBranch,
           });
         }
         // Keep worktreePath/worktreeBranch set — next task reuses the same worktree

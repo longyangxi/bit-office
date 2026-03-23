@@ -250,6 +250,10 @@ export class AgentSession {
   worktreeBranch: string | null = null;
   /** Use backend-native worktree isolation (e.g. Claude Code --worktree) */
   useNativeWorktree = false;
+  /** When false (default), completed worktree changes wait for manual merge instead of auto-merging */
+  autoMerge = false;
+  /** True when task is done and worktree has unmerged changes awaiting manual merge */
+  pendingMerge = false;
 
   /** Current working directory of the running task */
   get currentWorkingDir(): string | null { return this.currentCwd; }

@@ -25,6 +25,7 @@ export interface PersistedAgent {
   workDir?: string;
   worktreePath?: string | null;
   worktreeBranch?: string | null;
+  autoMerge?: boolean;
 }
 
 export interface PersistedTeam {
