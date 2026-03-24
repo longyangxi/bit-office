@@ -240,7 +240,7 @@ export default function EditorToolbar({
           {showColor && (
             <div style={{
               display: 'flex', flexDirection: 'column', gap: 3,
-              padding: '4px 6px', background: '#181828', border: '2px solid #4a4a6a', borderRadius: 0,
+              padding: '4px 6px', background: '#181828', border: '1px solid var(--term-border)', borderRadius: 0,
             }}>
               <ColorSlider label="H" value={floorColor.h} min={0} max={360} onChange={(v) => handleColorChange('h', v)} />
               <ColorSlider label="S" value={floorColor.s} min={0} max={100} onChange={(v) => handleColorChange('s', v)} />
@@ -277,7 +277,7 @@ export default function EditorToolbar({
           {showWallColor && (
             <div style={{
               display: 'flex', flexDirection: 'column', gap: 3,
-              padding: '4px 6px', background: '#181828', border: '2px solid #4a4a6a', borderRadius: 0,
+              padding: '4px 6px', background: '#181828', border: '1px solid var(--term-border)', borderRadius: 0,
             }}>
               <ColorSlider label="H" value={wallColor.h} min={0} max={360} onChange={(v) => handleWallColorChange('h', v)} />
               <ColorSlider label="S" value={wallColor.s} min={0} max={100} onChange={(v) => handleWallColorChange('s', v)} />
@@ -374,7 +374,7 @@ export default function EditorToolbar({
           {showFurnitureColor && (
             <div style={{
               display: 'flex', flexDirection: 'column', gap: 3,
-              padding: '4px 6px', background: '#181828', border: '2px solid #4a4a6a', borderRadius: 0,
+              padding: '4px 6px', background: '#181828', border: '1px solid var(--term-border)', borderRadius: 0,
             }}>
               {effectiveColor.colorize ? (
                 <>

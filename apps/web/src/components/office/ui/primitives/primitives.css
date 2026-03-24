@@ -167,7 +167,7 @@
 .tm-container {
   background: var(--term-panel);
   border: 1px solid var(--term-border);
-  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow-xl);
   width: 90%;
   max-width: 420px;
   max-height: 90vh;
@@ -379,8 +379,7 @@
   padding: 3px 4px;
   box-shadow:
     var(--shadow-lg),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 0 0 1px rgba(0, 0, 0, 0.3);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .btb-btn {
@@ -550,7 +549,7 @@
   max-width: 480px;
   background: var(--term-panel);
   border: 1px solid var(--term-border);
-  box-shadow: var(--shadow-xl), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
   max-height: 400px;
