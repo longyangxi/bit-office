@@ -20,7 +20,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onEndProject, onSuggest, onPreview, onReview, detectedBackends,
   onLoadMore, onPasteImage, onPasteText, onDropImage,
   reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
-  autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage,
+  autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, undoCount,
   onMerge, onRevert, onUndoMerge,
   scrollFrozen,
 }: {
@@ -61,6 +61,7 @@ const StableAgentPane = memo(function StableAgentPane({
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
+  undoCount?: number;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
   onUndoMerge?: (agentId: string) => void;
@@ -217,6 +218,7 @@ const StableAgentPane = memo(function StableAgentPane({
         pendingMerge={data.pendingMerge}
         lastMergeCommit={data.lastMergeCommit}
         lastMergeMessage={data.lastMergeMessage}
+        undoCount={data.undoCount}
         onMerge={onMerge ? () => onMerge(agentId) : undefined}
         onRevert={onRevert ? () => onRevert(agentId) : undefined}
         onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
@@ -253,6 +255,7 @@ interface AgentData {
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
+  undoCount?: number;
 }
 
 export interface MultiPaneViewProps {

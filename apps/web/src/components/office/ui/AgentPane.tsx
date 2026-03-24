@@ -136,6 +136,7 @@ export interface AgentPaneProps {
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
+  undoCount?: number;
   onMerge?: () => void;
   onRevert?: () => void;
   onUndoMerge?: () => void;
@@ -336,7 +337,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onSubmit, onCancel, onFire, onApproval, onApprovePlan, onEndProject,
     onSuggest, onPreview, onLoadMore, onPasteImage, onPasteText, onDropImage,
     onQuickApprove, onReview, detectedBackends,
-    autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, onMerge, onRevert, onUndoMerge,
+    autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, undoCount, onMerge, onRevert, onUndoMerge,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
     scrollFrozen, hideInfoRole,
   } = props;
@@ -344,9 +345,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const statusConfig = getStatusConfig();
   const cfg = statusConfig[status] ?? statusConfig.idle;
 
-  // DEBUG: trace undo-merge button visibility
-  if (pendingMerge || lastMergeCommit || autoMerge) {
-    console.log(`[UndoMerge] ${agentId}: busy=${busy} isOwner=${isOwner} teamId=${teamId} isTeamMember=${isTeamMember} pendingMerge=${pendingMerge} lastMergeCommit=${lastMergeCommit} lastMergeMessage=${lastMergeMessage} onUndoMerge=${!!onUndoMerge}`);
+  // DEBUG: trace undo button visibility
+  if (pendingMerge || (undoCount ?? 0) > 0 || autoMerge) {
+    console.log(`[Undo] ${agentId}: busy=${busy} isOwner=${isOwner} teamId=${teamId} isTeamMember=${isTeamMember} pendingMerge=${pendingMerge} undoCount=${undoCount} awaitingApproval=${awaitingApproval} onUndoMerge=${!!onUndoMerge}`);
   }
 
   // ── Scroll management (unified via useScrollAnchor) ──
@@ -919,7 +920,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                     >Close Project</button>
                   </div>
-                ) : !busy && isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) ? (
+                ) : !busy && isOwner && !teamId && !isTeamMember && !awaitingApproval && (pendingMerge || (undoCount ?? 0) > 0) ? (
                   <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
                     {pendingMerge && !autoMerge && onMerge && (
                       <button
@@ -945,7 +946,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Revert</button>
                     )}
-                    {!pendingMerge && lastMergeCommit && onUndoMerge && (
+                    {!pendingMerge && (undoCount ?? 0) > 0 && onUndoMerge && (
                       <button
                         className="term-btn"
                         onClick={onUndoMerge}
@@ -955,7 +956,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                           backgroundColor: "transparent", color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer",
                           fontFamily: TERM_FONT, flexShrink: 0,
                         }}
-                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo Merge</button>
+                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo ({undoCount})</button>
                     )}
                     <div className="term-input-well" style={{ flex: 1, display: "flex", alignItems: "center" }}>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 8px", flexShrink: 0 }}>&gt;</span>

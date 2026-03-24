@@ -79,6 +79,7 @@ interface AgentState {
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
+  undoCount?: number;
 }
 
 export interface TeamChatMessage {
@@ -492,6 +493,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               pendingMerge: event.pendingMerge ?? existing.pendingMerge,
               lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : existing.lastMergeCommit,
               lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : existing.lastMergeMessage,
+              undoCount: event.undoCount ?? existing.undoCount,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -511,6 +513,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.pendingMerge = event.pendingMerge;
             agent.lastMergeCommit = event.lastMergeCommit;
             agent.lastMergeMessage = event.lastMergeMessage;
+            agent.undoCount = event.undoCount;
             if (saved) {
               agent.messages = saved.messages;
             }
@@ -977,6 +980,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             pendingMerge: event.success ? false : agent.pendingMerge,
             lastMergeCommit: event.success ? (event.commitHash ?? agent.lastMergeCommit) : agent.lastMergeCommit,
             lastMergeMessage: event.success ? (event.commitMessage ?? agent.lastMergeMessage) : agent.lastMergeMessage,
+            undoCount: event.undoCount ?? (event.success ? (agent.undoCount ?? 0) + 1 : agent.undoCount),
           });
           break;
         }
@@ -994,6 +998,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             autoMerge: event.autoMerge,
             lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : agent.lastMergeCommit,
             lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : agent.lastMergeMessage,
+            undoCount: event.undoCount ?? agent.undoCount,
           });
           break;
         }

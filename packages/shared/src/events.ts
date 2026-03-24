@@ -96,6 +96,7 @@ export const AgentCreatedEvent = z.object({
   pendingMerge: z.boolean().optional(),
   lastMergeCommit: z.string().nullable().optional(),
   lastMergeMessage: z.string().nullable().optional(),
+  undoCount: z.number().optional(),
 });
 
 export const AgentFiredEvent = z.object({
@@ -245,6 +246,7 @@ export const WorktreeMergedEvent = z.object({
   success: z.boolean(),
   commitHash: z.string().optional(),
   commitMessage: z.string().optional(),
+  undoCount: z.number().optional(),
 });
 
 export const WorktreeRevertedEvent = z.object({
@@ -262,6 +264,7 @@ export const AutoMergeUpdatedEvent = z.object({
   autoMerge: z.boolean(),
   lastMergeCommit: z.string().nullable().optional(),
   lastMergeMessage: z.string().nullable().optional(),
+  undoCount: z.number().optional(),
 });
 
 export const BackendsAvailableEvent = z.object({

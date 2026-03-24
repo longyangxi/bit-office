@@ -483,6 +483,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].hash : null,
       lastMergeMessage: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].message : null,
       mergeCommitStack: s.mergeCommitStack,
+      undoCount: s.mergeCommitStack.length,
     }));
   }
 

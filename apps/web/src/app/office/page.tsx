@@ -1768,6 +1768,7 @@ export default function OfficePage() {
                     pendingMerge: ag.pendingMerge,
                     lastMergeCommit: ag.lastMergeCommit,
                     lastMergeMessage: ag.lastMergeMessage,
+                    undoCount: ag.undoCount,
                   };
                 }}
                 paneOffset={paneOffset}
@@ -1918,6 +1919,7 @@ export default function OfficePage() {
                   pendingMerge={ag.pendingMerge}
                   lastMergeCommit={ag.lastMergeCommit}
                   lastMergeMessage={ag.lastMergeMessage}
+                  undoCount={ag.undoCount}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
                   onUndoMerge={async () => {
