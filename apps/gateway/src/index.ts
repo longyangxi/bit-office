@@ -11,7 +11,7 @@ import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
 import { nanoid } from "nanoid";
 import { exec, execFile, execFileSync, execSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync, rmdirSync } from "fs";
 import path from "path";
 import os from "os";
 import { ProcessScanner } from "./process-scanner.js";
@@ -162,6 +162,44 @@ function createUniqueProjectDir(workspace: string, baseName: string): string {
 }
 
 const AGENTS_FILE = path.join(CONFIG_DIR, "data", "agents.json");
+const SKILLS_DIR = path.join(CONFIG_DIR, "skills");
+
+/** Scan ~/.open-office[-dev]/skills/ and return metadata for each skill */
+function listSkills(): Array<{ name: string; title: string; isFolder: boolean }> {
+  if (!existsSync(SKILLS_DIR)) return [];
+  try {
+    const entries = readdirSync(SKILLS_DIR, { withFileTypes: true });
+    const skills: Array<{ name: string; title: string; isFolder: boolean }> = [];
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        const entryPath = path.join(SKILLS_DIR, entry.name, "skill.md");
+        if (existsSync(entryPath)) {
+          const content = readFileSync(entryPath, "utf-8");
+          const titleMatch = content.match(/^#\s+(.+)/m);
+          skills.push({ name: entry.name, title: titleMatch?.[1] ?? entry.name, isFolder: true });
+        }
+      } else if (entry.name.endsWith(".md")) {
+        const name = entry.name.replace(/\.md$/, "");
+        const content = readFileSync(path.join(SKILLS_DIR, entry.name), "utf-8");
+        const titleMatch = content.match(/^#\s+(.+)/m);
+        skills.push({ name, title: titleMatch?.[1] ?? name, isFolder: false });
+      }
+    }
+    return skills;
+  } catch (e) {
+    console.log(`[Gateway] Failed to list skills: ${e}`);
+    return [];
+  }
+}
+
+/** Get the absolute entry path for a skill by name */
+function getSkillEntryPath(skillName: string): string | null {
+  const folderPath = path.join(SKILLS_DIR, skillName, "skill.md");
+  const filePath = path.join(SKILLS_DIR, `${skillName}.md`);
+  if (existsSync(folderPath)) return folderPath;
+  if (existsSync(filePath)) return filePath;
+  return null;
+}
 
 function loadAgentDefs(): AgentDefinition[] {
   try {
@@ -367,11 +405,34 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       if (workDir) {
         agentWorkDirs.set(parsed.agentId, workDir);
       }
+      // Resolve skill files and inject content into personality
+      let personality = parsed.personality ?? "";
+      const skillFileNames = parsed.skillFiles;
+      if (skillFileNames && skillFileNames.length > 0) {
+        const skillContents: string[] = [];
+        for (const skillName of skillFileNames) {
+          const entryPath = getSkillEntryPath(skillName);
+          if (entryPath) {
+            try {
+              const content = readFileSync(entryPath, "utf-8");
+              skillContents.push(content);
+            } catch (e) {
+              console.log(`[Gateway] Failed to read skill file ${skillName}: ${e}`);
+            }
+          }
+        }
+        if (skillContents.length > 0) {
+          personality = personality
+            + "\n\n===== AGENT SKILLS =====\n"
+            + skillContents.join("\n\n---\n\n");
+          console.log(`[Gateway] Injected ${skillContents.length} skill file(s) for ${parsed.name}`);
+        }
+      }
       orc.createAgent({
         agentId: parsed.agentId,
         name: parsed.name,
         role: parsed.role,
-        personality: parsed.personality,
+        personality,
         backend: backendId,
         palette: parsed.palette,
         teamId: parsed.teamId,
@@ -734,6 +795,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       }
       publishEvent({ type: "AGENT_DEFS", agents: agentDefs });
       publishEvent({ type: "BACKENDS_AVAILABLE", backends: config.detectedBackends });
+      publishEvent({ type: "SKILL_LIST", skills: listSkills() });
       break;
     }
     case "SAVE_AGENT_DEF": {
@@ -765,6 +827,42 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       saveAgentDefs(agentDefs);
       setTelegramAgentDefs(agentDefs);
       publishEvent({ type: "AGENT_DEFS", agents: agentDefs });
+      break;
+    }
+    case "LIST_SKILLS": {
+      const skills = listSkills();
+      publishEvent({ type: "SKILL_LIST", skills });
+      break;
+    }
+    case "SAVE_SKILL": {
+      const skillName = parsed.name.replace(/[^a-zA-Z0-9_-]/g, "-").toLowerCase();
+      if (!skillName) break;
+      const skillDir = path.join(SKILLS_DIR, skillName);
+      if (!existsSync(skillDir)) mkdirSync(skillDir, { recursive: true });
+      writeFileSync(path.join(skillDir, "skill.md"), parsed.content, "utf-8");
+      console.log(`[Gateway] Saved skill: ${skillName}`);
+      publishEvent({ type: "SKILL_LIST", skills: listSkills() });
+      break;
+    }
+    case "DELETE_SKILL": {
+      const skillName = parsed.name;
+      const folderPath = path.join(SKILLS_DIR, skillName);
+      const filePath = path.join(SKILLS_DIR, `${skillName}.md`);
+      try {
+        if (existsSync(folderPath) && !existsSync(path.join(folderPath, "skill.md"))) {
+          // Not a valid skill folder
+        } else if (existsSync(folderPath)) {
+          const files = readdirSync(folderPath);
+          for (const f of files) unlinkSync(path.join(folderPath, f));
+          rmdirSync(folderPath);
+        } else if (existsSync(filePath)) {
+          unlinkSync(filePath);
+        }
+        console.log(`[Gateway] Deleted skill: ${skillName}`);
+      } catch (e) {
+        console.log(`[Gateway] Failed to delete skill ${skillName}: ${e}`);
+      }
+      publishEvent({ type: "SKILL_LIST", skills: listSkills() });
       break;
     }
     case "SUGGEST": {

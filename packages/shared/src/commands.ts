@@ -40,6 +40,7 @@ export const CreateAgentCommand = z.object({
   backend: z.string().optional(),
   teamId: z.string().optional(),
   workDir: z.string().optional(),
+  skillFiles: z.array(z.string()).optional(),
 });
 
 export const FireAgentCommand = z.object({
@@ -106,7 +107,23 @@ export const SaveAgentDefCommand = z.object({
     palette: z.number(),
     isBuiltin: z.boolean(),
     teamRole: z.enum(["dev", "reviewer", "leader"]),
+    skillFiles: z.array(z.string()).optional(),
   }),
+});
+
+export const ListSkillsCommand = z.object({
+  type: z.literal("LIST_SKILLS"),
+});
+
+export const SaveSkillCommand = z.object({
+  type: z.literal("SAVE_SKILL"),
+  name: z.string(),
+  content: z.string(),
+});
+
+export const DeleteSkillCommand = z.object({
+  type: z.literal("DELETE_SKILL"),
+  name: z.string(),
 });
 
 export const DeleteAgentDefCommand = z.object({
@@ -231,6 +248,9 @@ export const CommandSchema = z.discriminatedUnion("type", [
   ToggleAutoMergeCommand,
   GetConfigCommand,
   SaveConfigCommand,
+  ListSkillsCommand,
+  SaveSkillCommand,
+  DeleteSkillCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -263,4 +283,7 @@ export type UndoMergeCommand = z.infer<typeof UndoMergeCommand>;
 export type RevertWorktreeCommand = z.infer<typeof RevertWorktreeCommand>;
 export type ToggleAutoMergeCommand = z.infer<typeof ToggleAutoMergeCommand>;
 export type SaveConfigCommand = z.infer<typeof SaveConfigCommand>;
+export type ListSkillsCommand = z.infer<typeof ListSkillsCommand>;
+export type SaveSkillCommand = z.infer<typeof SaveSkillCommand>;
+export type DeleteSkillCommand = z.infer<typeof DeleteSkillCommand>;
 export type Command = z.infer<typeof CommandSchema>;

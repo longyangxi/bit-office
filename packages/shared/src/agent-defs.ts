@@ -7,6 +7,14 @@ export interface AgentDefinition {
   palette: number;        // Avatar palette index (0-5)
   isBuiltin: boolean;     // true = shipped with app, editable but not deletable
   teamRole: "dev" | "reviewer" | "leader";  // What team slot this agent can fill
+  skillFiles?: string[];  // Skill file names in ~/.open-office/skills/ (e.g. ["tdd", "react-patterns"])
+}
+
+/** Metadata for a skill stored in ~/.open-office[-dev]/skills/ */
+export interface SkillMeta {
+  name: string;           // Directory or file name (without .md extension)
+  title: string;          // Display title (first heading or name)
+  isFolder: boolean;      // true = folder with skill.md, false = single .md file
 }
 
 export const DEFAULT_AGENT_DEFS: AgentDefinition[] = [

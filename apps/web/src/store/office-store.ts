@@ -137,6 +137,7 @@ interface OfficeStore {
   configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
   configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
+  availableSkills: Array<{ name: string; title: string; isFolder: boolean }>;
   connected: boolean;
   hydrated: boolean;
   /** Separated from agents to avoid full Map clone on every LOG_APPEND */
@@ -356,6 +357,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   configResult: null,
   configData: null,
   detectedBackends: [],
+  availableSkills: [],
   connected: false,
   hydrated: false,
   agentLogLines: new Map(),
@@ -920,6 +922,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "AGENT_DEFS": {
           return { agents, agentDefs: event.agents };
+        }
+        case "SKILL_LIST": {
+          return { agents, availableSkills: event.skills };
         }
         case "TEAM_PHASE": {
           const teamPhases = new Map(state.teamPhases);

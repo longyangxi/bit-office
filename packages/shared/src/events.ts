@@ -169,6 +169,16 @@ export const AgentDefsEvent = z.object({
     palette: z.number(),
     isBuiltin: z.boolean(),
     teamRole: z.enum(["dev", "reviewer", "leader"]),
+    skillFiles: z.array(z.string()).optional(),
+  })),
+});
+
+export const SkillListEvent = z.object({
+  type: z.literal("SKILL_LIST"),
+  skills: z.array(z.object({
+    name: z.string(),
+    title: z.string(),
+    isFolder: z.boolean(),
   })),
 });
 
@@ -324,6 +334,7 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   WorktreeMergedEvent,
   WorktreeRevertedEvent,
   AutoMergeUpdatedEvent,
+  SkillListEvent,
 ]);
 
 export type TokenUsage = z.infer<typeof TokenUsage>;
@@ -359,4 +370,5 @@ export type WorktreeReadyEvent = z.infer<typeof WorktreeReadyEvent>;
 export type WorktreeMergedEvent = z.infer<typeof WorktreeMergedEvent>;
 export type WorktreeRevertedEvent = z.infer<typeof WorktreeRevertedEvent>;
 export type AutoMergeUpdatedEvent = z.infer<typeof AutoMergeUpdatedEvent>;
+export type SkillListEvent = z.infer<typeof SkillListEvent>;
 export type GatewayEvent = z.infer<typeof GatewayEventSchema>;
