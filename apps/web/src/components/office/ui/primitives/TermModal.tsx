@@ -69,7 +69,7 @@ export default function TermModal({
       <DialogContent
         maxWidth={maxWidth}
         className={cn(className)}
-        style={zIndex ? { zIndex } : undefined}
+        zIndex={zIndex ?? undefined}
       >
         {title && (
           <DialogHeader>
