@@ -10,6 +10,7 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "fs";
 import { join, extname, resolve } from "path";
 import * as Ably from "ably";
 import type { Channel, CommandMeta } from "./transport.js";
+import { writePortLock } from "./runtime-state.js";
 import { nanoid } from "nanoid";
 
 /**
@@ -478,6 +479,7 @@ export const wsChannel: Channel = {
           });
 
           console.log(`[WS] Server listening on port ${port}`);
+          writePortLock(port);
           printLanAddresses();
           promiseResolve(true);
         });

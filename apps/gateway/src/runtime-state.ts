@@ -16,6 +16,55 @@ const RUNTIME_FILE = path.join(config.instanceDir, "runtime.json");
 const HEARTBEAT_MS = 15_000;
 let heartbeatTimer: NodeJS.Timeout | null = null;
 let runtimeState: GatewayRuntimeState | null = null;
+let portLockFile: string | null = null;
+
+/** Directory for port-level lock files (shared across all instances) */
+const LOCKS_DIR = path.join(path.dirname(config.instanceDir), ".locks");
+
+function portLockPath(port: number): string {
+  return path.join(LOCKS_DIR, `port-${port}.pid`);
+}
+
+/**
+ * Kill any process holding a port lock file.
+ * Safer than lsof — the PID in the file is guaranteed to be a gateway we spawned.
+ */
+function killPortLockHolder(port: number): void {
+  const lockFile = portLockPath(port);
+  if (!existsSync(lockFile)) return;
+  try {
+    const pid = parseInt(readFileSync(lockFile, "utf-8").trim(), 10);
+    if (!pid || pid === process.pid) return;
+    // Check if process is alive
+    try { process.kill(pid, 0); } catch {
+      console.log(`[Gateway] Stale port lock for :${port} (pid=${pid} already dead), removing`);
+      try { unlinkSync(lockFile); } catch { /* ignore */ }
+      return;
+    }
+    console.warn(`[Gateway] Killing orphan gateway on port :${port} (pid=${pid})`);
+    killAndWait(pid);
+    try { unlinkSync(lockFile); } catch { /* ignore */ }
+  } catch {
+    try { unlinkSync(lockFile); } catch { /* ignore */ }
+  }
+}
+
+/** Write a port lock file after successfully binding a port. */
+export function writePortLock(port: number): void {
+  if (!existsSync(LOCKS_DIR)) mkdirSync(LOCKS_DIR, { recursive: true });
+  const lockPath = portLockPath(port);
+  writeFileSync(lockPath, String(process.pid), "utf-8");
+  portLockFile = lockPath;
+  console.log(`[Gateway] Port lock written: ${lockPath} (pid=${process.pid})`);
+}
+
+/** Remove the port lock file (called on exit). */
+function clearPortLock(): void {
+  if (portLockFile) {
+    try { unlinkSync(portLockFile); } catch { /* ignore */ }
+    portLockFile = null;
+  }
+}
 
 function writeRuntimeFile(state: GatewayRuntimeState): void {
   const dir = path.dirname(RUNTIME_FILE);
@@ -92,6 +141,12 @@ export function killPreviousInstances(): void {
       try { unlinkSync(runtimeFile); } catch { /* ignore */ }
     }
   }
+
+  // Phase 2: Kill orphans via port lock files (catches zombies whose runtime.json was lost)
+  const targetPort = config.wsPort;
+  for (let p = targetPort; p < targetPort + 10; p++) {
+    killPortLockHolder(p);
+  }
 }
 
 export function registerRuntimeState(): GatewayRuntimeState {
@@ -124,4 +179,5 @@ export function clearRuntimeState(): void {
   try {
     unlinkSync(RUNTIME_FILE);
   } catch { /* ignore */ }
+  clearPortLock();
 }
