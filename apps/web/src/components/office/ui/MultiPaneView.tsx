@@ -3,6 +3,7 @@ import dynamic from "next/dynamic";
 import type { ReviewerOverlayData } from "./AgentPane";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_GREEN } from "./termTheme";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
+import { cn } from "@/lib/utils";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
@@ -98,66 +99,37 @@ const StableAgentPane = memo(function StableAgentPane({
           : statusKey === "done" ? TERM_SEM_GREEN
           : TERM_BORDER;
         return (
-          <div className="term-info-bar" style={{
-            display: "flex", alignItems: "center", gap: 8,
-            padding: "8px 12px",
-            background: TERM_PANEL,
-            flexShrink: 0,
-          }}>
+          <div className="term-info-bar flex items-center gap-2 px-3 py-2 bg-term-panel shrink-0">
             {/* Avatar with status ring */}
-            <div style={{
-              position: "relative", width: 26, height: 30,
-              overflow: "hidden", borderRadius: 3, flexShrink: 0,
-              border: `1.5px solid ${TERM_BORDER}`,
-            }}>
-              <div style={{ marginTop: -1 }}>
+            <div className="relative w-[26px] h-[30px] overflow-hidden rounded-sm shrink-0" style={{ border: `1.5px solid ${TERM_BORDER}` }}>
+              <div className="-mt-px">
                 <SpriteAvatar palette={meta.palette} zoom={1.6} ready={assetsReady ?? false} />
               </div>
               {data.busy && (
-                <span style={{
-                  position: "absolute", top: 1, right: 1,
-                  width: 5, height: 5, borderRadius: "50%",
-                  backgroundColor: TERM_GREEN,
-                  boxShadow: `0 0 4px ${TERM_GREEN}40`,
-                  animation: "px-pulse-gold 1.5s ease infinite",
-                }} />
+                <span
+                  className="absolute top-px right-px w-[5px] h-[5px] rounded-full animate-[px-pulse-gold_1.5s_ease_infinite]"
+                  style={{ backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}40` }}
+                />
               )}
             </div>
             {/* Name · Backend · Role */}
-            <div style={{
-              display: "flex", alignItems: "center", gap: 0,
-              overflow: "hidden", whiteSpace: "nowrap", minWidth: 0,
-              fontFamily: TERM_FONT,
-            }}>
-              <span style={{
-                fontSize: TERM_SIZE, color: TERM_TEXT_BRIGHT, fontWeight: 600,
-                letterSpacing: "-0.01em", flexShrink: 0,
-              }}>{meta.name}</span>
+            <div className="flex items-center gap-0 overflow-hidden whitespace-nowrap min-w-0 font-mono">
+              <span className="text-term text-term-text-bright font-semibold tracking-tight shrink-0">{meta.name}</span>
               {meta.isTeamLead && (
-                <span style={{
-                  fontSize: 8, fontFamily: TERM_FONT,
-                  color: TERM_SEM_YELLOW, fontWeight: 700,
-                  padding: "0 3px", lineHeight: "14px", marginLeft: 5,
-                  border: `1px solid ${TERM_SEM_YELLOW}40`,
-                  borderRadius: 3, flexShrink: 0,
-                }}>LEAD</span>
+                <span
+                  className="text-[8px] font-mono font-bold text-sem-yellow px-[3px] leading-[14px] ml-1.5 rounded-sm shrink-0"
+                  style={{ border: `1px solid ${TERM_SEM_YELLOW}40` }}
+                >LEAD</span>
               )}
               {backendName && (
-                <span style={{
-                  fontSize: 9, color: TERM_TEXT_BRIGHT, opacity: 0.55, flexShrink: 0,
-                  padding: "1px 6px", marginLeft: 6,
-                  background: `${TERM_DIM}18`, borderRadius: 3,
-                  letterSpacing: "0.02em",
-                }}>{backendName}</span>
+                <span className="text-[9px] text-term-text-bright opacity-55 shrink-0 px-1.5 ml-1.5 rounded-sm tracking-wide" style={{ background: `${TERM_DIM}18` }}>
+                  {backendName}
+                </span>
               )}
               {roleName && (
-                <span style={{
-                  fontSize: 9, color: TERM_TEXT_BRIGHT, opacity: 0.4, flexShrink: 0,
-                  padding: "1px 6px", marginLeft: 4,
-                  background: `${TERM_DIM}10`, borderRadius: 3,
-                  overflow: "hidden", textOverflow: "ellipsis",
-                  letterSpacing: "0.02em",
-                }}>{roleName}</span>
+                <span className="text-[9px] text-term-text-bright opacity-40 shrink-0 px-1.5 ml-1 rounded-sm overflow-hidden text-ellipsis tracking-wide" style={{ background: `${TERM_DIM}10` }}>
+                  {roleName}
+                </span>
               )}
             </div>
           </div>
@@ -523,34 +495,19 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
   if (openPanes.length === 0) {
     return (
-      <div
-        style={{
-          display: "flex",
-          flex: 1,
-          alignItems: "center",
-          justifyContent: "center",
-          fontFamily: TERM_FONT,
-          fontSize: TERM_SIZE,
-          color: TERM_DIM,
-          minHeight: 0,
-        }}
-      >
+      <div className="flex flex-1 items-center justify-center font-mono text-term text-muted-foreground min-h-0">
         {showHireButton && onHire ? (
           <button
             onClick={onHire}
             title="Hire"
+            className="flex items-center justify-center gap-2 px-6 py-4 h-[60px] cursor-pointer text-sm font-mono font-medium tracking-wide rounded-lg transition-all duration-200 hover:bg-accent/[0.15] hover:border-accent/[0.56] hover:text-accent"
             style={{
-              display: "flex", alignItems: "center", justifyContent: "center",
-              gap: 8, padding: "16px 24px", height: 60,
-              border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
-              backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
-              fontSize: 14, fontFamily: TERM_FONT, fontWeight: 500, letterSpacing: "0.5px",
-              borderRadius: 8, transition: "all 0.2s ease",
+              border: `1px solid ${TERM_GREEN}50`,
+              backgroundColor: `${TERM_GREEN}12`,
+              color: `${TERM_GREEN}cc`,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}25`; e.currentTarget.style.borderColor = `${TERM_GREEN}90`; e.currentTarget.style.color = TERM_GREEN; }}
-            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
           >
-            <span style={{ fontSize: 15, lineHeight: "1" }}>+</span> {hireLabel}
+            <span className="text-[15px] leading-none">+</span> {hireLabel}
           </button>
         ) : (
           "No agents active"
@@ -567,15 +524,14 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const pagePanes = pages[currentPage] ?? [];
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Only render the current page — simple and bulletproof */}
       <div
         key={currentPage}
         ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade"}
-        style={{ display: "flex", flex: 1, minHeight: 0 }}
+        className={cn("flex flex-1 min-h-0", slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade")}
       >
         {pagePanes.map((agentId, i) => {
           const data = getAgentData(agentId);
@@ -583,7 +539,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           const meta = agentMeta?.find(m => m.agentId === agentId);
           const flex = flexValues[i] != null ? `${flexValues[i]} 1 0%` : "1 1 0%";
           return (
-            <div key={agentId} style={{ display: "contents" }}>
+            <div key={agentId} className="contents">
               {i > 0 && (
                 <div
                   className={`pane-resize${dragRef.current?.index === i - 1 ? " pane-resize-active" : ""}`}
@@ -658,65 +614,24 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
         {/* Trailing team controls on last page */}
         {hasTrailingControls && (
-          <div
-            style={{
-              display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center",
-              gap: 8, padding: "0 16px",
-              borderLeft: pagePanes.length > 0 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
-              minWidth: 60, flexShrink: 0,
-            }}
-          >
+          <div className={cn("flex flex-col items-center justify-center gap-2 px-4 min-w-[60px] shrink-0", pagePanes.length > 0 && "border-l border-term-border-dim")}>
             {showTeamControls && teamBusy && onStopTeam && (
-              <button
-                onClick={onStopTeam}
-                title="Stop Team Work"
-                style={{
-                  padding: "6px 12px",
-                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
-                  backgroundColor: "transparent", color: TERM_SEM_YELLOW,
-                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-                }}
-              >stop</button>
+              <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
+                stop
+              </button>
             )}
             {showTeamControls && onFireTeam && (
-              <button
-                onClick={onFireTeam}
-                title="Fire Team"
-                style={{
-                  padding: "6px 12px",
-                  border: `1px solid ${TERM_DIM}`, cursor: "pointer",
-                  backgroundColor: "transparent", color: TERM_DIM,
-                  fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-                  transition: "color 0.15s",
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = TERM_SEM_RED; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
-              >fire</button>
+              <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
+                fire
+              </button>
             )}
           </div>
         )}
       </div>
 
       {/* Bottom bar: page dots + hire button */}
-      <div
-        className="term-info-bar"
-        style={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          padding: "6px 12px",
-          fontFamily: TERM_FONT,
-          fontSize: TERM_SIZE - 1,
-          color: TERM_DIM,
-          background: TERM_PANEL,
-          flexShrink: 0,
-          position: "relative",
-          gap: 8,
-          borderTop: `1px solid ${TERM_BORDER_DIM}`,
-          boxShadow: `0 -3px 8px -2px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)`,
-        }}
-      >
+      <div className="term-info-bar flex justify-center items-center px-3 py-1.5 font-mono text-[11px] text-muted-foreground bg-term-panel shrink-0 relative gap-2 border-t border-term-border-dim shadow-[0_-3px_8px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)]">
+
         {/* Center: page indicator dots */}
         {totalPages > 1 && (
           <div className="mpv-dots">

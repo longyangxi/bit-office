@@ -53,20 +53,10 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
   const displayH = 32 * zoom; // 128
 
   return (
-    <div style={{
-      position: "absolute",
-      inset: 0,
-      zIndex: 50,
-      background: "#0e0c1a",
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 16,
-      opacity,
-      transition: "opacity 0.6s ease",
-      pointerEvents: visible ? "auto" : "none",
-    }}>
+    <div
+      className="absolute inset-0 z-50 bg-[#0e0c1a] flex flex-col items-center justify-center gap-4 transition-opacity duration-[600ms] ease-out"
+      style={{ opacity, pointerEvents: visible ? "auto" : "none" }}
+    >
       <style>{`
         @keyframes loading-walk-sprite {
           0%   { background-position-x: 0px; }
@@ -94,13 +84,8 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
           animation: "loading-walk-sprite 0.5s steps(1) infinite, loading-walk-move 3s linear infinite",
         }} />
       </div>
-      <div style={{
-        fontFamily: "monospace",
-        fontSize: 13,
-        color: TERM_DIM,
-        letterSpacing: "0.05em",
-      }}>
-        Loading office<span style={{ display: "inline-block", width: "1.5em", textAlign: "left" }}>
+      <div className="font-mono text-[13px] text-muted-foreground tracking-wide">
+        Loading office<span className="inline-block w-6 text-left">
           <LoadingDots />
         </span>
       </div>

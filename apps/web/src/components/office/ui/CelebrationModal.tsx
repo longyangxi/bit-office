@@ -64,7 +64,7 @@ function ConfettiOverlay() {
   return (
     <canvas
       ref={canvasRef}
-      style={{ position: "fixed", inset: 0, zIndex: 10000, pointerEvents: "none" }}
+      className="fixed inset-0 z-[10000] pointer-events-none"
     />
   );
 }
@@ -116,12 +116,12 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
         </>
       }
     >
-      <div style={{ textAlign: "center" }}>
-        <div style={{ fontSize: 34, marginBottom: 10, color: TERM_GREEN }}>{"\u2605"}</div>
-        <div className="px-font" style={{ color: TERM_GREEN, fontSize: 14, marginBottom: 10, letterSpacing: "0.05em" }}>
+      <div className="text-center">
+        <div className="text-[34px] mb-2.5 text-accent">{"\u2605"}</div>
+        <div className="px-font text-accent text-sm mb-2.5 tracking-wide">
           Mission Complete!
         </div>
-        <div style={{ color: TERM_DIM, fontSize: 14, lineHeight: 1.7, fontFamily: "var(--font-mono)" }}>
+        <div className="text-muted-foreground text-sm leading-[1.7] font-mono">
           Your task has been completed successfully. Ready for the next mission whenever you are.
         </div>
       </div>
