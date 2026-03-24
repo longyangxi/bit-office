@@ -602,10 +602,20 @@ export function getMergeHistory(workspace: string, agentId: string): { hash: str
     const escaped = agentId.replace(/[[\]\\]/g, "\\$&");
     const raw = gitExec(`git log --grep="\\[${escaped}\\]" --format=%H%x09%s`, repoRoot);
     if (!raw) return [];
-    return raw.split("\n").filter(Boolean).map(line => {
+    const all = raw.split("\n").filter(Boolean).map(line => {
       const tab = line.indexOf("\t");
       return { hash: line.slice(0, tab), message: line.slice(tab + 1) };
-    }).reverse(); // git log is newest-first; reverse for stack order
+    });
+    // Collect messages that were reverted (Revert "original msg" → "original msg")
+    const revertedMsgs = new Set<string>();
+    for (const entry of all) {
+      const m = entry.message.match(/^Revert "(.+)"$/);
+      if (m) revertedMsgs.add(m[1]);
+    }
+    // Keep only non-revert entries whose message wasn't reverted
+    return all
+      .filter(e => !e.message.startsWith('Revert "') && !revertedMsgs.has(e.message))
+      .reverse(); // oldest-first = stack order
   } catch {
     return [];
   }
