@@ -712,6 +712,20 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               <span className="scroll-pill-arrow">{"\u2193"}</span>
               new messages
             </div>
+            {/* Floating Undo button — bottom-right of scroll area */}
+            {!busy && isOwner && !teamId && !isTeamMember && !pendingMerge && (undoCount ?? 0) > 0 && onUndoMerge && (
+              <button
+                className="term-btn"
+                onClick={onUndoMerge}
+                style={{
+                  position: "absolute", bottom: 8, right: 14,
+                  display: "inline-flex", alignItems: "center", gap: 5,
+                  padding: "4px 12px", border: `1px solid ${TERM_SEM_RED}40`,
+                  backgroundColor: TERM_BG, color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer",
+                  fontFamily: TERM_FONT, zIndex: 2, borderRadius: 3, opacity: 0.85,
+                }}
+              ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo ({undoCount})</button>
+            )}
           </div>
 
           {/* Suggestion feed (visible to owner and collaborator) */}
@@ -920,9 +934,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       }}
                     >Close Project</button>
                   </div>
-                ) : !busy && isOwner && !teamId && !isTeamMember && !awaitingApproval && (pendingMerge || (undoCount ?? 0) > 0) ? (
+                ) : !busy && isOwner && !teamId && !isTeamMember && pendingMerge ? (
                   <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
-                    {pendingMerge && !autoMerge && onMerge && (
+                    {!autoMerge && onMerge && (
                       <button
                         className="term-btn"
                         onClick={onMerge}
@@ -934,7 +948,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6M4 3v10M4 13l4-4 4 0"/></svg>Merge</button>
                     )}
-                    {pendingMerge && !autoMerge && onRevert && (
+                    {!autoMerge && onRevert && (
                       <button
                         className="term-btn"
                         onClick={onRevert}
@@ -945,18 +959,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                           fontFamily: TERM_FONT, flexShrink: 0,
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Revert</button>
-                    )}
-                    {!pendingMerge && (undoCount ?? 0) > 0 && onUndoMerge && (
-                      <button
-                        className="term-btn"
-                        onClick={onUndoMerge}
-                        style={{
-                          display: "inline-flex", alignItems: "center", gap: 5,
-                          padding: "5px 14px", border: `1px solid ${TERM_SEM_RED}40`,
-                          backgroundColor: "transparent", color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer",
-                          fontFamily: TERM_FONT, flexShrink: 0,
-                        }}
-                      ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo ({undoCount})</button>
                     )}
                     <div className="term-input-well" style={{ flex: 1, display: "flex", alignItems: "center" }}>
                     <span style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "0 0 0 8px", flexShrink: 0 }}>&gt;</span>
