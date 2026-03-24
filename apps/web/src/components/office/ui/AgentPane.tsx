@@ -6,6 +6,7 @@ import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
 import { TermButton, TermInput, TermEmpty } from "./primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 import type { ChatMessage } from "@/store/office-store";
 import dynamic from "next/dynamic";
 
@@ -282,14 +283,9 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
   }, []);
 
   return (
-    <div style={{
-      padding: "8px 12px",
-      background: TERM_PANEL,
-      boxShadow: "0 -3px 6px -2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
-      fontFamily: TERM_FONT, flexShrink: 0,
-    }}>
+    <div className="px-3 py-2 bg-term-panel font-mono shrink-0 shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
       {/* Feedback input */}
-      <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 8 }}>
+      <div className="flex gap-2 items-center mb-2">
         <TermInput
           ref={inputRef}
           type="text"
@@ -306,7 +302,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
         />
       </div>
       {/* Action buttons */}
-      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+      <div className="flex gap-2 justify-center">
         {onApplyReviewFixes && (
           <TermButton
             variant="success"
@@ -404,21 +400,14 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   });
 
   return (
-    <div style={{
-      display: "flex", flexDirection: "column",
-      flex: 1, minHeight: 0,
-      position: "relative",
-    }}>
+    <div className="flex flex-col flex-1 min-h-0 relative">
       {/* ── Info bar ── */}
-      <div className={`term-info-bar ${status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle"}`} style={{
-        display: "flex", alignItems: "center", gap: 10,
-        padding: "5px 14px",
-        background: TERM_PANEL,
-        fontSize: 12, fontFamily: TERM_FONT,
-        flexShrink: 0,
-      }}>
+      <div className={cn(
+        "term-info-bar flex items-center gap-2.5 px-3.5 py-1.5 bg-term-panel font-mono text-term shrink-0",
+        status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
+      )}>
         {!hideInfoRole && (
-          <span style={{ color: TERM_TEXT_BRIGHT, flexShrink: 0, letterSpacing: "-0.01em" }}>
+          <span className="text-term-text-bright shrink-0 tracking-tight">
             {role?.split("\u2014")[0]?.trim()}
           </span>
         )}
@@ -441,14 +430,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             </Tooltip>
           );
         })()}
-        <span style={{ flex: 1 }} />
-        <span style={{
-          color: cfg.color, flexShrink: 0, fontSize: 9,
-          padding: "2px 7px", borderRadius: 3,
-          background: `${cfg.color}14`, border: `1px solid ${cfg.color}25`,
-          letterSpacing: "0.04em", fontWeight: 500,
-          textTransform: "uppercase",
-        }}>{cfg.label.replace("...", "")}</span>
+        <span className="flex-1" />
+        <span
+          className="shrink-0 text-[9px] px-[7px] py-0.5 rounded-sm tracking-wide font-medium uppercase"
+          style={{ color: cfg.color, background: `${cfg.color}14`, border: `1px solid ${cfg.color}25` }}
+        >{cfg.label.replace("...", "")}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <Tooltip>
@@ -466,38 +452,23 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
       {/* ── External agent panel ── */}
       {isExternal && (
-        <div style={{
-          flex: 1,
-          display: "flex", flexDirection: "column",
-          backgroundColor: TERM_BG,
-          minHeight: 0,
-          overflow: "hidden",
-        }}>
+        <div className="flex-1 flex flex-col bg-background min-h-0 overflow-hidden">
           {/* Compact info header */}
-          <div style={{
-            padding: "8px 12px",
-            boxShadow: `0 3px 6px -2px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)`,
-            background: TERM_PANEL,
-            flexShrink: 0,
-          }}>
-            <div style={{ fontSize: TERM_SIZE, color: TERM_DIM, marginBottom: 4, fontFamily: TERM_FONT, letterSpacing: "0.05em" }}>
+          <div className="px-3 py-2 bg-term-panel shrink-0 shadow-[0_3px_6px_-2px_rgba(0,0,0,0.45),inset_0_-1px_0_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.03)]">
+            <div className="font-mono text-term text-muted-foreground mb-1 tracking-wide">
               EXTERNAL PROCESS
             </div>
-            <div style={{ display: "flex", gap: 12, fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, flexWrap: "wrap" }}>
+            <div className="flex gap-3 font-mono text-term text-muted-foreground flex-wrap">
               <span>{backend ?? "unknown"}</span>
               <span>PID {pid ?? "\u2014"}</span>
-              <span className="term-path-scroll" title={cwd ?? undefined} style={{ maxWidth: 300 }}>
+              <span className="term-path-scroll max-w-[300px]" title={cwd ?? undefined}>
                 {cwd ?? "\u2014"}
               </span>
             </div>
           </div>
 
           {/* Scrollable messages */}
-          <div data-scrollbar className="crt-screen" style={{
-            flex: 1, overflowY: "auto", padding: "8px 10px",
-            display: "flex", flexDirection: "column",
-            minHeight: 0,
-          }}>
+          <div data-scrollbar className="crt-screen flex-1 overflow-y-auto px-2.5 py-2 flex flex-col min-h-0">
             {messages.length === 0 && (
               <TermEmpty message="waiting for output" />
             )}
@@ -509,12 +480,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           </div>
 
           {/* Read-only footer */}
-          <div style={{
-            padding: "6px 12px",
-            backgroundColor: TERM_SURFACE,
-            fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT,
-            textAlign: "center", flexShrink: 0,
-          }}>
+          <div className="px-3 py-1.5 bg-muted font-mono text-term text-muted-foreground text-center shrink-0">
             Read-only — this process is running externally
           </div>
         </div>
@@ -675,23 +641,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); e.currentTarget.style.outline = `2px solid ${TERM_SEM_YELLOW}60`; } }}
           onDragLeave={(e) => { e.currentTarget.style.outline = "none"; }}
           onDrop={(e) => { e.currentTarget.style.outline = "none"; onDropImage(e); }}
-          className="crt-screen"
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            backgroundColor: TERM_BG,
-            minHeight: 0,
-            overflow: "hidden",
-          }}
+          className="crt-screen flex-1 flex flex-col bg-background min-h-0 overflow-hidden"
         >
           {/* Messages */}
-          <div style={{ position: "relative", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            <div ref={scrollContainerRef} data-scrollbar className="term-dotgrid term-chat-area" style={{
-              flex: 1, overflowY: "auto", padding: "14px 14px 10px",
-              display: "flex", flexDirection: "column",
-              minHeight: 0,
-            }}>
+          <div className="relative flex-1 min-h-0 flex flex-col">
+            <div ref={scrollContainerRef} data-scrollbar className="term-dotgrid term-chat-area flex-1 overflow-y-auto px-3.5 pt-3.5 pb-2.5 flex flex-col min-h-0">
               <ChatMessageList
                 visibleMessages={visibleMessages}
                 hasMoreMessages={hasMoreMessages}
@@ -790,12 +744,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             // Spectator: read-only footer
             if (isSpectator) {
               return (
-                <div style={{
-                  padding: "8px 10px",
-                  backgroundColor: TERM_SURFACE, flexShrink: 0,
-                  fontSize: TERM_SIZE, color: TERM_DIM, fontFamily: TERM_FONT, textAlign: "center",
-                  boxShadow: "0 -3px 6px -2px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.03)",
-                }}>
+                <div className="px-2.5 py-2 bg-muted shrink-0 font-mono text-term text-muted-foreground text-center shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
                   Watching — read-only mode
                 </div>
               );
@@ -842,15 +791,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
             // Owner input area
             return (
-              <div className="term-input-area" style={{
-                padding: "8px 12px",
-                background: TERM_PANEL,
-                flexShrink: 0,
-              }}>
+              <div className="term-input-area px-3 py-2 bg-term-panel shrink-0">
                 {isTeamMember ? (
-                  <div style={{
-                    textAlign: "center", color: TERM_DIM, fontSize: TERM_SIZE, padding: "8px 0", fontFamily: TERM_FONT,
-                  }}>
+                  <div className="text-center text-muted-foreground font-mono text-term py-2">
                     Tasks are assigned by the Team Lead
                   </div>
                 ) : cardPhase === "execute" ? (
