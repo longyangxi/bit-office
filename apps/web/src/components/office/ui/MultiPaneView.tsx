@@ -107,8 +107,7 @@ const StableAgentPane = memo(function StableAgentPane({
             <div style={{
               position: "relative", width: 26, height: 30,
               overflow: "hidden", borderRadius: 3, flexShrink: 0,
-              border: `1.5px solid ${statusColor}`,
-              transition: "border-color 0.3s ease",
+              border: `1.5px solid ${TERM_BORDER}`,
             }}>
               <div style={{ marginTop: -1 }}>
                 <SpriteAvatar palette={meta.palette} zoom={1.6} ready={assetsReady ?? false} />
