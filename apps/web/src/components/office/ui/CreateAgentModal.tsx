@@ -286,39 +286,39 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
         </>
       }
     >
-      {/* Avatar palette selector */}
-      <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>AVATAR</div>
-        <div style={{ display: "flex", gap: 4 }}>
-          {[0, 1, 2, 3, 4, 5].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPalette(p)}
-              style={{
-                padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
-                backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
-                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-              }}
-            >
-              <SpriteAvatar palette={p} zoom={2} ready={assetsReady} />
-            </button>
-          ))}
+      {/* Avatar + Name — side by side */}
+      <div className="flex gap-4 mb-3 items-start">
+        <div className="shrink-0">
+          <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">AVATAR</div>
+          <div className="flex gap-1">
+            {[0, 1, 2, 3, 4, 5].map((p) => (
+              <button
+                key={p}
+                onClick={() => setPalette(p)}
+                style={{
+                  padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
+                  backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
+                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                }}
+              >
+                <SpriteAvatar palette={p} zoom={2} ready={assetsReady} />
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
-
-      {/* Name */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>NAME</div>
-        <TermInput
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Agent name"
-        />
+        <div className="flex-1 min-w-0">
+          <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">NAME</div>
+          <TermInput
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Agent name"
+          />
+        </div>
       </div>
 
       {/* Role */}
       <div style={{ marginBottom: 8, position: "relative" }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>ROLE</div>
+        <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">ROLE</div>
         <RoleSearchSelect
           value={currentRole}
           onSelect={(roleName) => {
@@ -487,18 +487,15 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
         )}
       </div>
 
-      {/* Personality */}
+      {/* Personality — 2-column grid */}
       <div style={{ marginBottom: 10 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>PERSONALITY</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+        <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">PERSONALITY</div>
+        <div className="grid grid-cols-2 gap-x-2 gap-y-1">
           {PERSONALITY_PRESETS.map((p, i) => (
             <label
               key={i}
-              style={{
-                display: "flex", alignItems: "center", gap: 6, padding: "4px 6px",
-                cursor: "pointer", fontSize: 13, color: personalityMode === i ? TERM_TEXT : TERM_DIM,
-                fontFamily: "var(--font-mono)",
-              }}
+              className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-[13px]"
+              style={{ color: personalityMode === i ? TERM_TEXT : TERM_DIM }}
             >
               <input
                 type="radio"
@@ -511,11 +508,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
             </label>
           ))}
           <label
-            style={{
-              display: "flex", alignItems: "center", gap: 6, padding: "4px 6px",
-              cursor: "pointer", fontSize: 13, color: personalityMode === 4 ? TERM_TEXT : TERM_DIM,
-              fontFamily: "var(--font-mono)",
-            }}
+            className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-[13px]"
+            style={{ color: personalityMode === 4 ? TERM_TEXT : TERM_DIM }}
           >
             <input
               type="radio"
@@ -526,17 +520,17 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
             />
             Custom
           </label>
-          {personalityMode === 4 && (
-            <textarea
-              className="ti ti-textarea"
-              value={customPersonality}
-              onChange={(e) => setCustomPersonality(e.target.value)}
-              placeholder="Describe the personality..."
-              rows={2}
-              style={{ resize: "vertical", marginTop: 2 }}
-            />
-          )}
         </div>
+        {personalityMode === 4 && (
+          <textarea
+            className="ti ti-textarea mt-1.5"
+            value={customPersonality}
+            onChange={(e) => setCustomPersonality(e.target.value)}
+            placeholder="Describe the personality..."
+            rows={2}
+            style={{ resize: "vertical" }}
+          />
+        )}
       </div>
     </TermModal>
   );

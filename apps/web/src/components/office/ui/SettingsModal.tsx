@@ -20,6 +20,19 @@ interface SettingsModalProps {
   onSoundEnabledChange: (enabled: boolean) => void
 }
 
+/** Horizontal form row: label on left, input on right */
+function FormRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-2">
+      <label className="text-term text-muted-foreground shrink-0 w-[100px] text-right">
+        {label}
+        {hint && <span className="block text-[10px] opacity-50 mt-0.5">{hint}</span>}
+      </label>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
+}
+
 export default function SettingsModal({
   isOpen,
   onClose,
@@ -147,60 +160,52 @@ export default function SettingsModal({
     checked ? "bg-accent text-background" : "bg-transparent",
   )
 
-  const menuItemCls = "flex items-center justify-between w-full px-2.5 py-1.5 text-[15px] text-foreground bg-transparent border-none cursor-pointer text-left font-mono transition-colors duration-fast hover:bg-white/5"
+  const toggleCls = "flex items-center justify-between w-full px-3 py-2 text-term text-foreground bg-transparent border-none cursor-pointer text-left font-mono transition-colors duration-fast hover:bg-white/5"
 
   return (
     <TermModal
       open={isOpen}
       onClose={onClose}
-      maxWidth={480}
+      maxWidth={520}
       zIndex={100}
       title="Settings"
     >
       {/* ---- Telegram Section ---- */}
-      <div className="border-b border-term-border-dim pb-2 mb-2">
-        <div className="flex items-center gap-1.5 mb-2">
+      <div className="border-b border-term-border-dim pb-3 mb-3">
+        <div className="flex items-center gap-1.5 mb-3">
           <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tgConnected ? "bg-sem-green" : "bg-muted-foreground")} />
           <span className="text-[13px] text-foreground font-medium">
             Telegram {tgConnected ? '(connected)' : '(disconnected)'}
           </span>
         </div>
-        <div className="mb-2">
-          <label className="text-term text-muted-foreground mb-1 block">Bot Token</label>
+        <FormRow label="Bot Token">
           <div className="flex gap-1">
             <TermInput
               type={showToken ? 'text' : 'password'}
               value={tgToken}
               onChange={e => setTgToken(e.target.value)}
               placeholder="123456:ABC-DEF..."
-              style={{ flex: 1 }}
+              className="flex-1"
               onFocus={() => { if (tgToken.includes('...')) setTgToken('') }}
             />
             <TermButton
               variant="dim"
+              size="sm"
               onClick={() => setShowToken(!showToken)}
               title={showToken ? 'Hide' : 'Show'}
-              style={{ padding: '4px 8px', fontSize: '14px' }}
-            >{showToken ? '🙈' : '👁'}</TermButton>
+            >{showToken ? '\u{1F648}' : '\u{1F441}'}</TermButton>
           </div>
-        </div>
-        <div className="mb-2">
-          <label className="text-term text-muted-foreground mb-1 block">
-            Allowed User IDs <span className="opacity-60">(comma-separated, empty = all)</span>
-          </label>
+        </FormRow>
+        <FormRow label="Allowed IDs" hint="comma-sep, empty=all">
           <TermInput
             type="text"
             value={tgUsers}
             onChange={e => setTgUsers(e.target.value)}
             placeholder="123456789, 987654321"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <TermButton
-            variant="primary"
-            onClick={handleSaveTelegram}
-            disabled={tgSaving}
-          >
+        </FormRow>
+        <div className="flex items-center gap-2 pl-[112px]">
+          <TermButton variant="primary" onClick={handleSaveTelegram} disabled={tgSaving}>
             {tgSaving ? 'Saving...' : 'Save & Connect'}
           </TermButton>
           {tgMessage && (
@@ -212,49 +217,41 @@ export default function SettingsModal({
       </div>
 
       {/* ---- Tunnel Section ---- */}
-      <div className="border-b border-term-border-dim pb-2 mb-2">
-        <div className="flex items-center gap-1.5 mb-2">
+      <div className="border-b border-term-border-dim pb-3 mb-3">
+        <div className="flex items-center gap-1.5 mb-3">
           <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tunnelRunning ? "bg-sem-green" : "bg-muted-foreground")} />
           <span className="text-[13px] text-foreground font-medium">
             Tunnel {tunnelRunning ? '(running)' : '(stopped)'}
           </span>
         </div>
-        <div className="mb-2">
-          <label className="text-term text-muted-foreground mb-1 block">Tunnel Token</label>
+        <FormRow label="Token">
           <div className="flex gap-1">
             <TermInput
               type={showTunnelToken ? 'text' : 'password'}
               value={tunnelToken}
               onChange={e => setTunnelToken(e.target.value)}
               placeholder="eyJ..."
-              style={{ flex: 1 }}
+              className="flex-1"
               onFocus={() => { if (tunnelToken.includes('...')) setTunnelToken('') }}
             />
             <TermButton
               variant="dim"
+              size="sm"
               onClick={() => setShowTunnelToken(!showTunnelToken)}
               title={showTunnelToken ? 'Hide' : 'Show'}
-              style={{ padding: '4px 8px', fontSize: '14px' }}
             >{showTunnelToken ? '\u{1F648}' : '\u{1F441}'}</TermButton>
           </div>
-        </div>
-        <div className="mb-2">
-          <label className="text-term text-muted-foreground mb-1 block">
-            Public URL
-          </label>
+        </FormRow>
+        <FormRow label="Public URL">
           <TermInput
             type="text"
             value={tunnelBaseUrl}
             onChange={e => setTunnelBaseUrl(e.target.value)}
             placeholder="https://office.example.com"
           />
-        </div>
-        <div className="flex items-center gap-2">
-          <TermButton
-            variant="primary"
-            onClick={handleSaveTunnel}
-            disabled={tunnelSaving}
-          >
+        </FormRow>
+        <div className="flex items-center gap-2 pl-[112px]">
+          <TermButton variant="primary" onClick={handleSaveTunnel} disabled={tunnelSaving}>
             {tunnelSaving ? 'Saving...' : 'Save & Start'}
           </TermButton>
           {tunnelMessage && (
@@ -265,32 +262,39 @@ export default function SettingsModal({
         </div>
       </div>
 
-      {/* ---- Toggles Section ---- */}
-      <button onClick={toggleWorktree} className={menuItemCls} title="Each agent works in its own git worktree branch, merged on completion">
-        <span>Agent Isolation</span>
-        <span className={checkboxCls(worktreeOn)}>{worktreeOn ? '\u2713' : ''}</span>
-      </button>
-      <button onClick={toggleAutoMerge} className={menuItemCls} title="Auto-merge agent changes to main on task completion. Turn off to review before merging.">
-        <span>Auto-merge</span>
-        <span className={checkboxCls(autoMergeOn)}>{autoMergeOn ? '\u2713' : ''}</span>
-      </button>
-      <button onClick={toggleSound} className={menuItemCls}>
-        <span>Sound Notifications</span>
-        <span className={checkboxCls(soundEnabled)}>{soundEnabled ? '\u2713' : ''}</span>
-      </button>
-      <div className="border-t border-term-border-dim my-1" />
-      <button
-        onClick={() => { setAgentsUpdating(true); setAgentsMessage(null); sendCommand({ type: "UPDATE_AGENCY_AGENTS" }); }}
-        disabled={agentsUpdating}
-        className={cn(menuItemCls, agentsUpdating && "opacity-50")}
-      >
-        <span>{agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}</span>
-        {agentsMessage && (
-          <span className={cn("text-[11px]", agentsMessage.startsWith('Failed') ? "text-sem-red" : "text-sem-green")}>
-            {agentsMessage.startsWith('Failed') ? '\u2717' : '\u2713'}
-          </span>
-        )}
-      </button>
+      {/* ---- Toggles ---- */}
+      <div className="mb-1">
+        <button onClick={toggleWorktree} className={toggleCls} title="Each agent works in its own git worktree branch, merged on completion">
+          <span>Agent Isolation</span>
+          <span className={checkboxCls(worktreeOn)}>{worktreeOn ? '\u2713' : ''}</span>
+        </button>
+        <button onClick={toggleAutoMerge} className={toggleCls} title="Auto-merge agent changes to main on task completion. Turn off to review before merging.">
+          <span>Auto-merge</span>
+          <span className={checkboxCls(autoMergeOn)}>{autoMergeOn ? '\u2713' : ''}</span>
+        </button>
+        <button onClick={toggleSound} className={toggleCls}>
+          <span>Sound Notifications</span>
+          <span className={checkboxCls(soundEnabled)}>{soundEnabled ? '\u2713' : ''}</span>
+        </button>
+      </div>
+
+      {/* ---- Actions ---- */}
+      <div className="border-t border-term-border-dim pt-2">
+        <button
+          onClick={() => { setAgentsUpdating(true); setAgentsMessage(null); sendCommand({ type: "UPDATE_AGENCY_AGENTS" }); }}
+          disabled={agentsUpdating}
+          className={cn(toggleCls, agentsUpdating && "opacity-50")}
+        >
+          <span>{agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}</span>
+          {agentsMessage && (
+            <span className={cn("text-[11px]", agentsMessage.startsWith('Failed') ? "text-sem-red" : "text-sem-green")}>
+              {agentsMessage.startsWith('Failed') ? '\u2717' : '\u2713'}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ---- Version ---- */}
       <div className="border-t border-term-border-dim mt-1 pt-2 text-[11px] text-muted-foreground font-mono leading-snug select-text" title="From monorepo root package.json at build time">
         <div>
           <span className="opacity-75">Web UI</span>{' '}
