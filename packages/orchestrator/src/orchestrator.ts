@@ -567,6 +567,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
               commitHash: result.commitHash,
               commitMessage: result.commitMessage,
             });
+            if (!result.success) {
+              // Merge failed — fall back to manual merge UI
+              session.pendingMerge = true;
+              this.emitEvent({
+                type: "worktree:ready",
+                agentId: session.agentId,
+                taskId: "restore",
+                branch: session.worktreeBranch,
+              });
+            }
             console.log(`[Worktree] Auto-merged pending changes for ${session.name} on ${session.worktreeBranch} (success=${result.success})`);
           } else {
             session.pendingMerge = true;
@@ -937,6 +947,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
             stagedFiles: result.stagedFiles,
           });
           if (!result.success) {
+            // Merge failed — restore pendingMerge so user can retry manually
+            doneSession.pendingMerge = true;
+            this.emitEvent({
+              type: "worktree:ready",
+              agentId,
+              taskId: event.taskId,
+              branch: doneSession.worktreeBranch!,
+            });
             const conflictList = result.conflictFiles?.length
               ? `: ${result.conflictFiles.join(", ")}`
               : "";
