@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { TERM_DIM } from "./termTheme";
 
 function LoadingDots() {
   const [dots, setDots] = useState("");

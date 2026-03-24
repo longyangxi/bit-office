@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
-import { TERM_BG, TERM_GREEN, TERM_PANEL, TERM_BORDER, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_BLUE } from "./termTheme";
 import { computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";

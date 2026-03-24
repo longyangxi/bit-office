@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { TERM_BG, TERM_PANEL, TERM_BORDER, TERM_BORDER_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_DIM, TERM_GREEN, TERM_HOVER, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
 import { cn } from "@/lib/utils"
 import type { OfficeLayout } from '../types'
 import { sendCommand } from '@/lib/connection'
