@@ -919,6 +919,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         && !this.agentManager.isTeamLead(agentId) && !doneSession.teamId) {
         if (this.worktreeMerge && doneSession.autoMerge) {
           // Auto-merge: merge immediately as before
+          doneSession.pendingMerge = false;
           const summary = event.result?.summary;
           const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name, doneSession.agentId);
           if (result.success && result.commitHash) {
