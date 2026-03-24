@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@/styles/global.css";
 import "@/components/office/ui/primitives/primitives.css";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 export const metadata: Metadata = {
   title: "Open Office",
@@ -22,7 +23,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body style={{ margin: 0, backgroundColor: "#16122a", color: "#eddcb8", fontFamily: "system-ui, sans-serif" }}>
+        <TooltipProvider delayDuration={300} skipDelayDuration={100}>
         {children}
+        </TooltipProvider>
         <script
           dangerouslySetInnerHTML={{
             __html: `

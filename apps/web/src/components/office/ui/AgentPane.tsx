@@ -5,6 +5,7 @@ import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge } from "./MessageBubble";
 import { TermButton, TermInput, TermEmpty } from "./primitives";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ChatMessage } from "@/store/office-store";
 import dynamic from "next/dynamic";
 
@@ -425,14 +426,19 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           const raw = cwd ?? workDir ?? "";
           const display = raw.replace(/^\/Users\/[^/]+/, "~");
           return (
-            <span className="term-path-scroll" style={{
-              color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.7,
-              overflow: "hidden", whiteSpace: "nowrap",
-              direction: "rtl", textAlign: "left",
-              fontSize: TERM_SIZE - 1,
-            }} title={raw}>
-              <bdi>{display}</bdi>
-            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="term-path-scroll" style={{
+                  color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.7,
+                  overflow: "hidden", whiteSpace: "nowrap",
+                  direction: "rtl", textAlign: "left",
+                  fontSize: TERM_SIZE - 1,
+                }}>
+                  <bdi>{display}</bdi>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs break-all">{raw}</TooltipContent>
+            </Tooltip>
           );
         })()}
         <span style={{ flex: 1 }} />
@@ -445,11 +451,16 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         }}>{cfg.label.replace("...", "")}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
-          <button
-            className="tdx"
-            onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
-            aria-label="Fire agent"
-          >{"\u2715"}</button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                className="tdx"
+                onClick={(e) => { e.stopPropagation(); onFire(agentId); }}
+                aria-label="Fire agent"
+              >{"\u2715"}</button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">Fire agent</TooltipContent>
+          </Tooltip>
         )}
       </div>
 
