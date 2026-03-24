@@ -219,7 +219,7 @@ function shouldCleanWorktree(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isGitRepo(cwd: string): boolean {
+export function isGitRepo(cwd: string): boolean {
   try {
     execSync("git rev-parse --is-inside-work-tree", {
       cwd,

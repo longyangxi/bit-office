@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain, isGitRepo } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -315,6 +315,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     const base = repoPath ?? session.workspaceDir;
+
+    // Non-git workspaces (e.g. custom folders) don't support worktrees — skip silently
+    if (!isGitRepo(base)) return;
+
     const instanceDir = process.env.BIT_OFFICE_INSTANCE_DIR;
     const owner = instanceDir
       ? {
