@@ -20,6 +20,7 @@ const StableAgentPane = memo(function StableAgentPane({
   onEndProject, onSuggest, onPreview, onReview, detectedBackends,
   onLoadMore, onPasteImage, onPasteText, onDropImage,
   reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
+  autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage,
   onMerge, onRevert, onUndoMerge,
   scrollFrozen,
 }: {
@@ -56,6 +57,10 @@ const StableAgentPane = memo(function StableAgentPane({
   onReviewerLoadMore?: () => void;
   onApplyReviewFixes?: (userFeedback?: string) => void;
   onDismissReview?: () => void;
+  autoMerge?: boolean;
+  pendingMerge?: boolean;
+  lastMergeCommit?: string | null;
+  lastMergeMessage?: string | null;
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
   onUndoMerge?: (agentId: string) => void;
