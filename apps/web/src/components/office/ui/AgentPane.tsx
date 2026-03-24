@@ -418,7 +418,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="term-path-scroll" style={{
-                  color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.7,
+                  color: TERM_TEXT, flexShrink: 1, minWidth: 0, opacity: 0.6,
                   overflow: "hidden", whiteSpace: "nowrap",
                   direction: "rtl", textAlign: "left",
                   fontSize: TERM_SIZE - 1,
@@ -432,7 +432,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         })()}
         <span className="flex-1" />
         <span
-          className="shrink-0 text-[9px] px-[7px] py-0.5 rounded-sm tracking-wide font-medium uppercase"
+          className="shrink-0 text-[10px] px-[7px] py-0.5 rounded-sm tracking-wide font-medium uppercase"
           style={{ color: cfg.color, background: `${cfg.color}14`, border: `1px solid ${cfg.color}25` }}
         >{cfg.label.replace("...", "")}</span>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}

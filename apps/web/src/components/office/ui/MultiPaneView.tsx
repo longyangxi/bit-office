@@ -114,7 +114,7 @@ const StableAgentPane = memo(function StableAgentPane({
             </div>
             {/* Name · Backend · Role */}
             <div className="flex items-center gap-0 overflow-hidden whitespace-nowrap min-w-0 font-mono">
-              <span className="text-term text-term-text-bright font-semibold tracking-tight shrink-0">{meta.name}</span>
+              <span className="text-[13px] text-term-text-bright font-semibold tracking-tight shrink-0">{meta.name}</span>
               {meta.isTeamLead && (
                 <span
                   className="text-[8px] font-mono font-bold text-sem-yellow px-[3px] leading-[14px] ml-1.5 rounded-sm shrink-0"
@@ -122,12 +122,12 @@ const StableAgentPane = memo(function StableAgentPane({
                 >LEAD</span>
               )}
               {backendName && (
-                <span className="text-[9px] text-term-text-bright opacity-55 shrink-0 px-1.5 ml-1.5 rounded-sm tracking-wide" style={{ background: `${TERM_DIM}18` }}>
+                <span className="text-[10px] text-term-text-bright opacity-70 shrink-0 px-1.5 ml-1.5 rounded-sm tracking-wide" style={{ background: `${TERM_DIM}18` }}>
                   {backendName}
                 </span>
               )}
               {roleName && (
-                <span className="text-[9px] text-term-text-bright opacity-40 shrink-0 px-1.5 ml-1 rounded-sm overflow-hidden text-ellipsis tracking-wide" style={{ background: `${TERM_DIM}10` }}>
+                <span className="text-[10px] text-term-text-bright opacity-55 shrink-0 px-1.5 ml-1 rounded-sm overflow-hidden text-ellipsis tracking-wide" style={{ background: `${TERM_DIM}10` }}>
                   {roleName}
                 </span>
               )}
