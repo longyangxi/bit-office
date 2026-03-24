@@ -7,6 +7,21 @@
 
 ---
 
+## TL;DR
+
+| Layer | Scope | What it stores |
+|-------|-------|----------------|
+| **L0 -- Ephemeral** | Current conversation | Sliding window (in-memory) |
+| **L1 -- Session** | Per-task | Structured summary: what/why/files/decisions/commits |
+| **L2 -- Agent** | Per-agent, long-term | Learned facts & preferences (up to 50, auto-deduped) |
+| **L3 -- Shared** | Cross-agent | Project-wide knowledge promoted from L2 |
+
+After a session crash, agents recover with **structured context** (task summary, changed files, commits, decisions) instead of raw chat fragments. Facts are extracted rule-based (zero extra LLM cost) and deduplicated via Jaccard similarity. High-confidence agent facts auto-promote to shared project knowledge.
+
+Review patterns, tech preferences, and project ratings also persist (via the orchestrator's `memory.ts`). Agents **learn what you value** and adapt -- low visual scores lead to richer designs, recurring review failures get avoided automatically. The orchestrator injects these into worker prompts as `===== LEARNED FROM PREVIOUS PROJECTS =====`.
+
+---
+
 ## 1. Problem Statement
 
 ### Current System Analysis
