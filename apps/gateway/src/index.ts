@@ -880,6 +880,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           for (const agent of orc.getAllAgents()) {
             orc.setAgentAutoMerge(agent.agentId, parsed.autoMergeEnabled);
           }
+          persistTeamState(); // Persist per-agent autoMerge so it survives gateway restart
         }
         if (parsed.tunnelBaseUrl !== undefined) updates.tunnelBaseUrl = parsed.tunnelBaseUrl || undefined;
         if (parsed.tunnelToken !== undefined) updates.tunnelToken = parsed.tunnelToken || undefined;
@@ -1222,6 +1223,13 @@ async function main() {
       const restoredPhase = orc.getTeamPhase(t.leadAgentId);
       console.log(`[Gateway] Restored team ${t.teamId}: phase=${t.phase}→${restoredPhase}, lead=${t.leadAgentId}, projectDir=${t.projectDir}`);
     }
+  }
+
+  // Re-apply global autoMerge setting to all agents (overrides stale per-agent values
+  // from teamState in case SAVE_CONFIG wasn't persisted before a crash/restart)
+  const globalAutoMerge = config.autoMergeEnabled ?? true;
+  for (const agent of orc.getAllAgents()) {
+    orc.setAgentAutoMerge(agent.agentId, globalAutoMerge);
   }
 
   // Detect worktrees with pending changes after all agents are restored

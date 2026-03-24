@@ -974,7 +974,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const agent = agents.get(event.agentId);
           if (agent) agents.set(event.agentId, {
             ...agent,
-            pendingMerge: false,
+            pendingMerge: event.success ? false : agent.pendingMerge,
             lastMergeCommit: event.success ? (event.commitHash ?? agent.lastMergeCommit) : agent.lastMergeCommit,
             lastMergeMessage: event.success ? (event.commitMessage ?? agent.lastMergeMessage) : agent.lastMergeMessage,
           });

@@ -343,7 +343,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
   const statusConfig = getStatusConfig();
   const cfg = statusConfig[status] ?? statusConfig.idle;
-  const busy = status === "working" || status === "waiting_approval";
 
   // DEBUG: trace undo-merge button visibility
   if (pendingMerge || lastMergeCommit || autoMerge) {
@@ -922,7 +921,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 ) : !busy && isOwner && !teamId && !isTeamMember && (pendingMerge || lastMergeCommit) ? (
                   <div style={{ display: "flex", gap: 6, alignItems: "center", padding: "4px 0" }}>
-                    {pendingMerge && onMerge && (
+                    {pendingMerge && !autoMerge && onMerge && (
                       <button
                         className="term-btn"
                         onClick={onMerge}
@@ -934,7 +933,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6M4 3v10M4 13l4-4 4 0"/></svg>Merge</button>
                     )}
-                    {pendingMerge && onRevert && (
+                    {pendingMerge && !autoMerge && onRevert && (
                       <button
                         className="term-btn"
                         onClick={onRevert}
