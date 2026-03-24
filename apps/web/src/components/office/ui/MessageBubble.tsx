@@ -177,14 +177,14 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
   const textColor = isError ? TERM_ERROR : TERM_DIM;
   return (
     <div className="term-msg" style={{ marginBottom: 2, fontSize: TERM_SIZE, fontFamily: TERM_FONT, lineHeight: 1.7, color: TERM_DIM, padding: "1px 0" }}>
-      <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
+      <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
       {isLong && (
         <span
           onClick={() => setExpanded(!expanded)}
           style={{ color: isError ? TERM_ERROR : TERM_DIM, cursor: "pointer", marginRight: 4 }}
         >{expanded ? "\u25BE" : "\u25B8"}</span>
       )}
-      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, marginRight: 6, opacity: 0.7 }}>{tag}</span>
+      <span style={{ color: isError ? TERM_ERROR : TERM_DIM, marginRight: 6 }}>{tag}</span>
       <span style={{ color: textColor, wordBreak: "break-word" }} className="chat-markdown">
         {isLong && !expanded
           ? <span>{firstLine}</span>
@@ -305,9 +305,9 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         borderLeft: `2px solid ${TERM_BORDER}`,
         padding: "6px 12px",
       }}>
-        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
+        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
         <span style={{ color: TERM_GREEN, opacity: 0.7 }}>&gt; </span>
-        <span style={{ color: TERM_TEXT_BRIGHT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
+        <span style={{ color: TERM_TEXT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
     );
   }
@@ -337,16 +337,16 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     if (!msg.text) {
       return (
         <div style={{ ...base, padding: "2px 0" }}>
-          <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
-          <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
+          <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+          <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
           <span style={{ color: TERM_DIM, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
         </div>
       );
     }
     return (
       <div style={{ ...base, padding: "2px 0" }}>
-        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6, opacity: 0.6 }}>{ts}</span>
-        <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
+        <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
+        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
         <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
           <MdContent text={msg.text} />
         </div>
@@ -364,7 +364,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
     return (
       <div className="term-msg" style={{ ...base, marginTop: 10, borderTop: `1px solid ${TERM_BORDER_DIM}`, paddingTop: 10 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-          <span className="term-ts" style={{ color: TERM_DIM, opacity: 0.6 }}>{ts}</span>
+          <span className="term-ts" style={{ color: TERM_DIM }}>{ts}</span>
           <span style={{ color: TERM_SEM_GREEN }}>done</span>
           {msg.durationMs && msg.durationMs > 1000 && (
             <span style={{ color: TERM_DIM, fontFamily: TERM_FONT }}>{formatDuration(msg.durationMs)}</span>
@@ -390,8 +390,8 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   return (
     <div className="term-msg" style={{ ...base, paddingTop: 8, marginTop: 6 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-        <span className="term-ts" style={{ color: TERM_DIM, opacity: 0.6 }}>{ts}</span>
-        <span style={{ color: TERM_DIM, opacity: 0.7 }}>{agentName ?? "agent"}</span>
+        <span className="term-ts" style={{ color: TERM_DIM }}>{ts}</span>
+        <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
       </div>
       <div style={{ color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
         {planContent ? (
