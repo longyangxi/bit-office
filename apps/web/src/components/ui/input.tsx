@@ -14,7 +14,7 @@ const Input = React.forwardRef<
         "font-mono text-term leading-5",
         "outline-none transition-colors duration-fast",
         "placeholder:text-term-green-dim placeholder:opacity-50",
-        "focus:border-accent",
+        "focus:border-term-green-dim",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}
