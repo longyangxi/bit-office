@@ -31,33 +31,22 @@ npx bit-office
 
 ## Features
 
-### Multi Models & 150+ Roles
-8 AI CLI backends in one pipeline (see [Supported Backends](#supported-backends)).  
-150+ specialist roles powered by [agency-agents](vendor/agency-agents).
+- **8 AI backends, 150+ roles** — Claude, Codex, Gemini, Copilot, and more in one pipeline  
+- **Team-based delivery** — Leader coordinates planning, coding, review, and release  
+- **Parallel collaboration** — Worktree isolation with auto commit, merge, and undo  
+- **Flexible code review** — Mix Claude Code, Codex, or any tool you prefer  
+- **Preview & feedback** — Live preview, rating, and continuous learning  
+- **Persistent memory** — 4-layer memory across sessions and agents  
+- **Telegram Control** — Manage your agent team remotely  
+- **Native desktop app** — Tauri-based app with system notifications  
+- **Token cost tracking** — Real-time usage per agent and team  
 
-### Team Delivery
-A team leader coordinates specialists to plan, implement, review, and deliver (see [Team Workflow](team-workflow.md)).
+## Learn More
 
-### Collaboration
-Multiple agents work together with worktree isolation. Auto commit, merge, and manual undo.([`Collaboration`](packages/orchestrator/README.md))
-
-### Code Review
-Write code with Claude Code, review it with Codex — or use any combination you prefer.
-
-### Preview & Rating
-Every delivery generates a live preview. Rate it, provide feedback, and agents learn from it.
-
-### Persistent Memory
-Agents remember across sessions through a four-layer memory system([`Memory Design`](packages/memory/README.md)).
-
-### Telegram Bot
-Use a Telegram bot to control your entire agent team.
-
-### Desktop App 
-Native desktop app powered by Tauri with system notifications.
-
-### Token Cost Visibility
-Track token usage per agent and per team in real time.
+- **150+ specialist roles** powered by [agency-agents](vendor/agency-agents)  
+- **Team workflow** — how agents plan, execute, and deliver ([view](team-workflow.md))  
+- **Collaboration system** — multi-agent orchestration and worktree isolation ([view](packages/orchestrator/README.md))  
+- **Memory design** — four-layer persistent memory architecture ([view](packages/memory/README.md))  
 
 ## Run from Source
 
