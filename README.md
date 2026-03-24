@@ -21,7 +21,7 @@
 
 ## What is Open Office
 
-Open Office gives AI automation a visible, controllable workspace. Multiple AI models collaborate as a single team — planning, coding, reviewing, and delivering in one continuous flow.
+A visible workspace for AI agents to collaborate as a single team.
 
 ## Quick Start
 
