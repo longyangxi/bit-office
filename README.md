@@ -2,14 +2,14 @@
 
 # Open Office
 
-### Pixel office for AI agents and multi-agent collaboration
+### A pixel-art workspace for AI agents and multi-agent collaboration
 
 [![npm version](https://img.shields.io/npm/v/open-office?color=cb3837&logo=npm)](https://www.npmjs.com/package/open-office)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js&logoColor=white)](https://nodejs.org/)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/longyangxi/open-office/pulls)
 
-**Support Claude, Codex, Gemini, Copilot, Cursor, Aider, OpenCode, Pi & Sapling — one team 🚀**
+**Supports Claude, Codex, Gemini, Copilot, Cursor, Aider, OpenCode, Pi & Sapling — one team 🚀**
 
 
 [Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
@@ -21,7 +21,7 @@
 
 ## What is Open Office
 
-Open Office gives AI automation a **visible, controllable workspace**. Different AI models collaborate as one team — planning, coding, reviewing, and delivering in a single flow, all rendered in a live pixel-art office you can watch, control, and share.
+Open Office gives AI automation a visible, controllable workspace. Multiple AI models collaborate as a single team — planning, coding, reviewing, and delivering in one continuous flow.
 
 ## Quick Start
 
@@ -32,29 +32,29 @@ npx bit-office
 ## Features
 
 ### Multi Models & 150+ Roles
-8 AI CLI backends in one pipeline(see [Supported Backends](#supported-backends)).
-150+ Specialist roles[agency-agents](vendor/agency-agents)
+8 AI CLI backends in one pipeline (see [Supported Backends](#supported-backends)).  
+150+ specialist roles powered by [agency-agents](vendor/agency-agents).
 
 ### Team Delivery
-A Team Leader coordinates specialists to plan, implement, review, and deliver.([Team Workflow](team-workflow.md))
+A team leader coordinates specialists to plan, implement, review, and deliver (see [Team Workflow](team-workflow.md)).
 
 ### Collaboration
-Multiple agents worktogether with worktree isolation. Auto commit, merge, and manual undo.([`Collaboration`](packages/orchestrator/README.md))
+Multiple agents work together with worktree isolation. Auto commit, merge, and manual undo.([`Collaboration`](packages/orchestrator/README.md))
 
 ### Code Review
-Code with Claude Code, review with Codex whatever you want.
+Write code with Claude Code, review it with Codex — or use any combination you prefer.
 
 ### Preview & Rating
-Every delivery generates an auto preview, rate it, feedback it, agents learn.
+Every delivery generates a live preview. Rate it, provide feedback, and agents learn from it.
 
 ### Persistent Memory
 Agents remember across sessions through a four-layer memory system([`Memory Design`](packages/memory/README.md)).
 
 ### Telegram Bot
-Use Telegram Bot to control your full agents team.
+Use a Telegram bot to control your entire agent team.
 
 ### Desktop App 
-Native desktop app powered by Tauri with notification.
+Native desktop app powered by Tauri with system notifications.
 
 ### Token Cost Visibility
 Track token usage per agent and per team in real time.
