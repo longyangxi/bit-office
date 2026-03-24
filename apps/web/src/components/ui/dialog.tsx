@@ -45,14 +45,32 @@ const DialogContent = React.forwardRef<
         className={cn(
           "fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
           "w-[90%] max-w-[520px] max-h-[90vh]",
-          "bg-term-panel border-2 border-[#3e3448] shadow-[0_8px_24px_rgba(0,0,0,0.5),0_16px_48px_rgba(0,0,0,0.4),0_0_1px_rgba(212,168,96,0.12),0_0_15px_rgba(212,168,96,0.04)]",
+          "bg-term-panel border border-[rgba(212,168,96,0.18)]",
           "flex flex-col overflow-hidden",
           "font-mono text-term text-foreground",
           "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-[0.97] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
           "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-[0.97]",
           className
         )}
-        style={{ zIndex: contentZ, ...(maxWidth ? { maxWidth } : {}), ...style }}
+        style={{
+          zIndex: contentZ,
+          ...(maxWidth ? { maxWidth } : {}),
+          ...style,
+          boxShadow: [
+            /* CRT bezel: inner top highlight */
+            "inset 0 1px 0 rgba(212,168,96,0.06)",
+            /* CRT bezel: inner edge glow */
+            "inset 0 0 0 1px rgba(212,168,96,0.05)",
+            /* Outer edge: crisp 1px gold ring */
+            "0 0 0 1px rgba(212,168,96,0.10)",
+            /* Ambient glow: warm CRT halo */
+            "0 0 20px rgba(212,168,96,0.05)",
+            "0 0 40px rgba(212,168,96,0.02)",
+            /* Depth shadow */
+            "0 8px 32px rgba(0,0,0,0.55)",
+            "0 20px 60px rgba(0,0,0,0.4)",
+          ].join(", "),
+        }}
         {...props}
       >
         {children}
