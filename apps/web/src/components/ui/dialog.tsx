@@ -59,10 +59,6 @@ const DialogContent = React.forwardRef<
           boxShadow: [
             /* CRT bezel: inner top highlight */
             "inset 0 1px 0 rgba(212,168,96,0.06)",
-            /* CRT bezel: inner edge glow */
-            "inset 0 0 0 1px rgba(212,168,96,0.05)",
-            /* Outer edge: crisp 1px gold ring */
-            "0 0 0 1px rgba(212,168,96,0.10)",
             /* Ambient glow: warm CRT halo */
             "0 0 20px rgba(212,168,96,0.05)",
             "0 0 40px rgba(212,168,96,0.02)",
