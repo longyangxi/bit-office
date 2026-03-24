@@ -2,7 +2,7 @@
 
 # Open Office
 
-### A pixel-art workspace for AI agents and multi-agent collaboration
+### A visible workspace for AI agents to collaborate as a single team.
 
 [![npm version](https://img.shields.io/npm/v/open-office?color=cb3837&logo=npm)](https://www.npmjs.com/package/open-office)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -12,16 +12,12 @@
 **Supports Claude, Codex, Gemini, Copilot, Cursor, Aider, OpenCode, Pi & Sapling — one team 🚀**
 
 
-[Quick Start](#quick-start) | [Features](#features) | [Team Workflow](#team-workflow) | [Architecture](#architecture) | [Contributing](#contributing)
+[Quick Start](#quick-start) | [Features](#features) | [Architecture](#architecture) | [Contributing](#contributing)
 
 </div>
 
 ---
 ![Image](https://github.com/user-attachments/assets/ecfcd88b-e72e-4b04-bdd7-87eea9f00b51)
-
-## What is Open Office
-
-A visible workspace for AI agents to collaborate as a single team.
 
 ## Quick Start
 
