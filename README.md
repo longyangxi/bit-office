@@ -19,11 +19,6 @@
 ---
 ![Image](https://github.com/user-attachments/assets/ecfcd88b-e72e-4b04-bdd7-87eea9f00b51)
 
-## Quick Start
-
-```bash
-npx bit-office
-```
 
 ## Features
 - **8 AI backends, 150+ roles** — Claude, Codex, Gemini, Copilot, and more in one pipeline  
@@ -36,6 +31,11 @@ npx bit-office
 - **Native desktop app** — Tauri-based app with system notifications  
 - **Token cost tracking** — Real-time usage per agent and team  
 
+## Quick Start
+
+```bash
+npx bit-office
+```
 
 ## Learn More
 
