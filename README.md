@@ -26,35 +26,16 @@ npx bit-office
 ```
 
 ## Features
+- **8 AI backends, 150+ roles** — Claude, Codex, Gemini, Copilot, and more in one pipeline  
+- **Team-based delivery** — Leader coordinates planning, coding, review, and release  
+- **Parallel collaboration** — Worktree isolation with auto commit, merge, and undo  
+- **Flexible code review** — Mix Claude Code, Codex, or any tool you prefer  
+- **Preview & feedback** — Live preview, rating, and continuous learning  
+- **Persistent memory** — 4-layer memory across sessions and agents  
+- **Telegram Control** — Manage your agent team remotely  
+- **Native desktop app** — Tauri-based app with system notifications  
+- **Token cost tracking** — Real-time usage per agent and team  
 
-## Features
-
-- 🧠 **All-in-one AI team**  
-  8 backends, 150+ roles — Claude, Codex, Gemini, Copilot, and more
-
-- 🤝 **Team-based delivery**  
-  Leader coordinates planning, coding, review, and release
-
-- ⚡ **Parallel collaboration**  
-  Worktree isolation with auto commit, merge, and undo
-
-- 🔍 **Flexible code review**  
-  Mix Claude Code, Codex, or any tool you prefer
-
-- 👀 **Live preview & feedback**  
-  Auto preview, rating, and continuous learning
-
-- 🧩 **Persistent memory**  
-  4-layer memory across sessions and agents
-
-- 📱 **Remote control via Telegram**  
-  Manage your agent team anywhere
-
-- 🖥️ **Native desktop app**  
-  Tauri-based app with system notifications
-
-- 💰 **Token cost visibility**  
-  Real-time usage per agent and team
 
 ## Learn More
 
