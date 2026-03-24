@@ -417,16 +417,15 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         )}
         {(cwd || workDir) && (() => {
           const raw = cwd ?? workDir ?? "";
-          // Show shortened path: ~/…/last-two-segments
-          const parts = raw.replace(/^\/Users\/[^/]+/, "~").split("/");
-          const short = parts.length > 3 ? `${parts[0]}/\u2026/${parts.slice(-2).join("/")}` : parts.join("/");
+          const display = raw.replace(/^\/Users\/[^/]+/, "~");
           return (
             <span className="term-path-scroll" style={{
               color: TERM_DIM, flexShrink: 1, minWidth: 0, opacity: 0.7,
-              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+              overflow: "hidden", whiteSpace: "nowrap",
+              direction: "rtl", textAlign: "left",
               fontSize: TERM_SIZE - 1,
             }} title={raw}>
-              {short}
+              <bdi>{display}</bdi>
             </span>
           );
         })()}
