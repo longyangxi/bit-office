@@ -626,6 +626,40 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(agentId);
     if (!session) return;
     session.autoMerge = autoMerge;
+
+    // If turning ON and agent has pending merge, auto-merge immediately
+    if (autoMerge && this.worktreeMerge && session.pendingMerge
+      && session.worktreePath && session.worktreeBranch) {
+      session.pendingMerge = false;
+      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name, session.agentId);
+      if (result.success && result.commitHash) {
+        session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
+      }
+      this.emitEvent({
+        type: "worktree:merged",
+        agentId,
+        taskId: "auto-merge-toggle",
+        branch: session.worktreeBranch,
+        success: result.success,
+        commitHash: result.commitHash,
+        commitMessage: result.commitMessage,
+        conflictFiles: result.conflictFiles,
+        stagedFiles: result.stagedFiles,
+      });
+      if (!result.success) {
+        // Merge failed — restore pendingMerge so user can retry manually
+        session.pendingMerge = true;
+        this.emitEvent({
+          type: "team:chat",
+          fromAgentId: agentId,
+          message: `Auto-merge failed for ${session.name} — manual resolution needed.`,
+          messageType: "warning",
+          timestamp: Date.now(),
+        });
+      }
+      console.log(`[Worktree] Auto-merged pending changes for ${session.name} on toggle (success=${result.success})`);
+    }
+
     this.emitEvent({ type: "autoMerge:updated", agentId, autoMerge });
   }
 
