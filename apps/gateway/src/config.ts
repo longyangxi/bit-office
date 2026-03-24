@@ -159,7 +159,7 @@ function buildConfig() {
       if (envWs) console.log(`[Config] WORKSPACE="${envWs}" does not exist, using default`);
       return resolveDefaultWorkspace();
     })(),
-    wsPort: Number(process.env.WS_PORT) || 9090,
+    wsPort: Number(process.env.WS_PORT) || (isDev ? 9099 : 9090),
     ablyApiKey: process.env.ABLY_API_KEY || saved.ablyApiKey || undefined,
     webDir: resolveWebDir(),
     telegramBotToken:

@@ -126,6 +126,7 @@ export const wsChannel: Channel = {
           res.writeHead(200, { "Content-Type": "application/json" });
           res.end(JSON.stringify({
             machineId: config.machineId,
+            gatewayId: config.gatewayId,
             wsUrl: `ws://localhost:${config.wsPort}`,
             role: "owner",
             sessionToken,
@@ -408,7 +409,10 @@ export const wsChannel: Channel = {
       const tryListen = () => {
         const httpServer = createServer(requestHandler);
         httpServer.listen(port, () => {
-          config.wsPort = port;
+          // When port=0, OS assigns a random port — read the actual value
+          const actualPort = (httpServer.address() as any)?.port ?? port;
+          port = actualPort;
+          config.wsPort = actualPort;
 
           // Attach WebSocket server only after successful listen
           wss = new WebSocketServer({ server: httpServer });
@@ -481,6 +485,10 @@ export const wsChannel: Channel = {
           console.log(`[WS] Server listening on port ${port}`);
           writePortLock(port);
           printLanAddresses();
+
+          // Signal for Tauri sidecar — Rust parses this to emit port to webview
+          console.log(`GATEWAY_READY ${JSON.stringify({ port, gatewayId: config.gatewayId })}`);
+
           promiseResolve(true);
         });
 

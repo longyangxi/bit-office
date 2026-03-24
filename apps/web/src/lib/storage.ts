@@ -3,6 +3,7 @@ const CONNECTION_KEY = "office_connection";
 export interface ConnectionInfo {
   mode: "ws" | "ably";
   machineId: string;
+  gatewayId?: string;
   wsUrl?: string;
   role?: "owner" | "collaborator" | "spectator";
   sessionToken?: string;
