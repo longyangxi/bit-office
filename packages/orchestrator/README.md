@@ -41,7 +41,7 @@ src/
   config.ts             58 lines  Centralized constants (delegation, timing, preview)
   types.ts             264 lines  All event types, options, payloads
   retry.ts             111 lines  Auto-retry with leader escalation
-  worktree.ts          ~600 lines Git worktree isolation: create/merge/remove/cleanup
+  worktree.ts          ~930 lines Git worktree isolation: create/merge/remove/cleanup/undo/revert/owner
   agent-manager.ts      80 lines  Session registry + team lead tracking
   resolve-path.ts       36 lines  4-strategy path resolution for agent-reported paths
   ai-backend.ts         29 lines  AIBackend interface
@@ -516,3 +516,176 @@ CONFIG.preview.runners              // { ".py": "python3", ".js": "node", ... }
 | `delegation-hint` | EXECUTE | Delegation syntax helper |
 
 Templates use `{{variable}}` substitution. Key variables include `{{memory}}` (injected from Agent Memory for dev workers) and `{{soloHint}}` (solo mode instructions). Override any template by placing a `<template-name>.md` file in `promptsDir`.
+
+## Owner Metadata (Multi-Instance Safety)
+
+Each worktree has an owner file at `<worktreeDir>/.owners/<agentId>.json`:
+
+```typescript
+interface WorktreeOwnerInfo {
+  gatewayId: string;
+  machineId: string;
+  instanceDir: string;
+  pid: number;
+  startedAt: number;
+  agentId: string;
+  agentName: string;
+  branch: string;
+  repoRoot: string;
+}
+```
+
+This enables safe cleanup across multiple gateway instances (Tauri / Web / CLI). A worktree is only cleaned up if its owning runtime is dead (PID check + heartbeat TTL via `RuntimeOwnerInfo`). The `shouldCleanWorktree()` function checks:
+1. Same gateway instance + same startedAt → clean (stale from previous run)
+2. Owner's runtime PID is dead or heartbeat expired → clean
+3. Otherwise → skip (another live instance owns it)
+
+## Activity Board (Real-time Awareness)
+
+When multiple agents work concurrently, they need awareness of each other's activities.
+
+### Event Protocol
+
+```typescript
+interface AgentActivityEvent {
+  type: "agent:activity";
+  agentId: string;
+  agentName: string;
+  intent: string;       // Task description (first CONFIG.limits.intentChars chars)
+  phase: "started" | "completed";
+}
+```
+
+### Broadcast Points
+- **Delegation start** (`delegation.ts`): emitted when a worker receives a task
+- **Task completion** (`delegation.ts`): emitted when a worker returns a result
+
+### Worker Team Context
+
+Workers receive a lightweight team awareness block (~30 tokens per peer) via `buildWorkerTeamContext()`:
+
+```
+===== TEAM AWARENESS =====
+Your teammates (for context -- do NOT delegate or coordinate with them):
+- Leo (Developer) [working] -- feat: implement game loop...
+- Ada (Code Reviewer) [idle]
+```
+
+This shows peer names, roles, statuses, and last results — enough to avoid file conflicts without overwhelming the prompt.
+
+## Persistence
+
+### Agent State
+
+File: `~/.open-office[-dev]/data/instances/<id>/team-state.json` (instance-scoped)
+
+```typescript
+interface PersistedAgent {
+  agentId: string;
+  name: string;
+  role: string;
+  personality?: string;
+  backend?: string;
+  palette?: number;
+  teamId?: string;
+  isTeamLead?: boolean;
+  workDir?: string;
+  worktreePath?: string | null;
+  worktreeBranch?: string | null;
+  autoMerge?: boolean;
+}
+
+interface PersistedTeam {
+  teamId: string;
+  leadAgentId: string;
+  phase: "create" | "design" | "execute" | "complete";
+  projectDir: string | null;
+  originalTask?: string | null;  // Leader's approved plan -- survives restart
+}
+```
+
+- Saved on: CREATE_AGENT, FIRE_AGENT, team:phase changes, gateway shutdown
+- Atomic write via tmp file + rename (prevents truncation on kill)
+- `loadTeamState()` restores all agents on startup (no filtering)
+- Solo agents are NOT removed when creating a team
+
+### Session Context
+- Agent sessions store agentId -> Claude Code session ID mapping
+- Conversation history lives in `~/.claude/projects/` (managed by Claude Code)
+- On restart: `--resume <sessionId>` continues the conversation
+- Session IDs should NOT be cleared — causes context loss
+
+### Project History
+
+File: `~/.open-office[-dev]/data/project-history/<startedAt>-<name>.json`
+
+Completed projects are archived with all events, agents, team state, preview info, token usage, and ratings. Event buffer is persisted to `project-events.jsonl` (instance-scoped) so archives survive gateway restarts.
+
+## External Agent Output
+
+External agents (detected by process scanner) bypass the orchestrator entirely:
+- Output read from `~/.claude/projects/` JSONL files by `external-output-reader.ts`
+- Text blocks sent as LOG_APPEND events (no truncation, 500ms throttle)
+- Frontend accumulates chunks into growing messages (10s window per message block)
+- No TASK_DONE event — streaming messages are the final display
+
+## Console Mode (UI)
+
+Terminal-style chat interface with CRT effects:
+- **Layout**: Left vertical tab bar (Agents/Team/External) + top horizontal agent strip + full-height chat
+- **Visual**: JetBrains Mono font, green terminal theme (#18ff62), CRT scanlines, screen flicker
+- **Messages**: Terminal log format with timestamps and agent name tags `[Marcus]`
+- **Input**: Always-visible `>` prompt, ESC to stop working agent, type to continue
+- **Streaming**: Real-time output via LOG_APPEND, typewriter reveal effect
+- **Completion**: Duration display (e.g. "Brewed for 1m 45s")
+- **Working indicator**: Animated dots `...` in streaming message, `>_` when idle
+- **Console toggle**: Button on sidebar left edge, expands chat to full screen (unmounts PixiJS scene)
+
+## Team Execution Notes
+
+- Leader's non-delegation responses in execute phase are treated as conversational replies (marked `isFinalResult`, phase returns to complete)
+- Streaming messages (`-stream` suffix) are cleaned up on: TASK_DONE, TASK_FAILED, TASK_STARTED (stale cleanup), and leader intermediate completions
+- Direct fix shortcut: reviewer FAIL -> dev (skip leader) -> auto re-review -> escalate to leader if still failing
+
+## Implementation Status
+
+| Phase | Content | Status |
+|-------|---------|--------|
+| Phase 1 | Working directory config (workDir, PICK_FOLDER, persistence) | Done |
+| Phase 2 | Git worktree isolation (centralized storage, team + solo, alwaysIsolate) | Done |
+| Phase 3 | Conflict detection (git merge-tree dry-run, rebase-then-retry) | Done |
+| Phase 4 | Activity Board (agent:activity event, worker team context injection) | Done |
+| Phase 5 | Exports/Needs dependency graph + prompt injection | Planned |
+
+## Key File Index
+
+| File | Responsibility |
+|------|---------------|
+| `src/worktree.ts` | Git worktree CRUD + env isolation -- `createWorktree` (centralized), `mergeWorktree` (squash + rebase-retry), `removeWorktree`, `checkConflicts` (git 2.38+ with fallback), `cleanupStaleWorktrees` (owner-aware), `getIsolatedGitEnv`, `syncWorktreeToMain`, `undoMergeCommit`, `resetWorktreeToMain`, `revertWorktreeCommit`, `getMergeHistory`, `initGitRepo` |
+| `src/delegation.ts` | `DelegationRouter` -- `prepareWorktree` callback, batched result forwarding, direct fix shortcut (reviewer->dev->re-review), budget/ceiling enforcement, worker team context |
+| `src/orchestrator.ts` | Core engine -- `prepareWorktree()`, `hasSoloNeighbor()`, `alwaysIsolate`, `mergeAllWorktrees()`, `detectPendingMerges()`, `undoMerge()`, `setAutoMerge()`, `manualMerge()`, `revertLastCommit()` |
+| `src/agent-session.ts` | Process management -- `worktreePath`/`worktreeBranch` storage, CWD resolution (worktree > repoPath > workspace), stale worktree auto-clear, conditional cleanup on failure |
+| `src/memory.ts` | Persistent learning -- review patterns, tech prefs, project history |
+| `src/phase-machine.ts` | State machine: CREATE -> DESIGN -> EXECUTE -> COMPLETE |
+| `src/result-finalizer.ts` | Team merge: changedFiles, preview, entryFile |
+| `src/preview-resolver.ts` | 7-step cascading preview URL resolution |
+| `src/prompt-templates.ts` | 15 typed templates (leader/worker/reviewer/direct-fix) |
+| `src/config.ts` | Centralized constants (delegation, timing, preview, limits) |
+| `apps/gateway/src/index.ts` | Gateway -- `agentWorkDirs`, `git init` on APPROVE_PLAN, event forwarding, `worktreeEnabled` toggle |
+| `apps/gateway/src/team-state.ts` | State persistence -- instance-scoped, atomic write, project history archive |
+| `apps/gateway/src/external-output-reader.ts` | External agent output -- JSONL reader, 500ms throttle |
+| `apps/web/src/app/office/page.tsx` | UI -- console layout, terminal messages, typewriter effect |
+| `apps/web/src/store/office-store.ts` | Store -- streaming message lifecycle, external agent text accumulation |
+
+## Rejected Approaches
+
+| Approach | Reason |
+|----------|--------|
+| CRDTs (Yjs/Automerge) | AI agents write entire files, not character-by-character edits -- wrong abstraction level |
+| Python frameworks (MetaGPT/CrewAI) | Not Node.js native, and they don't solve file conflicts |
+| Pure file locking (no worktree) | LLM agents are unpredictable -- they may ignore locks and write files directly |
+| Custom merge algorithms | Git's three-way merge is already optimal -- no need to reinvent the wheel |
+| External clash CLI | Native `git merge-tree` achieves the same goal without extra dependencies |
+| Clearing session on error | Causes context loss -- session should be preserved for retry |
+| In-repo `.worktrees/` directory | Path traversal issues -- agents walk up to find project root and hit worktree dirs |
+| Startup GC for stale worktrees | Could destroy worktrees with pending unmerged changes -- replaced by owner-aware cleanup |
