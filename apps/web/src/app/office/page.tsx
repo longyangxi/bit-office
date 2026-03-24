@@ -18,7 +18,7 @@ import { useSoundEffects } from "@/hooks/useSoundEffects";
 import type { SceneAdapter } from "@/components/office/scene/SceneAdapter";
 import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 
-// Extracted constants, theme, and utils — Rex test change for undo
+// Extracted constants, theme, and utils
 import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
