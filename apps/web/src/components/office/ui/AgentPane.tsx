@@ -343,6 +343,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
   const statusConfig = getStatusConfig();
   const cfg = statusConfig[status] ?? statusConfig.idle;
+  const busy = status === "working" || status === "waiting_approval";
+
+  // DEBUG: trace undo-merge button visibility
+  if (pendingMerge || lastMergeCommit || autoMerge) {
+    console.log(`[UndoMerge] ${agentId}: busy=${busy} isOwner=${isOwner} teamId=${teamId} isTeamMember=${isTeamMember} pendingMerge=${pendingMerge} lastMergeCommit=${lastMergeCommit} lastMergeMessage=${lastMergeMessage} onUndoMerge=${!!onUndoMerge}`);
+  }
 
   // ── Scroll management (unified via useScrollAnchor) ──
   // All scroll-to-bottom logic (new messages, streaming, resize, visibility
