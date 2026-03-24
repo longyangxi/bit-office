@@ -1,6 +1,8 @@
 "use client";
 
 import { forwardRef } from "react";
+import { Button, type ButtonProps } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export type TermButtonVariant = "ghost" | "primary" | "danger" | "success" | "warning" | "dim";
 
@@ -8,20 +10,9 @@ export interface TermButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
   variant?: TermButtonVariant;
 }
 
-const variantClass: Record<TermButtonVariant, string> = {
-  ghost: "tb-ghost",
-  primary: "tb-primary",
-  danger: "tb-danger",
-  success: "tb-success",
-  warning: "tb-warning",
-  dim: "tb-dim",
-};
-
 /**
- * TermButton -- CSS-class-based button for the terminal UI.
- *
- * Hover/focus states handled entirely in CSS (primitives.css).
- * No onMouseEnter/onMouseLeave JS required.
+ * TermButton -- Wrapper around shadcn Button with terminal theme variants.
+ * Drop-in replacement: same API, backed by CVA + Tailwind.
  *
  * Usage:
  *   <TermButton variant="primary" onClick={handleClick}>approve</TermButton>
@@ -32,8 +23,14 @@ const TermButton = forwardRef<HTMLButtonElement, TermButtonProps>(function TermB
   { variant = "ghost", className, ...props },
   ref,
 ) {
-  const cls = ["tb", variantClass[variant], className].filter(Boolean).join(" ");
-  return <button ref={ref} className={cls} {...props} />;
+  return (
+    <Button
+      ref={ref}
+      variant={variant as ButtonProps["variant"]}
+      className={cn(className)}
+      {...props}
+    />
+  );
 });
 
 export default TermButton;
