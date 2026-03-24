@@ -104,16 +104,6 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
           <LoadingDots />
         </span>
       </div>
-      <div style={{
-        fontFamily: "monospace",
-        fontSize: 11,
-        color: TERM_DIM,
-        opacity: 0.5,
-        letterSpacing: "0.03em",
-        marginTop: 4,
-      }}>
-        Preparing your workspace
-      </div>
     </div>
   );
 }
