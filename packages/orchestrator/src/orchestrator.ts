@@ -352,7 +352,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
-      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, false, undefined, session.name, session.agentId);
+      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, false, session.lastSummary ?? undefined, session.name, session.agentId);
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -502,7 +502,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       });
       return { success: false };
     }
-    const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name, session.agentId);
+    const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
     if (result.success) {
       session.pendingMerge = false;
       if (result.commitHash) session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
@@ -554,7 +554,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         if (worktreeHasPendingChanges(session.workspaceDir, session.worktreePath)) {
           if (this.worktreeMerge && session.autoMerge) {
             // Auto-merge agents: merge immediately instead of showing pending UI
-            const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name, session.agentId);
+            const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
             if (result.success && result.commitHash) {
               session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
             }
@@ -631,7 +631,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (autoMerge && this.worktreeMerge && session.pendingMerge
       && session.worktreePath && session.worktreeBranch) {
       session.pendingMerge = false;
-      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, undefined, session.name, session.agentId);
+      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
       if (result.success && result.commitHash) {
         session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
       }

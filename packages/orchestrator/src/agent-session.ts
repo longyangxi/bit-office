@@ -234,6 +234,8 @@ export class AgentSession {
   set hasExecuted(v: boolean) { this._hasExecuted = v; }
   /** Short summary of last completed/failed task (for roster context) */
   get lastResult(): string | null { return this._lastResult; }
+  /** Clean task summary without prefix (for merge commit messages) */
+  lastSummary: string | null = null;
   private _lastResultText: string | null = null;
   /** Full output from the last completed task (for plan capture). */
   private _lastFullOutput: string | null = null;
@@ -810,6 +812,7 @@ export class AgentSession {
               ? { previewUrl: undefined, previewPath: undefined }
               : this.detectPreview();
 
+            this.lastSummary = summary || null;
             this._lastResult = `done: ${summary.slice(0, 120)}`;
             this.setStatus("done");
             const tokenUsage = (this.taskInputTokens > 0 || this.taskOutputTokens > 0)
