@@ -5,7 +5,7 @@ import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "
 import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -51,7 +51,6 @@ function persistTeamState() {
       worktreePath: a.worktreePath,
       worktreeBranch: a.worktreeBranch,
       autoMerge: a.autoMerge,
-      mergeCommitStack: a.mergeCommitStack.length > 0 ? a.mergeCommitStack : undefined,
     }));
 
   let team: TeamState["team"] = null;
@@ -1175,9 +1174,10 @@ async function main() {
       if (agent.worktreePath && agent.worktreeBranch) {
         orc.restoreAgentWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
       }
-      // Restore merge commit history for undo-merge support across restarts
-      if (agent.mergeCommitStack?.length) {
-        orc.restoreAgentMergeHistory(agent.agentId, agent.mergeCommitStack);
+      // Rebuild merge commit history from git log (single source of truth)
+      const mergeStack = getMergeHistory(config.defaultWorkspace, agent.agentId);
+      if (mergeStack.length > 0) {
+        orc.restoreAgentMergeHistory(agent.agentId, mergeStack);
       }
       // Restore custom workDir for solo agents (gateway-level map for RUN_TASK repoPath)
       if (agent.workDir) {

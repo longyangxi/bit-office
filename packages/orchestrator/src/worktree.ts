@@ -591,6 +591,26 @@ function autoCommitWorktree(worktreePath: string, branch: string): boolean {
   }
 }
 
+/**
+ * Rebuild merge commit history for an agent from git log.
+ * Searches for commits tagged with `[agentId]` in the message.
+ * Returns oldest-first (stack order: push/pop from end).
+ */
+export function getMergeHistory(workspace: string, agentId: string): { hash: string; message: string }[] {
+  const repoRoot = resolveGitWorkspaceRoot(workspace);
+  try {
+    const escaped = agentId.replace(/[[\]\\]/g, "\\$&");
+    const raw = gitExec(`git log --grep="\\[${escaped}\\]" --format=%H%x09%s`, repoRoot);
+    if (!raw) return [];
+    return raw.split("\n").filter(Boolean).map(line => {
+      const tab = line.indexOf("\t");
+      return { hash: line.slice(0, tab), message: line.slice(tab + 1) };
+    }).reverse(); // git log is newest-first; reverse for stack order
+  } catch {
+    return [];
+  }
+}
+
 export function mergeWorktree(
   workspace: string,
   worktreePath: string,
@@ -598,6 +618,7 @@ export function mergeWorktree(
   keepAlive = false,
   summary?: string,
   agentName?: string,
+  agentId?: string,
 ): MergeResult {
   const repoRoot = resolveGitWorkspaceRoot(workspace);
   try {
@@ -667,8 +688,10 @@ export function mergeWorktree(
 
     if (stagedFiles.length > 0) {
       const prefix = agentName ? `${agentName}: ` : "";
-      const raw = summary ? summary.split("\n")[0].trim().slice(0, 72 - prefix.length) : `merge ${branch}`;
-      const msg = `${prefix}${raw || `merge ${branch}`}`;
+      const suffix = agentId ? ` [${agentId}]` : "";
+      const maxLen = 72 - prefix.length - suffix.length;
+      const raw = summary ? summary.split("\n")[0].trim().slice(0, maxLen) : `merge ${branch}`;
+      const msg = `${prefix}${raw || `merge ${branch}`}${suffix}`;
       execSync(`git commit -m "$COMMIT_MSG"`, {
         cwd: repoRoot,
         stdio: "pipe",

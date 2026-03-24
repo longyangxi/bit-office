@@ -274,7 +274,7 @@ Worktrees are cleaned up only when an agent is **fired** (`removeAgent`). No sta
 **State persistence:**
 - `autoMerge`: persisted in `team-state.json`, restored on restart
 - `pendingMerge`: reconstructed from git state on restart via `detectPendingMerges()`
-- `mergeCommitStack`: runtime-only (lost on restart — undo not available after restart)
+- `mergeCommitStack`: rebuilt from git log on restart via `getMergeHistory()` — undo survives restarts
 
 ### Configuration
 
