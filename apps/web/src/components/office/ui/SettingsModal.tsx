@@ -153,7 +153,7 @@ export default function SettingsModal({
     <TermModal
       open={isOpen}
       onClose={onClose}
-      maxWidth={400}
+      maxWidth={480}
       zIndex={100}
       title="Settings"
     >

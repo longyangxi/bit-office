@@ -43,7 +43,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
     <TermModal
       open={true}
       onClose={onClose}
-      maxWidth={440}
+      maxWidth={540}
       zIndex={100}
       title="Hire Team"
       footer={

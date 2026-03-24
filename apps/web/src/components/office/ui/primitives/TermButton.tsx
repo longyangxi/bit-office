@@ -6,8 +6,11 @@ import { cn } from "@/lib/utils";
 
 export type TermButtonVariant = "ghost" | "primary" | "danger" | "success" | "warning" | "dim";
 
+export type TermButtonSize = "default" | "sm" | "icon";
+
 export interface TermButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: TermButtonVariant;
+  size?: TermButtonSize;
 }
 
 /**
@@ -20,13 +23,14 @@ export interface TermButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
  *   <TermButton onClick={handleCancel}>cancel</TermButton>  // defaults to ghost
  */
 const TermButton = forwardRef<HTMLButtonElement, TermButtonProps>(function TermButton(
-  { variant = "ghost", className, ...props },
+  { variant = "ghost", size = "default", className, ...props },
   ref,
 ) {
   return (
     <Button
       ref={ref}
       variant={variant as ButtonProps["variant"]}
+      size={size as ButtonProps["size"]}
       className={cn(className)}
       {...props}
     />

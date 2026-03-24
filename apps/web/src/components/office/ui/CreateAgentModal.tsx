@@ -274,7 +274,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
     <TermModal
       open={true}
       onClose={onClose}
-      maxWidth={400}
+      maxWidth={520}
       zIndex={110}
       title={editAgent ? "Edit Agent" : "Create Agent"}
       footer={
