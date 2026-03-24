@@ -824,23 +824,32 @@ export class AgentSession {
             this.onTaskComplete?.(this.agentId, completedTaskId, summary, true, fullOutput);
             this.idleTimer = setTimeout(() => { this.idleTimer = null; this.setStatus("idle"); }, CONFIG.timing.idleDoneDelayMs);
           } else {
+            // Detect transient API errors (rate limit, usage exhaustion, network)
+            // that kill the process before any output. These are NOT session corruption —
+            // the session is fine, the API just refused the request.
+            const isTransientApiError = /usage limit|rate limit|out of.*usage|quota|balance|billing|overloaded|503|529|too many requests/i.test(this.stderrBuffer);
+
             // If resume produced 0 output, the session MAY be corrupted — but don't
-            // clear immediately. Transient errors (API rate limit, balance exhaustion,
-            // network timeout) also produce 0 output. Clearing the session on the first
-            // failure causes total context loss when the user retries.
-            // Strategy: clear after 2 consecutive 0-output failures so the 3rd
-            // attempt (last retry) runs with a fresh session instead of wasting it.
+            // clear immediately. Clear after 2 consecutive 0-output failures so the 3rd
+            // attempt runs with a fresh session instead of wasting it.
+            // EXCEPTION: transient API errors don't count — the session is intact,
+            // only the API refused the request. Preserving the session lets the user
+            // retry with --resume after the rate limit resets (same as native console).
             if (this.sessionId && this.stdoutBuffer.length === 0) {
-              this.resumeFailCount++;
-              if (this.resumeFailCount >= 2) {
-                const stderrTail = this.stderrBuffer.slice(-500);
-                console.error(`[CRITICAL] [Agent ${this.agentId}] Session ${this.sessionId} cleared after ${this.resumeFailCount} consecutive 0-output failures. cwd=${this.currentCwd}, stderr: ${stderrTail || "(empty)"}`);
-                this.sessionId = null;
-                this.hasHistory = false;
-                this.resumeFailCount = 0;
-                saveSessionId(this.agentId, null);
+              if (isTransientApiError) {
+                console.log(`[Agent ${this.agentId}] Transient API error (session ${this.sessionId} preserved): ${this.stderrBuffer.split("\n").filter(l => /error/i.test(l)).pop()?.trim() || "(see stderr)"}`);
               } else {
-                console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/3 — preserving session for retry`);
+                this.resumeFailCount++;
+                if (this.resumeFailCount >= 2) {
+                  const stderrTail = this.stderrBuffer.slice(-500);
+                  console.error(`[CRITICAL] [Agent ${this.agentId}] Session ${this.sessionId} cleared after ${this.resumeFailCount} consecutive 0-output failures. cwd=${this.currentCwd}, stderr: ${stderrTail || "(empty)"}`);
+                  this.sessionId = null;
+                  this.hasHistory = false;
+                  this.resumeFailCount = 0;
+                  saveSessionId(this.agentId, null);
+                } else {
+                  console.log(`[Agent ${this.agentId}] Resume session ${this.sessionId} failed (0ch output), attempt ${this.resumeFailCount}/3 — preserving session for retry`);
+                }
               }
             } else if (this.stdoutBuffer.length > 0) {
               // Non-zero output on a failed run proves the session is alive —
@@ -871,14 +880,19 @@ export class AgentSession {
             const errorMsg = stderrError || this.stdoutBuffer.slice(0, 300) || this.stderrBuffer.slice(-300) || `Process exited with code ${code}`;
             this._lastResult = `failed: ${errorMsg.slice(0, 120)}`;
             this.setStatus("error");
-            // Auto-cleanup orphaned worktree + branch on failure
-            if (this.worktreePath && this.worktreeBranch) {
+            // Auto-cleanup orphaned worktree + branch on failure — but NOT for
+            // transient API errors (rate limit, usage exhaustion). Those failures
+            // don't indicate a broken worktree, and the agent may have committed
+            // work before hitting the limit. Preserve the worktree for retry.
+            if (this.worktreePath && this.worktreeBranch && !isTransientApiError) {
               try {
                 removeWorktree(this.worktreePath, this.worktreeBranch, this.workspace);
                 console.log(`[Agent ${this.name}] Cleaned up worktree branch on failure: ${this.worktreeBranch}`);
               } catch { /* ignore */ }
               this.worktreePath = null;
               this.worktreeBranch = null;
+            } else if (this.worktreePath && isTransientApiError) {
+              console.log(`[Agent ${this.name}] Preserving worktree on transient API failure: ${this.worktreePath}`);
             }
             this.onEvent({
               type: "task:failed",
