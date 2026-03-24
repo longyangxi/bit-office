@@ -1176,7 +1176,7 @@ async function main() {
         orc.restoreAgentWorktree(agent.agentId, agent.worktreePath, agent.worktreeBranch);
       }
       // Rebuild merge commit history from git log (single source of truth)
-      const mergeStack = getMergeHistory(config.defaultWorkspace, agent.agentId);
+      const mergeStack = getMergeHistory(agent.workDir || config.defaultWorkspace, agent.agentId);
       if (mergeStack.length > 0) {
         orc.restoreAgentMergeHistory(agent.agentId, mergeStack);
       }
