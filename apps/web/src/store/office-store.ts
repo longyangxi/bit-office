@@ -79,6 +79,7 @@ interface AgentState {
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
   lastMergeMessage?: string | null;
+  undoCount?: number;
 }
 
 export interface TeamChatMessage {
@@ -136,6 +137,7 @@ interface OfficeStore {
   configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
   configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
+  availableSkills: Array<{ name: string; title: string; isFolder: boolean }>;
   connected: boolean;
   hydrated: boolean;
   /** Separated from agents to avoid full Map clone on every LOG_APPEND */
@@ -355,6 +357,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   configResult: null,
   configData: null,
   detectedBackends: [],
+  availableSkills: [],
   connected: false,
   hydrated: false,
   agentLogLines: new Map(),
@@ -492,6 +495,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               pendingMerge: event.pendingMerge ?? existing.pendingMerge,
               lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : existing.lastMergeCommit,
               lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : existing.lastMergeMessage,
+              undoCount: event.undoCount ?? existing.undoCount,
             });
           } else {
             // Restore saved messages from localStorage (skip for external agents)
@@ -511,6 +515,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             agent.pendingMerge = event.pendingMerge;
             agent.lastMergeCommit = event.lastMergeCommit;
             agent.lastMergeMessage = event.lastMergeMessage;
+            agent.undoCount = event.undoCount;
             if (saved) {
               agent.messages = saved.messages;
             }
@@ -918,6 +923,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         case "AGENT_DEFS": {
           return { agents, agentDefs: event.agents };
         }
+        case "SKILL_LIST": {
+          return { agents, availableSkills: event.skills };
+        }
         case "TEAM_PHASE": {
           const teamPhases = new Map(state.teamPhases);
           teamPhases.set(event.teamId, { phase: event.phase, leadAgentId: event.leadAgentId });
@@ -977,6 +985,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             pendingMerge: event.success ? false : agent.pendingMerge,
             lastMergeCommit: event.success ? (event.commitHash ?? agent.lastMergeCommit) : agent.lastMergeCommit,
             lastMergeMessage: event.success ? (event.commitMessage ?? agent.lastMergeMessage) : agent.lastMergeMessage,
+            undoCount: event.undoCount ?? (event.success ? (agent.undoCount ?? 0) + 1 : agent.undoCount),
           });
           break;
         }
@@ -994,6 +1003,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             autoMerge: event.autoMerge,
             lastMergeCommit: event.lastMergeCommit !== undefined ? event.lastMergeCommit : agent.lastMergeCommit,
             lastMergeMessage: event.lastMergeMessage !== undefined ? event.lastMergeMessage : agent.lastMergeMessage,
+            undoCount: event.undoCount ?? agent.undoCount,
           });
           break;
         }

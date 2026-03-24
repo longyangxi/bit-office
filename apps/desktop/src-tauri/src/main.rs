@@ -1,7 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use tauri::{
-    Manager,
+    Emitter, Manager,
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     menu::{Menu, MenuItem},
 };
@@ -13,9 +13,20 @@ fn bounce_dock(window: tauri::Window) {
     let _ = window.request_user_attention(Some(tauri::UserAttentionType::Informational));
 }
 
+/// Returns gateway connection info (port + gatewayId) if sidecar is ready, or null.
+/// Frontend polls this to handle the race where GATEWAY_READY emits before listen() is registered.
+#[tauri::command]
+fn get_gateway_info(state: tauri::State<'_, Mutex<GatewayInfo>>) -> Option<serde_json::Value> {
+    state.lock().unwrap().ready_payload.clone()
+}
+
 struct GatewayState {
     child: Option<tauri_plugin_shell::process::CommandChild>,
     pid: Option<u32>,
+}
+
+struct GatewayInfo {
+    ready_payload: Option<serde_json::Value>,
 }
 
 fn kill_gateway(app: &tauri::AppHandle) {
@@ -57,6 +68,7 @@ fn main() {
         ))
         .plugin(tauri_plugin_notification::init())
         .manage(Mutex::new(GatewayState { child: None, pid: None }))
+        .manage(Mutex::new(GatewayInfo { ready_payload: None }))
         .setup(move |app| {
             // -- System tray --
             let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
@@ -202,12 +214,27 @@ fn main() {
                             guard.pid = Some(pid);
                         }
 
+                        let app_handle = app.handle().clone();
                         tauri::async_runtime::spawn(async move {
                             use tauri_plugin_shell::process::CommandEvent;
                             while let Some(event) = rx.recv().await {
                                 match event {
                                     CommandEvent::Stdout(line) => {
-                                        println!("[gateway] {}", String::from_utf8_lossy(&line));
+                                        let text = String::from_utf8_lossy(&line);
+                                        println!("[gateway] {}", text);
+
+                                        // Parse GATEWAY_READY signal, store it, and emit to webview
+                                        if let Some(json_str) = text.strip_prefix("GATEWAY_READY ") {
+                                            if let Ok(value) = serde_json::from_str::<serde_json::Value>(json_str.trim()) {
+                                                println!("[desktop] Gateway ready: {}", value);
+                                                // Store for get_gateway_info command (handles race where
+                                                // webview hasn't registered listen() yet)
+                                                let info_state = app_handle.state::<Mutex<GatewayInfo>>();
+                                                info_state.lock().unwrap().ready_payload = Some(value.clone());
+                                                // Also emit event for listen()-based path
+                                                let _ = app_handle.emit("gateway-ready", value);
+                                            }
+                                        }
                                     }
                                     CommandEvent::Stderr(line) => {
                                         eprintln!("[gateway] {}", String::from_utf8_lossy(&line));
@@ -238,7 +265,7 @@ fn main() {
                 api.prevent_close();
             }
         })
-        .invoke_handler(tauri::generate_handler![bounce_dock])
+        .invoke_handler(tauri::generate_handler![bounce_dock, get_gateway_info])
         .build(tauri::generate_context!())
         .expect("error while building Open Office")
         .run(|app, event| {

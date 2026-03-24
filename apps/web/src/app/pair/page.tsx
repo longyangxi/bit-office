@@ -6,6 +6,25 @@ import dynamic from "next/dynamic";
 
 const OfficeSplash = dynamic(() => import("@/components/OfficeSplash"), { ssr: false });
 
+const isTauri = () => typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
+
+/** Connect to a specific gateway port and save the connection info. */
+async function connectToPort(port: number): Promise<boolean> {
+  const res = await fetch(`http://localhost:${port}/connect`, { signal: AbortSignal.timeout(3000) });
+  if (!res.ok) return false;
+  const data = await res.json();
+  const { saveConnection } = await import("@/lib/storage");
+  saveConnection({
+    mode: "ws",
+    machineId: data.machineId,
+    gatewayId: data.gatewayId,
+    wsUrl: `ws://localhost:${port}`,
+    role: data.role ?? "owner",
+    sessionToken: data.sessionToken,
+  });
+  return true;
+}
+
 export default function PairPage() {
   const [gateway, setGateway] = useState("");
   const [code, setCode] = useState("");
@@ -14,56 +33,100 @@ export default function PairPage() {
   const [status, setStatus] = useState<"connecting" | "failed" | "remote">("connecting");
   const router = useRouter();
 
-  const tryAutoConnect = useCallback(async (attempt = 0): Promise<boolean> => {
-    const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
-    const maxAttempts = isTauri ? 10 : 5;
+  // ── Tauri (production): get port from Rust via command + listen fallback ──
+  const waitForTauriGateway = useCallback(async (): Promise<boolean> => {
+    try {
+      const { invoke } = await import("@tauri-apps/api/core");
+      const { listen } = await import("@tauri-apps/api/event");
+
+      // 1. Check if sidecar is already ready (handles race where event fired before listen)
+      const stored = await invoke<{ port: number; gatewayId: string } | null>("get_gateway_info");
+      if (stored?.port) {
+        console.log(`[pair] Tauri get_gateway_info: port=${stored.port}`);
+        return connectToPort(stored.port);
+      }
+
+      // 2. Not ready yet — listen for the event
+      return new Promise<boolean>((resolve) => {
+        let settled = false;
+        const timeout = setTimeout(() => {
+          if (!settled) { settled = true; unlisten?.(); resolve(false); }
+          console.log("[pair] Tauri gateway-ready timeout after 30s");
+        }, 30_000);
+
+        let unlisten: (() => void) | undefined;
+        listen<{ port: number; gatewayId: string }>("gateway-ready", async (event) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timeout);
+          unlisten?.();
+          const { port } = event.payload;
+          console.log(`[pair] Tauri gateway-ready event: port=${port}`);
+          try {
+            resolve(await connectToPort(port));
+          } catch {
+            resolve(false);
+          }
+        }).then((fn) => { unlisten = fn; });
+      });
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // ── Web (and Tauri dev): scan known ports to find local gateway ──
+  const tryPortScan = useCallback(async (attempt = 0): Promise<boolean> => {
+    const maxAttempts = 5;
+    const isDev = window.location.port === "3000" || window.location.port === "3002";
 
     // 1. Same-origin (gateway serves the web bundle in production)
-    if (window.location.port !== "3000" && window.location.port !== "3002") {
+    if (!isDev) {
       try {
         const res = await fetch(`${window.location.origin}/connect`, { signal: AbortSignal.timeout(1000) });
         if (res.ok) {
           const data = await res.json();
           const { saveConnection } = await import("@/lib/storage");
-          saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: window.location.origin.replace(/^http/, "ws"), role: data.role ?? "owner", sessionToken: data.sessionToken });
+          saveConnection({ mode: "ws", machineId: data.machineId, gatewayId: data.gatewayId, wsUrl: window.location.origin.replace(/^http/, "ws"), role: data.role ?? "owner", sessionToken: data.sessionToken });
           return true;
         }
       } catch { /* not bundled mode */ }
     }
 
-    // 2. Connect to local gateway — dev prefers 9099, release prefers 9090, fallback to nearby ports
-    const isDev = window.location.port === "3000" || window.location.port === "3002";
+    // 2. Scan known ports
     const ports = isDev ? [9099, 9090, 9091] : [9090, 9091, 9099];
-    const scanTimeout = isTauri ? 2000 : 1500;
-    setStatus("connecting");
     console.log(`[pair] Trying ports [${ports}] (dev=${isDev}, attempt=${attempt + 1}/${maxAttempts})`);
     for (const gwPort of ports) {
       try {
-        const origin = `http://localhost:${gwPort}`;
-        const res = await fetch(`${origin}/connect`, { signal: AbortSignal.timeout(scanTimeout) });
+        const res = await fetch(`http://localhost:${gwPort}/connect`, { signal: AbortSignal.timeout(1500) });
         if (!res.ok) continue;
         const data = await res.json();
-        console.log(`[pair] Connected to gateway on port ${gwPort}`);
+        console.log(`[pair] Connected to gateway on port ${gwPort} (gatewayId=${data.gatewayId})`);
         const { saveConnection } = await import("@/lib/storage");
-        saveConnection({ mode: "ws", machineId: data.machineId, wsUrl: `ws://localhost:${gwPort}`, role: data.role ?? "owner", sessionToken: data.sessionToken });
+        saveConnection({ mode: "ws", machineId: data.machineId, gatewayId: data.gatewayId, wsUrl: `ws://localhost:${gwPort}`, role: data.role ?? "owner", sessionToken: data.sessionToken });
         return true;
-      } catch {
-        // try next port
-      }
+      } catch { /* try next */ }
     }
 
-    // Retry
     if (attempt < maxAttempts - 1) {
       await new Promise((r) => setTimeout(r, 1000));
-      return tryAutoConnect(attempt + 1);
+      return tryPortScan(attempt + 1);
     }
-
     return false;
   }, []);
 
+  /** Pick discovery strategy: Tauri production → IPC; Tauri dev / web → port scan */
+  const autoConnect = useCallback(async (): Promise<boolean> => {
+    // Tauri dev mode: sidecar not spawned, user runs gateway manually → port scan
+    const isDev = window.location.port === "3000" || window.location.port === "3002";
+    if (isTauri() && !isDev) {
+      return waitForTauriGateway();
+    }
+    return tryPortScan();
+  }, [waitForTauriGateway, tryPortScan]);
+
   useEffect(() => {
     const startTime = Date.now();
-    const minDisplayMs = 3000; // Show loading animation for at least 3 seconds
+    const minDisplayMs = 3000;
 
     const navigateAfterDelay = () => {
       const elapsed = Date.now() - startTime;
@@ -74,15 +137,20 @@ export default function PairPage() {
     const run = async () => {
       const { getConnection, clearConnection } = require("@/lib/storage");
       const conn = getConnection();
-      if (conn && conn.sessionToken) {
+
+      // Tauri: reject cached connections to wrong gateway
+      if (isTauri() && conn?.gatewayId && conn.gatewayId !== "desktop") {
+        console.log(`[pair] Cached connection is for gateway ${conn.gatewayId}, need desktop — clearing`);
+        clearConnection();
+      } else if (conn?.sessionToken) {
         await navigateAfterDelay();
         router.push("/office");
         return;
-      }
-      if (conn && !conn.sessionToken) {
+      } else if (conn && !conn.sessionToken) {
         clearConnection();
       }
-      const ok = await tryAutoConnect();
+
+      const ok = await autoConnect();
       if (ok) {
         await navigateAfterDelay();
         router.push("/office");
@@ -91,13 +159,17 @@ export default function PairPage() {
       }
     };
     run();
-  }, [router, tryAutoConnect]);
+  }, [router, autoConnect]);
 
   async function handleRetry() {
     setStatus("connecting");
     setError("");
-    const ok = await tryAutoConnect();
-    if (!ok) setStatus("failed");
+    const ok = await autoConnect();
+    if (ok) {
+      router.push("/office");
+    } else {
+      setStatus("failed");
+    }
   }
 
   async function handleRemoteSubmit(e: React.FormEvent) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { APP_VERSION } from '@/lib/appMeta'
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 interface BottomToolbarProps {
   editMode: boolean
@@ -13,43 +14,69 @@ interface BottomToolbarProps {
   showEditorControls?: boolean
 }
 
+function TipButton({
+  label,
+  tip,
+  className,
+  onClick,
+}: {
+  label: string
+  tip: string
+  className: string
+  onClick: () => void
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <button className={className} onClick={onClick}>
+          {label}
+        </button>
+      </TooltipTrigger>
+      <TooltipContent side="top">{tip}</TooltipContent>
+    </Tooltip>
+  )
+}
+
 export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettings, onOpenHistory, onOpenOfficeSwitcher, onToggleTest, testActive, showEditorControls = true }: BottomToolbarProps) {
   return (
     <div className="btb">
       {onOpenOfficeSwitcher && (
-        <button className="btb-btn" onClick={onOpenOfficeSwitcher} title="Switch office appearance">
-          Office
-        </button>
+        <TipButton
+          label="Office"
+          tip="Switch office appearance"
+          className="btb-btn"
+          onClick={onOpenOfficeSwitcher}
+        />
       )}
       {showEditorControls && (
-        <button
+        <TipButton
+          label="Layout"
+          tip="Edit office layout"
           className={editMode ? "btb-btn btb-btn-active" : "btb-btn"}
           onClick={onToggleEditMode}
-          title="Edit office layout"
-        >
-          Layout
-        </button>
+        />
       )}
       {onOpenHistory && (
-        <button className="btb-btn" onClick={onOpenHistory} title="Project history">
-          History
-        </button>
+        <TipButton
+          label="History"
+          tip="Project history"
+          className="btb-btn"
+          onClick={onOpenHistory}
+        />
       )}
-      <button
+      <TipButton
+        label="Settings"
+        tip={`Settings \u00b7 Web UI v${APP_VERSION}`}
         className="btb-btn"
         onClick={onOpenSettings}
-        title={`Settings \u00b7 Web UI v${APP_VERSION}`}
-      >
-        Settings
-      </button>
+      />
       {onToggleTest && (
-        <button
+        <TipButton
+          label={testActive ? 'Clear Test' : 'Test'}
+          tip="Fill all work seats with test characters"
           className={testActive ? "btb-btn btb-btn-danger" : "btb-btn"}
           onClick={onToggleTest}
-          title="Fill all work seats with test characters"
-        >
-          {testActive ? 'Clear Test' : 'Test'}
-        </button>
+        />
       )}
     </div>
   )

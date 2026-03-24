@@ -219,7 +219,7 @@ function shouldCleanWorktree(
 // Helpers
 // ---------------------------------------------------------------------------
 
-function isGitRepo(cwd: string): boolean {
+export function isGitRepo(cwd: string): boolean {
   try {
     execSync("git rev-parse --is-inside-work-tree", {
       cwd,
@@ -229,6 +229,26 @@ function isGitRepo(cwd: string): boolean {
     });
     return true;
   } catch {
+    return false;
+  }
+}
+
+/**
+ * Initialize a git repo in a non-git directory so worktree isolation can work.
+ * Creates an initial commit so branches/worktrees can be created.
+ * Returns true if the repo was successfully initialized.
+ */
+export function initGitRepo(cwd: string): boolean {
+  try {
+    execSync("git init", { cwd, stdio: "pipe", timeout: TIMEOUT, env: getIsolatedGitEnv() });
+    execSync("git add -A", { cwd, stdio: "pipe", timeout: TIMEOUT, env: getIsolatedGitEnv() });
+    execSync('git commit --allow-empty -m "init: workspace initialized for worktree isolation"', {
+      cwd, stdio: "pipe", timeout: TIMEOUT, env: getIsolatedGitEnv(),
+    });
+    console.log(`[Worktree] Initialized git repo at ${cwd}`);
+    return true;
+  } catch (err) {
+    console.warn(`[Worktree] Failed to init git repo at ${cwd}: ${(err as Error).message}`);
     return false;
   }
 }

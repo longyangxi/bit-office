@@ -640,7 +640,7 @@ export default function OfficePage() {
     );
     const displayName = existing.length === 0 ? def.name : `${def.name} ${existing.length + 1}`;
     const agentId = `agent-${nanoid(6)}`;
-    sendCommand({ type: "CREATE_AGENT", agentId, name: displayName, role: def.skills ? `${def.role} — ${def.skills}` : def.role, palette: def.palette, personality: def.personality, backend, workDir });
+    sendCommand({ type: "CREATE_AGENT", agentId, name: displayName, role: def.skills ? `${def.role} — ${def.skills}` : def.role, palette: def.palette, personality: def.personality, backend, workDir, skillFiles: def.skillFiles });
     // Store workDir locally so RUN_TASK can pass it as repoPath
     if (workDir) {
       agentWorkDirMap.set(agentId, workDir);
@@ -1768,6 +1768,7 @@ export default function OfficePage() {
                     pendingMerge: ag.pendingMerge,
                     lastMergeCommit: ag.lastMergeCommit,
                     lastMergeMessage: ag.lastMergeMessage,
+                    undoCount: ag.undoCount,
                   };
                 }}
                 paneOffset={paneOffset}
@@ -1918,6 +1919,7 @@ export default function OfficePage() {
                   pendingMerge={ag.pendingMerge}
                   lastMergeCommit={ag.lastMergeCommit}
                   lastMergeMessage={ag.lastMergeMessage}
+                  undoCount={ag.undoCount}
                   onMerge={() => sendCommand({ type: "MERGE_WORKTREE", agentId: selectedAgent })}
                   onRevert={() => sendCommand({ type: "REVERT_WORKTREE", agentId: selectedAgent })}
                   onUndoMerge={async () => {
@@ -2427,6 +2429,7 @@ export default function OfficePage() {
           onClose={() => { setShowCreateAgent(false); setEditingAgent(null); }}
           assetsReady={assetsReady}
           editAgent={editingAgent}
+          sendCommand={sendCommand}
         />
       )}
 

@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 html, body {
   overflow: hidden;
   height: 100%;
@@ -239,31 +243,31 @@ select option {
   font-weight: 400 !important; line-height: 1.7 !important;
   letter-spacing: -0.01em;
 }
-/* ── Headings: same size, brighter color — no weight escalation ── */
+/* ── Headings: same size, weight-only hierarchy — no bright color jump ── */
 .chat-markdown h1 {
   font-size: 12px !important; font-weight: 500 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 14px 0 6px !important; padding: 0 0 4px !important;
   border-bottom: 1px solid var(--term-border-dim) !important;
 }
 .chat-markdown h2 {
   font-size: 12px !important; font-weight: 500 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 12px 0 4px !important; padding: 0 !important;
 }
 .chat-markdown h3 {
   font-size: 12px !important; font-weight: 500 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 10px 0 3px !important; padding: 0 !important;
 }
 .chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
   font-size: 12px !important; font-weight: 400 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 8px 0 2px !important; padding: 0 !important;
 }
-/* ── Inline emphasis: subtle, minimal differentiation ── */
+/* ── Inline emphasis: subtle, weight-only differentiation ── */
 .chat-markdown strong, .chat-markdown b {
-  font-weight: 500 !important; color: var(--term-text-bright) !important;
+  font-weight: 500 !important; color: var(--term-text) !important;
 }
 .chat-markdown em, .chat-markdown i {
   font-style: italic !important; color: var(--term-text) !important;
@@ -318,7 +322,7 @@ select option {
 }
 .chat-markdown th {
   padding: 4px 12px !important; text-align: left !important;
-  font-weight: 500 !important; color: var(--term-text-bright) !important;
+  font-weight: 500 !important; color: var(--term-text) !important;
   border-bottom: 1px solid var(--term-border) !important;
 }
 .chat-markdown td {
@@ -388,28 +392,21 @@ select option {
 }
 /* ── Text selection — subtle, non-distracting ── */
 .crt-screen ::selection { background: rgba(var(--term-accent-rgb),0.15); color: var(--term-text-bright); }
-/* ── Input well — inset engraved container for text inputs ── */
+/* ── Input well — single subtle border, no double-ring ── */
 .term-input-well {
   display: flex;
   align-items: flex-end;
   gap: 0;
   background: var(--term-bg);
   border-radius: var(--radius-sm);
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25),
-    0 1px 0 var(--separator-groove-light);
+  border: 1px solid var(--term-border);
   padding: 0 2px;
-  transition: box-shadow var(--duration-fast) ease;
+  transition: border-color var(--duration-fast) ease;
 }
 .term-input-well:focus-within {
-  box-shadow:
-    inset 0 1px 3px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(var(--term-accent-rgb), 0.2),
-    0 1px 0 var(--separator-groove-light),
-    0 0 0 1px rgba(var(--term-accent-rgb), 0.06);
+  border-color: var(--term-green-dim);
 }
-/* ── Input focus — clean bottom-border accent instead of glow ── */
+/* ── Input focus — no outline ── */
 .term-input:focus { outline: none; }
 .term-input::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
@@ -435,7 +432,7 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 /* ── Chat area — recessed surface with subtle inset shadow ── */
 .term-chat-area {
   background-image: none;
-  box-shadow: var(--shadow-inset);
+  box-shadow: inset 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(0, 0, 0, 0.5);
 }
 /* ── Surface texture — subtle noise for raised panels ── */
 .term-info-bar,
@@ -523,11 +520,10 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 :focus:not(:focus-visible) {
   outline: none;
 }
-/* Inputs already have their own focus treatment */
+/* Inputs already have their own focus treatment — no extra rings */
 .term-input:focus-visible,
 textarea:focus-visible {
   outline: none;
-  box-shadow: inset 0 -1px 0 var(--term-green);
 }
 
 /* ── Reduced motion — respect user preference ── */

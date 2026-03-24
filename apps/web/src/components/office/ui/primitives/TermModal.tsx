@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useCallback } from "react";
+import { useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 export interface TermModalProps {
   /** Whether the modal is open */
@@ -24,15 +34,12 @@ export interface TermModalProps {
 }
 
 /**
- * TermModal -- Accessible modal with focus trap, Escape-to-close,
- * backdrop click, and CSS-driven animations.
+ * TermModal -- Accessible modal backed by Radix Dialog.
+ * Drop-in replacement: same props API, powered by shadcn Dialog.
  *
  * Usage:
  *   <TermModal open={show} onClose={() => setShow(false)} title="Confirm">
  *     <p>Are you sure?</p>
- *     <TermModal.Footer>
- *       <TermButton onClick={...}>Yes</TermButton>
- *     </TermModal.Footer>
  *   </TermModal>
  *
  * Or with footer prop:
@@ -49,110 +56,40 @@ export default function TermModal({
   children,
   footer,
   className,
-  role = "dialog",
 }: TermModalProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const previousFocus = useRef<HTMLElement | null>(null);
-
-  // Focus trap + restore focus on close
-  useEffect(() => {
-    if (!open) return;
-
-    // Save previous focus
-    previousFocus.current = document.activeElement as HTMLElement;
-
-    // Focus the container (or first focusable element)
-    const timer = setTimeout(() => {
-      const container = containerRef.current;
-      if (!container) return;
-      const focusable = container.querySelector<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      (focusable || container).focus();
-    }, 50);
-
-    return () => {
-      clearTimeout(timer);
-      // Restore previous focus on unmount
-      previousFocus.current?.focus();
-    };
-  }, [open]);
-
-  // Escape key handler
-  useEffect(() => {
-    if (!open) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.stopPropagation();
-        onClose();
-      }
-      // Focus trap: Tab wrapping
-      if (e.key === "Tab") {
-        const container = containerRef.current;
-        if (!container) return;
-        const focusables = container.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        );
-        if (focusables.length === 0) return;
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      }
-    };
-    document.addEventListener("keydown", handleKeyDown, true);
-    return () => document.removeEventListener("keydown", handleKeyDown, true);
-  }, [open, onClose]);
-
-  // Prevent body scroll when modal is open
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => { document.body.style.overflow = prev; };
-  }, [open]);
-
-  const handleBackdropClick = useCallback((e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) onClose();
-  }, [onClose]);
-
-  if (!open) return null;
+  const handleOpenChange = useCallback(
+    (isOpen: boolean) => {
+      if (!isOpen) onClose();
+    },
+    [onClose]
+  );
 
   return (
-    <div
-      className="tm-backdrop"
-      onClick={handleBackdropClick}
-      role={role}
-      aria-modal="true"
-      aria-label={title}
-      style={zIndex ? { zIndex } : undefined}
-    >
-      <div
-        ref={containerRef}
-        className={["tm-container", className].filter(Boolean).join(" ")}
-        style={maxWidth ? { maxWidth } : undefined}
-        tabIndex={-1}
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent
+        maxWidth={maxWidth}
+        className={cn(className)}
+        zIndex={zIndex ?? undefined}
       >
         {title && (
-          <div className="tm-header">
-            <span>{title}</span>
-            <button className="tm-close" onClick={onClose} aria-label="Close">&times;</button>
-          </div>
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            <button
+              className="px-2 py-0.5 border border-border bg-transparent text-muted-foreground font-mono text-term cursor-pointer leading-none transition-colors duration-fast hover:text-foreground hover:border-term-text-bright"
+              onClick={onClose}
+              aria-label="Close"
+            >
+              &times;
+            </button>
+          </DialogHeader>
         )}
-        <div className="tm-body">
-          {children}
-        </div>
-        {footer && (
-          <div className="tm-footer">
-            {footer}
-          </div>
-        )}
-      </div>
-    </div>
+        {/* Hidden description for accessibility when no visible description */}
+        <DialogDescription className="sr-only">
+          {title ? `${title} dialog` : "Dialog"}
+        </DialogDescription>
+        <DialogBody>{children}</DialogBody>
+        {footer && <DialogFooter>{footer}</DialogFooter>}
+      </DialogContent>
+    </Dialog>
   );
 }

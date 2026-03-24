@@ -1,6 +1,9 @@
 "use client";
 
 import { forwardRef } from "react";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
 
 export interface TermInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   /** Render as inline (borderless, transparent) terminal-style input */
@@ -12,9 +15,12 @@ export interface TermTextAreaProps extends React.TextareaHTMLAttributes<HTMLText
   inline?: boolean;
 }
 
+const inlineClasses =
+  "border-none bg-transparent text-term-text-bright caret-accent px-1.5 py-1.5 focus:border-none focus:shadow-none";
+
 /**
- * TermInput -- CSS-class-based <input> for the terminal UI.
- * Focus states handled in CSS. Consistent sizing with lineHeight: 20px.
+ * TermInput -- Wrapper around shadcn Input with terminal styling.
+ * Drop-in replacement: same API.
  *
  * Usage:
  *   <TermInput placeholder="Search..." value={q} onChange={...} />
@@ -24,13 +30,17 @@ const TermInput = forwardRef<HTMLInputElement, TermInputProps>(function TermInpu
   { inline, className, ...props },
   ref,
 ) {
-  const cls = ["ti", inline && "ti-inline", className].filter(Boolean).join(" ");
-  return <input ref={ref} className={cls} {...props} />;
+  return (
+    <Input
+      ref={ref}
+      className={cn(inline && inlineClasses, className)}
+      {...props}
+    />
+  );
 });
 
 /**
- * TermTextArea -- CSS-class-based <textarea> for the terminal UI.
- * Uses ti + ti-textarea classes for consistent styling.
+ * TermTextArea -- Wrapper around shadcn Textarea with terminal styling.
  *
  * Usage:
  *   <TermTextArea rows={1} placeholder="message..." />
@@ -40,8 +50,17 @@ const TermTextArea = forwardRef<HTMLTextAreaElement, TermTextAreaProps>(function
   { inline, className, ...props },
   ref,
 ) {
-  const cls = ["ti", !inline && "ti-textarea", inline && "ti-inline", className].filter(Boolean).join(" ");
-  return <textarea ref={ref} className={cls} {...props} />;
+  return (
+    <Textarea
+      ref={ref}
+      className={cn(
+        !inline && "overflow-hidden",
+        inline && inlineClasses,
+        className,
+      )}
+      {...props}
+    />
+  );
 });
 
 export { TermTextArea };

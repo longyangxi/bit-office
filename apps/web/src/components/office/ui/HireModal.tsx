@@ -33,7 +33,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
     <TermModal
       open={true}
       onClose={onClose}
-      maxWidth={420}
+      maxWidth={520}
       zIndex={100}
       title="Hire Team"
       footer={

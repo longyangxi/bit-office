@@ -1,5 +1,8 @@
 "use client";
 
+import { Badge, type BadgeProps } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+
 export type TermBadgeVariant = "green" | "yellow" | "red" | "blue" | "purple" | "dim";
 
 export interface TermBadgeProps {
@@ -9,17 +12,9 @@ export interface TermBadgeProps {
   style?: React.CSSProperties;
 }
 
-const variantClass: Record<TermBadgeVariant, string> = {
-  green: "tg-green",
-  yellow: "tg-yellow",
-  red: "tg-red",
-  blue: "tg-blue",
-  purple: "tg-purple",
-  dim: "tg-dim",
-};
-
 /**
- * TermBadge -- Small status/label badge with semantic color variants.
+ * TermBadge -- Wrapper around shadcn Badge with terminal semantic colors.
+ * Drop-in replacement: same API.
  *
  * Usage:
  *   <TermBadge variant="green">Done</TermBadge>
@@ -32,6 +27,13 @@ export default function TermBadge({
   className,
   style,
 }: TermBadgeProps) {
-  const cls = ["tg", variantClass[variant], className].filter(Boolean).join(" ");
-  return <span className={cls} style={style}>{children}</span>;
+  return (
+    <Badge
+      variant={variant as BadgeProps["variant"]}
+      className={cn(className)}
+      style={style}
+    >
+      {children}
+    </Badge>
+  );
 }

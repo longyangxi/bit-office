@@ -11,7 +11,7 @@ import { RetryTracker } from "./retry.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain } from "./worktree.js";
+import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain, isGitRepo, initGitRepo } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -315,6 +315,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     const base = repoPath ?? session.workspaceDir;
+
+    // Non-git workspaces: auto-init git so worktree isolation + undo work
+    if (!isGitRepo(base)) {
+      if (!initGitRepo(base)) return;
+    }
+
     const instanceDir = process.env.BIT_OFFICE_INSTANCE_DIR;
     const owner = instanceDir
       ? {
@@ -483,6 +489,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].hash : null,
       lastMergeMessage: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].message : null,
       mergeCommitStack: s.mergeCommitStack,
+      undoCount: s.mergeCommitStack.length,
     }));
   }
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { TERM_BG, TERM_PANEL, TERM_BORDER, TERM_BORDER_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_DIM, TERM_GREEN, TERM_HOVER, TERM_SURFACE, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme"
+import { cn } from "@/lib/utils"
 import type { OfficeLayout } from '../types'
 import { sendCommand } from '@/lib/connection'
 import { useOfficeStore } from '@/store/office-store'
@@ -18,6 +18,19 @@ interface SettingsModalProps {
   onImportRoomZip?: (layout: OfficeLayout, backgroundImage: HTMLImageElement | null) => void
   soundEnabled: boolean
   onSoundEnabledChange: (enabled: boolean) => void
+}
+
+/** Horizontal form row: label on left, input on right */
+function FormRow({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 mb-2">
+      <label className="text-term text-muted-foreground shrink-0 w-[100px] text-right">
+        {label}
+        {hint && <span className="block text-[10px] opacity-50 mt-0.5">{hint}</span>}
+      </label>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  )
 }
 
 export default function SettingsModal({
@@ -141,99 +154,62 @@ export default function SettingsModal({
     })
   }
 
-  const checkboxStyle = (checked: boolean): React.CSSProperties => ({
-    width: 14,
-    height: 14,
-    border: `2px solid ${TERM_DIM}`,
-    borderRadius: 3,
-    background: checked ? TERM_GREEN : 'transparent',
-    flexShrink: 0,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '11px',
-    lineHeight: 1,
-    color: TERM_BG,
-  })
+  const checkboxCls = (checked: boolean) => cn(
+    "w-3.5 h-3.5 border-2 border-muted-foreground rounded-sm shrink-0",
+    "flex items-center justify-center text-[11px] leading-none",
+    checked ? "bg-accent text-background" : "bg-transparent",
+  )
 
-  const menuItemBase: React.CSSProperties = {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    padding: '6px 10px',
-    fontSize: '15px',
-    color: TERM_TEXT,
-    background: 'transparent',
-    border: 'none',
-    cursor: 'pointer',
-    textAlign: 'left',
-    fontFamily: 'var(--font-mono)',
-    transition: 'background var(--duration-fast) ease',
-  }
+  const toggleCls = "flex items-center justify-between w-full px-3 py-2 text-term text-foreground bg-transparent border-none cursor-pointer text-left font-mono transition-colors duration-fast hover:bg-white/5"
 
   return (
     <TermModal
       open={isOpen}
       onClose={onClose}
-      maxWidth={400}
+      maxWidth={520}
       zIndex={100}
       title="Settings"
     >
       {/* ---- Telegram Section ---- */}
-      <div style={{ borderBottom: `1px solid ${TERM_BORDER_DIM}`, paddingBottom: 8, marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <span style={{
-            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-            background: tgConnected ? TERM_SEM_GREEN : TERM_DIM, flexShrink: 0,
-          }} />
-          <span style={{ fontSize: '13px', color: TERM_TEXT, fontWeight: 500 }}>
+      <div className="border-b border-term-border-dim pb-3 mb-3">
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tgConnected ? "bg-sem-green" : "bg-muted-foreground")} />
+          <span className="text-[13px] text-foreground font-medium">
             Telegram {tgConnected ? '(connected)' : '(disconnected)'}
           </span>
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>Bot Token</label>
-          <div style={{ display: 'flex', gap: 4 }}>
+        <FormRow label="Bot Token">
+          <div className="flex gap-1">
             <TermInput
               type={showToken ? 'text' : 'password'}
               value={tgToken}
               onChange={e => setTgToken(e.target.value)}
               placeholder="123456:ABC-DEF..."
-              style={{ flex: 1 }}
+              className="flex-1"
               onFocus={() => { if (tgToken.includes('...')) setTgToken('') }}
             />
             <TermButton
               variant="dim"
+              size="sm"
               onClick={() => setShowToken(!showToken)}
               title={showToken ? 'Hide' : 'Show'}
-              style={{ padding: '4px 8px', fontSize: '14px' }}
-            >{showToken ? '🙈' : '👁'}</TermButton>
+            >{showToken ? '\u{1F648}' : '\u{1F441}'}</TermButton>
           </div>
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>
-            Allowed User IDs <span style={{ opacity: 0.6 }}>(comma-separated, empty = all)</span>
-          </label>
+        </FormRow>
+        <FormRow label="Allowed IDs" hint="comma-sep, empty=all">
           <TermInput
             type="text"
             value={tgUsers}
             onChange={e => setTgUsers(e.target.value)}
             placeholder="123456789, 987654321"
           />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <TermButton
-            variant="primary"
-            onClick={handleSaveTelegram}
-            disabled={tgSaving}
-          >
+        </FormRow>
+        <div className="flex items-center gap-2 pl-[112px]">
+          <TermButton variant="primary" onClick={handleSaveTelegram} disabled={tgSaving}>
             {tgSaving ? 'Saving...' : 'Save & Connect'}
           </TermButton>
           {tgMessage && (
-            <span style={{
-              fontSize: 12,
-              color: tgMessage.includes('Failed') || tgMessage.includes('not') ? TERM_SEM_RED : TERM_SEM_GREEN,
-            }}>
+            <span className={cn("text-term", tgMessage.includes('Failed') || tgMessage.includes('not') ? "text-sem-red" : "text-sem-green")}>
               {tgMessage}
             </span>
           )}
@@ -241,133 +217,91 @@ export default function SettingsModal({
       </div>
 
       {/* ---- Tunnel Section ---- */}
-      <div style={{ borderBottom: `1px solid ${TERM_BORDER_DIM}`, paddingBottom: 8, marginBottom: 8 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <span style={{
-            display: 'inline-block', width: 8, height: 8, borderRadius: '50%',
-            background: tunnelRunning ? TERM_SEM_GREEN : TERM_DIM, flexShrink: 0,
-          }} />
-          <span style={{ fontSize: '13px', color: TERM_TEXT, fontWeight: 500 }}>
+      <div className="border-b border-term-border-dim pb-3 mb-3">
+        <div className="flex items-center gap-1.5 mb-3">
+          <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tunnelRunning ? "bg-sem-green" : "bg-muted-foreground")} />
+          <span className="text-[13px] text-foreground font-medium">
             Tunnel {tunnelRunning ? '(running)' : '(stopped)'}
           </span>
         </div>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>Tunnel Token</label>
-          <div style={{ display: 'flex', gap: 4 }}>
+        <FormRow label="Token">
+          <div className="flex gap-1">
             <TermInput
               type={showTunnelToken ? 'text' : 'password'}
               value={tunnelToken}
               onChange={e => setTunnelToken(e.target.value)}
               placeholder="eyJ..."
-              style={{ flex: 1 }}
+              className="flex-1"
               onFocus={() => { if (tunnelToken.includes('...')) setTunnelToken('') }}
             />
             <TermButton
               variant="dim"
+              size="sm"
               onClick={() => setShowTunnelToken(!showTunnelToken)}
               title={showTunnelToken ? 'Hide' : 'Show'}
-              style={{ padding: '4px 8px', fontSize: '14px' }}
             >{showTunnelToken ? '\u{1F648}' : '\u{1F441}'}</TermButton>
           </div>
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label style={{ fontSize: '12px', color: TERM_DIM, marginBottom: 4, display: 'block' }}>
-            Public URL
-          </label>
+        </FormRow>
+        <FormRow label="Public URL">
           <TermInput
             type="text"
             value={tunnelBaseUrl}
             onChange={e => setTunnelBaseUrl(e.target.value)}
             placeholder="https://office.example.com"
           />
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <TermButton
-            variant="primary"
-            onClick={handleSaveTunnel}
-            disabled={tunnelSaving}
-          >
+        </FormRow>
+        <div className="flex items-center gap-2 pl-[112px]">
+          <TermButton variant="primary" onClick={handleSaveTunnel} disabled={tunnelSaving}>
             {tunnelSaving ? 'Saving...' : 'Save & Start'}
           </TermButton>
           {tunnelMessage && (
-            <span style={{
-              fontSize: 12,
-              color: tunnelMessage.includes('not') || tunnelMessage.includes('Failed') ? TERM_SEM_RED : TERM_SEM_GREEN,
-            }}>
+            <span className={cn("text-term", tunnelMessage.includes('not') || tunnelMessage.includes('Failed') ? "text-sem-red" : "text-sem-green")}>
               {tunnelMessage}
             </span>
           )}
         </div>
       </div>
 
-      {/* ---- Toggles Section ---- */}
-      <button
-        onClick={toggleWorktree}
-        style={menuItemBase}
-        title="Each agent works in its own git worktree branch, merged on completion"
-      >
-        <span>Agent Isolation</span>
-        <span style={checkboxStyle(worktreeOn)}>
-          {worktreeOn ? '\u2713' : ''}
-        </span>
-      </button>
-      <button
-        onClick={toggleAutoMerge}
-        style={menuItemBase}
-        title="Auto-merge agent changes to main on task completion. Turn off to review before merging."
-      >
-        <span>Auto-merge</span>
-        <span style={checkboxStyle(autoMergeOn)}>
-          {autoMergeOn ? '\u2713' : ''}
-        </span>
-      </button>
-      <button onClick={toggleSound} style={menuItemBase}>
-        <span>Sound Notifications</span>
-        <span style={checkboxStyle(soundEnabled)}>
-          {soundEnabled ? '\u2713' : ''}
-        </span>
-      </button>
-      <div style={{ borderTop: `1px solid ${TERM_BORDER_DIM}`, margin: '4px 0' }} />
-      <button
-        onClick={() => {
-          setAgentsUpdating(true)
-          setAgentsMessage(null)
-          sendCommand({ type: "UPDATE_AGENCY_AGENTS" })
-        }}
-        disabled={agentsUpdating}
-        style={{ ...menuItemBase, opacity: agentsUpdating ? 0.5 : 1 }}
-      >
-        <span>
-          {agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}
-        </span>
-        {agentsMessage && (
-          <span style={{
-            fontSize: 11,
-            color: agentsMessage.startsWith('Failed') ? TERM_SEM_RED : TERM_SEM_GREEN,
-          }}>
-            {agentsMessage.startsWith('Failed') ? '\u2717' : '\u2713'}
-          </span>
-        )}
-      </button>
-      <div
-        style={{
-          borderTop: `1px solid ${TERM_BORDER_DIM}`,
-          marginTop: 4,
-          paddingTop: 8,
-          fontSize: 11,
-          color: TERM_DIM,
-          fontFamily: 'var(--font-mono)',
-          lineHeight: 1.45,
-          userSelect: 'text',
-        }}
-        title="From monorepo root package.json at build time"
-      >
+      {/* ---- Toggles ---- */}
+      <div className="mb-1">
+        <button onClick={toggleWorktree} className={toggleCls} title="Each agent works in its own git worktree branch, merged on completion">
+          <span>Agent Isolation</span>
+          <span className={checkboxCls(worktreeOn)}>{worktreeOn ? '\u2713' : ''}</span>
+        </button>
+        <button onClick={toggleAutoMerge} className={toggleCls} title="Auto-merge agent changes to main on task completion. Turn off to review before merging.">
+          <span>Auto-merge</span>
+          <span className={checkboxCls(autoMergeOn)}>{autoMergeOn ? '\u2713' : ''}</span>
+        </button>
+        <button onClick={toggleSound} className={toggleCls}>
+          <span>Sound Notifications</span>
+          <span className={checkboxCls(soundEnabled)}>{soundEnabled ? '\u2713' : ''}</span>
+        </button>
+      </div>
+
+      {/* ---- Actions ---- */}
+      <div className="border-t border-term-border-dim pt-2">
+        <button
+          onClick={() => { setAgentsUpdating(true); setAgentsMessage(null); sendCommand({ type: "UPDATE_AGENCY_AGENTS" }); }}
+          disabled={agentsUpdating}
+          className={cn(toggleCls, agentsUpdating && "opacity-50")}
+        >
+          <span>{agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}</span>
+          {agentsMessage && (
+            <span className={cn("text-[11px]", agentsMessage.startsWith('Failed') ? "text-sem-red" : "text-sem-green")}>
+              {agentsMessage.startsWith('Failed') ? '\u2717' : '\u2713'}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* ---- Version ---- */}
+      <div className="border-t border-term-border-dim mt-1 pt-2 text-[11px] text-muted-foreground font-mono leading-snug select-text" title="From monorepo root package.json at build time">
         <div>
-          <span style={{ opacity: 0.75 }}>Web UI</span>{' '}
-          <span style={{ color: TERM_TEXT }}>v{APP_VERSION}</span>
+          <span className="opacity-75">Web UI</span>{' '}
+          <span className="text-foreground">v{APP_VERSION}</span>
         </div>
         {APP_BUILD_TIME ? (
-          <div style={{ marginTop: 2, fontSize: 10, opacity: 0.9 }}>
+          <div className="mt-0.5 text-[10px] opacity-90">
             build {APP_BUILD_TIME.replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC')}
           </div>
         ) : null}
