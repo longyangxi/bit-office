@@ -445,8 +445,9 @@ export class AgentSession {
         } else {
           workerInitial = "worker-initial";
         }
-        // Only use continue template if we have an actual session to resume
-        const canResume = this.hasHistory && !!this.sessionId;
+        // Only use continue template if we have an actual session to resume.
+        // Reviewers are stateless — never resume, always fresh context.
+        const canResume = !isReviewer && this.hasHistory && !!this.sessionId;
         fullPrompt = this._renderPrompt(canResume ? "worker-continue" : workerInitial, templateVars);
       }
       const fullAccess = this.sandboxMode === "full";
@@ -457,7 +458,7 @@ export class AgentSession {
       // setups causes agent context contamination (e.g. Dev gets Kai's session).
       const args = this.backend.buildArgs(fullPrompt, {
         continue: false,
-        resumeSessionId: this.sessionId ?? undefined,
+        resumeSessionId: this.role.toLowerCase().includes("review") ? undefined : (this.sessionId ?? undefined),
         fullAccess,
         noTools: this._isTeamLead,
         model: this._model,
