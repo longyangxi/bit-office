@@ -292,8 +292,6 @@ export interface OrchestratorOptions {
   retry?: RetryOptions | false;
   /** FS directory for prompt template overrides */
   promptsDir?: string;
-  /** Path to SOUL.md (base persona file for all agents) */
-  soulPath?: string;
   /** Sandbox mode: "full" gives agent full access, "safe" restricts */
   sandboxMode?: "full" | "safe";
 }

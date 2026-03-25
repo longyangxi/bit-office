@@ -1226,10 +1226,6 @@ async function main() {
   setStorageRoot(path.join(config.instanceDir, "memory"));
   console.log(`[Gateway] Instance "${config.gatewayId}" → ${config.instanceDir}`);
 
-  // Resolve SOUL.md from project repo root (dev) — falls back to embedded default in release
-  const repoRoot = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "..", "..");
-  const soulPath = path.join(repoRoot, "SOUL.md");
-
   orc = createOrchestrator({
     workspace: config.defaultWorkspace,
     backends: backendsToUse,
@@ -1237,7 +1233,6 @@ async function main() {
     worktree: config.worktreeEnabled ? { mergeOnComplete: true, alwaysIsolate: true } : false,
     retry: { maxRetries: 2, escalateToLeader: true },
     promptsDir: path.join(CONFIG_DIR, "data", "prompts"),
-    soulPath: existsSync(soulPath) ? soulPath : undefined,
     sandboxMode: config.sandboxMode,
   });
 

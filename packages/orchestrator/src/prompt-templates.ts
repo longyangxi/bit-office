@@ -440,12 +440,9 @@ Address their feedback. Do NOT delegate or write code.`,
 export class PromptEngine {
   private templates: Record<string, string> = { ...PROMPT_DEFAULTS };
   private promptsDir: string | undefined;
-  private soulPath: string | undefined;
-  private soul: string = "";
 
-  constructor(promptsDir?: string, soulPath?: string) {
+  constructor(promptsDir?: string) {
     this.promptsDir = promptsDir;
-    this.soulPath = soulPath;
   }
 
   /**
@@ -470,19 +467,6 @@ export class PromptEngine {
       written++;
     }
     console.log(`[Prompts] Synced ${written} default templates to ${this.promptsDir}`);
-    // Load soul.md: soulPath > promptsDir/soul.md > embedded default
-    this.soul = DEFAULT_SOUL;
-    const promptsSoulPath = path.join(this.promptsDir, "soul.md");
-    if (this.soulPath && existsSync(this.soulPath)) {
-      try {
-        this.soul = readFileSync(this.soulPath, "utf-8").trim();
-        console.log(`[Prompts] Loaded SOUL.md from ${this.soulPath} (${this.soul.length} chars)`);
-      } catch { /* fall through to default */ }
-    } else if (this.soulPath) {
-      console.log(`[Prompts] SOUL.md not found at ${this.soulPath}, using embedded default`);
-    }
-    // Always sync to promptsDir for transparency
-    writeFileSync(promptsSoulPath, this.soul, "utf-8");
     this.reload();
   }
 
@@ -526,7 +510,7 @@ export class PromptEngine {
       console.warn(`[Prompts] Unknown template: ${templateName}`);
       return vars["prompt"] ?? "";
     }
-    const mergedVars = { soul: this.soul, ...vars };
+    const mergedVars = { soul: DEFAULT_SOUL, ...vars };
     return template.replace(/\{\{(\w+)\}\}/g, (_, key) => mergedVars[key] ?? "");
   }
 }
