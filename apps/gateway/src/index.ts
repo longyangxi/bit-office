@@ -585,6 +585,10 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       let leadAgentId: string | null = null;
       const teamId = `team-${nanoid(6)}`;
 
+      // Auto-name pool for team members without short names
+      const autoNames = ["Alex", "Mia", "Leo", "Nova", "Luna", "Rex", "Kai", "Zoe", "Jay", "Sam"];
+      const usedNames = new Set<string>();
+
       for (const defId of allIds) {
         const def = agentDefs.find(a => a.id === defId);
         if (!def) { console.log(`[Gateway] Agent def not found: ${defId}`); continue; }
@@ -596,9 +600,17 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           orc.setTeamLead(agentId);
         }
 
+        // Use def.name if it's a short human name; otherwise auto-assign
+        let agentName = def.name;
+        const isShortName = agentName.length <= 10 && !agentName.includes(" ");
+        if (!isShortName || usedNames.has(agentName.toLowerCase())) {
+          agentName = autoNames.find(n => !usedNames.has(n.toLowerCase())) ?? `Agent${usedNames.size + 1}`;
+        }
+        usedNames.add(agentName.toLowerCase());
+
         orc.createAgent({
           agentId,
-          name: def.name,
+          name: agentName,
           role: def.skills ? `${def.role} — ${def.skills}` : def.role,
           personality: def.personality,
           backend: backendId,
