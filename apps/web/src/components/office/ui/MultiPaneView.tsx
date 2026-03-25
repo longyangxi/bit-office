@@ -417,7 +417,25 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   for (let i = 0; i < emptySlots; i++) slots.push({ type: "placeholder", index: i });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0">
+    <div className="flex flex-col flex-1 min-h-0" style={{ position: "relative" }}>
+      {/* Floating team controls — top-right overlay */}
+      {showTeamControls && (
+        <div style={{
+          position: "absolute", top: 8, right: 14, zIndex: 10,
+          display: "flex", gap: 6, alignItems: "center",
+        }}>
+          {teamBusy && onStopTeam && (
+            <button onClick={onStopTeam} title="Stop Team" className="tb tb-sm" style={{
+              color: "var(--term-accent)", borderColor: "var(--term-accent)",
+            }}>stop</button>
+          )}
+          {onFireTeam && (
+            <button onClick={onFireTeam} title="Fire Team" className="tb tb-sm" style={{
+              color: "var(--term-dim)", borderColor: "var(--term-dim)",
+            }}>fire team</button>
+          )}
+        </div>
+      )}
       {/* Current page — CSS Grid: COLS × ROWS */}
       <div
         key={currentPage}
@@ -526,21 +544,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 </button>
               )}
 
-              {/* Team controls in last placeholder */}
-              {hasTrailingControls && pi === emptySlots - 1 && (
-                <div className="flex flex-col items-center gap-2 absolute bottom-4 left-1/2 -translate-x-1/2">
-                  {showTeamControls && teamBusy && onStopTeam && (
-                    <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
-                      stop
-                    </button>
-                  )}
-                  {showTeamControls && onFireTeam && (
-                    <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
-                      fire
-                    </button>
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
