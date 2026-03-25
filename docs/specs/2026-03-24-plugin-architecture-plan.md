@@ -12,6 +12,46 @@
 
 ---
 
+## Prerequisites
+
+### Task 0.1: Install vitest
+
+**Files:**
+- Modify: `packages/orchestrator/package.json`
+- Create: `packages/orchestrator/vitest.config.ts`
+
+- [ ] **Step 1: Add vitest to devDependencies**
+
+```bash
+cd packages/orchestrator && pnpm add -D vitest
+```
+
+- [ ] **Step 2: Create vitest.config.ts**
+
+```typescript
+// packages/orchestrator/vitest.config.ts
+import { defineConfig } from "vitest/config";
+
+export default defineConfig({
+  test: {
+    include: ["src/**/__tests__/**/*.test.ts"],
+  },
+});
+```
+
+- [ ] **Step 3: Add test script to package.json**
+
+Add `"test": "vitest run"` to scripts.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add packages/orchestrator/package.json packages/orchestrator/vitest.config.ts pnpm-lock.yaml
+git commit -m "chore: add vitest to orchestrator package"
+```
+
+---
+
 ## File Map
 
 ### Phase 1 — Reaction Engine
@@ -101,7 +141,16 @@
 
 ```typescript
 // packages/orchestrator/src/reaction/types.ts
-import type { Notification } from "../notifier/types.js";
+
+// Notification defined inline (moved to notifier/types.ts in Phase 5)
+export interface Notification {
+  title: string;
+  message: string;
+  priority: "urgent" | "action" | "warning" | "info";
+  agentId?: string;
+  taskId?: string;
+  data?: Record<string, unknown>;
+}
 
 // ── Triggers ──
 export type ReactionTrigger =
@@ -143,9 +192,10 @@ export interface ReactionContext {
   wasTimeout?: boolean;
   wasCancellation?: boolean;
   isDelegated?: boolean;
+  isReviewer?: boolean;           // true for Code Reviewer agents (never retry)
   reviewerOutput?: string;
   devAgentId?: string;
-  attempt?: number;
+  originalPrompt?: string;        // original task prompt (for escalation context)
   session: AgentSessionFacade;
   orchestrator: OrchestratorFacade;
 }
@@ -169,20 +219,6 @@ export interface ReactionRule {
 
 export interface ReactionEngineConfig {
   rules: ReactionRule[];
-}
-```
-
-Note: `Notification` type doesn't exist yet — use a forward-compatible import. We'll create the actual type in Phase 5. For now, define a minimal inline type:
-
-```typescript
-// Temporary until Phase 5 notifier/types.ts exists
-export interface Notification {
-  title: string;
-  message: string;
-  priority: "urgent" | "action" | "warning" | "info";
-  agentId?: string;
-  taskId?: string;
-  data?: Record<string, unknown>;
 }
 ```
 
@@ -335,6 +371,39 @@ describe("ReactionEngine", () => {
     expect(result.action).toBe("no-match");
   });
 
+  it("skips retry for reviewer agents", () => {
+    const engine = new ReactionEngine({ rules: DEFAULT_RULES });
+    const ctx = baseContext({ isReviewer: true, role: "Code Reviewer" });
+    const result = engine.handle("task:failed", ctx);
+    expect(result.action).toBe("no-match");
+  });
+
+  it("skips retry for cancellations", () => {
+    const engine = new ReactionEngine({ rules: DEFAULT_RULES });
+    const ctx = baseContext({ wasCancellation: true });
+    const result = engine.handle("task:failed", ctx);
+    expect(result.action).toBe("no-match");
+  });
+
+  it("returns attempt count in result for retrying events", () => {
+    const engine = new ReactionEngine({ rules: DEFAULT_RULES });
+    const ctx = baseContext();
+    const result = engine.handle("task:failed", ctx);
+    expect(result.attempt).toBe(1);
+    expect(result.maxRetries).toBe(2);
+  });
+
+  it("resets state on reset()", () => {
+    const engine = new ReactionEngine({ rules: DEFAULT_RULES });
+    const ctx = baseContext();
+    engine.handle("task:failed", ctx);
+    engine.reset();
+    // After reset, first attempt again
+    const result = engine.handle("task:failed", ctx);
+    expect(result.action).toBe("retry");
+    expect(result.attempt).toBe(1);
+  });
+
   it("sends review:fail to dev agent for direct fix", () => {
     const engine = new ReactionEngine({ rules: DEFAULT_RULES });
     const ctx = baseContext({
@@ -386,18 +455,27 @@ export interface ReactionResult {
   action: ReactionAction | "no-match";
   trigger: ReactionTrigger;
   ruleIndex?: number;
+  /** Current attempt count (for task:retrying event) */
+  attempt?: number;
+  /** Max retries for this rule (for task:retrying event) */
+  maxRetries?: number;
+}
+
+interface AttemptState {
+  count: number;
+  errors: string[];
 }
 
 /**
  * ReactionEngine — matches events to rules and executes actions.
  *
- * Tracks per-agent-task attempt counts for retry/escalation logic.
+ * Tracks per-agent-task attempt counts AND error history for retry/escalation.
  * Stateful: call reset() between team sessions.
  */
 export class ReactionEngine {
   private rules: ReactionRule[];
-  /** Track attempts per trigger+agentId+taskId for retry counting */
-  private attempts = new Map<string, number>();
+  /** Track attempts + error history per trigger+agentId+taskId */
+  private attempts = new Map<string, AttemptState>();
 
   constructor(config: ReactionEngineConfig) {
     this.rules = config.rules;
@@ -405,6 +483,15 @@ export class ReactionEngine {
 
   private attemptKey(trigger: ReactionTrigger, ctx: ReactionContext): string {
     return `${trigger}:${ctx.agentId}:${ctx.taskId}`;
+  }
+
+  private getAttemptState(key: string): AttemptState {
+    let state = this.attempts.get(key);
+    if (!state) {
+      state = { count: 0, errors: [] };
+      this.attempts.set(key, state);
+    }
+    return state;
   }
 
   private matchesRule(rule: ReactionRule, ctx: ReactionContext): boolean {
@@ -415,41 +502,55 @@ export class ReactionEngine {
     if (m.isDelegated !== undefined && ctx.isDelegated !== m.isDelegated) return false;
     if (m.attempt?.gte !== undefined) {
       const key = this.attemptKey(rule.trigger, ctx);
-      const count = this.attempts.get(key) ?? 0;
-      if (count < m.attempt.gte) return false;
+      const state = this.attempts.get(key);
+      if (!state || state.count < m.attempt.gte) return false;
     }
     return true;
   }
 
   handle(trigger: ReactionTrigger, ctx: ReactionContext): ReactionResult {
+    // Never retry reviewer failures or cancellations
+    if (trigger === "task:failed" && (ctx.isReviewer || ctx.wasCancellation)) {
+      return { action: "no-match", trigger };
+    }
+
     for (let i = 0; i < this.rules.length; i++) {
       const rule = this.rules[i];
       if (rule.trigger !== trigger) continue;
       if (!this.matchesRule(rule, ctx)) continue;
 
       const key = this.attemptKey(trigger, ctx);
-      const attempt = this.attempts.get(key) ?? 0;
+      const state = this.getAttemptState(key);
       const maxRetries = rule.retries ?? 0;
 
-      if (attempt >= maxRetries && rule.escalateAction) {
+      // Record the error for history
+      if (ctx.error) state.errors.push(ctx.error);
+
+      if (state.count >= maxRetries && rule.escalateAction) {
+        const errors = [...state.errors];
         this.attempts.delete(key);
-        this.executeAction(rule.escalateAction, ctx);
-        return { action: rule.escalateAction, trigger, ruleIndex: i };
+        this.executeAction(rule.escalateAction, ctx, errors);
+        return { action: rule.escalateAction, trigger, ruleIndex: i,
+                 attempt: state.count, maxRetries };
       }
 
-      this.attempts.set(key, attempt + 1);
+      state.count++;
       this.executeAction(rule.action, ctx);
-      return { action: rule.action, trigger, ruleIndex: i };
+      return { action: rule.action, trigger, ruleIndex: i,
+               attempt: state.count, maxRetries };
     }
 
     return { action: "no-match", trigger };
   }
 
-  private executeAction(action: ReactionAction, ctx: ReactionContext): void {
+  private executeAction(action: ReactionAction, ctx: ReactionContext, errorHistory?: string[]): void {
     switch (action) {
       case "retry": {
-        const attempt = this.attempts.get(this.attemptKey("task:failed", ctx)) ?? 1;
-        const retryPrompt = this.buildRetryPrompt(ctx, attempt);
+        const key = this.attemptKey("task:failed", ctx);
+        const state = this.attempts.get(key);
+        const attempt = state?.count ?? 1;
+        const maxRetries = this.rules.find(r => r.trigger === "task:failed")?.retries ?? 2;
+        const retryPrompt = this.buildRetryPrompt(ctx, attempt, maxRetries);
         ctx.session.prependTask(ctx.taskId, retryPrompt);
         break;
       }
@@ -462,8 +563,10 @@ export class ReactionEngine {
       case "escalate-to-leader": {
         const lead = ctx.orchestrator.getTeamLead();
         if (lead && lead.getAgentId() !== ctx.agentId) {
-          const prompt = this.buildEscalationPrompt(ctx);
-          ctx.orchestrator.runTask(lead.getAgentId(), ctx.taskId, prompt);
+          const prompt = this.buildEscalationPrompt(ctx, errorHistory ?? []);
+          // Use a new taskId for escalation to avoid tracking conflicts
+          const escalationTaskId = `escalation-${ctx.taskId}-${Date.now()}`;
+          ctx.orchestrator.runTask(lead.getAgentId(), escalationTaskId, prompt);
         }
         break;
       }
@@ -484,11 +587,12 @@ export class ReactionEngine {
     }
   }
 
-  private buildRetryPrompt(ctx: ReactionContext, attempt: number): string {
+  private buildRetryPrompt(ctx: ReactionContext, attempt: number, maxRetries: number): string {
     const error = ctx.error ?? "unknown error";
-    return `${error}
+    const original = ctx.originalPrompt ?? "";
+    return `${original}
 
-[RETRY — Attempt ${attempt}]
+[RETRY — Attempt ${attempt}/${maxRetries}]
 Previous attempt failed with:
 ${error.slice(0, 500)}
 
@@ -499,15 +603,25 @@ Before retrying, follow this protocol:
 Do NOT repeat the same approach that failed.`;
   }
 
-  private buildEscalationPrompt(ctx: ReactionContext): string {
-    return `[ESCALATION] A task has failed and needs your decision.
+  private buildEscalationPrompt(ctx: ReactionContext, errorHistory: string[]): string {
+    const errorList = errorHistory.map((e, i) => `  Attempt ${i + 1}: ${e.slice(0, 200)}`).join("\n");
+    const sameError = errorHistory.length >= 2 && errorHistory.every(e =>
+      e.slice(0, 80).toLowerCase() === errorHistory[0].slice(0, 80).toLowerCase()
+    );
 
-Original task for agent ${ctx.agentId}: "${(ctx.error ?? "").slice(0, 300)}"
+    return `[ESCALATION] A task has failed after ${errorHistory.length} attempts and needs your decision.
 
+Original task: "${(ctx.originalPrompt ?? ctx.error ?? "").slice(0, 300)}"
+
+Failure history:
+${errorList}
+${sameError ? "\nAll attempts failed with the SAME error. This is likely a PERMANENT blocker (missing credentials, API limits, service unavailable). Do NOT reassign — report to user.\n" : ""}
 Options (choose ONE):
 1. If the error is FIXABLE (code bug, wrong path): Reassign to a DIFFERENT team member with revised instructions
 2. If the task is too large: Break into smaller pieces and delegate each part
-3. If the error is PERMANENT (auth failure, service down): Report the blocker to the user. Do NOT reassign.`;
+3. If the error is PERMANENT (auth failure, service down, insufficient balance, missing API key): Report the blocker to the user. Do NOT reassign.
+
+IMPORTANT: If the same error keeps repeating, choose option 3. Do not waste resources retrying.`;
   }
 
   /** Reset attempt counters (call between team sessions) */
@@ -704,6 +818,7 @@ if (event.type === "task:failed") {
   const taskId = event.taskId;
   const session = this.agentManager.get(agentId);
   if (session) {
+    const isReviewer = session.role?.toLowerCase().includes("review") ?? false;
     const ctx: ReactionContext = {
       agentId,
       taskId,
@@ -712,18 +827,19 @@ if (event.type === "task:failed") {
       wasTimeout: session.wasTimeout ?? false,
       wasCancellation: event.error === "Task cancelled by user",
       isDelegated: this.delegationRouter.isDelegated(taskId),
+      isReviewer,
+      originalPrompt: session.lastPrompt,
       session: this.buildSessionFacade(session),
       orchestrator: this.buildOrchestratorFacade(),
     };
     const result = this.reactionEngine.handle("task:failed", ctx);
     if (result.action === "retry") {
-      // Emit retrying event for UI
       this.emitEvent({
         type: "task:retrying",
         agentId,
         taskId,
-        attempt: 1,
-        maxRetries: 2,
+        attempt: result.attempt ?? 1,
+        maxRetries: result.maxRetries ?? 2,
         error: event.error,
       });
       return; // Don't emit task:failed — we're retrying
@@ -795,10 +911,12 @@ In `delegation.ts`, find `tryDirectFix()` method. After the VERDICT:FAIL regex m
 
 The `emitEvent` callback is already passed to the constructor. Add to the VERDICT:FAIL detection block:
 
+Note: Task 1.4 must be completed first (adds `ReviewFailEvent` to the event union).
+
 ```typescript
 // After: if (!verdictMatch || verdictMatch[1].toUpperCase() !== "FAIL") return false;
 this.emitEvent({
-  type: "review:fail" as any,  // TODO: add to OrchestratorEvent union (done in Task 1.4)
+  type: "review:fail",
   agentId: reviewerAgentId,
   taskId: /* current task ID */,
   reviewerOutput: output,
@@ -1038,7 +1156,8 @@ export class WorktreeWorkspace implements Workspace {
     const info: WorkspaceInfo = { path, branch, agentId: config.agentId };
     if (this.postCreateConfig) {
       // Fire and forget — errors logged but don't block
-      runPostCreate(info, config.repoRoot, this.postCreateConfig).catch(() => {});
+      runPostCreate(info, config.repoRoot, this.postCreateConfig).catch((err) =>
+        console.warn("[Workspace postCreate] Unexpected error:", err));
     }
     return info;
   }
@@ -1051,7 +1170,7 @@ export class WorktreeWorkspace implements Workspace {
     _syncWorktreeToMain(repoRoot, worktreePath);
   }
 
-  merge(repoRoot: string, worktreePath: string, branch: string, opts?: { keepAlive?: boolean; summary?: string; agentName?: string }): WorkspaceMergeResult {
+  merge(repoRoot: string, worktreePath: string, branch: string, opts?: { keepAlive?: boolean; summary?: string; agentName?: string; agentId?: string }): WorkspaceMergeResult {
     return _mergeWorktree(repoRoot, worktreePath, branch, opts?.keepAlive, opts?.summary, opts?.agentName);
   }
 
