@@ -1,6 +1,7 @@
 import { nanoid } from "nanoid";
 import path from "path";
 import { CONFIG } from "./config.js";
+import { parseReviewerFeedback } from "./output-parser.js";
 import type { AgentManager } from "./agent-manager.js";
 import type { AgentSession } from "./agent-session.js";
 import type { PromptEngine } from "./prompt-templates.js";
@@ -360,13 +361,14 @@ export class DelegationRouter {
           this.assignedTask.set(meta.reviewerAgentId, reReviewTaskId);
           this.totalDelegations++;
 
-          // Include the original review context (reviewer's FAIL output) so the re-review
-          // has full context even if --resume fails and session history is lost.
-          const originalContext = meta.reviewContext
-            ? `\n\nYour previous review (for reference):\n${meta.reviewContext}`
+          // Re-review prompt: pass only the structured issue checklist from the original review.
+          // Reviewer is a clean session with full file access — it reads the code directly
+          // rather than relying on Dev's self-reported fix summary.
+          const issueChecklist = meta.reviewContext
+            ? `\nIssues to verify (from your previous review):\n${meta.reviewContext}`
             : "";
           const reReviewPrompt = this.promptEngine.render("worker-continue", {
-            prompt: `[Re-review after fix] ${fromName} fixed the issues you reported. Verify fixes are correct, deliverable runs, core features work.${originalContext}\n\nDev's fix report:\n${summary.slice(0, CONFIG.limits.chatMessageChars)}\n\nVERDICT: PASS | FAIL\nISSUES: (if FAIL)\nSUMMARY: (one sentence)`,
+            prompt: `[Re-review after fix] ${fromName} reports fixing the issues. Read the code and verify each fix is correct.${issueChecklist}\n\nVERDICT: PASS | FAIL\nISSUES: (if FAIL)\nSUMMARY: (one sentence)`,
           });
           const repoPath = this.resolveDevWorktreePath(this.teamProjectDir ?? undefined);
 
@@ -463,41 +465,41 @@ export class DelegationRouter {
     this.devFixAttempts.set(devAgentId, attempts + 1);
     this.totalDelegations++;
 
-    // Build a fix prompt from reviewer feedback.
-    // Carry the reviewer's full FAIL output as reviewContext — it contains the issues list
-    // AND implicitly the features that were checked. If --resume fails on re-review,
-    // this context ensures the reviewer still knows what to verify.
+    // Parse reviewer output into structured fields instead of raw truncation.
+    // This preserves all issues (no 800-char cutoff) and gives Dev a clean checklist.
+    const feedback = parseReviewerFeedback(output);
     const fixTaskId = nanoid();
     this.tasks.set(fixTaskId, {
       origin: originAgentId,
       depth: 1,
       isDirectFix: true,
       reviewerAgentId: reviewerAgentId,
-      reviewContext: output.slice(0, 1000),
+      // Carry structured feedback as reviewContext for re-review resilience
+      reviewContext: feedback.formatted,
     });
     this.assignedTask.set(devAgentId, fixTaskId);
 
     const reviewerName = reviewerSession?.name ?? "Code Reviewer";
     const fixPrompt = this.promptEngine.render("worker-direct-fix", {
       reviewerName,
-      reviewFeedback: output.slice(0, 800),
+      reviewFeedback: feedback.formatted,
     });
 
     const repoPath = this.teamProjectDir ?? undefined;
 
-    console.log(`[DirectFix] ${reviewerName} FAIL → ${devSession.name} (attempt ${attempts + 1}/${CONFIG.delegation.maxDirectFixes}, skipping leader)`);
+    console.log(`[DirectFix] ${reviewerName} FAIL → ${devSession.name} (attempt ${attempts + 1}/${CONFIG.delegation.maxDirectFixes}, ${feedback.issues.length} issues, skipping leader)`);
     this.emitEvent({
       type: "task:delegated",
       fromAgentId: reviewerAgentId,
       toAgentId: devAgentId,
       taskId: fixTaskId,
-      prompt: `Fix issues from ${reviewerName}'s review`,
+      prompt: `Fix ${feedback.issues.length} issues from ${reviewerName}'s review`,
     });
     this.emitEvent({
       type: "team:chat",
       fromAgentId: reviewerAgentId,
       toAgentId: devAgentId,
-      message: `Direct fix: ${output.slice(0, CONFIG.limits.chatMessageChars)}`,
+      message: `Direct fix: ${feedback.formatted.slice(0, CONFIG.limits.chatMessageChars)}`,
       messageType: "delegation",
       taskId: fixTaskId,
       timestamp: Date.now(),

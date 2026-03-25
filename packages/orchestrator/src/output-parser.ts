@@ -71,6 +71,71 @@ export function parseAgentOutput(raw: string, fallbackText?: string | null): Par
   return { summary, fullOutput, changedFiles, entryFile, projectDir, previewCmd, previewPort };
 }
 
+/** Parsed reviewer feedback — structured fields from VERDICT/ISSUES/SUMMARY output */
+export interface ParsedReviewerFeedback {
+  verdict: "PASS" | "FAIL" | "UNKNOWN";
+  issues: string[];
+  suggestions: string[];
+  summary: string;
+  /** Compact string for injection into fix/re-review prompts */
+  formatted: string;
+}
+
+/**
+ * Parse reviewer output into structured fields.
+ * Extracts VERDICT, ISSUES, SUGGESTIONS, SUMMARY from the reviewer's output format.
+ * Returns a compact `formatted` string suitable for prompt injection (no raw truncation).
+ */
+export function parseReviewerFeedback(raw: string): ParsedReviewerFeedback {
+  const verdictMatch = raw.match(/VERDICT:\s*(PASS|FAIL)/i);
+  const verdict = verdictMatch ? (verdictMatch[1].toUpperCase() as "PASS" | "FAIL") : "UNKNOWN";
+
+  const summaryMatch = raw.match(/SUMMARY:\s*(.+)/i);
+  const summary = summaryMatch?.[1]?.trim() ?? "";
+
+  const issues = extractNumberedList(raw, "ISSUES");
+  const suggestions = extractNumberedList(raw, "SUGGESTIONS");
+
+  // Build compact formatted string — all structured info, no noise
+  const parts: string[] = [`VERDICT: ${verdict}`];
+  if (issues.length > 0) {
+    parts.push("ISSUES:");
+    issues.forEach((issue, i) => parts.push(`${i + 1}. ${issue}`));
+  }
+  if (suggestions.length > 0) {
+    parts.push("SUGGESTIONS:");
+    suggestions.forEach((s, i) => parts.push(`${i + 1}. ${s}`));
+  }
+  if (summary) parts.push(`SUMMARY: ${summary}`);
+
+  return { verdict, issues, suggestions, summary, formatted: parts.join("\n") };
+}
+
+/**
+ * Extract a numbered list after a label (e.g. "ISSUES:", "SUGGESTIONS:").
+ * Handles both "ISSUES: 1. foo 2. bar" inline and multi-line numbered lists.
+ */
+function extractNumberedList(raw: string, label: string): string[] {
+  // Find the section starting from the label
+  const labelRe = new RegExp(`${label}:\\s*(.*)`, "i");
+  const labelMatch = raw.match(labelRe);
+  if (!labelMatch) return [];
+
+  // Get everything from the label to the next known section or end
+  const startIdx = raw.indexOf(labelMatch[0]) + labelMatch[0].length;
+  const remainingSections = /\n\s*(?:VERDICT|ISSUES|SUGGESTIONS|SUMMARY|STATUS|FILES_CHANGED|ENTRY_FILE):/i;
+  const endMatch = raw.slice(startIdx).match(remainingSections);
+  const block = labelMatch[1] + (endMatch ? raw.slice(startIdx, startIdx + endMatch.index!) : raw.slice(startIdx));
+
+  // Extract numbered items (1. foo, 2. bar, etc.) or dash items (- foo)
+  const items: string[] = [];
+  for (const match of block.matchAll(/(?:^|\n)\s*(?:\d+[\.\)]\s*|[-*]\s+)(.+)/g)) {
+    const item = match[1].trim();
+    if (item) items.push(item);
+  }
+  return items;
+}
+
 /**
  * Extract a human-readable summary from raw output when no SUMMARY field is present.
  * Filters out delegation lines, system noise, and returns the first meaningful content.
