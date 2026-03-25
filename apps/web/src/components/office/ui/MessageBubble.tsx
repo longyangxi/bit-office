@@ -278,8 +278,8 @@ const accentBtnStyle: React.CSSProperties = {
 const previewBtnStyle = accentBtnStyle;
 const reviewBtnStyle: React.CSSProperties = {
   ...accentBtnStyle,
-  color: "var(--term-dim)",
-  border: "1px solid color-mix(in srgb, var(--term-dim) 55%, transparent)",
+  color: "var(--term-text)",
+  border: "1px solid color-mix(in srgb, var(--term-text) 40%, transparent)",
 };
 
 const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
