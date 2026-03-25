@@ -1105,6 +1105,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         diffSection = `\n\n(No diff available — read the files to review)`;
       }
 
+      // Build review context (data only — output format comes from reviewer template in orchestrator).
+      // agent-session.ts auto-selects worker-reviewer-initial for roles containing "review",
+      // which includes standardized VERDICT/ISSUES/SUGGESTIONS/SUMMARY format constraints.
       const fileList = changedFiles.map(f => `- ${f}`).join("\n");
       const reviewPrompt = [
         `Review the code changes below. Focus on the DIFF for what changed, Read files only if you need surrounding context.`,
@@ -1115,10 +1118,6 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         entryFile ? `Entry: ${entryFile}` : "",
         summary ? `Summary: ${summary}` : "",
         diffSection,
-        ``,
-        `VERDICT: PASS | FAIL`,
-        `ISSUES: (numbered list — severity, file:line, description, fix)`,
-        `SUMMARY: (one sentence)`,
       ].filter(Boolean).join("\n");
 
       // Create reviewer agent
