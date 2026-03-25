@@ -232,7 +232,7 @@ export default function OfficePage() {
   // ── Theme ──
   // Always start with default to avoid SSR/client hydration mismatch,
   // then restore saved theme in useEffect (client-only).
-  const [termTheme, setTermTheme] = useState("office");
+  const [termTheme, setTermTheme] = useState("amber-noir");
   applyTermTheme(termTheme);
   useEffect(() => {
     const saved = localStorage.getItem("open-office-theme");

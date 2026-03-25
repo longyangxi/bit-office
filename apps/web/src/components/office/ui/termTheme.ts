@@ -1,7 +1,3 @@
-// ── Terminal theme system ──
-export const TERM_FONT = "'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace";
-export const TERM_SIZE = 12;
-
 export type TermTheme = {
   name: string;
   accent: string;
@@ -18,9 +14,9 @@ export type TermTheme = {
   codeBg: string;
   codeText: string;
   scrollThumb: string;
-  clean?: boolean; // Disable CRT textures, dot grid, glow effects
-  // ── Semantic colors ──
-  green: string;   // success / done
+  clean?: boolean;
+  // Semantic colors — for status indicators, warnings, etc.
+  green: string;   // success / working
   yellow: string;  // warning / approval
   red: string;     // error / danger
   blue: string;    // info / working
@@ -29,6 +25,54 @@ export type TermTheme = {
 };
 
 export const TERM_THEMES: Record<string, TermTheme> = {
+  "amber-noir": {
+    name: "Amber Noir",
+    accent: "#e8b040",
+    accentRgb: "232,176,64",
+    dim: "#6a5c40",
+    text: "#c4b894",
+    textBright: "#e0d8c4",
+    bg: "#0c0a08",
+    panel: "#100e0a",
+    surface: "#181410",
+    hover: "#201c16",
+    border: "#2c2618",
+    borderDim: "#1c1810",
+    codeBg: "#0a0908",
+    codeText: "#a08848",
+    scrollThumb: "#302818",
+    clean: true,
+    green: "#8aac5a",
+    yellow: "#e8b040",
+    red: "#c85a4a",
+    blue: "#6498b8",
+    purple: "#a07cc0",
+    cyan: "#5aaa98",
+  },
+  monokai: {
+    name: "Monokai",
+    accent: "#a6e22e",
+    accentRgb: "166,226,46",
+    dim: "#7a8a48",
+    text: "#c8d888",
+    textBright: "#e8f0c8",
+    bg: "#1a1c14",
+    panel: "#22241a",
+    surface: "#282a20",
+    hover: "#343828",
+    border: "#3e4430",
+    borderDim: "#343828",
+    codeBg: "#181a12",
+    codeText: "#7a9040",
+    scrollThumb: "#3e4430",
+    clean: true,
+    green: "#a6e22e",
+    yellow: "#e6db74",
+    red: "#f92672",
+    blue: "#66d9ef",
+    purple: "#ae81ff",
+    cyan: "#66d9ef",
+  },
   "green-hacker": {
     name: "Green Hacker",
     accent: "#18ff62",
@@ -52,29 +96,29 @@ export const TERM_THEMES: Record<string, TermTheme> = {
     purple: "#c084fc",
     cyan: "#40e8d0",
   },
-  catppuccin: {
-    name: "Catppuccin",
-    accent: "#89b4fa",
-    accentRgb: "137,180,250",
-    dim: "#6c7086",
-    text: "#bac2de",
-    textBright: "#cdd6f4",
-    bg: "#1e1e2e",
-    panel: "#181825",
-    surface: "#313244",
-    hover: "#45475a",
-    border: "#45475a",
-    borderDim: "#313244",
-    codeBg: "#181825",
-    codeText: "#a6adc8",
-    scrollThumb: "#45475a",
+  "atom-one-dark": {
+    name: "Atom One Dark",
+    accent: "#61afef",
+    accentRgb: "97,175,239",
+    dim: "#5c6370",
+    text: "#abb2bf",
+    textBright: "#d7dae0",
+    bg: "#21252b",
+    panel: "#1e2227",
+    surface: "#282c34",
+    hover: "#323844",
+    border: "#3e4451",
+    borderDim: "#282c34",
+    codeBg: "#1e2227",
+    codeText: "#98c379",
+    scrollThumb: "#3e4451",
     clean: true,
-    green: "#a6e3a1",
-    yellow: "#f9e2af",
-    red: "#f38ba8",
-    blue: "#89b4fa",
-    purple: "#cba6f7",
-    cyan: "#94e2d5",
+    green: "#98c379",
+    yellow: "#e5c07b",
+    red: "#e06c75",
+    blue: "#61afef",
+    purple: "#c678dd",
+    cyan: "#56b6c2",
   },
   "tokyo-night": {
     name: "Tokyo Night",
@@ -99,6 +143,31 @@ export const TERM_THEMES: Record<string, TermTheme> = {
     blue: "#7aa2f7",
     purple: "#bb9af7",
     cyan: "#7dcfff",
+  },
+  // ── Hidden themes (not in picker, still usable if saved in localStorage) ──
+  catppuccin: {
+    name: "Catppuccin",
+    accent: "#89b4fa",
+    accentRgb: "137,180,250",
+    dim: "#6c7086",
+    text: "#bac2de",
+    textBright: "#cdd6f4",
+    bg: "#1e1e2e",
+    panel: "#181825",
+    surface: "#313244",
+    hover: "#45475a",
+    border: "#45475a",
+    borderDim: "#313244",
+    codeBg: "#181825",
+    codeText: "#a6adc8",
+    scrollThumb: "#45475a",
+    clean: true,
+    green: "#a6e3a1",
+    yellow: "#f9e2af",
+    red: "#f38ba8",
+    blue: "#89b4fa",
+    purple: "#cba6f7",
+    cyan: "#94e2d5",
   },
   gruvbox: {
     name: "Gruvbox",
@@ -171,30 +240,6 @@ export const TERM_THEMES: Record<string, TermTheme> = {
     blue: "#8be9fd",
     purple: "#bd93f9",
     cyan: "#8be9fd",
-  },
-  monokai: {
-    name: "Monokai",
-    accent: "#a6e22e",
-    accentRgb: "166,226,46",
-    dim: "#7a8a48",
-    text: "#c8d888",
-    textBright: "#e8f0c8",
-    bg: "#1a1c14",
-    panel: "#22241a",
-    surface: "#282a20",
-    hover: "#343828",
-    border: "#3e4430",
-    borderDim: "#343828",
-    codeBg: "#181a12",
-    codeText: "#7a9040",
-    scrollThumb: "#3e4430",
-    clean: true,
-    green: "#a6e22e",
-    yellow: "#e6db74",
-    red: "#f92672",
-    blue: "#66d9ef",
-    purple: "#ae81ff",
-    cyan: "#66d9ef",
   },
   kanagawa: {
     name: "Kanagawa",
@@ -292,30 +337,6 @@ export const TERM_THEMES: Record<string, TermTheme> = {
     purple: "#999999",
     cyan: "#aaaaaa",
   },
-  "atom-one-dark": {
-    name: "Atom One Dark",
-    accent: "#61afef",
-    accentRgb: "97,175,239",
-    dim: "#5c6370",
-    text: "#abb2bf",
-    textBright: "#d7dae0",
-    bg: "#21252b",
-    panel: "#1e2227",
-    surface: "#282c34",
-    hover: "#323844",
-    border: "#3e4451",
-    borderDim: "#282c34",
-    codeBg: "#1e2227",
-    codeText: "#98c379",
-    scrollThumb: "#3e4451",
-    clean: true,
-    green: "#98c379",
-    yellow: "#e5c07b",
-    red: "#e06c75",
-    blue: "#61afef",
-    purple: "#c678dd",
-    cyan: "#56b6c2",
-  },
   owl: {
     name: "Owl",
     accent: "#da5b2c",
@@ -412,58 +433,34 @@ export const TERM_THEMES: Record<string, TermTheme> = {
     purple: "#a78bfa",
     cyan: "#5ec4d0",
   },
-  "amber-noir": {
-    name: "Amber Noir",
-    accent: "#e8b040",
-    accentRgb: "232,176,64",
-    dim: "#6a5c40",
-    text: "#c4b894",
-    textBright: "#e0d8c4",
-    bg: "#0c0a08",
-    panel: "#100e0a",
-    surface: "#181410",
-    hover: "#201c16",
-    border: "#2c2618",
-    borderDim: "#1c1810",
-    codeBg: "#0a0908",
-    codeText: "#a08848",
-    scrollThumb: "#302818",
-    clean: true,
-    green: "#8aac5a",
-    yellow: "#e8b040",
-    red: "#c85a4a",
-    blue: "#6498b8",
-    purple: "#a07cc0",
-    cyan: "#5aaa98",
-  },
 };
 
 // Mutable theme variables — reassigned by applyTermTheme()
-// Defaults match "office" theme
-export let TERM_GREEN = "#c8a464";
-export let TERM_DIM = "#6e6050";
-export let TERM_TEXT = "#b8ae9e";
-export let TERM_TEXT_BRIGHT = "#dcd4c6";
-export let TERM_ERROR = "#c06050";
+// Defaults match "amber-noir" theme
+export let TERM_GREEN = "#e8b040";
+export let TERM_DIM = "#6a5c40";
+export let TERM_TEXT = "#c4b894";
+export let TERM_TEXT_BRIGHT = "#e0d8c4";
+export let TERM_ERROR = "#c85a4a";
 export let TERM_GLOW = "none";
-export let TERM_BG = "#111010";
-export let TERM_PANEL = "#171514";
-export let TERM_SURFACE = "#1e1b18";
-export let TERM_HOVER = "#262220";
-export let TERM_BORDER = "#302b26";
-export let TERM_BORDER_DIM = "#231f1a";
+export let TERM_BG = "#0c0a08";
+export let TERM_PANEL = "#100e0a";
+export let TERM_SURFACE = "#181410";
+export let TERM_HOVER = "#201c16";
+export let TERM_BORDER = "#2c2618";
+export let TERM_BORDER_DIM = "#1c1810";
 export let TERM_GLOW_BORDER = "none";
 export let TERM_GLOW_FOCUS = "none";
 // Semantic color exports
-export let TERM_SEM_GREEN = "#7ab87a";
-export let TERM_SEM_YELLOW = "#d4a850";
-export let TERM_SEM_RED = "#c06050";
-export let TERM_SEM_BLUE = "#6a9ec0";
-export let TERM_SEM_PURPLE = "#a888b8";
-export let TERM_SEM_CYAN = "#70b0a8";
+export let TERM_SEM_GREEN = "#8aac5a";
+export let TERM_SEM_YELLOW = "#e8b040";
+export let TERM_SEM_RED = "#c85a4a";
+export let TERM_SEM_BLUE = "#6498b8";
+export let TERM_SEM_PURPLE = "#a07cc0";
+export let TERM_SEM_CYAN = "#5aaa98";
 
 export function applyTermTheme(key: string) {
-  const t = TERM_THEMES[key] ?? TERM_THEMES["office"];
+  const t = TERM_THEMES[key] ?? TERM_THEMES["amber-noir"];
   TERM_GREEN = t.accent;
   TERM_DIM = t.dim;
   TERM_TEXT = t.text;
@@ -491,31 +488,26 @@ export function applyTermTheme(key: string) {
     const s = document.documentElement.style;
     s.setProperty("--term-bg", t.bg);
     s.setProperty("--term-panel", t.panel);
-    s.setProperty("--term-card", t.surface);
     s.setProperty("--term-surface", t.surface);
+    s.setProperty("--term-hover", t.hover);
     s.setProperty("--term-border", t.border);
     s.setProperty("--term-border-dim", t.borderDim);
-    s.setProperty("--term-green", t.accent);
-    s.setProperty("--term-green-dim", t.dim);
     s.setProperty("--term-text", t.text);
     s.setProperty("--term-text-bright", t.textBright);
+    s.setProperty("--term-dim", t.dim);
+    s.setProperty("--term-accent", t.accent);
     s.setProperty("--term-accent-rgb", t.accentRgb);
+    s.setProperty("--term-green", t.green);
+    s.setProperty("--term-yellow", t.yellow);
+    s.setProperty("--term-red", t.red);
+    s.setProperty("--term-blue", t.blue);
+    s.setProperty("--term-purple", t.purple);
+    s.setProperty("--term-cyan", t.cyan);
     s.setProperty("--term-code-bg", t.codeBg);
     s.setProperty("--term-code-text", t.codeText);
     s.setProperty("--term-scroll-thumb", t.scrollThumb);
-    s.setProperty("--term-clean", t.clean ? "1" : "0");
-    // Semantic CSS vars
-    s.setProperty("--term-sem-green", t.green);
-    s.setProperty("--term-sem-yellow", t.yellow);
-    s.setProperty("--term-sem-red", t.red);
-    s.setProperty("--term-sem-blue", t.blue);
-    s.setProperty("--term-sem-purple", t.purple);
-    s.setProperty("--term-sem-cyan", t.cyan);
-    // Toggle clean mode class on root for CSS selectors
-    if (t.clean) {
-      document.documentElement.classList.add("term-clean");
-    } else {
-      document.documentElement.classList.remove("term-clean");
-    }
   }
 }
+
+export const TERM_FONT = `"Berkeley Mono", "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", "Menlo", monospace`;
+export const TERM_SIZE = 13;
