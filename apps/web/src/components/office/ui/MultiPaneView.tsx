@@ -8,8 +8,10 @@ import { cn } from "@/lib/utils";
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
 
-/** Number of columns per screen — each pane gets exactly 1/COLS width */
+/** Grid layout: COLS × ROWS per page */
 const COLS = 3;
+const ROWS = 1;
+const SLOTS_PER_PAGE = COLS * ROWS;
 
 /** Per-pane wrapper that stabilizes callback references via useRef so AgentPane memo is effective */
 const StableAgentPane = memo(function StableAgentPane({
@@ -297,15 +299,15 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Total pages: always at least 1 (for placeholders even with 0 panes).
-  // When all COLS slots on the last page are filled, add one extra page for the "+" placeholder.
-  const filledPages = Math.max(1, Math.ceil(openPanes.length / COLS));
-  const lastPageFull = openPanes.length > 0 && openPanes.length % COLS === 0;
+  // When all slots on the last page are filled, add one extra page for the "+" placeholder.
+  const filledPages = Math.max(1, Math.ceil(openPanes.length / SLOTS_PER_PAGE));
+  const lastPageFull = openPanes.length > 0 && openPanes.length % SLOTS_PER_PAGE === 0;
   const totalPages = showHireButton && onHire && lastPageFull ? filledPages + 1 : filledPages;
 
-  // Build pages: each page holds up to COLS pane ids
+  // Build pages: each page holds up to SLOTS_PER_PAGE pane ids
   const pages: string[][] = [];
-  for (let i = 0; i < openPanes.length; i += COLS) {
-    pages.push(openPanes.slice(i, i + COLS));
+  for (let i = 0; i < openPanes.length; i += SLOTS_PER_PAGE) {
+    pages.push(openPanes.slice(i, i + SLOTS_PER_PAGE));
   }
   // Ensure we always have `totalPages` entries (extra empty pages for placeholders)
   while (pages.length < totalPages) pages.push([]);
@@ -314,7 +316,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const clampedPage = Math.max(0, Math.min(currentPage, totalPages - 1));
   if (clampedPage !== currentPage) {
     setCurrentPage(clampedPage);
-    onPaneOffsetChange(clampedPage * COLS);
+    onPaneOffsetChange(clampedPage * SLOTS_PER_PAGE);
   }
 
   // Blur auto-focused inputs so keyboard arrows work for pagination
@@ -335,7 +337,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       setSlideDir(clamped > prev ? "left" : "right");
       return clamped;
     });
-    onPaneOffsetChange(clamped * COLS);
+    onPaneOffsetChange(clamped * SLOTS_PER_PAGE);
   }, [totalPages, onPaneOffsetChange]);
 
   // Keyboard navigation
@@ -396,136 +398,144 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const hasTrailingControls = isLastPage && showTeamControls;
 
   const pagePanes = pages[currentPage] ?? [];
-  const emptySlots = COLS - pagePanes.length;
+  const emptySlots = SLOTS_PER_PAGE - pagePanes.length;
 
-  // Determine which empty slot (0-indexed within empty slots on this page) gets the "+" button.
-  // It's always the first empty slot, but only on the page that actually has the first empty slot.
+  // First empty slot on this page gets the "+" button
   const hireSlotIndex = showHireButton && onHire && emptySlots > 0 ? 0 : -1;
 
-  // Fixed width per column
-  const colWidth = `${100 / COLS}%`;
+  // Build a flat list of SLOTS_PER_PAGE items: real panes + placeholders
+  const slots: Array<{ type: "agent"; agentId: string } | { type: "placeholder"; index: number }> = [];
+  for (const agentId of pagePanes) slots.push({ type: "agent", agentId });
+  for (let i = 0; i < emptySlots; i++) slots.push({ type: "placeholder", index: i });
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Current page — fixed COLS grid */}
+      {/* Current page — CSS Grid: COLS × ROWS */}
       <div
         key={currentPage}
         ref={containerRef}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
-        className={cn("flex flex-1 min-h-0", slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade")}
+        className={cn("mpv-grid flex-1 min-h-0", slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade")}
+        style={{
+          display: "grid",
+          gridTemplateColumns: `repeat(${COLS}, 1fr)`,
+          gridTemplateRows: `repeat(${ROWS}, 1fr)`,
+        }}
       >
-        {/* Real agent panes */}
-        {pagePanes.map((agentId, i) => {
-          const data = getAgentData(agentId);
-          if (!data) return null;
-          const meta = agentMeta?.find(m => m.agentId === agentId);
+        {slots.map((slot) => {
+          if (slot.type === "agent") {
+            const { agentId } = slot;
+            const data = getAgentData(agentId);
+            if (!data) return null;
+            const meta = agentMeta?.find(m => m.agentId === agentId);
+            return (
+              <div
+                key={agentId}
+                className="mpv-cell"
+                style={{
+                  minWidth: 0,
+                  minHeight: 0,
+                  display: "flex",
+                  flexDirection: "column",
+                  position: "relative",
+                  overflow: "hidden",
+                  borderLeft: `1px solid ${TERM_BORDER}`,
+                  borderBottom: ROWS > 1 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
+                }}
+              >
+                <StableAgentPane
+                  agentId={agentId}
+                  data={data}
+                  meta={meta}
+                  assetsReady={assetsReady}
+                  panePrompts={panePrompts}
+                  onPanePromptChange={onPanePromptChange}
+                  isOwner={isOwner}
+                  isCollaborator={isCollaborator}
+                  isSpectator={isSpectator}
+                  panePendingImages={panePendingImages}
+                  onPanePendingImagesChange={onPanePendingImagesChange}
+                  suggestions={suggestions}
+                  suggestText={suggestText}
+                  onSuggestTextChange={onSuggestTextChange}
+                  onSubmit={onSubmit}
+                  onCancel={onCancel}
+                  onFire={onFire}
+                  onApproval={onApproval}
+                  onApprovePlan={onApprovePlan}
+                  onQuickApprove={onQuickApprove}
+                  onEndProject={onEndProject}
+                  onSuggest={onSuggest}
+                  onPreview={onPreview}
+                  onReview={onReview}
+                  detectedBackends={detectedBackends}
+                  onLoadMore={onLoadMore}
+                  onPasteImage={onPasteImage}
+                  onPasteText={onPasteText}
+                  onDropImage={onDropImage}
+                  reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
+                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
+                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
+                  onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                  autoMerge={data.autoMerge}
+                  pendingMerge={data.pendingMerge}
+                  lastMergeCommit={data.lastMergeCommit}
+                  lastMergeMessage={data.lastMergeMessage}
+                  onMerge={onMerge ? () => onMerge(agentId) : undefined}
+                  onRevert={onRevert ? () => onRevert(agentId) : undefined}
+                  onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
+                  scrollFrozen={scrollFrozen}
+                />
+              </div>
+            );
+          }
+
+          // Placeholder slot
+          const { index: pi } = slot;
           return (
             <div
-              key={agentId}
+              key={`placeholder-${pi}`}
+              className="mpv-placeholder"
               style={{
-                width: colWidth,
                 minWidth: 0,
+                minHeight: 0,
                 display: "flex",
                 flexDirection: "column",
                 position: "relative",
-                flexShrink: 0,
-                ...(i === 0 ? {
-                  borderLeft: `1px solid ${TERM_BORDER}`,
-                  boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
-                } : {}),
+                borderLeft: `1px solid ${TERM_BORDER_DIM}`,
+                borderBottom: ROWS > 1 ? `1px solid ${TERM_BORDER_DIM}` : undefined,
               }}
             >
-              <StableAgentPane
-                agentId={agentId}
-                data={data}
-                meta={meta}
-                assetsReady={assetsReady}
-                panePrompts={panePrompts}
-                onPanePromptChange={onPanePromptChange}
-                isOwner={isOwner}
-                isCollaborator={isCollaborator}
-                isSpectator={isSpectator}
-                panePendingImages={panePendingImages}
-                onPanePendingImagesChange={onPanePendingImagesChange}
-                suggestions={suggestions}
-                suggestText={suggestText}
-                onSuggestTextChange={onSuggestTextChange}
-                onSubmit={onSubmit}
-                onCancel={onCancel}
-                onFire={onFire}
-                onApproval={onApproval}
-                onApprovePlan={onApprovePlan}
-                onQuickApprove={onQuickApprove}
-                onEndProject={onEndProject}
-                onSuggest={onSuggest}
-                onPreview={onPreview}
-                onReview={onReview}
-                detectedBackends={detectedBackends}
-                onLoadMore={onLoadMore}
-                onPasteImage={onPasteImage}
-                onPasteText={onPasteText}
-                onDropImage={onDropImage}
-                reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
-                onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
-                onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
-                onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
-                autoMerge={data.autoMerge}
-                pendingMerge={data.pendingMerge}
-                lastMergeCommit={data.lastMergeCommit}
-                lastMergeMessage={data.lastMergeMessage}
-                onMerge={onMerge ? () => onMerge(agentId) : undefined}
-                onRevert={onRevert ? () => onRevert(agentId) : undefined}
-                onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
-                scrollFrozen={scrollFrozen}
-              />
+              {pi === hireSlotIndex && onHire && (
+                <button
+                  onClick={onHire}
+                  title="Hire an agent"
+                  aria-label="Hire an agent"
+                  className="mpv-placeholder-hire"
+                >
+                  <span className="mpv-placeholder-hire-icon">+</span>
+                </button>
+              )}
+
+              {/* Team controls in last placeholder */}
+              {hasTrailingControls && pi === emptySlots - 1 && (
+                <div className="flex flex-col items-center gap-2 absolute bottom-4 left-1/2 -translate-x-1/2">
+                  {showTeamControls && teamBusy && onStopTeam && (
+                    <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
+                      stop
+                    </button>
+                  )}
+                  {showTeamControls && onFireTeam && (
+                    <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
+                      fire
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           );
         })}
-
-        {/* Empty placeholder slots to fill remaining COLS */}
-        {emptySlots > 0 && Array.from({ length: emptySlots }, (_, i) => (
-          <div
-            key={`placeholder-${i}`}
-            style={{
-              width: colWidth,
-              minWidth: 0,
-              flexShrink: 0,
-              display: "flex",
-              flexDirection: "column",
-              position: "relative",
-              borderLeft: `1px solid ${TERM_BORDER_DIM}`,
-            }}
-            className="mpv-placeholder"
-          >
-            {i === hireSlotIndex && onHire && (
-              <button
-                onClick={onHire}
-                title="Hire an agent"
-                aria-label="Hire an agent"
-                className="mpv-placeholder-hire"
-              >
-                <span className="mpv-placeholder-hire-icon">+</span>
-              </button>
-            )}
-
-            {/* Team controls in trailing placeholder */}
-            {hasTrailingControls && i === emptySlots - 1 && (
-              <div className="flex flex-col items-center gap-2 absolute bottom-4 left-1/2 -translate-x-1/2">
-                {showTeamControls && teamBusy && onStopTeam && (
-                  <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
-                    stop
-                  </button>
-                )}
-                {showTeamControls && onFireTeam && (
-                  <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
-                    fire
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-        ))}
       </div>
 
       {/* Bottom bar: page dots */}
