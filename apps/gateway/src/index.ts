@@ -11,7 +11,7 @@ import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
 import { nanoid } from "nanoid";
 import { exec, execFile, execFileSync, execSync } from "child_process";
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, unlinkSync, rmdirSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync, renameSync, unlinkSync, rmdirSync } from "fs";
 import path from "path";
 import os from "os";
 import { ProcessScanner } from "./process-scanner.js";
@@ -870,7 +870,9 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     case "SYNC_CHAT_HISTORY": {
       try {
         const chatFile = path.join(config.instanceDir, "chat-history.json");
-        writeFileSync(chatFile, parsed.data, "utf-8");
+        const tmpFile = chatFile + ".tmp";
+        writeFileSync(tmpFile, parsed.data, "utf-8");
+        renameSync(tmpFile, chatFile);
       } catch (e) {
         console.warn(`[Gateway] Failed to save chat history: ${e}`);
       }
