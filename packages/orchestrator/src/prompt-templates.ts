@@ -173,6 +173,7 @@ RULES:
 - Do NOT include PROJECT_DIR — the system manages project directories automatically.`,
 
   "worker-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
+{{soul}}
 {{soloHint}}
 {{memory}}
 {{recoveryContext}}
@@ -183,6 +184,7 @@ ${DELIVERABLE_RULES}
 {{prompt}}`,
 
   "worker-reviewer-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
+{{soul}}
 {{teamRoster}}
 
 SYSTEM CONSTRAINTS:
@@ -204,6 +206,7 @@ SUMMARY: (one sentence)
 {{prompt}}`,
 
   "worker-subagent-reviewer-initial": `Your name is {{name}}. {{personality}}
+{{soul}}
 {{memory}}
 {{teamRoster}}
 
@@ -218,6 +221,7 @@ SUMMARY: (one sentence)
 {{prompt}}`,
 
   "worker-subagent-initial": `Your name is {{name}}. {{personality}}
+{{soul}}
 {{soloHint}}
 {{memory}}
 {{teamRoster}}
@@ -226,6 +230,7 @@ SUMMARY: (one sentence)
 {{prompt}}`,
 
   "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
+{{soul}}
 {{soloHint}}
 {{memory}}
 {{teamRoster}}
@@ -236,6 +241,7 @@ ${DELIVERABLE_RULES}
 {{prompt}}`,
 
   "worker-continue": `[Context reminder] You are {{name}} ({{role}}). {{personality}}
+{{soul}}
 {{soloHint}}
 {{memory}}
 {{recoveryContext}}
@@ -382,6 +388,7 @@ Address their feedback. Do NOT delegate or write code.`,
 export class PromptEngine {
   private templates: Record<string, string> = { ...PROMPT_DEFAULTS };
   private promptsDir: string | undefined;
+  private soul: string = "";
 
   constructor(promptsDir?: string) {
     this.promptsDir = promptsDir;
@@ -409,6 +416,16 @@ export class PromptEngine {
       written++;
     }
     console.log(`[Prompts] Synced ${written} default templates to ${this.promptsDir}`);
+    // Load soul.md (base persona for all agents) — user-editable, not overwritten
+    const soulPath = path.join(this.promptsDir, "soul.md");
+    if (existsSync(soulPath)) {
+      try {
+        this.soul = readFileSync(soulPath, "utf-8").trim();
+        console.log(`[Prompts] Loaded soul.md (${this.soul.length} chars)`);
+      } catch { /* ignore */ }
+    } else {
+      console.log(`[Prompts] No soul.md found — agents will run without base persona`);
+    }
     this.reload();
   }
 
@@ -452,6 +469,7 @@ export class PromptEngine {
       console.warn(`[Prompts] Unknown template: ${templateName}`);
       return vars["prompt"] ?? "";
     }
-    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
+    const mergedVars = { soul: this.soul, ...vars };
+    return template.replace(/\{\{(\w+)\}\}/g, (_, key) => mergedVars[key] ?? "");
   }
 }
