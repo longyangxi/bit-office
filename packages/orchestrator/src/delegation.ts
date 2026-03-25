@@ -361,15 +361,14 @@ export class DelegationRouter {
           this.assignedTask.set(meta.reviewerAgentId, reReviewTaskId);
           this.totalDelegations++;
 
-          // Re-review prompt: pass only the structured issue checklist from the original review.
-          // Reviewer is a clean session with full file access — it reads the code directly
-          // rather than relying on Dev's self-reported fix summary.
+          // Re-review: pass only the structured issue checklist, not Dev's self-report.
+          // Reviewer is always a clean session (never resumes), so runTask() will wrap
+          // this prompt in the reviewer-initial template which includes format rules.
+          // Do NOT pre-render with a template here — that causes double-wrapping.
           const issueChecklist = meta.reviewContext
             ? `\nIssues to verify (from your previous review):\n${meta.reviewContext}`
             : "";
-          const reReviewPrompt = this.promptEngine.render("worker-continue", {
-            prompt: `[Re-review after fix] ${fromName} reports fixing the issues. Read the code and verify each fix is correct.${issueChecklist}\n\nVERDICT: PASS | FAIL\nISSUES: (if FAIL)\nSUMMARY: (one sentence)`,
-          });
+          const reReviewPrompt = `[Re-review after fix] ${fromName} reports fixing the issues. Read the code and verify each fix is correct.${issueChecklist}`;
           const repoPath = this.resolveDevWorktreePath(this.teamProjectDir ?? undefined);
 
           console.log(`[DirectFix] Dev ${fromName} fix complete → auto re-review by ${reviewerSession.name}`);
