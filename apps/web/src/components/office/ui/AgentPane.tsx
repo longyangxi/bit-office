@@ -404,19 +404,27 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
       {/* ── Info bar (single merged row) ── */}
-      <div className={cn(
-        "term-info-bar flex items-center gap-2 px-3 py-1 bg-term-panel font-mono text-term shrink-0",
-        status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
-      )}>
+      <div
+        className={cn(
+          "term-info-bar flex items-center gap-2 px-3 py-2 bg-term-panel font-mono text-term shrink-0",
+          status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
+        )}
+        style={{
+          borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+          boxShadow: `0 2px 6px -1px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)`,
+        }}
+      >
         {/* Inline avatar (console mode) */}
         {inlineAvatar && (() => {
           const AvatarComp = inlineAvatar.AvatarComponent;
+          const backendName = backend ? (BACKEND_OPTIONS.find((b) => b.id === backend)?.name ?? backend) : null;
+          const roleName = role?.split("\u2014")[0]?.trim();
           return (
             <>
               {AvatarComp && (
-                <div className="relative w-[22px] h-[26px] overflow-hidden rounded-sm shrink-0" style={{ border: `1px solid ${TERM_BORDER_DIM}` }}>
+                <div className="relative w-[24px] h-[28px] overflow-hidden rounded-sm shrink-0" style={{ border: `1px solid ${TERM_BORDER_DIM}` }}>
                   <div className="-mt-px">
-                    <AvatarComp palette={inlineAvatar.palette} zoom={1.4} ready={inlineAvatar.assetsReady} />
+                    <AvatarComp palette={inlineAvatar.palette} zoom={1.5} ready={inlineAvatar.assetsReady} />
                   </div>
                 </div>
               )}
@@ -426,6 +434,16 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   className="text-[8px] font-mono font-bold text-sem-yellow px-[3px] leading-[14px] rounded-sm shrink-0"
                   style={{ border: `1px solid ${TERM_SEM_YELLOW}40` }}
                 >LEAD</span>
+              )}
+              {backendName && (
+                <span className="text-[10px] text-term-text opacity-60 shrink-0 tracking-wide">
+                  {backendName}
+                </span>
+              )}
+              {roleName && (
+                <span className="text-[10px] text-term-text opacity-45 shrink-0 tracking-wide hidden sm:inline">
+                  {roleName}
+                </span>
               )}
             </>
           );
@@ -455,7 +473,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           );
         })()}
         <span className="flex-1" />
-        {/* Status dot — replaces block badge */}
+        {/* Status dot */}
         <Tooltip>
           <TooltipTrigger asChild>
             <span
