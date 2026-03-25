@@ -206,7 +206,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
   });
   const [customPersonality, setCustomPersonality] = useState(editAgent?.personality ?? "");
 
-  const currentPersonality = personalityMode < 4
+  const currentPersonality = personalityMode < 3
     ? PERSONALITY_PRESETS[personalityMode].value
     : customPersonality;
 
@@ -403,19 +403,19 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
           ))}
           <label
             className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-[13px]"
-            style={{ color: personalityMode === 4 ? TERM_TEXT : TERM_DIM }}
+            style={{ color: personalityMode === 3 ? TERM_TEXT : TERM_DIM }}
           >
             <input
               type="radio"
               name="personality"
-              checked={personalityMode === 4}
-              onChange={() => setPersonalityMode(4)}
+              checked={personalityMode === 3}
+              onChange={() => setPersonalityMode(3)}
               style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
             />
             Custom
           </label>
         </div>
-        {personalityMode === 4 && (
+        {personalityMode === 3 && (
           <textarea
             className="ti ti-textarea mt-1.5"
             value={customPersonality}

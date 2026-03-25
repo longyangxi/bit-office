@@ -40,7 +40,6 @@ export const PERSONALITY_PRESETS = [
   { label: "Friendly & Casual", value: "You speak in a friendly, casual, encouraging, and natural tone." },
   { label: "Professional & Concise", value: "You speak formally, professionally, in an organized and concise manner." },
   { label: "Aggressive & Fast", value: "You are aggressive, action-first, always pursuing speed and efficiency." },
-  { label: "Patient Mentor", value: "You teach patiently, explain the reasoning, and guide like a mentor." },
 ];
 
 /** Roles available in Create Agent picker, organized by category.
