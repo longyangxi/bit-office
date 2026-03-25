@@ -21,7 +21,7 @@
 
 
 ## Features
-- **8 AI backends, 150+ roles** — Claude, Codex, Gemini, Copilot, and more in one pipeline  
+- **8 AI backends, 23 roles** — Claude, Codex, Gemini, Copilot, and more in one pipeline  
 - **Team-based delivery** — Leader coordinates planning, coding, review, and release  
 - **Parallel collaboration** — Worktree isolation with auto commit, merge, and undo  
 - **Flexible code review** — Mix Claude Code, Codex, or any tool you prefer  
@@ -39,7 +39,6 @@ npx bit-office
 
 ## Learn More
 
-- **150+ specialist roles** powered by [agency-agents](vendor/agency-agents)  
 - **Team workflow** — how agents plan, execute, and deliver ([view](team-workflow.md))  
 - **Collaboration system** — multi-agent orchestration and worktree isolation ([view](packages/orchestrator/README.md))  
 - **Memory design** — four-layer persistent memory architecture ([view](packages/memory/README.md))  
