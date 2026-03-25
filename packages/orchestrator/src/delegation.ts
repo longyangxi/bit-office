@@ -366,7 +366,7 @@ export class DelegationRouter {
             ? `\n\nYour previous review (for reference):\n${meta.reviewContext}`
             : "";
           const reReviewPrompt = this.promptEngine.render("worker-continue", {
-            prompt: `[Re-review after fix] ${fromName} has fixed the issues you reported. Please review the code again.\n\nDev's fix report:\n${summary.slice(0, CONFIG.limits.chatMessageChars)}${originalContext}\n\n===== YOUR TASK =====\n1. Check if ALL previously reported ISSUES are resolved\n2. Verify the deliverable runs without crashes\n3. Verify core features work (compare against the original task requirements)\n\nVERDICT: PASS | FAIL\n- PASS = code runs without crashes AND core features are implemented (even if rough)\n- FAIL = crashes/bugs that prevent usage OR core features are missing/broken\nISSUES: (numbered list if FAIL — only real bugs or missing core features)\nSUMMARY: (one sentence overall assessment)`,
+            prompt: `[Re-review after fix] ${fromName} fixed the issues you reported. Verify fixes are correct, deliverable runs, core features work.${originalContext}\n\nDev's fix report:\n${summary.slice(0, CONFIG.limits.chatMessageChars)}\n\nVERDICT: PASS | FAIL\nISSUES: (if FAIL)\nSUMMARY: (one sentence)`,
           });
           const repoPath = this.resolveDevWorktreePath(this.teamProjectDir ?? undefined);
 

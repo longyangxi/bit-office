@@ -1095,16 +1095,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
 
       const fileList = changedFiles.map(f => `- ${f}`).join("\n");
       const reviewPrompt = [
-        `Review the code changes below. Focus on the DIFF — it shows exactly what was changed.`,
-        ``,
-        `Severity classification:`,
-        `- CRITICAL: Bugs, crashes, security vulnerabilities, logic errors — must fix`,
-        `- SUGGESTION: Style, naming, refactoring — optional, non-blocking`,
-        ``,
-        `Rules:`,
-        `- Base your review primarily on the diff. Only Read files if you need surrounding context to understand the change.`,
-        `- Do NOT suggest renaming, refactoring, or style changes unless they cause actual bugs.`,
-        `- Be concise. For each issue: file, line, severity, what's wrong, how to fix.`,
+        `Review the code changes below. Focus on the DIFF for what changed, Read files only if you need surrounding context.`,
+        `Only flag real bugs, crashes, security issues, logic errors. Skip style/naming suggestions.`,
         ``,
         `Project: ${cwd}`,
         `Files changed:\n${fileList}`,
@@ -1112,9 +1104,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         summary ? `Summary: ${summary}` : "",
         diffSection,
         ``,
-        `Output format:`,
         `VERDICT: PASS | FAIL`,
-        `ISSUES: (numbered list with severity, file:line, description)`,
+        `ISSUES: (numbered list — severity, file:line, description, fix)`,
         `SUMMARY: (one sentence)`,
       ].filter(Boolean).join("\n");
 
