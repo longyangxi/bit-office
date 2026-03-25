@@ -95,7 +95,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
       zIndex={100}
       title="Hire Agent"
       footer={
-        <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
+        <TermButton variant="dim" onClick={onClose}>Cancel</TermButton>
       }
     >
       <div>

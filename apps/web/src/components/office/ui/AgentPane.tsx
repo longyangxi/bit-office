@@ -300,7 +300,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
             }
           }}
           placeholder="Add feedback for the fix..."
-          className="text-term h-7"
+          className=""
           style={{ flex: 1 }}
         />
       </div>

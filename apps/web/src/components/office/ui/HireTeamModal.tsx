@@ -48,8 +48,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
       title="Hire Team"
       footer={
         <>
-          <TermButton variant="primary" onClick={handleCreate} disabled={!leader} style={{ flex: 1, padding: "9px", fontWeight: 700 }}>Create Team</TermButton>
-          <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
+          <TermButton variant="primary" onClick={handleCreate} disabled={!leader} style={{ flex: 1, fontWeight: 700 }}>Create Team</TermButton>
+          <TermButton variant="dim" onClick={onClose}>Cancel</TermButton>
         </>
       }
     >

@@ -98,7 +98,6 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
                 const url = computePreviewUrl(resultInfo);
                 if (url) onPreview(url);
               }}
-              style={{ padding: "9px 20px" }}
             >{"\u25B6"} Preview</TermButton>
           )}
           {canLaunch && (
@@ -108,10 +107,10 @@ function CelebrationModal({ previewUrl, previewPath, onPreview, onDismiss, previ
                 if (cmd) sendCommand(cmd);
                 onDismiss();
               }}
-              style={{ padding: "9px 20px", borderColor: "var(--term-sem-blue)", color: "var(--term-sem-blue)" }}
+              style={{ borderColor: "var(--term-sem-blue)", color: "var(--term-sem-blue)" }}
             >{"\u25B6"} Launch</TermButton>
           )}
-          <TermButton variant="dim" onClick={onDismiss} style={{ padding: "9px 20px" }}>OK</TermButton>
+          <TermButton variant="dim" onClick={onDismiss}>OK</TermButton>
         </>
       }
     >

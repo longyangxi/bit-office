@@ -278,10 +278,10 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
       title={editAgent ? "Edit Agent" : "Create Agent"}
       footer={
         <>
-          <TermButton variant="primary" onClick={handleSave} disabled={!currentRole.trim()} style={{ flex: 1, padding: "9px", fontWeight: 700 }}>
+          <TermButton variant="primary" onClick={handleSave} disabled={!currentRole.trim()} style={{ flex: 1, fontWeight: 700 }}>
             {editAgent ? "Save" : "Create"}
           </TermButton>
-          <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
+          <TermButton variant="dim" onClick={onClose}>Cancel</TermButton>
         </>
       }
     >

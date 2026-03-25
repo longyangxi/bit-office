@@ -22,9 +22,9 @@ const buttonVariants = cva(
           "border border-border text-muted-foreground hover:text-foreground hover:border-term-text-bright hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
       },
       size: {
-        default: "px-3.5 py-1.5 leading-5",
-        sm: "px-2.5 py-1 text-[11px] leading-4",
-        icon: "h-8 w-8 p-0",
+        default: "px-3 py-1 leading-4",
+        sm: "px-2.5 py-0.5 text-[11px] leading-4",
+        icon: "h-7 w-7 p-0",
       },
     },
     defaultVariants: {

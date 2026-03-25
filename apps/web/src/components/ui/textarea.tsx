@@ -8,9 +8,9 @@ const Textarea = React.forwardRef<
   return (
     <textarea
       className={cn(
-        "flex w-full px-2.5 py-1.5 resize-none",
+        "flex w-full px-2.5 py-1 resize-none",
         "border border-border bg-background text-foreground",
-        "font-mono text-term leading-5",
+        "font-mono text-term leading-4",
         "outline-none transition-colors duration-fast",
         "placeholder:text-term-green-dim placeholder:opacity-50",
         "focus:border-term-green-dim",
