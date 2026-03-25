@@ -503,6 +503,13 @@ export function applyTermTheme(key: string) {
     s.setProperty("--term-blue", t.blue);
     s.setProperty("--term-purple", t.purple);
     s.setProperty("--term-cyan", t.cyan);
+    // Semantic aliases used by Tailwind (sem-green, sem-yellow, etc.)
+    s.setProperty("--term-sem-green", t.green);
+    s.setProperty("--term-sem-yellow", t.yellow);
+    s.setProperty("--term-sem-red", t.red);
+    s.setProperty("--term-sem-blue", t.blue);
+    s.setProperty("--term-sem-purple", t.purple);
+    s.setProperty("--term-sem-cyan", t.cyan);
     s.setProperty("--term-code-bg", t.codeBg);
     s.setProperty("--term-code-text", t.codeText);
     s.setProperty("--term-scroll-thumb", t.scrollThumb);
