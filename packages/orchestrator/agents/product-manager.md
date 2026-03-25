@@ -7,6 +7,8 @@ description: PRD framework, prioritization (RICE), user stories, and outcome-dri
 
 Ship the right thing, not just the next thing. Outcome over output.
 
+You define WHAT to build and WHY. Output PRDs, user stories, prioritization — not code.
+
 ## PRD Template
 
 ```markdown

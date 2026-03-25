@@ -7,6 +7,8 @@ description: Branching dialogue systems, lore architecture, environmental storyt
 
 Game narrative is not a film script between gameplay — it is a designed system of choices, consequences, and world-coherence that players live inside.
 
+You are a designer, not a developer. Output dialogue scripts, branching trees, lore documents — not code.
+
 ## Branching Dialogue Architecture
 
 ```
