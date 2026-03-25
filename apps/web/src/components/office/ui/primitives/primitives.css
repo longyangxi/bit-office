@@ -466,25 +466,16 @@
   box-shadow: inset 0 2px 0 var(--term-border), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-working {
-  box-shadow: inset 0 2px 0 var(--term-sem-blue), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-blue) 8%, transparent);
+  box-shadow: inset 0 2px 0 var(--term-sem-blue), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-waiting {
-  box-shadow: inset 0 2px 0 var(--term-sem-yellow), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-yellow) 8%, transparent);
+  box-shadow: inset 0 2px 0 var(--term-sem-yellow), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-done {
   box-shadow: inset 0 2px 0 var(--term-sem-green), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 .ap-status-error {
-  box-shadow: inset 0 2px 0 var(--term-sem-red), 0 1px 3px rgba(0, 0, 0, 0.2), 0 0 8px color-mix(in srgb, var(--term-sem-red) 8%, transparent);
-}
-
-/* Pulse animation for working state */
-@keyframes status-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-.ap-status-working {
-  animation: status-pulse 2s ease-in-out infinite;
+  box-shadow: inset 0 2px 0 var(--term-sem-red), 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* ============================================================
