@@ -302,6 +302,8 @@ export interface CreateAgentOpts {
   role: string;
   personality?: string;
   backend?: string;
+  /** Override model for this agent (e.g. "opus", "sonnet") */
+  model?: string;
   palette?: number;
   resumeHistory?: boolean;
   teamId?: string;

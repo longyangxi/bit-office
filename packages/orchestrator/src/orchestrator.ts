@@ -128,6 +128,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       workspace: opts.workDir ?? this.workspace,
       resumeHistory: opts.resumeHistory,
       backend,
+      model: opts.model,
       sandboxMode: this.sandboxMode,
       isTeamLead: this.agentManager.isTeamLead(opts.agentId),
       teamId: opts.teamId,
@@ -479,7 +480,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   getAllAgents() {
     return this.agentManager.getAll().map(s => ({
       agentId: s.agentId, name: s.name, role: s.role, status: s.status,
-      palette: s.palette, personality: s.personality, backend: s.backend.id, pid: s.pid,
+      palette: s.palette, personality: s.personality, backend: s.backend.id, model: s.model, pid: s.pid,
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
       teamId: s.teamId,
       worktreePath: s.worktreePath,

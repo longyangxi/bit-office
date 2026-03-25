@@ -21,6 +21,8 @@ interface SavedConfig {
   telegramAllowedUsers?: string[];
   detectedBackends?: string[];
   defaultBackend?: string;
+  /** Default model per backend (e.g. { "claude": "opus", "gemini": "gemini-2.5-pro" }) */
+  defaultModels?: Record<string, string>;
   sandboxMode?: "full" | "safe";
   worktreeEnabled?: boolean;
   autoMergeEnabled?: boolean;
@@ -175,6 +177,7 @@ function buildConfig() {
     ),
     detectedBackends: saved.detectedBackends ?? [],
     defaultBackend: saved.defaultBackend ?? "claude",
+    defaultModels: saved.defaultModels ?? { claude: "opus" },
     sandboxMode: (saved.sandboxMode ?? "full") as "full" | "safe",
     worktreeEnabled: saved.worktreeEnabled ?? true,
     autoMergeEnabled: saved.autoMergeEnabled ?? true,

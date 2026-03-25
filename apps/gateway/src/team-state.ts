@@ -19,6 +19,7 @@ export interface PersistedAgent {
   role: string;
   personality?: string;
   backend?: string;
+  model?: string;
   palette?: number;
   teamId?: string;
   isTeamLead?: boolean;

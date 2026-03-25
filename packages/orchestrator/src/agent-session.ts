@@ -183,6 +183,8 @@ export interface AgentSessionOpts {
   teamId?: string;
   /** Memory context to inject into prompts (from previous projects) */
   memoryContext?: string;
+  /** Override model (e.g. "opus", "sonnet") — passed as --model to Claude Code */
+  model?: string;
 }
 
 export class AgentSession {
@@ -220,6 +222,7 @@ export class AgentSession {
   private timedOut = false;
   private _isTeamLead: boolean;
   private _memoryContext: string;
+  private _model: string | undefined;
   /** Whether this leader has already been through execute phase at least once */
   private _hasExecuted = false;
   private _lastResult: string | null = null;
@@ -270,6 +273,8 @@ export class AgentSession {
   get pid(): number | null { return this.process?.pid ?? null; }
   /** Backend ID (e.g. "claude", "codex") */
   get backendId(): string { return this.backend.id; }
+  /** Model override (e.g. "opus", "sonnet") */
+  get model(): string | undefined { return this._model; }
 
   teamId?: string;
 
@@ -286,6 +291,7 @@ export class AgentSession {
     this._isTeamLead = opts.isTeamLead ?? false;
     this.teamId = opts.teamId;
     this._memoryContext = opts.memoryContext ?? "";
+    this._model = opts.model;
     this.onEvent = opts.onEvent;
     this._renderPrompt = opts.renderPrompt;
   }
@@ -463,6 +469,7 @@ export class AgentSession {
         resumeSessionId: this.sessionId ?? undefined,
         fullAccess,
         noTools: this._isTeamLead,
+        model: this._model,
         verbose,
         agentType,
         worktree: this.useNativeWorktree,

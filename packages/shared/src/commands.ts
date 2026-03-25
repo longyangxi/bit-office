@@ -38,6 +38,7 @@ export const CreateAgentCommand = z.object({
   palette: z.number().optional(),
   personality: z.string().optional(),
   backend: z.string().optional(),
+  model: z.string().optional(),
   teamId: z.string().optional(),
   workDir: z.string().optional(),
   skillFiles: z.array(z.string()).optional(),
