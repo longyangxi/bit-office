@@ -30,5 +30,9 @@ cp "$ROOT/gateway/dist/index.js.map" "$SIDECAR/gateway.js.map" 2>/dev/null || tr
 # Copy web static files for gateway's HTTP serving
 cp -r "$ROOT/web/out" "$SIDECAR/web"
 
+# Copy bundled agent definitions (synced to ~/.claude/agents/ on startup)
+MONOREPO="$(cd "$ROOT/.." && pwd)"
+cp -r "$MONOREPO/packages/orchestrator/agents" "$SIDECAR/agents"
+
 echo "=== Sidecar ready: $SIDECAR ==="
 ls -lh "$SIDECAR/node" "$SIDECAR/gateway.js"
