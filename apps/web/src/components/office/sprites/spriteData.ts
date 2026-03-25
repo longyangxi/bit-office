@@ -1082,7 +1082,7 @@ export function getCharacterThumbnail(paletteIndex: number): SpriteData | null {
 
 
 
-export function getCharacterSprites(paletteIndex: number, hueShift = 0): CharacterSprites {
+export function getCharacterSprites(paletteIndex: number, hueShift = 0): CharacterSprites | null {
   const cacheKey = `${paletteIndex}:${hueShift}`
   const cached = spriteCache.get(cacheKey)
   if (cached) return cached
