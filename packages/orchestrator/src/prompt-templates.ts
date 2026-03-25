@@ -440,10 +440,12 @@ Address their feedback. Do NOT delegate or write code.`,
 export class PromptEngine {
   private templates: Record<string, string> = { ...PROMPT_DEFAULTS };
   private promptsDir: string | undefined;
+  private projectRoot: string | undefined;
   private soul: string = "";
 
-  constructor(promptsDir?: string) {
+  constructor(promptsDir?: string, projectRoot?: string) {
     this.promptsDir = promptsDir;
+    this.projectRoot = projectRoot;
   }
 
   /**
@@ -468,11 +470,20 @@ export class PromptEngine {
       written++;
     }
     console.log(`[Prompts] Synced ${written} default templates to ${this.promptsDir}`);
-    // Sync soul.md (base persona for all agents) — same strategy as templates
-    const soulPath = path.join(this.promptsDir, "soul.md");
-    writeFileSync(soulPath, DEFAULT_SOUL, "utf-8");
+    // Load soul.md: project root SOUL.md > promptsDir/soul.md > embedded default
     this.soul = DEFAULT_SOUL;
-    console.log(`[Prompts] Synced soul.md (${this.soul.length} chars)`);
+    const projectSoulPath = this.projectRoot ? path.join(this.projectRoot, "SOUL.md") : null;
+    const promptsSoulPath = path.join(this.promptsDir, "soul.md");
+    if (projectSoulPath && existsSync(projectSoulPath)) {
+      try {
+        this.soul = readFileSync(projectSoulPath, "utf-8").trim();
+        console.log(`[Prompts] Loaded SOUL.md from project root (${this.soul.length} chars)`);
+      } catch { /* fall through to default */ }
+    } else {
+      console.log(`[Prompts] No project SOUL.md found, using embedded default`);
+    }
+    // Always sync to promptsDir for transparency
+    writeFileSync(promptsSoulPath, this.soul, "utf-8");
     this.reload();
   }
 

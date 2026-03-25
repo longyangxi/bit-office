@@ -86,7 +86,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.defaultBackendId = opts.defaultBackend ?? opts.backends[0]?.id ?? "claude";
 
     // Prompt engine
-    this.promptEngine = new PromptEngine(opts.promptsDir);
+    this.promptEngine = new PromptEngine(opts.promptsDir, opts.workspace);
     this.promptEngine.init();
 
     // Delegation
