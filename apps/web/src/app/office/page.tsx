@@ -1154,6 +1154,7 @@ export default function OfficePage() {
       busy: reviewResultText === null,
       reviewDone: reviewResultText !== null,
       reviewResultText: reviewResultText ?? undefined,
+      verdict: reviewResultText ? (reviewResultText.match(/VERDICT:\s*(PASS|FAIL)/i)?.[1]?.toUpperCase() as "PASS" | "FAIL" ?? "UNKNOWN") : undefined,
     };
   }, [agents, getVisibleMessages, reviewResultText]);
 

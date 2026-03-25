@@ -82,6 +82,8 @@ export interface ReviewerOverlayData {
   reviewDone: boolean;
   /** The resolved review result text (fallback when messages are empty) */
   reviewResultText?: string | null;
+  /** Parsed verdict from reviewer output — PASS means no bugs */
+  verdict?: "PASS" | "FAIL" | "UNKNOWN";
 }
 
 export interface AgentPaneProps {
@@ -286,24 +288,26 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
 
   return (
     <div className="px-3 py-1.5 bg-term-panel font-mono text-term shrink-0 shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
-      {/* Feedback input */}
-      <div className="flex gap-1.5 items-center mb-1.5">
-        <TermInput
-          ref={inputRef}
-          type="text"
-          value={feedback}
-          onChange={(e) => setFeedback(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && onApplyReviewFixes) {
-              e.preventDefault();
-              onApplyReviewFixes(feedback || undefined);
-            }
-          }}
-          placeholder="Add feedback for the fix..."
-          className=""
-          style={{ flex: 1 }}
-        />
-      </div>
+      {/* Feedback input — only show when fixes are available */}
+      {onApplyReviewFixes && (
+        <div className="flex gap-1.5 items-center mb-1.5">
+          <TermInput
+            ref={inputRef}
+            type="text"
+            value={feedback}
+            onChange={(e) => setFeedback(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                onApplyReviewFixes(feedback || undefined);
+              }
+            }}
+            placeholder="Add feedback for the fix..."
+            className=""
+            style={{ flex: 1 }}
+          />
+        </div>
+      )}
       {/* Action buttons */}
       <div className="flex gap-2 justify-center">
         {onApplyReviewFixes && (
@@ -677,7 +681,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
           {/* Footer: feedback input + action buttons */}
           <ReviewFooter
-            onApplyReviewFixes={onApplyReviewFixes}
+            onApplyReviewFixes={reviewerOverlay.verdict !== "PASS" ? onApplyReviewFixes : undefined}
             onDismissReview={onDismissReview}
           />
         </div>
