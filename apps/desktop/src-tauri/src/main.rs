@@ -203,6 +203,7 @@ fn main() {
                     .env("WEB_DIR", web_dir.to_str().unwrap())
                     .env("NO_OPEN", "1")
                     .env("GATEWAY_ID", "desktop")
+                    .env("NODE_ENV", "production")
                     .spawn()
                 {
                     Ok((mut rx, child)) => {

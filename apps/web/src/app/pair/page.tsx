@@ -138,10 +138,16 @@ export default function PairPage() {
       const { getConnection, clearConnection } = require("@/lib/storage");
       const conn = getConnection();
 
-      // Tauri: reject cached connections to wrong gateway
+      // Tauri: reject cached connections to wrong gateway and wipe stale UI state
       if (isTauri() && conn?.gatewayId && conn.gatewayId !== "desktop") {
-        console.log(`[pair] Cached connection is for gateway ${conn.gatewayId}, need desktop — clearing`);
+        console.log(`[pair] Cached connection is for gateway ${conn.gatewayId}, need desktop — clearing all state`);
         clearConnection();
+        // Clear stale agent cache and team messages from previous gateway session
+        try {
+          localStorage.removeItem("office-chat-history");
+          localStorage.removeItem("office-team-messages");
+          localStorage.removeItem("office-team-phase");
+        } catch { /* ignore */ }
       } else if (conn?.sessionToken) {
         await navigateAfterDelay();
         router.push("/office");
