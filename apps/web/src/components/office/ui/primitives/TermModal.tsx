@@ -71,7 +71,7 @@ export default function TermModal({
         className={cn(className)}
         zIndex={zIndex ?? undefined}
       >
-        {title && (
+        {title ? (
           <DialogHeader>
             <DialogTitle>{title}</DialogTitle>
             <button
@@ -82,6 +82,8 @@ export default function TermModal({
               &times;
             </button>
           </DialogHeader>
+        ) : (
+          <DialogTitle className="sr-only">Dialog</DialogTitle>
         )}
         {/* Hidden description for accessibility when no visible description */}
         <DialogDescription className="sr-only">
