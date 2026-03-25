@@ -1886,8 +1886,8 @@ export default function OfficePage() {
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
                 onFireTeam={handleFireTeam}
-                cols={consoleCols}
-                rows={consoleRows}
+                cols={hasTeam ? 3 : consoleCols}
+                rows={hasTeam ? 1 : consoleRows}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
