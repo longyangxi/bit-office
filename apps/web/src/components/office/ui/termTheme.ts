@@ -497,7 +497,7 @@ export function applyTermTheme(key: string) {
     s.setProperty("--term-dim", t.dim);
     s.setProperty("--term-accent", t.accent);
     s.setProperty("--term-accent-rgb", t.accentRgb);
-    s.setProperty("--term-green", t.green);
+    s.setProperty("--term-green", t.accent);
     s.setProperty("--term-yellow", t.yellow);
     s.setProperty("--term-red", t.red);
     s.setProperty("--term-blue", t.blue);

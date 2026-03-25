@@ -737,17 +737,17 @@
   width: 72px;
   height: 72px;
   margin: auto;
-  border: 2px dashed color-mix(in srgb, var(--term-green) 28%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--term-accent) 28%, transparent);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--term-green) 4%, transparent);
-  color: color-mix(in srgb, var(--term-green) 50%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 4%, transparent);
+  color: color-mix(in srgb, var(--term-accent) 50%, transparent);
   cursor: pointer;
   transition: all 0.25s ease;
 }
 .mpv-placeholder-hire:hover {
-  border-color: color-mix(in srgb, var(--term-green) 56%, transparent);
-  background: color-mix(in srgb, var(--term-green) 12%, transparent);
-  color: var(--term-green);
+  border-color: color-mix(in srgb, var(--term-accent) 56%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 12%, transparent);
+  color: var(--term-accent);
   transform: scale(1.08);
 }
 .mpv-placeholder-hire:active {
