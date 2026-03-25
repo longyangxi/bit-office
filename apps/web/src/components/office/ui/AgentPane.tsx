@@ -287,10 +287,13 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
   }, []);
 
   return (
-    <div className="px-3 py-1.5 bg-term-panel font-mono text-term shrink-0 shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="px-3.5 py-2 font-mono text-term shrink-0" style={{
+      background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 5%, ${TERM_PANEL})`,
+      boxShadow: `inset 0 1px 0 ${TERM_SEM_PURPLE}10`,
+    }}>
       {/* Feedback input — only show when fixes are available */}
       {onApplyReviewFixes && (
-        <div className="flex gap-1.5 items-center mb-1.5">
+        <div className="flex gap-1.5 items-center mb-2">
           <TermInput
             ref={inputRef}
             type="text"
@@ -541,27 +544,28 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
       {/* ── Review overlay — two-phase: mini input-area overlay (working) → expanded panel (done) ── */}
       {reviewerOverlay && reviewerOverlay.busy && (
-        /* Phase 1: Small window covering only the input area — shows role + "..." + streaming thoughts */
+        /* Phase 1: Compact overlay — covers input area, shows streaming thoughts */
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-          minHeight: 80, maxHeight: "40%",
+          minHeight: 72, maxHeight: "35%",
           display: "flex", flexDirection: "column",
-          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
-          borderTop: `1.5px solid ${TERM_SEM_PURPLE}30`,
-          boxShadow: `0 -4px 12px -2px rgba(0,0,0,0.5), inset 0 1px 0 ${TERM_SEM_PURPLE}12`,
+          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
+          borderTop: `1px solid ${TERM_SEM_PURPLE}25`,
+          boxShadow: `0 -4px 16px -4px rgba(0,0,0,0.5)`,
           fontFamily: TERM_FONT, fontSize: TERM_SIZE,
           animation: "review-overlay-in 0.3s ease-out",
         }}>
-          {/* Header: name + dots + dismiss */}
+          {/* Header */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
-            padding: "8px 12px",
-            boxShadow: `0 2px 4px -1px rgba(0,0,0,0.3), inset 0 -1px 0 ${TERM_SEM_PURPLE}18`,
+            padding: "7px 14px",
+            background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
+            boxShadow: `inset 0 -1px 0 ${TERM_SEM_PURPLE}15`,
             flexShrink: 0,
           }}>
             <span style={{ color: TERM_SEM_PURPLE, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_PURPLE}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
-              {reviewerOverlay.role?.split("\u2014")[0]?.trim() || reviewerOverlay.name}
+              {reviewerOverlay.name}
             </span>
             <span className="working-dots" style={{ color: TERM_SEM_PURPLE }}>
               <span className="working-dots-mid" />
@@ -574,20 +578,20 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               <button
                 onClick={onDismissReview}
                 style={{
-                  padding: "2px 8px", border: `1px solid ${TERM_BORDER}`,
-                  backgroundColor: "transparent", color: TERM_DIM,
+                  padding: "1px 6px", border: `1px solid ${TERM_BORDER}`,
+                  borderRadius: 3, backgroundColor: "transparent", color: TERM_DIM,
                   fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-                  cursor: "pointer", flexShrink: 0, lineHeight: 1,
+                  cursor: "pointer", flexShrink: 0, lineHeight: 1.2,
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.color = TERM_TEXT; }}
                 onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
               >{"\u00d7"}</button>
             )}
           </div>
-          {/* Scrollable streaming thoughts — only shown when reviewer has messages */}
+          {/* Streaming thoughts */}
           {reviewerOverlay.visibleMessages.length > 0 && (
             <div data-scrollbar style={{
-              flex: 1, overflowY: "auto", padding: "8px 12px",
+              flex: 1, overflowY: "auto", padding: "6px 14px",
               minHeight: 0, maxHeight: 120,
               backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
             }}>
@@ -603,10 +607,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               <div ref={reviewChatEndRef} />
             </div>
           )}
-          {/* Fallback hint when no messages yet */}
           {reviewerOverlay.visibleMessages.length === 0 && (
             <div style={{
-              padding: "8px 12px", color: TERM_DIM, fontSize: TERM_SIZE,
+              padding: "6px 14px", color: TERM_DIM, fontSize: TERM_SIZE,
               fontFamily: TERM_FONT,
             }}>
               {reviewerOverlay.lastLogLine?.slice(0, 80) || "Reviewing code changes..."}
@@ -616,43 +619,52 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       )}
 
       {reviewerOverlay && !reviewerOverlay.busy && (
-        /* Phase 2: Expanded result panel — covers bottom 65% of agent pane */
+        /* Phase 2: Expanded result panel */
         <div style={{
           position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-          height: "65%", minHeight: 200,
+          height: "55%", minHeight: 180,
           display: "flex", flexDirection: "column",
-          backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
-          borderTop: `1.5px solid ${TERM_SEM_PURPLE}30`,
-          boxShadow: `0 -4px 12px -2px rgba(0,0,0,0.5), inset 0 1px 0 ${TERM_SEM_PURPLE}12`,
+          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
+          borderTop: `1px solid ${TERM_SEM_PURPLE}25`,
+          boxShadow: `0 -4px 16px -4px rgba(0,0,0,0.5)`,
           animation: "review-slide-up 0.25s ease-out",
         }}>
-          {/* Header bar */}
+          {/* Header bar — unified style with Phase 1 */}
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
-            padding: "6px 14px",
+            padding: "7px 14px",
             background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
-            boxShadow: `0 3px 6px -2px rgba(0,0,0,0.4), inset 0 -1px 0 ${TERM_SEM_PURPLE}18, inset 0 1px 0 rgba(255,255,255,0.03)`,
+            boxShadow: `inset 0 -1px 0 ${TERM_SEM_PURPLE}15`,
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
             <span style={{ color: TERM_SEM_PURPLE, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_PURPLE}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
-            <span style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_SEM_GREEN }}>
-              {reviewerOverlay.status === "error" ? "error" : "done"}
-            </span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.name}
             </span>
+            {/* Verdict badge */}
+            {reviewerOverlay.verdict && reviewerOverlay.verdict !== "UNKNOWN" && (
+              <span style={{
+                fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3,
+                letterSpacing: "0.04em", textTransform: "uppercase",
+                color: reviewerOverlay.verdict === "PASS" ? TERM_SEM_GREEN : TERM_SEM_RED,
+                background: reviewerOverlay.verdict === "PASS" ? `${TERM_SEM_GREEN}18` : `${TERM_SEM_RED}18`,
+              }}>{reviewerOverlay.verdict}</span>
+            )}
+            {reviewerOverlay.status === "error" && (
+              <span style={{ color: TERM_SEM_RED, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_RED}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>ERROR</span>
+            )}
             <span style={{ flex: 1 }} />
             {reviewerOverlay.tokenUsage.inputTokens > 0 && (
               <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
             )}
           </div>
 
-          {/* Final review result — all agent messages */}
+          {/* Review result content */}
           <div data-scrollbar className="term-dotgrid term-chat-area" style={{
-            flex: 1, overflowY: "auto", padding: "10px 14px",
+            flex: 1, overflowY: "auto", padding: "8px 14px",
             display: "flex", flexDirection: "column",
-            minHeight: 0, backgroundColor: `color-mix(in srgb, ${TERM_SEM_PURPLE} 3%, ${TERM_BG})`,
+            minHeight: 0,
           }}>
             {(() => {
               const reviewMsgs = reviewerOverlay.visibleMessages.filter(m => m.role !== "user" && m.text);
@@ -661,17 +673,15 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   <MessageBubble key={msg.id} msg={msg} agentName={reviewerOverlay.name} />
                 ));
               }
-              // Fallback: show reviewResultText directly (covers error messages,
-              // race conditions where TASK_DONE clears streaming msg before render, etc.)
               if (reviewerOverlay.reviewResultText) {
                 return (
-                  <div style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
+                  <div style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "8px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
                     {reviewerOverlay.reviewResultText}
                   </div>
                 );
               }
               return (
-                <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "10px 0" }}>
+                <div style={{ color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "8px 0" }}>
                   (No review content)
                 </div>
               );
@@ -679,7 +689,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             <div ref={reviewChatEndRef} />
           </div>
 
-          {/* Footer: feedback input + action buttons */}
+          {/* Footer */}
           <ReviewFooter
             onApplyReviewFixes={reviewerOverlay.verdict !== "PASS" ? onApplyReviewFixes : undefined}
             onDismissReview={onDismissReview}
