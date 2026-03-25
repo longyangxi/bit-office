@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
@@ -28,48 +28,18 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   const [selectedDef, setSelectedDef] = useState<AgentDefinition | null>(null);
   const [hireName, setHireName] = useState(() => generateRandomName());
   const [workDir, setWorkDir] = useState<string>("");
-  // Track the clicked card's position for the popover
-  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
 
   const builtinAgents = agentDefs.filter((a) => a.isBuiltin && a.teamRole !== "leader");
   const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole !== "leader");
 
-  const handleSelectAgent = (def: AgentDefinition, e: React.MouseEvent) => {
+  const handleSelectAgent = (def: AgentDefinition) => {
     if (selectedDef?.id === def.id) {
       setSelectedDef(null);
-      setPopoverPos(null);
     } else {
       setSelectedDef(def);
       setHireName(generateRandomName());
-      // Position popover below the clicked card
-      const card = (e.currentTarget as HTMLElement);
-      const container = containerRef.current;
-      if (card && container) {
-        const cardRect = card.getBoundingClientRect();
-        const containerRect = container.getBoundingClientRect();
-        setPopoverPos({
-          top: cardRect.bottom - containerRect.top + 6,
-          left: Math.max(0, cardRect.left - containerRect.left),
-        });
-      }
     }
   };
-
-  // Close popover on outside click
-  useEffect(() => {
-    if (!selectedDef) return;
-    const handler = (e: MouseEvent) => {
-      const popover = document.getElementById("hire-popover");
-      if (popover && !popover.contains(e.target as Node)) {
-        setSelectedDef(null);
-        setPopoverPos(null);
-      }
-    };
-    // Delay to avoid immediate close from the card click
-    const t = setTimeout(() => document.addEventListener("mousedown", handler), 50);
-    return () => { clearTimeout(t); document.removeEventListener("mousedown", handler); };
-  }, [selectedDef]);
 
   const handleDoHire = () => {
     if (!selectedDef) return;
@@ -82,7 +52,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
     return (
       <button
         key={def.id}
-        onClick={(e) => handleSelectAgent(def, e)}
+        onClick={() => handleSelectAgent(def)}
         onMouseEnter={() => setHoveredId(def.id)}
         onMouseLeave={() => setHoveredId(null)}
         title={def.skills ? `Skills: ${def.skills}` : def.role}
@@ -128,7 +98,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
       }
     >
-      <div ref={containerRef} style={{ position: "relative" }}>
+      <div>
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>AI BACKEND</div>
@@ -191,83 +161,92 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           </button>
         </div>
 
-        {/* -- Floating popover: workDir + name + hire -- */}
-        {selectedDef && popoverPos && (
+        {/* -- Centered overlay: workDir + name + hire -- */}
+        {selectedDef && (
           <div
-            id="hire-popover"
             style={{
-              position: "absolute",
-              top: popoverPos.top,
-              left: 0, right: 0,
-              zIndex: 10,
-              padding: "12px",
-              border: `1px solid ${TERM_GREEN}50`,
-              backgroundColor: TERM_BG,
-              boxShadow: `0 8px 24px rgba(0,0,0,0.5), 0 0 0 1px ${TERM_GREEN}20`,
-              display: "flex", flexDirection: "column", gap: 8,
+              position: "fixed", inset: 0, zIndex: 200,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backgroundColor: "rgba(0,0,0,0.5)",
             }}
+            onClick={(e) => { if (e.target === e.currentTarget) setSelectedDef(null); }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <SpriteAvatar palette={selectedDef.palette} zoom={2} ready={assetsReady} />
-              <div style={{ fontSize: 13, color: TERM_GREEN, fontFamily: "var(--font-mono)", fontWeight: 600 }}>
-                {selectedDef.role}
+            <div
+              style={{
+                width: 360, maxWidth: "90vw",
+                padding: "16px",
+                border: `1px solid ${TERM_GREEN}50`,
+                backgroundColor: TERM_BG,
+                boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${TERM_GREEN}15`,
+                display: "flex", flexDirection: "column", gap: 10,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <SpriteAvatar palette={selectedDef.palette} zoom={2} ready={assetsReady} />
+                <div style={{ fontSize: 13, color: TERM_GREEN, fontFamily: "var(--font-mono)", fontWeight: 600, flex: 1 }}>
+                  {selectedDef.role}
+                </div>
+                <button
+                  onClick={() => setSelectedDef(null)}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: TERM_DIM, fontSize: 18, padding: "2px 4px", lineHeight: 1 }}
+                >&times;</button>
               </div>
-            </div>
-            {/* Working directory */}
-            <div>
-              <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
-              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+              {/* Working directory */}
+              <div>
+                <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
+                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  <TermInput
+                    type="text"
+                    value={workDir}
+                    onChange={(e) => setWorkDir(e.target.value)}
+                    placeholder="~/.open-office/projects"
+                    style={{ flex: 1 }}
+                  />
+                  <TermButton
+                    variant="dim"
+                    onClick={() => {
+                      const rid = nanoid(6);
+                      folderPickCallbacks.set(rid, (p) => setWorkDir(p));
+                      sendCommand({ type: "PICK_FOLDER", requestId: rid });
+                    }}
+                  >Browse</TermButton>
+                </div>
+                <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+                  Empty = default workspace
+                </div>
+              </div>
+              {/* Name */}
+              <div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+                  <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>NAME</span>
+                  <button
+                    onClick={() => setHireName(generateRandomName())}
+                    title="Randomize name"
+                    style={{
+                      background: "none", border: "none", cursor: "pointer",
+                      color: TERM_DIM, fontSize: 13, padding: 0, lineHeight: 1,
+                      fontFamily: "var(--font-mono)",
+                    }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+                  >&#x21bb;</button>
+                </div>
                 <TermInput
                   type="text"
-                  value={workDir}
-                  onChange={(e) => setWorkDir(e.target.value)}
-                  placeholder="~/.open-office/projects"
-                  style={{ flex: 1 }}
+                  value={hireName}
+                  onChange={(e) => setHireName(e.target.value)}
+                  placeholder="Agent display name"
                 />
-                <TermButton
-                  variant="dim"
-                  onClick={() => {
-                    const rid = nanoid(6);
-                    folderPickCallbacks.set(rid, (p) => setWorkDir(p));
-                    sendCommand({ type: "PICK_FOLDER", requestId: rid });
-                  }}
-                >Browse</TermButton>
               </div>
-              <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
-                Empty = default workspace
-              </div>
+              {/* Hire button */}
+              <TermButton
+                variant="primary"
+                onClick={handleDoHire}
+                style={{ padding: "9px", fontWeight: 700, width: "100%" }}
+              >
+                hire
+              </TermButton>
             </div>
-            {/* Name */}
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>NAME</span>
-                <button
-                  onClick={() => setHireName(generateRandomName())}
-                  title="Randomize name"
-                  style={{
-                    background: "none", border: "none", cursor: "pointer",
-                    color: TERM_DIM, fontSize: 13, padding: 0, lineHeight: 1,
-                    fontFamily: "var(--font-mono)",
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
-                >&#x21bb;</button>
-              </div>
-              <TermInput
-                type="text"
-                value={hireName}
-                onChange={(e) => setHireName(e.target.value)}
-                placeholder="Agent display name"
-              />
-            </div>
-            {/* Hire button */}
-            <TermButton
-              variant="primary"
-              onClick={handleDoHire}
-              style={{ padding: "9px", fontWeight: 700, width: "100%" }}
-            >
-              hire
-            </TermButton>
           </div>
         )}
       </div>
