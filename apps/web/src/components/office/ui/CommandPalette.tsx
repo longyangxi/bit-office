@@ -52,7 +52,8 @@ export default function CommandPalette({
     }
 
     // Theme actions
-    const themeActions: CommandAction[] = Object.entries(TERM_THEMES).map(([key, theme]) => ({
+    const hiddenThemes = new Set(["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "kanagawa"]);
+    const themeActions: CommandAction[] = Object.entries(TERM_THEMES).filter(([key]) => !hiddenThemes.has(key)).map(([key, theme]) => ({
       id: `theme:${key}`,
       label: theme.name,
       icon: currentTheme === key ? "\u25CF" : "\u25CB",
