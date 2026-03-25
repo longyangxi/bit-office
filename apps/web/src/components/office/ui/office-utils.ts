@@ -143,3 +143,14 @@ export function formatDuration(ms: number): string {
   const remSec = sec % 60;
   return `${verb} for ${min}m ${remSec}s`;
 }
+
+// ---------------------------------------------------------------------------
+// Random unique agent name generator (adjective + noun)
+// ---------------------------------------------------------------------------
+const _ADJECTIVES = ["Swift","Crimson","Neon","Cosmic","Silent","Blazing","Frost","Shadow","Ember","Volt","Lunar","Sonic","Vivid","Storm","Pixel","Quantum","Mystic","Turbo","Stellar","Prism","Iron","Golden","Savage","Crystal","Phantom","Arctic","Solar","Thunder","Cobalt","Rogue"];
+const _NOUNS = ["Fox","Hawk","Wolf","Lynx","Puma","Raven","Otter","Viper","Crane","Falcon","Tiger","Shark","Eagle","Panther","Cobra","Mantis","Owl","Sphinx","Dragon","Phoenix","Bear","Jackal","Oriole","Piper","Sparrow","Beetle","Hornet","Badger","Osprey","Coyote"];
+export function generateRandomName(): string {
+  const adj = _ADJECTIVES[Math.floor(Math.random() * _ADJECTIVES.length)];
+  const noun = _NOUNS[Math.floor(Math.random() * _NOUNS.length)];
+  return `${adj} ${noun}`;
+}

@@ -22,7 +22,7 @@ import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
-import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
+import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand, generateRandomName } from "@/components/office/ui/office-utils";
 import { APP_VERSION, APP_BUILD_TIME } from "@/lib/appMeta";
 
 // Extracted components — regular imports for hooks and inline-rendered components
@@ -74,17 +74,6 @@ function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
 
 
 
-
-// ---------------------------------------------------------------------------
-// Random unique agent name generator
-// ---------------------------------------------------------------------------
-const _ADJECTIVES = ["Swift","Crimson","Neon","Cosmic","Silent","Blazing","Frost","Shadow","Ember","Volt","Lunar","Sonic","Vivid","Storm","Pixel","Quantum","Mystic","Turbo","Stellar","Prism","Iron","Golden","Savage","Crystal","Phantom","Arctic","Solar","Thunder","Cobalt","Rogue"];
-const _NOUNS = ["Fox","Hawk","Wolf","Lynx","Puma","Raven","Otter","Viper","Crane","Falcon","Tiger","Shark","Eagle","Panther","Cobra","Mantis","Owl","Sphinx","Dragon","Phoenix","Bear","Jackal","Oriole","Piper","Sparrow","Beetle","Hornet","Badger","Osprey","Coyote"];
-function generateRandomName(): string {
-  const adj = _ADJECTIVES[Math.floor(Math.random() * _ADJECTIVES.length)];
-  const noun = _NOUNS[Math.floor(Math.random() * _NOUNS.length)];
-  return `${adj} ${noun}`;
-}
 
 // ---------------------------------------------------------------------------
 // Demo script — simulates a team working session for GIF recording

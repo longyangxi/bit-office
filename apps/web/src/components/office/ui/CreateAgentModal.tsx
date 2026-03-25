@@ -159,10 +159,6 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
   sendCommand?: (cmd: any) => void;
 }) {
   const [palette, setPalette] = useState(editAgent?.palette ?? Math.floor(Math.random() * 6));
-  const [name, setName] = useState(editAgent?.name ?? (() => {
-    const names = ["Alex", "Sam", "Max", "Leo", "Mia", "Kai", "Zoe", "Eli", "Ava", "Jay", "Rio", "Ash", "Sky", "Kit", "Noa", "Rex", "Ivy", "Ace", "Ren", "Jax"];
-    return names[Math.floor(Math.random() * names.length)];
-  })());
 
   const [rolePresetIndex, setRolePresetIndex] = useState<number>(() => {
     if (!editAgent?.role) return 0;
@@ -251,15 +247,18 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
     ? PERSONALITY_PRESETS[personalityMode].value
     : customPersonality;
 
+  // Name is assigned at hire time — use role as definition display name
+  const defName = editAgent?.name ?? currentRole;
+
   const handleSave = () => {
-    if (!name.trim()) return;
+    if (!currentRole.trim()) return;
     const id = editAgent
       ? editAgent.id
-      : (name.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-").replace(/^-|-$/g, "") || "agent") + `-${nanoid(4)}`;
+      : (defName.trim().toLowerCase().replace(/[^a-z0-9\u4e00-\u9fff]+/g, "-").replace(/^-|-$/g, "") || "agent") + `-${nanoid(4)}`;
     const skillFilesArr = Array.from(selectedSkillFiles);
     onSave({
       id,
-      name: name.trim(),
+      name: defName.trim(),
       role: currentRole,
       skills: Array.from(selectedSkills).join(", "),
       personality: currentPersonality,
@@ -279,40 +278,30 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
       title={editAgent ? "Edit Agent" : "Create Agent"}
       footer={
         <>
-          <TermButton variant="primary" onClick={handleSave} disabled={!name.trim()} style={{ flex: 1, padding: "9px", fontWeight: 700 }}>
+          <TermButton variant="primary" onClick={handleSave} disabled={!currentRole.trim()} style={{ flex: 1, padding: "9px", fontWeight: 700 }}>
             {editAgent ? "Save" : "Create"}
           </TermButton>
           <TermButton variant="dim" onClick={onClose} style={{ padding: "9px 16px" }}>Cancel</TermButton>
         </>
       }
     >
-      {/* Avatar + Name — side by side */}
-      <div className="flex gap-4 mb-3 items-start">
-        <div className="shrink-0">
-          <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">AVATAR</div>
-          <div className="flex gap-1">
-            {[0, 1, 2, 3, 4, 5].map((p) => (
-              <button
-                key={p}
-                onClick={() => setPalette(p)}
-                style={{
-                  padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
-                  backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
-                  cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-                }}
-              >
-                <SpriteAvatar palette={p} zoom={2} ready={assetsReady} />
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">NAME</div>
-          <TermInput
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Agent name"
-          />
+      {/* Avatar */}
+      <div className="mb-3">
+        <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">AVATAR</div>
+        <div className="flex gap-1">
+          {[0, 1, 2, 3, 4, 5].map((p) => (
+            <button
+              key={p}
+              onClick={() => setPalette(p)}
+              style={{
+                padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
+                backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
+                cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <SpriteAvatar palette={p} zoom={2} ready={assetsReady} />
+            </button>
+          ))}
         </div>
       </div>
 
