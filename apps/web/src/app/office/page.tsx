@@ -497,8 +497,17 @@ export default function OfficePage() {
         return connect(conn);
       }
 
-      // For ws mode: detect live gateway port
+      const isTauri = !!(window as any).__TAURI_INTERNALS__;
       const isDev = window.location.port === "3000" || window.location.port === "3002";
+
+      // Tauri production: pair page already resolved the sidecar port via IPC.
+      // Use the saved connection directly — port scanning would hit the wrong gateway
+      // if a web dev server is also running.
+      if (isTauri && !isDev && conn.wsUrl) {
+        return connect(conn);
+      }
+
+      // For ws mode: detect live gateway port
       const ports = isDev ? [9099, 9090, 9091] : [9090, 9091, 9099];
 
       // Try same-origin first (production bundled mode)
@@ -515,13 +524,15 @@ export default function OfficePage() {
         } catch { /* not bundled mode */ }
       }
 
-      // Scan preferred ports
+      // Scan preferred ports — only accept gateways matching saved gatewayId
       for (const port of ports) {
         try {
           const res = await fetch(`http://localhost:${port}/connect`, { signal: AbortSignal.timeout(1000) });
           if (!res.ok) continue;
           const data = await res.json();
-          const freshConn = { ...conn, wsUrl: `ws://localhost:${port}`, sessionToken: data.sessionToken };
+          // Skip gateways with mismatched gatewayId to avoid cross-instance connection
+          if (conn.gatewayId && data.gatewayId && data.gatewayId !== conn.gatewayId) continue;
+          const freshConn = { ...conn, wsUrl: `ws://localhost:${port}`, sessionToken: data.sessionToken, gatewayId: data.gatewayId };
           const { saveConnection } = await import("@/lib/storage");
           saveConnection(freshConn);
           return connect(freshConn);

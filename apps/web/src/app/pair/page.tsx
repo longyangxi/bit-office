@@ -141,12 +141,14 @@ export default function PairPage() {
       // Tauri: reject cached connections to wrong gateway and wipe stale UI state
       if (isTauri() && conn?.gatewayId && conn.gatewayId !== "desktop") {
         console.log(`[pair] Cached connection is for gateway ${conn.gatewayId}, need desktop — clearing all state`);
+        // Clear scoped storage for the stale gateway (and unscoped legacy keys)
+        const staleId = conn.gatewayId;
         clearConnection();
-        // Clear stale agent cache and team messages from previous gateway session
         try {
-          localStorage.removeItem("office-chat-history");
-          localStorage.removeItem("office-team-messages");
-          localStorage.removeItem("office-team-phase");
+          for (const base of ["office-chat-history", "office-team-messages", "office-team-phase"]) {
+            localStorage.removeItem(base);             // legacy unscoped
+            localStorage.removeItem(`${base}:${staleId}`); // scoped
+          }
         } catch { /* ignore */ }
       } else if (conn?.sessionToken) {
         await navigateAfterDelay();

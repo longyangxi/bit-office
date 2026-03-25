@@ -159,8 +159,23 @@ interface OfficeStore {
 }
 
 // ── localStorage persistence ──
+// Keys are scoped by gatewayId so desktop and web dev gateways don't overwrite each other's data.
 
-const STORAGE_KEY = "office-chat-history";
+function getGatewayId(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem("office_connection") ?? localStorage.getItem("office_connection");
+    if (!raw) return null;
+    return JSON.parse(raw).gatewayId ?? null;
+  } catch { return null; }
+}
+
+function scopedKey(base: string): string {
+  const gid = getGatewayId();
+  return gid ? `${base}:${gid}` : base;
+}
+
+const STORAGE_KEY_BASE = "office-chat-history";
 
 interface PersistedAgent {
   agentId: string;
@@ -215,7 +230,7 @@ function _flushSave() {
         });
       }
     }
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    localStorage.setItem(scopedKey(STORAGE_KEY_BASE), JSON.stringify(data));
     invalidateStorageCache();
   } catch {
     // quota exceeded or unavailable
@@ -233,7 +248,7 @@ function saveToStorage(agents: Map<string, AgentState>) {
 function loadFromStorage(): Map<string, PersistedAgent> {
   if (!isBrowser()) return new Map();
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(scopedKey(STORAGE_KEY_BASE));
     if (!raw) return new Map();
     const data: PersistedAgent[] = JSON.parse(raw);
     const map = new Map<string, PersistedAgent>();
@@ -277,21 +292,21 @@ function removeFromStorage(_agentId: string) {
 
 // ── Team messages persistence ──
 
-const TEAM_STORAGE_KEY = "office-team-messages";
+const TEAM_STORAGE_KEY_BASE = "office-team-messages";
 
 function saveTeamMessages(messages: TeamChatMessage[]) {
   if (!isBrowser()) return;
   try {
     // Keep last 200 messages
     const trimmed = messages.slice(-200);
-    localStorage.setItem(TEAM_STORAGE_KEY, JSON.stringify(trimmed));
+    localStorage.setItem(scopedKey(TEAM_STORAGE_KEY_BASE), JSON.stringify(trimmed));
   } catch { /* quota exceeded */ }
 }
 
 function loadTeamMessages(): TeamChatMessage[] {
   if (!isBrowser()) return [];
   try {
-    const raw = localStorage.getItem(TEAM_STORAGE_KEY);
+    const raw = localStorage.getItem(scopedKey(TEAM_STORAGE_KEY_BASE));
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];
@@ -300,21 +315,21 @@ function loadTeamMessages(): TeamChatMessage[] {
 
 // ── Team phase persistence ──
 
-const TEAM_PHASE_KEY = "office-team-phase";
+const TEAM_PHASE_KEY_BASE = "office-team-phase";
 
 function saveTeamPhases(phases: Map<string, TeamPhaseState>) {
   if (!isBrowser()) return;
   try {
     const data: Record<string, TeamPhaseState> = {};
     for (const [k, v] of phases) data[k] = v;
-    localStorage.setItem(TEAM_PHASE_KEY, JSON.stringify(data));
+    localStorage.setItem(scopedKey(TEAM_PHASE_KEY_BASE), JSON.stringify(data));
   } catch { /* quota exceeded */ }
 }
 
 function loadTeamPhases(): Map<string, TeamPhaseState> {
   if (!isBrowser()) return new Map();
   try {
-    const raw = localStorage.getItem(TEAM_PHASE_KEY);
+    const raw = localStorage.getItem(scopedKey(TEAM_PHASE_KEY_BASE));
     if (!raw) return new Map();
     const data: Record<string, TeamPhaseState> = JSON.parse(raw);
     return new Map(Object.entries(data));
