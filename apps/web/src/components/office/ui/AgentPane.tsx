@@ -285,9 +285,9 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
   }, []);
 
   return (
-    <div className="px-3 py-2 bg-term-panel font-mono shrink-0 shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
+    <div className="px-3 py-1.5 bg-term-panel font-mono text-term shrink-0 shadow-[0_-3px_6px_-2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.03)]">
       {/* Feedback input */}
-      <div className="flex gap-2 items-center mb-2">
+      <div className="flex gap-1.5 items-center mb-1.5">
         <TermInput
           ref={inputRef}
           type="text"
@@ -300,6 +300,7 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
             }
           }}
           placeholder="Add feedback for the fix..."
+          className="text-term h-7"
           style={{ flex: 1 }}
         />
       </div>
@@ -308,15 +309,15 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
         {onApplyReviewFixes && (
           <TermButton
             variant="success"
+            size="sm"
             onClick={() => onApplyReviewFixes(feedback || undefined)}
-            style={{ padding: "6px 18px" }}
           >apply fixes</TermButton>
         )}
         {onDismissReview && (
           <TermButton
             variant="dim"
+            size="sm"
             onClick={onDismissReview}
-            style={{ padding: "6px 18px" }}
           >dismiss</TermButton>
         )}
       </div>
