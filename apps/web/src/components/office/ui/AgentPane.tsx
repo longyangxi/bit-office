@@ -152,7 +152,7 @@ export interface AgentPaneProps {
   /** Hide role/backend in info bar (shown in console header instead) */
   hideInfoRole?: boolean;
   /** Inline avatar data (console mode) — renders avatar + name inside info bar */
-  inlineAvatar?: { name: string; palette: number; isTeamLead: boolean; assetsReady: boolean; AvatarComponent?: React.ComponentType<{ palette: number; zoom: number; ready: boolean }> } | null;
+  inlineAvatar?: { name: string; palette: number; isTeamLead: boolean; assetsReady: boolean; AvatarComponent?: React.ComponentType<{ palette: number; zoom?: number; ready?: boolean }> } | null;
 }
 
 /** Memoized message list — decoupled from input state so typing doesn't re-render messages */
