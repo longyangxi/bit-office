@@ -728,33 +728,43 @@
 }
 
 /* ============================================================
-   FLOATING HIRE BUTTON — .mpv-hire-float
-   Dashed button floating at top-right of last pane
+   PLACEHOLDER SLOT — empty grid cell with dashed outline
    ============================================================ */
-.mpv-hire-float {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  z-index: 8;
+.mpv-placeholder {
+  background: transparent;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ============================================================
+   PLACEHOLDER HIRE BUTTON — large centered "+" in first empty slot
+   ============================================================ */
+.mpv-placeholder-hire {
   display: flex;
   align-items: center;
-  gap: 5px;
-  height: 30px;
-  padding: 0 14px;
-  border: 1px solid color-mix(in srgb, var(--term-green) 32%, transparent);
-  border-radius: 6px;
-  background: color-mix(in srgb, var(--term-green) 7%, transparent);
-  backdrop-filter: blur(4px);
-  color: color-mix(in srgb, var(--term-green) 80%, transparent);
-  font-size: 11px;
-  font-weight: 500;
-  font-family: var(--font-mono);
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  margin: auto;
+  border: 2px dashed color-mix(in srgb, var(--term-green) 28%, transparent);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--term-green) 4%, transparent);
+  color: color-mix(in srgb, var(--term-green) 50%, transparent);
   cursor: pointer;
-  white-space: nowrap;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
 }
-.mpv-hire-float:hover {
-  background: color-mix(in srgb, var(--term-green) 15%, transparent);
+.mpv-placeholder-hire:hover {
   border-color: color-mix(in srgb, var(--term-green) 56%, transparent);
+  background: color-mix(in srgb, var(--term-green) 12%, transparent);
   color: var(--term-green);
+  transform: scale(1.08);
+}
+.mpv-placeholder-hire:active {
+  transform: scale(0.96);
+}
+.mpv-placeholder-hire-icon {
+  font-size: 32px;
+  font-weight: 300;
+  line-height: 1;
+  font-family: var(--font-mono);
 }

@@ -8,7 +8,8 @@ import { cn } from "@/lib/utils";
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
 
-const MAX_VISIBLE = 3;
+/** Number of columns per screen — each pane gets exactly 1/COLS width */
+const COLS = 3;
 
 /** Per-pane wrapper that stabilizes callback references via useRef so AgentPane memo is effective */
 const StableAgentPane = memo(function StableAgentPane({
@@ -291,35 +292,32 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   } = props;
 
   // ── Simple state-driven pagination ──
-  // currentPage=0 on every fresh mount (conditional render guarantees remount).
-  // NO mount effects — just useState(0). Conditional render guarantees fresh mount.
   const [currentPage, setCurrentPage] = useState(0);
-  // Track slide direction for animation: "left" = next page, "right" = prev page
   const [slideDir, setSlideDir] = useState<"left" | "right" | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // ── Pane resize logic (within a page) ──
-  const [paneWidths, setPaneWidths] = useState<number[]>([]);
-  const dragRef = useRef<{ index: number; startX: number; startWidths: number[]; containerW: number } | null>(null);
+  // Total pages: always at least 1 (for placeholders even with 0 panes).
+  // When all COLS slots on the last page are filled, add one extra page for the "+" placeholder.
+  const filledPages = Math.max(1, Math.ceil(openPanes.length / COLS));
+  const lastPageFull = openPanes.length > 0 && openPanes.length % COLS === 0;
+  const totalPages = showHireButton && onHire && lastPageFull ? filledPages + 1 : filledPages;
 
-  const totalPages = Math.ceil(openPanes.length / MAX_VISIBLE);
-
-  // Build pages: each page holds up to MAX_VISIBLE panes
+  // Build pages: each page holds up to COLS pane ids
   const pages: string[][] = [];
-  for (let i = 0; i < openPanes.length; i += MAX_VISIBLE) {
-    pages.push(openPanes.slice(i, i + MAX_VISIBLE));
+  for (let i = 0; i < openPanes.length; i += COLS) {
+    pages.push(openPanes.slice(i, i + COLS));
   }
+  // Ensure we always have `totalPages` entries (extra empty pages for placeholders)
+  while (pages.length < totalPages) pages.push([]);
 
   // Clamp currentPage when panes change
   const clampedPage = Math.max(0, Math.min(currentPage, totalPages - 1));
   if (clampedPage !== currentPage) {
     setCurrentPage(clampedPage);
-    onPaneOffsetChange(clampedPage * MAX_VISIBLE);
+    onPaneOffsetChange(clampedPage * COLS);
   }
 
-  // Blur any auto-focused input after mount and page changes.
-  // AgentPane auto-focuses its textarea on mount — override this so
-  // keyboard arrows work for pagination immediately.
+  // Blur auto-focused inputs so keyboard arrows work for pagination
   useEffect(() => {
     const t = setTimeout(() => {
       if (document.activeElement instanceof HTMLElement &&
@@ -337,7 +335,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       setSlideDir(clamped > prev ? "left" : "right");
       return clamped;
     });
-    onPaneOffsetChange(clamped * MAX_VISIBLE);
+    onPaneOffsetChange(clamped * COLS);
   }, [totalPages, onPaneOffsetChange]);
 
   // Keyboard navigation
@@ -353,14 +351,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     return () => window.removeEventListener("keydown", handleKey);
   }, [currentPage, totalPages, goToPage]);
 
-  // Mouse wheel pagination: scroll to change pages.
-  // Skips when mouse is over a scrollable area (chat messages, code blocks, etc.)
+  // Mouse wheel pagination
   const wheelCooldown = useRef(false);
   useEffect(() => {
     const el = containerRef.current;
     if (!el || totalPages <= 1) return;
     const handleWheel = (e: WheelEvent) => {
-      // Walk up from target — if any ancestor can scroll, let the browser handle it
       let node = e.target as HTMLElement | null;
       while (node && node !== el) {
         if (node.tagName === "TEXTAREA" || node.tagName === "INPUT") return;
@@ -390,95 +386,28 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     const dx = e.changedTouches[0].clientX - touchRef.current.startX;
     const dy = e.changedTouches[0].clientY - touchRef.current.startY;
     touchRef.current = null;
-    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return; // too short or vertical
-    if (dx < 0) goToPage(currentPage + 1); // swipe left → next
-    else goToPage(currentPage - 1); // swipe right → prev
+    if (Math.abs(dx) < 50 || Math.abs(dx) < Math.abs(dy)) return;
+    if (dx < 0) goToPage(currentPage + 1);
+    else goToPage(currentPage - 1);
   }, [currentPage, totalPages, goToPage]);
-
-  // Pane resize within a page
-  const startResize = useCallback((index: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    const el = containerRef.current;
-    if (!el) return;
-    const containerW = el.getBoundingClientRect().width;
-    const count = Math.min(pages[currentPage]?.length ?? 0, MAX_VISIBLE);
-    const currentWidths = paneWidths.length === count ? [...paneWidths] : Array(count).fill(1 / count);
-    dragRef.current = { index, startX: e.clientX, startWidths: currentWidths, containerW };
-
-    const onMouseMove = (ev: MouseEvent) => {
-      const d = dragRef.current;
-      if (!d) return;
-      const delta = (ev.clientX - d.startX) / d.containerW;
-      const newWidths = [...d.startWidths];
-      const minW = 0.15;
-      const left = d.startWidths[d.index] + delta;
-      const right = d.startWidths[d.index + 1] - delta;
-      if (left >= minW && right >= minW) {
-        newWidths[d.index] = left;
-        newWidths[d.index + 1] = right;
-        setPaneWidths(newWidths);
-      }
-    };
-    const onMouseUp = () => {
-      dragRef.current = null;
-      document.removeEventListener("mousemove", onMouseMove);
-      document.removeEventListener("mouseup", onMouseUp);
-      document.body.style.cursor = "";
-      document.body.style.userSelect = "";
-    };
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-  }, [currentPage, pages, paneWidths]);
-
-  // Reset pane widths when page or pane count changes
-  const prevPagePaneCount = useRef(0);
-  const activePaneCount = pages[currentPage]?.length ?? 0;
-  if (activePaneCount !== prevPagePaneCount.current) {
-    prevPagePaneCount.current = activePaneCount;
-    if (paneWidths.length !== activePaneCount) {
-      setPaneWidths(Array(activePaneCount).fill(1 / Math.max(1, activePaneCount)));
-    }
-  }
 
   // Check trailing team controls (last page only)
   const isLastPage = currentPage >= totalPages - 1;
   const hasTrailingControls = isLastPage && showTeamControls;
 
-  if (openPanes.length === 0) {
-    return (
-      <div className="flex flex-1 items-center justify-center font-mono text-term text-muted-foreground min-h-0">
-        {showHireButton && onHire ? (
-          <button
-            onClick={onHire}
-            title="Hire"
-            className="flex items-center justify-center gap-2 px-6 py-4 h-[60px] cursor-pointer text-sm font-mono font-medium tracking-wide rounded-lg transition-all duration-200 hover:bg-accent/[0.15] hover:border-accent/[0.56] hover:text-accent"
-            style={{
-              border: `1px solid ${TERM_GREEN}50`,
-              backgroundColor: `${TERM_GREEN}12`,
-              color: `${TERM_GREEN}cc`,
-            }}
-          >
-            <span className="text-[15px] leading-none">+</span> {hireLabel}
-          </button>
-        ) : (
-          "No agents active"
-        )}
-      </div>
-    );
-  }
-
-  // Flex values for panes in the current page
-  const flexValues = paneWidths.length === activePaneCount
-    ? paneWidths
-    : Array(activePaneCount).fill(1 / Math.max(1, activePaneCount));
-
   const pagePanes = pages[currentPage] ?? [];
+  const emptySlots = COLS - pagePanes.length;
+
+  // Determine which empty slot (0-indexed within empty slots on this page) gets the "+" button.
+  // It's always the first empty slot, but only on the page that actually has the first empty slot.
+  const hireSlotIndex = showHireButton && onHire && emptySlots > 0 ? 0 : -1;
+
+  // Fixed width per column
+  const colWidth = `${100 / COLS}%`;
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
-      {/* Only render the current page — simple and bulletproof */}
+      {/* Current page — fixed COLS grid */}
       <div
         key={currentPage}
         ref={containerRef}
@@ -486,103 +415,120 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         onTouchEnd={handleTouchEnd}
         className={cn("flex flex-1 min-h-0", slideDir === "left" ? "mpv-slide-left" : slideDir === "right" ? "mpv-slide-right" : "mpv-page-fade")}
       >
+        {/* Real agent panes */}
         {pagePanes.map((agentId, i) => {
           const data = getAgentData(agentId);
           if (!data) return null;
           const meta = agentMeta?.find(m => m.agentId === agentId);
-          const flex = flexValues[i] != null ? `${flexValues[i]} 1 0%` : "1 1 0%";
           return (
-            <div key={agentId} className="contents">
-              {i > 0 && (
-                <div
-                  className={`pane-resize${dragRef.current?.index === i - 1 ? " pane-resize-active" : ""}`}
-                  onMouseDown={(e) => startResize(i - 1, e)}
-                />
-              )}
-              <div
-                style={{
-                  flex,
-                  minWidth: 0,
-                  display: "flex",
-                  flexDirection: "column",
-                  position: "relative",
-                  ...(i === 0 ? {
-                    borderLeft: `1px solid ${TERM_BORDER}`,
-                    boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
-                  } : {}),
-                }}
-              >
-                {showHireButton && onHire && currentPage === pages.length - 1 && i === pagePanes.length - 1 && (
-                  <button onClick={onHire} title="Hire" aria-label="Hire" className="mpv-hire-float">
-                    <span style={{ fontSize: 13, lineHeight: "1" }}>+</span> {hireLabel}
-                  </button>
-                )}
-                <StableAgentPane
-                  agentId={agentId}
-                  data={data}
-                  meta={meta}
-                  assetsReady={assetsReady}
-                  panePrompts={panePrompts}
-                  onPanePromptChange={onPanePromptChange}
-                  isOwner={isOwner}
-                  isCollaborator={isCollaborator}
-                  isSpectator={isSpectator}
-                  panePendingImages={panePendingImages}
-                  onPanePendingImagesChange={onPanePendingImagesChange}
-                  suggestions={suggestions}
-                  suggestText={suggestText}
-                  onSuggestTextChange={onSuggestTextChange}
-                  onSubmit={onSubmit}
-                  onCancel={onCancel}
-                  onFire={onFire}
-                  onApproval={onApproval}
-                  onApprovePlan={onApprovePlan}
-                  onQuickApprove={onQuickApprove}
-                  onEndProject={onEndProject}
-                  onSuggest={onSuggest}
-                  onPreview={onPreview}
-                  onReview={onReview}
-                  detectedBackends={detectedBackends}
-                  onLoadMore={onLoadMore}
-                  onPasteImage={onPasteImage}
-                  onPasteText={onPasteText}
-                  onDropImage={onDropImage}
-                  reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
-                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
-                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
-                  onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
-                  autoMerge={data.autoMerge}
-                  pendingMerge={data.pendingMerge}
-                  lastMergeCommit={data.lastMergeCommit}
-                  lastMergeMessage={data.lastMergeMessage}
-                  onMerge={onMerge ? () => onMerge(agentId) : undefined}
-                  onRevert={onRevert ? () => onRevert(agentId) : undefined}
-                  onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
-                  scrollFrozen={scrollFrozen}
-                />
-              </div>
+            <div
+              key={agentId}
+              style={{
+                width: colWidth,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                position: "relative",
+                flexShrink: 0,
+                ...(i === 0 ? {
+                  borderLeft: `1px solid ${TERM_BORDER}`,
+                  boxShadow: `-1px 0 0 rgba(0,0,0,0.4), inset 1px 0 0 rgba(255,255,255,0.03)`,
+                } : {}),
+              }}
+            >
+              <StableAgentPane
+                agentId={agentId}
+                data={data}
+                meta={meta}
+                assetsReady={assetsReady}
+                panePrompts={panePrompts}
+                onPanePromptChange={onPanePromptChange}
+                isOwner={isOwner}
+                isCollaborator={isCollaborator}
+                isSpectator={isSpectator}
+                panePendingImages={panePendingImages}
+                onPanePendingImagesChange={onPanePendingImagesChange}
+                suggestions={suggestions}
+                suggestText={suggestText}
+                onSuggestTextChange={onSuggestTextChange}
+                onSubmit={onSubmit}
+                onCancel={onCancel}
+                onFire={onFire}
+                onApproval={onApproval}
+                onApprovePlan={onApprovePlan}
+                onQuickApprove={onQuickApprove}
+                onEndProject={onEndProject}
+                onSuggest={onSuggest}
+                onPreview={onPreview}
+                onReview={onReview}
+                detectedBackends={detectedBackends}
+                onLoadMore={onLoadMore}
+                onPasteImage={onPasteImage}
+                onPasteText={onPasteText}
+                onDropImage={onDropImage}
+                reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
+                onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
+                onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
+                onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                autoMerge={data.autoMerge}
+                pendingMerge={data.pendingMerge}
+                lastMergeCommit={data.lastMergeCommit}
+                lastMergeMessage={data.lastMergeMessage}
+                onMerge={onMerge ? () => onMerge(agentId) : undefined}
+                onRevert={onRevert ? () => onRevert(agentId) : undefined}
+                onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
+                scrollFrozen={scrollFrozen}
+              />
             </div>
           );
         })}
 
-        {/* Trailing team controls on last page */}
-        {hasTrailingControls && (
-          <div className={cn("flex flex-col items-center justify-center gap-2 px-4 min-w-[60px] shrink-0", pagePanes.length > 0 && "border-l border-term-border-dim")}>
-            {showTeamControls && teamBusy && onStopTeam && (
-              <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
-                stop
+        {/* Empty placeholder slots to fill remaining COLS */}
+        {emptySlots > 0 && Array.from({ length: emptySlots }, (_, i) => (
+          <div
+            key={`placeholder-${i}`}
+            style={{
+              width: colWidth,
+              minWidth: 0,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              position: "relative",
+              borderLeft: `1px solid ${TERM_BORDER_DIM}`,
+            }}
+            className="mpv-placeholder"
+          >
+            {i === hireSlotIndex && onHire && (
+              <button
+                onClick={onHire}
+                title="Hire an agent"
+                aria-label="Hire an agent"
+                className="mpv-placeholder-hire"
+              >
+                <span className="mpv-placeholder-hire-icon">+</span>
               </button>
             )}
-            {showTeamControls && onFireTeam && (
-              <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
-                fire
-              </button>
+
+            {/* Team controls in trailing placeholder */}
+            {hasTrailingControls && i === emptySlots - 1 && (
+              <div className="flex flex-col items-center gap-2 absolute bottom-4 left-1/2 -translate-x-1/2">
+                {showTeamControls && teamBusy && onStopTeam && (
+                  <button onClick={onStopTeam} title="Stop Team Work" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-sem-yellow font-mono text-term">
+                    stop
+                  </button>
+                )}
+                {showTeamControls && onFireTeam && (
+                  <button onClick={onFireTeam} title="Fire Team" className="px-3 py-1.5 border border-muted-foreground cursor-pointer bg-transparent text-muted-foreground font-mono text-term transition-colors duration-150 hover:text-sem-red">
+                    fire
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        )}
+        ))}
       </div>
 
-      {/* Bottom bar: page dots + hire button */}
+      {/* Bottom bar: page dots */}
       <div className="term-info-bar flex justify-center items-center px-3 py-1.5 font-mono text-[11px] text-muted-foreground bg-term-panel shrink-0 relative gap-2 border-t border-term-border-dim shadow-[0_-3px_8px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)]">
 
         {/* Center: page indicator dots */}
