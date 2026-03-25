@@ -1516,7 +1516,7 @@ export default function OfficePage() {
 
           {/* Theme picker */}
           <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 8, alignItems: "center", marginLeft: consoleMode ? 6 : 0 }}>
-            {Object.entries(TERM_THEMES).filter(([key]) => !["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "kanagawa", "office", "catppuccin"].includes(key)).map(([key, theme]) => (
+            {Object.entries(TERM_THEMES).filter(([key]) => !["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "kanagawa", "office", "catppuccin", "everforest"].includes(key)).map(([key, theme]) => (
               <button
                 key={key}
                 onClick={() => setTermTheme(key)}
