@@ -406,8 +406,7 @@ export class AgentSession {
         prompt,
         memory: this._memoryContext || getMemoryContext(this.agentId),
         recoveryContext: recoveryContextStr,
-        soloHint: this.teamId ? "" : `You are working solo. Do all the work yourself — no delegation.
-Write SUMMARY in English, conventional commit style (e.g. "feat: add login page"). Under 72 chars.`,
+        soloHint: "",
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
