@@ -84,7 +84,7 @@ Team status:
 
 Delegate using: @AgentName: task description
 
-Delegate to developer FIRST, wait for result, THEN assign reviewer. One task at a time. Keep fixes minimal — fix the reported bug only, no extras.
+CRITICAL: Only ONE delegation per response. Delegate to developer FIRST. Do NOT assign reviewer until dev reports back. Never delegate to dev and reviewer in the same message.
 
 {{prompt}}`,
 
@@ -100,12 +100,14 @@ Team status:
 New result from {{fromName}} ({{resultStatus}}):
 {{resultSummary}}
 
-Next step:
-- Dev done → assign reviewer (include ENTRY_FILE + key features from plan)
-- Dev failed → delegate targeted fix to same dev
-- Reviewer PASS → output FINAL SUMMARY
-- Reviewer FAIL → collect all issues into ONE fix delegation to dev, then re-review
-- LIMIT/BUDGET REACHED → accept as-is, output FINAL SUMMARY
+CRITICAL: Only ONE delegation per response. Never delegate to multiple agents at once.
+
+Next step (pick exactly ONE):
+- Dev done → assign reviewer ONLY (include ENTRY_FILE + key features)
+- Dev failed → delegate fix to same dev ONLY
+- Reviewer PASS → output FINAL SUMMARY (no delegation)
+- Reviewer FAIL → delegate fix to dev ONLY, reviewer will be assigned AFTER dev reports back
+- LIMIT/BUDGET REACHED → output FINAL SUMMARY
 - Permanent blocker or same error twice → report to user, stop
 
 ===== DEVELOPER'S LAST KNOWN PREVIEW FIELDS =====
