@@ -406,7 +406,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       {/* ── Info bar (single merged row) ── */}
       <div
         className={cn(
-          "term-info-bar flex items-center gap-2 px-3 py-2 bg-term-panel font-mono text-term shrink-0",
+          "term-info-bar flex items-center gap-2 px-3 py-2 bg-term-surface font-mono text-term shrink-0",
           status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
         )}
         style={{
