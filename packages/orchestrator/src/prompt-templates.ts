@@ -440,12 +440,12 @@ Address their feedback. Do NOT delegate or write code.`,
 export class PromptEngine {
   private templates: Record<string, string> = { ...PROMPT_DEFAULTS };
   private promptsDir: string | undefined;
-  private projectRoot: string | undefined;
+  private soulPath: string | undefined;
   private soul: string = "";
 
-  constructor(promptsDir?: string, projectRoot?: string) {
+  constructor(promptsDir?: string, soulPath?: string) {
     this.promptsDir = promptsDir;
-    this.projectRoot = projectRoot;
+    this.soulPath = soulPath;
   }
 
   /**
@@ -470,17 +470,16 @@ export class PromptEngine {
       written++;
     }
     console.log(`[Prompts] Synced ${written} default templates to ${this.promptsDir}`);
-    // Load soul.md: project root SOUL.md > promptsDir/soul.md > embedded default
+    // Load soul.md: soulPath > promptsDir/soul.md > embedded default
     this.soul = DEFAULT_SOUL;
-    const projectSoulPath = this.projectRoot ? path.join(this.projectRoot, "SOUL.md") : null;
     const promptsSoulPath = path.join(this.promptsDir, "soul.md");
-    if (projectSoulPath && existsSync(projectSoulPath)) {
+    if (this.soulPath && existsSync(this.soulPath)) {
       try {
-        this.soul = readFileSync(projectSoulPath, "utf-8").trim();
-        console.log(`[Prompts] Loaded SOUL.md from project root (${this.soul.length} chars)`);
+        this.soul = readFileSync(this.soulPath, "utf-8").trim();
+        console.log(`[Prompts] Loaded SOUL.md from ${this.soulPath} (${this.soul.length} chars)`);
       } catch { /* fall through to default */ }
-    } else {
-      console.log(`[Prompts] No project SOUL.md found, using embedded default`);
+    } else if (this.soulPath) {
+      console.log(`[Prompts] SOUL.md not found at ${this.soulPath}, using embedded default`);
     }
     // Always sync to promptsDir for transparency
     writeFileSync(promptsSoulPath, this.soul, "utf-8");
