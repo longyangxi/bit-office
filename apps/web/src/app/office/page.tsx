@@ -219,6 +219,8 @@ export default function OfficePage() {
   }, []);
   const [mapAspect, setMapAspect] = useState(1); // cols/rows ratio for scene width
   const [soundEnabled, setSoundEnabled] = useState(true);
+  const [consoleCols, setConsoleCols] = useState(3);
+  const [consoleRows, setConsoleRows] = useState(1);
   const [, forceUpdate] = useState(0);
   const editorRef = useRef(new EditorState());
   const officeStateRef = useRef<OfficeState | null>(null);
@@ -267,11 +269,17 @@ export default function OfficePage() {
     }
   }, [pendingPreviewUrl, previewUrl]);
 
-  // Load sound preference
+  // Load sound + grid preferences
   useEffect(() => {
     try {
       const stored = localStorage.getItem('office-sound-enabled');
       if (stored !== null) setSoundEnabled(JSON.parse(stored));
+    } catch { /* ignore */ }
+    try {
+      const c = localStorage.getItem('office-console-cols');
+      const r = localStorage.getItem('office-console-rows');
+      if (c !== null) setConsoleCols(Math.max(1, Math.min(6, JSON.parse(c))));
+      if (r !== null) setConsoleRows(Math.max(1, Math.min(4, JSON.parse(r))));
     } catch { /* ignore */ }
   }, []);
 
@@ -1867,6 +1875,8 @@ export default function OfficePage() {
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
                 onFireTeam={handleFireTeam}
+                cols={consoleCols}
+                rows={consoleRows}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -2449,6 +2459,10 @@ export default function OfficePage() {
           onImportRoomZip={handleImportRoomZip}
           soundEnabled={soundEnabled}
           onSoundEnabledChange={setSoundEnabled}
+          consoleCols={consoleCols}
+          consoleRows={consoleRows}
+          onConsoleColsChange={(v) => { setConsoleCols(v); localStorage.setItem('office-console-cols', JSON.stringify(v)); }}
+          onConsoleRowsChange={(v) => { setConsoleRows(v); localStorage.setItem('office-console-rows', JSON.stringify(v)); }}
         />
       )}
 

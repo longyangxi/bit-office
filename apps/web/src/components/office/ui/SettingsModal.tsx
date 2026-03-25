@@ -18,6 +18,10 @@ interface SettingsModalProps {
   onImportRoomZip?: (layout: OfficeLayout, backgroundImage: HTMLImageElement | null) => void
   soundEnabled: boolean
   onSoundEnabledChange: (enabled: boolean) => void
+  consoleCols?: number
+  consoleRows?: number
+  onConsoleColsChange?: (v: number) => void
+  onConsoleRowsChange?: (v: number) => void
 }
 
 /** Horizontal form row: label on left, input on right */
@@ -38,6 +42,10 @@ export default function SettingsModal({
   onClose,
   soundEnabled,
   onSoundEnabledChange,
+  consoleCols = 3,
+  consoleRows = 1,
+  onConsoleColsChange,
+  onConsoleRowsChange,
 }: SettingsModalProps) {
   const [agentsUpdating, setAgentsUpdating] = useState(false)
   const [agentsMessage, setAgentsMessage] = useState<string | null>(null)
@@ -276,6 +284,48 @@ export default function SettingsModal({
           <span>Sound Notifications</span>
           <span className={checkboxCls(soundEnabled)}>{soundEnabled ? '\u2713' : ''}</span>
         </button>
+      </div>
+
+      {/* ---- Console Grid ---- */}
+      <div className="border-b border-term-border-dim pb-3 mb-2">
+        <span className="text-[13px] text-foreground font-medium block mb-2">Console Grid</span>
+        <div className="flex items-center gap-4">
+          <FormRow label="Columns">
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3, 4].map(v => (
+                <button
+                  key={v}
+                  onClick={() => onConsoleColsChange?.(v)}
+                  className={cn(
+                    "w-8 h-7 text-term font-mono border rounded cursor-pointer transition-colors duration-150",
+                    consoleCols === v
+                      ? "border-accent bg-accent/20 text-accent"
+                      : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-muted-foreground"
+                  )}
+                >{v}</button>
+              ))}
+            </div>
+          </FormRow>
+          <FormRow label="Rows">
+            <div className="flex items-center gap-1.5">
+              {[1, 2, 3].map(v => (
+                <button
+                  key={v}
+                  onClick={() => onConsoleRowsChange?.(v)}
+                  className={cn(
+                    "w-8 h-7 text-term font-mono border rounded cursor-pointer transition-colors duration-150",
+                    consoleRows === v
+                      ? "border-accent bg-accent/20 text-accent"
+                      : "border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-muted-foreground"
+                  )}
+                >{v}</button>
+              ))}
+            </div>
+          </FormRow>
+        </div>
+        <div className="text-[10px] text-muted-foreground mt-1 pl-[112px]">
+          {consoleCols} × {consoleRows} = {consoleCols * consoleRows} agents per page
+        </div>
       </div>
 
       {/* ---- Actions ---- */}

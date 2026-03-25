@@ -8,10 +8,9 @@ import { cn } from "@/lib/utils";
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
 const SpriteAvatar = dynamic(() => import("./SpriteAvatar"), { ssr: false });
 
-/** Grid layout: COLS × ROWS per page */
-const COLS = 3;
-const ROWS = 1;
-const SLOTS_PER_PAGE = COLS * ROWS;
+/** Grid layout defaults */
+const DEFAULT_COLS = 3;
+const DEFAULT_ROWS = 1;
 
 /** Per-pane wrapper that stabilizes callback references via useRef so AgentPane memo is effective */
 const StableAgentPane = memo(function StableAgentPane({
@@ -240,6 +239,9 @@ export interface MultiPaneViewProps {
   teamBusy?: boolean;
   onStopTeam?: () => void;
   onFireTeam?: () => void;
+  /** Grid dimensions — configurable via Settings */
+  cols?: number;
+  rows?: number;
 }
 
 const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
@@ -291,7 +293,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onUndoMerge,
     onStopTeam,
     onFireTeam,
+    cols: propCols,
+    rows: propRows,
   } = props;
+
+  const COLS = propCols ?? DEFAULT_COLS;
+  const ROWS = propRows ?? DEFAULT_ROWS;
+  const SLOTS_PER_PAGE = COLS * ROWS;
 
   // ── Simple state-driven pagination ──
   const [currentPage, setCurrentPage] = useState(0);
