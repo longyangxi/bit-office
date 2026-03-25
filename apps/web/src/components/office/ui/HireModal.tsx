@@ -91,9 +91,10 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
     <TermModal
       open={true}
       onClose={onClose}
-      maxWidth={520}
+      maxWidth={440}
       zIndex={100}
       title="Hire Agent"
+      className="max-h-[min(712px,85vh)]"
       footer={
         <TermButton variant="dim" onClick={onClose}>Cancel</TermButton>
       }
@@ -132,7 +133,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         </div>
 
         {/* Scrollable agent list */}
-        <div data-scrollbar style={{ maxHeight: "50vh", overflowY: "auto", overflowX: "hidden" }}>
+        <div data-scrollbar style={{ maxHeight: "55vh", overflowY: "auto", overflowX: "hidden" }}>
           {/* Built-in agents */}
           <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>

@@ -236,9 +236,10 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
     <TermModal
       open={true}
       onClose={onClose}
-      maxWidth={520}
+      maxWidth={440}
       zIndex={110}
       title={editAgent ? "Edit Agent" : "Create Agent"}
+      className="max-h-[min(712px,85vh)]"
       footer={
         <>
           <TermButton variant="primary" onClick={handleSave} disabled={!currentRole.trim()} style={{ flex: 1, fontWeight: 700 }}>
