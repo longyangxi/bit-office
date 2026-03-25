@@ -296,6 +296,12 @@ export const ConfigSavedEvent = z.object({
   tunnelRunning: z.boolean().optional(),
 });
 
+export const ChatHistoryLoadedEvent = z.object({
+  type: z.literal("CHAT_HISTORY_LOADED"),
+  /** Serialized PersistedAgent[] — same format as localStorage */
+  data: z.string(),
+});
+
 export const GatewayEventSchema = z.discriminatedUnion("type", [
   AgentsSyncEvent,
   AgentStatusEvent,
@@ -328,6 +334,7 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   WorktreeRevertedEvent,
   AutoMergeUpdatedEvent,
   SkillListEvent,
+  ChatHistoryLoadedEvent,
 ]);
 
 export type TokenUsage = z.infer<typeof TokenUsage>;

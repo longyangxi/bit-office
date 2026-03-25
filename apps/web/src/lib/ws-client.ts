@@ -50,9 +50,10 @@ function doConnect() {
       socket.send(JSON.stringify({ type: "AUTH", sessionToken: currentSessionToken }));
     }
     useOfficeStore.getState().setConnected(true);
-    // Send PING to get current agent statuses
+    // Send PING to get current agent statuses, then request persisted chat history
     if (socket.readyState === WebSocket.OPEN) {
       socket.send(JSON.stringify({ type: "PING" }));
+      socket.send(JSON.stringify({ type: "LOAD_CHAT_HISTORY" }));
     }
   };
 

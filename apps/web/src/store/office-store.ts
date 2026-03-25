@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import type { AgentStatus, GatewayEvent, TaskResultPayload, AgentDefinition, UserRole } from "@office/shared";
 import { tunnelRewrite } from "@/components/office/ui/office-utils";
+import { sendCommand } from "@/lib/connection";
 
 /** Pending PICK_FOLDER callbacks: requestId → callback */
 export const folderPickCallbacks = new Map<string, (path: string) => void>();
@@ -229,8 +230,11 @@ function _flushSave() {
         });
       }
     }
-    localStorage.setItem(scopedKey(STORAGE_KEY_BASE), JSON.stringify(data));
+    const json = JSON.stringify(data);
+    localStorage.setItem(scopedKey(STORAGE_KEY_BASE), json);
     invalidateStorageCache();
+    // Also sync to gateway for persistence across webview rebuilds
+    try { sendCommand({ type: "SYNC_CHAT_HISTORY", data: json }); } catch { /* not connected */ }
   } catch {
     // quota exceeded or unavailable
   }
@@ -938,6 +942,19 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "SKILL_LIST": {
           return { agents, availableSkills: event.skills };
+        }
+        case "CHAT_HISTORY_LOADED": {
+          // Restore messages from gateway-side persistence (when localStorage is empty)
+          try {
+            const saved: PersistedAgent[] = JSON.parse(event.data);
+            for (const item of saved) {
+              const agent = agents.get(item.agentId);
+              if (agent && agent.messages.length === 0 && item.messages.length > 0) {
+                agent.messages = filterRecentMessages(item.messages);
+              }
+            }
+          } catch { /* malformed data */ }
+          return { agents };
         }
         case "TEAM_PHASE": {
           const teamPhases = new Map(state.teamPhases);

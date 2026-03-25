@@ -214,6 +214,16 @@ export const RequestReviewCommand = z.object({
   backend: z.string().optional(),
 });
 
+export const SyncChatHistoryCommand = z.object({
+  type: z.literal("SYNC_CHAT_HISTORY"),
+  /** Serialized PersistedAgent[] — same format as localStorage office-chat-history */
+  data: z.string(),
+});
+
+export const LoadChatHistoryCommand = z.object({
+  type: z.literal("LOAD_CHAT_HISTORY"),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -247,6 +257,8 @@ export const CommandSchema = z.discriminatedUnion("type", [
   ListSkillsCommand,
   SaveSkillCommand,
   DeleteSkillCommand,
+  SyncChatHistoryCommand,
+  LoadChatHistoryCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;

@@ -867,6 +867,27 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       publishEvent({ type: "SKILL_LIST", skills: listSkills() });
       break;
     }
+    case "SYNC_CHAT_HISTORY": {
+      try {
+        const chatFile = path.join(config.instanceDir, "chat-history.json");
+        writeFileSync(chatFile, parsed.data, "utf-8");
+      } catch (e) {
+        console.warn(`[Gateway] Failed to save chat history: ${e}`);
+      }
+      break;
+    }
+    case "LOAD_CHAT_HISTORY": {
+      try {
+        const chatFile = path.join(config.instanceDir, "chat-history.json");
+        if (existsSync(chatFile)) {
+          const data = readFileSync(chatFile, "utf-8");
+          publishEvent({ type: "CHAT_HISTORY_LOADED", data });
+        }
+      } catch (e) {
+        console.warn(`[Gateway] Failed to load chat history: ${e}`);
+      }
+      break;
+    }
     case "SUGGEST": {
       // Rate limit: 1 per 3 seconds per client
       const lastSuggest = suggestRateLimit.get(meta.clientId) ?? 0;
