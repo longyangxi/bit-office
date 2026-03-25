@@ -35,7 +35,7 @@ const config: Config = {
           foreground: "var(--term-green-dim)",
         },
         accent: {
-          DEFAULT: "var(--term-green)",
+          DEFAULT: "var(--term-accent)",
           foreground: "var(--term-bg)",
         },
         popover: {

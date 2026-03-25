@@ -734,8 +734,11 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 style={{
                   position: "absolute", bottom: 8, right: 14,
                   display: "inline-flex", alignItems: "center", gap: 5,
-                  padding: "4px 12px", border: `1px solid ${TERM_SEM_RED}40`,
-                  backgroundColor: TERM_BG, color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer",
+                  padding: "4px 12px",
+                  border: "1px solid color-mix(in srgb, var(--term-accent) 55%, transparent)",
+                  backgroundColor: "var(--term-bg)",
+                  color: "var(--term-accent)",
+                  fontSize: TERM_SIZE, cursor: "pointer",
                   fontFamily: TERM_FONT, zIndex: 2, borderRadius: 3, opacity: 0.85,
                 }}
               ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 6l4-4 4 4"/><path d="M6 2v8a4 4 0 0 0 4 4h2"/></svg>Undo ({undoCount})</button>

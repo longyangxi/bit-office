@@ -11,13 +11,13 @@ const buttonVariants = cva(
         ghost:
           "border border-border bg-transparent text-foreground hover:border-term-text-bright hover:text-term-text-bright hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0 active:shadow-none",
         primary:
-          "border border-sem-green text-sem-green hover:bg-sem-green/10 hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
+          "border border-accent text-accent hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
         danger:
-          "border border-sem-red text-sem-red hover:bg-sem-red/10 hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
+          "border border-accent text-accent opacity-70 hover:opacity-100 hover:shadow-sm hover:-translate-y-px active:translate-y-0",
         success:
-          "border border-sem-green text-sem-green hover:bg-sem-green/10 hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
+          "border border-accent text-accent hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
         warning:
-          "border border-sem-yellow text-sem-yellow hover:bg-sem-yellow/10 hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
+          "border border-accent text-accent opacity-80 hover:opacity-100 hover:shadow-sm hover:-translate-y-px active:translate-y-0",
         dim:
           "border border-border text-muted-foreground hover:text-foreground hover:border-term-text-bright hover:shadow-sm hover:-translate-y-px active:opacity-85 active:translate-y-0",
       },
