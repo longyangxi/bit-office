@@ -139,7 +139,8 @@ export default function PairPage() {
       const conn = getConnection();
 
       // Tauri: reject cached connections to wrong gateway and wipe stale UI state
-      if (isTauri() && conn?.gatewayId && conn.gatewayId !== "desktop") {
+      // Note: conn.gatewayId may be undefined for old connections — treat that as "wrong" too
+      if (isTauri() && conn?.sessionToken && conn.gatewayId !== "desktop") {
         console.log(`[pair] Cached connection is for gateway ${conn.gatewayId}, need desktop — clearing all state`);
         // Clear scoped storage for the stale gateway (and unscoped legacy keys)
         const staleId = conn.gatewayId;
