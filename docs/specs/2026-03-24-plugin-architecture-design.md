@@ -47,9 +47,43 @@ type ReactionAction =
   | "notify"
   | "force-finalize";
 
+/** Rich context passed to the engine alongside every event */
+interface ReactionContext {
+  agentId: string;
+  taskId: string;
+  role?: string;                  // "Developer" | "Code Reviewer" | "Team Lead"
+  wasTimeout?: boolean;           // session.wasTimeout
+  wasCancellation?: boolean;      // task was cancelled, not failed
+  isDelegated?: boolean;          // delegationRouter.isDelegated(taskId)
+  reviewerOutput?: string;        // full reviewer output (for VERDICT parsing)
+  attempt?: number;               // current retry/fix attempt count
+  session: AgentSessionFacade;    // restricted access to session operations
+  orchestrator: OrchestratorFacade; // restricted access to orchestrator operations
+}
+
+/** Minimal session operations the engine can invoke */
+interface AgentSessionFacade {
+  prependTask(taskId: string, prompt: string): void;
+  getAgentId(): string;
+  getRole(): string;
+}
+
+/** Minimal orchestrator operations the engine can invoke */
+interface OrchestratorFacade {
+  getTeamLead(): AgentSessionFacade | null;
+  runTask(agentId: string, taskId: string, prompt: string): void;
+  forceFinalize(agentId: string): void;
+  emitNotification(notification: Notification): void;
+}
+
 interface ReactionRule {
   trigger: ReactionTrigger;
-  match?: { role?: string; attempt?: { gte?: number } };
+  match?: {
+    role?: string;
+    attempt?: { gte?: number };
+    wasTimeout?: boolean;
+    isDelegated?: boolean;
+  };
   action: ReactionAction;
   retries?: number;
   escalateAction?: ReactionAction;
@@ -61,18 +95,42 @@ interface ReactionEngineConfig {
 }
 ```
 
+#### Event Emission: Who emits `review:fail`?
+
+`review:fail` is NOT an existing orchestrator event. The `DelegationRouter` currently detects VERDICT:FAIL by parsing reviewer output with a regex. After the refactor:
+
+1. `DelegationRouter` remains responsible for detecting `VERDICT: FAIL` in reviewer output (it already does this)
+2. On detection, it emits a new `review:fail` event via the orchestrator's EventEmitter
+3. The Reaction Engine subscribes to this event and decides the action (direct fix, escalate, etc.)
+
+This keeps VERDICT parsing where it already lives (delegation) and avoids duplicating regex logic in the engine.
+
+New event type added to `types.ts`:
+
+```typescript
+interface ReviewFailEvent {
+  type: "review:fail";
+  agentId: string;         // reviewer agentId
+  taskId: string;
+  reviewerOutput: string;  // full output for context
+  devAgentId?: string;     // which dev the review was for
+}
+```
+
 #### Default Rules (preserving current behavior)
 
 ```typescript
 // packages/orchestrator/src/reaction/defaults.ts
 
 const DEFAULT_RULES: ReactionRule[] = [
-  // retry.ts behavior
-  { trigger: "task:failed", action: "retry", retries: 2,
+  // retry.ts behavior: retry failed tasks, skip timeouts and cancellations
+  { trigger: "task:failed",
+    match: { wasTimeout: false },
+    action: "retry", retries: 2,
     escalateAction: "escalate-to-leader" },
 
   // delegation.ts VERDICT:FAIL -> direct fix behavior
-  { trigger: "review:fail", match: { attempt: { gte: 0 } },
+  { trigger: "review:fail",
     action: "send-to-agent", retries: 1,
     escalateAction: "escalate-to-leader" },
 
@@ -86,28 +144,35 @@ const DEFAULT_RULES: ReactionRule[] = [
 
 #### Architecture
 
-`ReactionEngine` subscribes to Orchestrator events, matches rules, executes actions. Orchestrator emits events; it no longer handles retry/escalation directly.
+`ReactionEngine` receives events + `ReactionContext`, matches rules, executes actions through facades. Orchestrator constructs the context and delegates; it no longer handles retry/escalation directly.
 
 ```
-Orchestrator emits event
+Orchestrator receives event (task:failed, etc.)
     |
     v
-ReactionEngine.onEvent(event)
+Construct ReactionContext (session facade, orchestrator facade, metadata)
+    |
+    v
+ReactionEngine.handle(event, context)
     |
     v
 Match rules by trigger + match conditions
     |
     v
-Execute action (retry / send-to-agent / escalate / notify / force-finalize)
+Execute action via facade (retry / send-to-agent / escalate / notify / force-finalize)
     |
     +-- retries exhausted? --> execute escalateAction
 ```
+
+#### Memory Recording
+
+Memory recording (`recordReviewFeedback`, `recordProjectCompletion`, `recordTechPreference`) stays in the orchestrator's own event listeners. The Reaction Engine handles **operational responses** (retry, escalate, notify). Memory is a **side-effect concern**, not a reaction — it always runs regardless of which reaction fires.
 
 #### Files
 
 ```
 packages/orchestrator/src/reaction/
-  types.ts          — interfaces above
+  types.ts          — interfaces above (including facades)
   engine.ts         — ReactionEngine class
   defaults.ts       — DEFAULT_RULES
   index.ts          — exports
@@ -116,7 +181,7 @@ packages/orchestrator/src/reaction/
 #### Deleted/Refactored
 
 - `retry.ts` — removed entirely, logic migrated to reaction engine `retry` action
-- `delegation.ts` — `devFixAttempts`/`reviewCount`/`maxDirectFixes` logic migrated to `review:fail` rule
+- `delegation.ts` — `devFixAttempts`/`reviewCount`/`maxDirectFixes` logic migrated to `review:fail` rule; VERDICT detection stays, now emits `review:fail` event
 - `config.ts` — `hardCeilingRounds`/`maxReviewRounds` become reaction rule parameters
 
 ---
@@ -140,11 +205,13 @@ interface WorkspaceInfo {
   agentId: string;
 }
 
+/** Input config for creating a workspace — subset of full owner info */
 interface WorkspaceCreateConfig {
   repoRoot: string;
   agentId: string;
   agentName: string;
-  owner?: WorktreeOwnerInfo;
+  /** Partial owner info (agentId/branch/repoRoot are derived during creation) */
+  owner?: Omit<WorktreeOwnerInfo, "agentId" | "agentName" | "branch" | "repoRoot">;
 }
 
 interface WorkspaceMergeResult {
@@ -155,35 +222,50 @@ interface WorkspaceMergeResult {
   stagedFiles?: string[];
 }
 
+interface RevertResult {
+  success: boolean;
+  commitId?: string;
+  message?: string;
+  commitsAhead: number;
+}
+
+/**
+ * All methods that operate on an existing workspace take two paths:
+ * - repoRoot: the main repository root (where main branch lives)
+ * - worktreePath: the agent's workspace directory
+ * This matches the existing function signatures in worktree.ts.
+ */
 interface Workspace {
   readonly name: string;
 
   create(config: WorkspaceCreateConfig): WorkspaceInfo | null;
-  destroy(agentId: string, branch: string): void;
-  sync(workspace: string, worktreePath: string): void;
-  merge(workspace: string, worktreePath: string, branch: string,
+  destroy(repoRoot: string, worktreePath: string, branch: string): void;
+  sync(repoRoot: string, worktreePath: string): void;
+  merge(repoRoot: string, worktreePath: string, branch: string,
         opts?: { keepAlive?: boolean; summary?: string; agentName?: string }
   ): WorkspaceMergeResult;
-  revert(workspace: string, worktreePath: string): RevertResult;
-  undoMerge(workspace: string, commitHash: string): { success: boolean; message?: string };
-  hasPendingChanges(workspace: string, worktreePath: string): boolean;
-  checkConflicts(workspace: string, branch: string): string[];
-  cleanup(workspace: string, activeBranches: Set<string>,
+  revert(repoRoot: string, worktreePath: string): RevertResult;
+  undoMerge(repoRoot: string, commitHash: string): { success: boolean; message?: string };
+  hasPendingChanges(repoRoot: string, worktreePath: string): boolean;
+  checkConflicts(repoRoot: string, branch: string): string[];
+  cleanup(repoRoot: string, activeBranches: Set<string>,
           options?: CleanupWorktreeOptions
   ): { removedBranches: string[]; removedWorktrees: string[] };
 
-  postCreate?(info: WorkspaceInfo, hooks: PostCreateConfig): Promise<void>;
+  postCreate?(info: WorkspaceInfo, config: PostCreateConfig): Promise<void>;
 }
 
 interface PostCreateConfig {
-  symlinks?: string[];      // relative paths to symlink from main repo
-  commands?: string[];      // shell commands to run after creation
+  /** Relative paths to symlink from main repo into workspace */
+  symlinks?: string[];
+  /** Shell commands to run after creation */
+  commands?: string[];
 }
 ```
 
 #### Implementation
 
-Current `worktree.ts` functions become methods on `WorktreeWorkspace implements Workspace`. Logic unchanged, only reorganized.
+Current `worktree.ts` functions become methods on `WorktreeWorkspace implements Workspace`. Logic unchanged, only reorganized. The class constructor receives the centralized worktree base dir path.
 
 #### postCreate
 
@@ -206,10 +288,20 @@ After worktree creation:
 1. Symlink `.env` and `.claude` from main repo (with path traversal validation)
 2. Run `pnpm install`
 
+#### PostCreate Error Handling
+
+If a postCreate command fails:
+- Log a warning with the command and error
+- Continue with workspace creation (do not fail the whole operation)
+- The agent will encounter missing dependencies and fail on its own
+- Reaction Engine's `task:failed` rule handles the retry/escalation
+
+This is intentional — failing the workspace creation would leave an orphaned worktree. Letting the agent fail gives the reaction engine a chance to handle it.
+
 #### Security
 
 - Symlink paths must be relative, no `..` segments
-- Resolved path verified to stay within workspace
+- Resolved path verified to stay within workspace boundary
 - postCreate commands from trusted config only (orchestrator options), never from agent output
 
 #### Files
@@ -244,7 +336,9 @@ type TaskStatus = "pending" | "running" | "done" | "failed";
 
 interface TaskNode {
   id: string;              // hierarchical: "1", "1.2", "1.2.3"
+  parentId: string | null; // explicit parent reference (avoids string parsing)
   description: string;
+  role?: string;           // "Developer" | "Code Reviewer"
   kind: TaskKind;
   status: TaskStatus;
   depth: number;
@@ -272,14 +366,16 @@ Leader prompt requires structured `[DECOMPOSITION]` output:
 [DECOMPOSITION]
 {
   "tasks": [
-    { "role": "Developer", "description": "Implement PixiJS snake movement" },
-    { "role": "Developer", "description": "Add collision detection and scoring" },
-    { "role": "Code Reviewer", "description": "Review game implementation" }
+    { "id": "dev-1", "role": "Developer", "description": "Implement PixiJS snake movement" },
+    { "id": "dev-2", "role": "Developer", "description": "Add collision detection and scoring" },
+    { "id": "review-1", "role": "Code Reviewer", "description": "Review game implementation" }
   ],
-  "parallel": [[0, 1], [2]]
+  "groups": [["dev-1", "dev-2"], ["review-1"]]
 }
 [/DECOMPOSITION]
 ```
+
+Task IDs are explicit strings (not indices) — robust against reordering. `groups` replaces `parallel` for clarity — each group runs sequentially, tasks within a group run concurrently.
 
 Orchestrator's `output-parser.ts` parses this block into a TaskNode tree.
 
@@ -314,14 +410,30 @@ Do not duplicate sibling work. If you need interfaces from siblings, define stub
 
 #### Scheduler
 
-`scheduler.ts` reads the TaskNode tree and `parallel` groups:
-- Dispatch all tasks in a parallel group concurrently
+`scheduler.ts` reads the TaskNode tree and `groups`:
+- Dispatch all tasks in a group concurrently
 - Wait for group completion before starting the next group
 - Propagate done/failed status up the tree
+- On task failure: delegate to Reaction Engine (which decides retry/escalate)
 
-#### Relationship with delegation.ts
+#### Responsibility Matrix: Scheduler vs DelegationRouter
 
-`DelegationRouter` becomes an **execution layer** only — it creates tasks and forwards results. Scheduling logic moves up to the decomposer scheduler.
+| Responsibility | Owner After Refactor |
+|---|---|
+| Parse [DECOMPOSITION] block | `decomposer/parser.ts` |
+| Build TaskNode tree | `decomposer/parser.ts` |
+| Decide dispatch order (groups) | `decomposer/scheduler.ts` |
+| Track task tree status | `decomposer/scheduler.ts` |
+| Inject lineage/siblings context | `decomposer/context.ts` |
+| **Create agent task + spawn process** | `DelegationRouter` (unchanged) |
+| **Forward results between agents** | `DelegationRouter` (unchanged) |
+| **Batch result forwarding + timers** | `DelegationRouter` (unchanged) |
+| Track `totalDelegations` | `DelegationRouter` (unchanged) |
+| Track `leaderRounds` | `DelegationRouter` (unchanged) |
+| Detect VERDICT:FAIL, emit `review:fail` | `DelegationRouter` (unchanged) |
+| Handle failure/retry/escalation | `ReactionEngine` |
+
+The scheduler calls `DelegationRouter.delegate()` for each task dispatch. The router's internal bookkeeping (`totalDelegations`, `leaderRounds`, `assignedTask` map) stays intact. The scheduler adds the layer of structured ordering and context injection on top.
 
 #### Files
 
@@ -330,7 +442,7 @@ packages/orchestrator/src/decomposer/
   types.ts              — TaskNode, DecompositionPlan
   parser.ts             — parse [DECOMPOSITION] block from Leader output
   llm-decomposer.ts     — independent LLM classify + decompose (optional)
-  scheduler.ts          — dispatch tasks by tree + parallel groups
+  scheduler.ts          — group-based task dispatch + status propagation
   context.ts            — formatLineage(), formatSiblings()
   index.ts
 ```
@@ -383,16 +495,23 @@ type ActivityState =
   | "waiting_input"
   | "exited";
 
+/** Session reference for plugin queries. AgentSession exposes pid via getter. */
 interface AgentSessionRef {
   agentId: string;
   workspacePath: string | null;
-  runtimeHandle: { pid?: number };
+  pid: number | undefined;         // from AgentSession.pid getter (already exists)
+  lastOutputAt: number | undefined; // timestamp of last stdout activity
 }
 
 interface AgentSessionInfo {
   summary: string | null;
   agentSessionId: string | null;
   cost?: { inputTokens: number; outputTokens: number };
+}
+
+interface WorkspaceHooksConfig {
+  dataDir: string;
+  sessionId?: string;
 }
 ```
 
@@ -417,7 +536,7 @@ apps/gateway/src/agents/
 #### Activity Detection
 
 - Claude Code: parse `~/.claude/projects/` JSONL logs for last activity timestamp
-- Generic fallback: track last stdout activity time in agent-session.ts
+- Generic fallback: compare `lastOutputAt` against threshold in `agent-session.ts`
 
 Provides reliable data source for Reaction Engine's `agent:stuck` trigger.
 
@@ -428,6 +547,7 @@ Claude Code implementation writes `.claude/settings.json` with a PostToolUse hoo
 #### Deleted
 
 - `packages/orchestrator/src/ai-backend.ts` — replaced by `agent/types.ts`
+- `apps/gateway/src/backends.ts` — replaced by `apps/gateway/src/agents/`
 
 ---
 
@@ -468,6 +588,19 @@ interface Notifier {
 | `websocket` | Emit `notification` event, gateway forwards to web UI | Zero config (default) |
 | `desktop` | macOS native notification | Optional |
 | `telegram` | Reuse existing Telegram channel | Requires bot token |
+
+#### Notification Event Type
+
+New event added to `OrchestratorEventMap`:
+
+```typescript
+interface NotificationEvent {
+  type: "notification";
+  notification: Notification;
+}
+```
+
+The websocket notifier calls `orchestrator.emit("notification", { type: "notification", notification })`. Gateway subscribes to this event and forwards to WebSocket/Ably clients, same as all other events. Web UI displays notifications in an attention zone or toast.
 
 #### PluginRegistry
 
@@ -543,7 +676,7 @@ packages/orchestrator/src/
     post-create.ts          — symlink + command execution
     index.ts
   reaction/
-    types.ts                — ReactionRule, ReactionTrigger, ReactionAction
+    types.ts                — ReactionRule, ReactionTrigger, ReactionAction, facades
     engine.ts               — ReactionEngine class
     defaults.ts             — DEFAULT_RULES
     index.ts
@@ -551,7 +684,7 @@ packages/orchestrator/src/
     types.ts                — TaskNode, DecompositionPlan
     parser.ts               — parse [DECOMPOSITION] from Leader output
     llm-decomposer.ts       — optional LLM classify + decompose
-    scheduler.ts            — tree-based task dispatch
+    scheduler.ts            — group-based task dispatch + status propagation
     context.ts              — formatLineage(), formatSiblings()
     index.ts
   notifier/
@@ -564,7 +697,7 @@ packages/orchestrator/src/
   orchestrator.ts           — core engine (slimmed, delegates to modules)
   agent-session.ts          — process management (uses AgentPlugin)
   agent-manager.ts          — session registry
-  delegation.ts             — execution layer only (scheduling moved to decomposer)
+  delegation.ts             — execution layer + VERDICT detection + result batching
   phase-machine.ts          — unchanged
   output-parser.ts          — extended: parse [DECOMPOSITION] block
   prompt-templates.ts       — extended: lineage/siblings injection
@@ -572,8 +705,9 @@ packages/orchestrator/src/
   preview-resolver.ts       — unchanged
   preview-server.ts         — unchanged
   resolve-path.ts           — unchanged
+  memory.ts                 — KEPT as re-export shim (imports from @bit-office/memory)
   config.ts                 — slimmed (constants moved to module defaults)
-  types.ts                  — extended event types
+  types.ts                  — extended: ReviewFailEvent, NotificationEvent
   index.ts                  — public exports
 ```
 
@@ -584,7 +718,8 @@ packages/orchestrator/src/
 | `ai-backend.ts` | `agent/types.ts` |
 | `worktree.ts` | `workspace/worktree.ts` |
 | `retry.ts` | `reaction/engine.ts` |
-| `memory.ts` (orchestrator) | already replaced by `packages/memory` |
+
+Note: `memory.ts` is a re-export shim for `@bit-office/memory`. It is **kept** to avoid breaking imports in `orchestrator.ts` and `agent-session.ts`.
 
 ### Gateway Changes
 
@@ -608,11 +743,11 @@ apps/gateway/src/
 |-------|------|-----------|-----------------|
 | 1 | Reaction Engine | — | reaction/, refactor retry.ts + delegation.ts |
 | 2 | Workspace Abstraction | — | workspace/, refactor worktree.ts |
-| 3 | Task Decomposer | Phase 1 (reaction handles failures) | decomposer/, refactor delegation.ts + prompt-templates.ts |
-| 4 | Agent Plugin | Phase 2 (workspace hooks) | agent/, refactor backends.ts + agent-session.ts |
+| 3 | Task Decomposer | Phase 1 + 2 | decomposer/, refactor delegation.ts + prompt-templates.ts |
+| 4 | Agent Plugin | Phase 1 + 2 | agent/, refactor backends.ts + agent-session.ts |
 | 5 | Notifier + Registry | Phase 1 + 4 | notifier/, plugin-registry.ts, new orchestrator API |
 
 Phases 1 and 2 are independent and can be done in parallel.
-Phase 3 depends on Phase 1 (reaction engine handles decomposer failures).
-Phase 4 depends on Phase 2 (agent plugins call workspace hooks).
+Phase 3 depends on Phase 1 (reaction engine handles decomposer task failures) and Phase 2 (scheduler dispatches to agents in workspaces).
+Phase 4 depends on Phase 1 (activity detection feeds agent:stuck trigger) and Phase 2 (agent plugins call workspace hooks via Workspace interface).
 Phase 5 ties everything together.
