@@ -421,7 +421,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       {/* Floating team controls — top-right overlay */}
       {showTeamControls && (
         <div style={{
-          position: "absolute", top: 8, right: 14, zIndex: 10,
+          position: "absolute", top: 38, right: 14, zIndex: 10,
           display: "flex", gap: 6, alignItems: "center",
         }}>
           {teamBusy && onStopTeam && (
