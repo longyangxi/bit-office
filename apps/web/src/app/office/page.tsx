@@ -76,6 +76,17 @@ function LoadMoreSentinel({ onLoadMore }: { onLoadMore: () => void }) {
 
 
 // ---------------------------------------------------------------------------
+// Random unique agent name generator
+// ---------------------------------------------------------------------------
+const _ADJECTIVES = ["Swift","Crimson","Neon","Cosmic","Silent","Blazing","Frost","Shadow","Ember","Volt","Lunar","Sonic","Vivid","Storm","Pixel","Quantum","Mystic","Turbo","Stellar","Prism","Iron","Golden","Savage","Crystal","Phantom","Arctic","Solar","Thunder","Cobalt","Rogue"];
+const _NOUNS = ["Fox","Hawk","Wolf","Lynx","Puma","Raven","Otter","Viper","Crane","Falcon","Tiger","Shark","Eagle","Panther","Cobra","Mantis","Owl","Sphinx","Dragon","Phoenix","Bear","Jackal","Oriole","Piper","Sparrow","Beetle","Hornet","Badger","Osprey","Coyote"];
+function generateRandomName(): string {
+  const adj = _ADJECTIVES[Math.floor(Math.random() * _ADJECTIVES.length)];
+  const noun = _NOUNS[Math.floor(Math.random() * _NOUNS.length)];
+  return `${adj} ${noun}`;
+}
+
+// ---------------------------------------------------------------------------
 // Demo script — simulates a team working session for GIF recording
 // ---------------------------------------------------------------------------
 function runDemoScript(onDone: () => void) {
@@ -193,6 +204,10 @@ export default function OfficePage() {
   const [showHireModal, setShowHireModal] = useState(false);
   const [showHireTeamModal, setShowHireTeamModal] = useState(false);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
+  // Inline hire form state
+  const [showInlineHire, setShowInlineHire] = useState(false);
+  const [inlineHireName, setInlineHireName] = useState(() => generateRandomName());
+  const [inlineHireWorkDir, setInlineHireWorkDir] = useState("");
   const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
@@ -1675,20 +1690,30 @@ export default function OfficePage() {
                   </button>
                 );
               })}
-              {/* Hire button inline with agents */}
+              {/* Hire "+" button — same size as agent cell */}
               {isOwner && expandedSection === "agents" && (
-                <button onClick={() => setShowHireModal(true)} title="Hire Agent"
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    gap: 5, padding: "6px 16px", height: 52, flexShrink: 0,
-                    border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
-                    backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
-                    fontSize: 11, fontFamily: TERM_FONT, fontWeight: 500,
-                    borderRadius: 6, transition: "all 0.2s ease",
+                <button
+                  onClick={() => {
+                    setShowInlineHire((v) => {
+                      if (!v) setInlineHireName(generateRandomName());
+                      return !v;
+                    });
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}25`; e.currentTarget.style.borderColor = `${TERM_GREEN}90`; e.currentTarget.style.color = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
-                ><span style={{ fontSize: 15, lineHeight: 1 }}>+</span> hire</button>
+                  title="Hire Agent"
+                  style={{
+                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                    width: 52, minHeight: 52, flexShrink: 0,
+                    border: `1px solid ${showInlineHire ? TERM_GREEN : TERM_BORDER_DIM}`,
+                    cursor: "pointer",
+                    backgroundColor: showInlineHire ? `${TERM_GREEN}18` : "transparent",
+                    color: showInlineHire ? TERM_GREEN : `${TERM_GREEN}cc`,
+                    fontSize: 22, fontFamily: TERM_FONT, fontWeight: 300,
+                    borderRadius: 6, transition: "all 0.2s ease",
+                    outline: "none", lineHeight: 1,
+                  }}
+                  onMouseEnter={(e) => { if (!showInlineHire) { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_GREEN; } }}
+                  onMouseLeave={(e) => { if (!showInlineHire) { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER_DIM; e.currentTarget.style.color = `${TERM_GREEN}cc`; } }}
+                >+</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}
               {isOwner && expandedSection === "team" && !hasTeam && (
@@ -1734,6 +1759,101 @@ export default function OfficePage() {
                 >fire</button>
               )}
             </div>
+            )}
+
+            {/* -- Inline hire form (slides below agent bar) -- */}
+            {showInlineHire && !consoleMode && expandedSection === "agents" && (
+              <div style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "8px 12px",
+                borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+                background: TERM_PANEL,
+                fontFamily: TERM_FONT, fontSize: 11,
+              }}>
+                {/* Working directory */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: "0 0 auto" }}>
+                  <span style={{ fontSize: 9, color: TERM_DIM, letterSpacing: "0.05em", textTransform: "uppercase" }}>Work Dir</span>
+                  <input
+                    type="text"
+                    value={inlineHireWorkDir}
+                    onChange={(e) => setInlineHireWorkDir(e.target.value)}
+                    placeholder="~/.open-office/projects"
+                    style={{
+                      width: 220, padding: "4px 8px", fontSize: 11,
+                      fontFamily: TERM_FONT,
+                      border: `1px solid ${TERM_BORDER}`,
+                      backgroundColor: TERM_BG, color: TERM_TEXT,
+                      borderRadius: 4, outline: "none",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = TERM_BORDER; }}
+                  />
+                </div>
+                {/* Random name */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 2, flex: "0 0 auto" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 9, color: TERM_DIM, letterSpacing: "0.05em", textTransform: "uppercase" }}>Name</span>
+                    <button
+                      onClick={() => setInlineHireName(generateRandomName())}
+                      title="Randomize name"
+                      style={{
+                        background: "none", border: "none", cursor: "pointer",
+                        color: TERM_DIM, fontSize: 11, padding: 0, lineHeight: 1,
+                        fontFamily: TERM_FONT,
+                      }}
+                      onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
+                    >&#x21bb;</button>
+                  </div>
+                  <input
+                    type="text"
+                    value={inlineHireName}
+                    onChange={(e) => setInlineHireName(e.target.value)}
+                    placeholder="Agent name"
+                    style={{
+                      width: 140, padding: "4px 8px", fontSize: 11,
+                      fontFamily: TERM_FONT,
+                      border: `1px solid ${TERM_BORDER}`,
+                      backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT,
+                      borderRadius: 4, outline: "none",
+                    }}
+                    onFocus={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; }}
+                    onBlur={(e) => { e.currentTarget.style.borderColor = TERM_BORDER; }}
+                  />
+                </div>
+                {/* Hire button */}
+                <button
+                  onClick={() => {
+                    const name = inlineHireName.trim() || generateRandomName();
+                    const agentId = `agent-${nanoid(6)}`;
+                    const palette = Math.floor(Math.random() * 10);
+                    sendCommand({
+                      type: "CREATE_AGENT", agentId, name,
+                      role: "Developer", palette, backend: "claude",
+                      workDir: inlineHireWorkDir.trim() || undefined,
+                    });
+                    if (inlineHireWorkDir.trim()) {
+                      agentWorkDirMap.set(agentId, inlineHireWorkDir.trim());
+                    }
+                    setSelectedAgent(agentId);
+                    setChatOpen(true);
+                    setShowInlineHire(false);
+                    setInlineHireName(generateRandomName());
+                    setInlineHireWorkDir("");
+                  }}
+                  style={{
+                    padding: "6px 18px", fontSize: 11, fontWeight: 600,
+                    fontFamily: TERM_FONT, cursor: "pointer",
+                    border: `1px solid ${TERM_GREEN}`,
+                    backgroundColor: `${TERM_GREEN}20`,
+                    color: TERM_GREEN, borderRadius: 4,
+                    transition: "all 0.15s ease",
+                    whiteSpace: "nowrap",
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}40`; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}20`; }}
+                >hire</button>
+              </div>
             )}
 
             {/* -- Chat content: single pane (sidebar) or multi pane (console) -- */}
