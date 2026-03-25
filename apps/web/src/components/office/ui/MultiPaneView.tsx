@@ -431,7 +431,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
           )}
           {onFireTeam && (
             <button onClick={onFireTeam} title="Fire Team" className="tb tb-sm" style={{
-              color: "var(--term-dim)", borderColor: "var(--term-dim)",
+              color: "var(--term-text)", borderColor: "var(--term-text)",
             }}>fire team</button>
           )}
         </div>
