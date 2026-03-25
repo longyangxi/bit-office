@@ -131,7 +131,6 @@ You MUST include ENTRY_FILE or PREVIEW_CMD — the user needs this to preview.`,
 
   "worker-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
 {{soul}}
-{{soloHint}}
 {{memory}}
 {{recoveryContext}}
 {{teamRoster}}
@@ -173,7 +172,6 @@ SUMMARY: (one sentence)
 
   "worker-subagent-initial": `Your name is {{name}}. {{personality}}
 {{soul}}
-{{soloHint}}
 {{memory}}
 {{teamRoster}}
 {{recoveryContext}}
@@ -182,7 +180,6 @@ SUMMARY: (one sentence)
 
   "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
 {{soul}}
-{{soloHint}}
 {{memory}}
 {{teamRoster}}
 {{recoveryContext}}
@@ -193,7 +190,6 @@ ${DELIVERABLE_RULES}
 
   "worker-continue": `[Context reminder] You are {{name}} ({{role}}). {{personality}}
 {{soul}}
-{{soloHint}}
 {{memory}}
 {{recoveryContext}}
 {{teamRoster}}

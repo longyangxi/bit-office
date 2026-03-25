@@ -406,7 +406,6 @@ export class AgentSession {
         prompt,
         memory: this._memoryContext || getMemoryContext(this.agentId),
         recoveryContext: recoveryContextStr,
-        soloHint: "",
       };
       // Capture before template selection modifies it
       const isFirstExecute = this._isTeamLead && phaseOverride === "execute" && !this._hasExecuted;
