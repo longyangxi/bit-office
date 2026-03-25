@@ -52,7 +52,7 @@ export default function CommandPalette({
     }
 
     // Theme actions
-    const hiddenThemes = new Set(["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "kanagawa", "office", "catppuccin", "everforest"]);
+    const hiddenThemes = new Set(["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "office", "catppuccin", "everforest"]);
     const themeActions: CommandAction[] = Object.entries(TERM_THEMES).filter(([key]) => !hiddenThemes.has(key)).map(([key, theme]) => ({
       id: `theme:${key}`,
       label: theme.name,
