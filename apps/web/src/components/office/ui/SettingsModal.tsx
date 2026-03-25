@@ -47,8 +47,6 @@ export default function SettingsModal({
   onConsoleColsChange,
   onConsoleRowsChange,
 }: SettingsModalProps) {
-  const [agentsUpdating, setAgentsUpdating] = useState(false)
-  const [agentsMessage, setAgentsMessage] = useState<string | null>(null)
   const [tgToken, setTgToken] = useState('')
   const [tgUsers, setTgUsers] = useState('')
   const [tgSaving, setTgSaving] = useState(false)
@@ -63,7 +61,6 @@ export default function SettingsModal({
   const [tunnelSaving, setTunnelSaving] = useState(false)
   const [tunnelMessage, setTunnelMessage] = useState<string | null>(null)
   const [showTunnelToken, setShowTunnelToken] = useState(false)
-  const agencyResult = useOfficeStore((s) => s.agencyAgentsResult)
   const configData = useOfficeStore((s) => s.configData)
   const configResult = useOfficeStore((s) => s.configResult)
 
@@ -106,19 +103,6 @@ export default function SettingsModal({
       return () => clearTimeout(t)
     }
   }, [configResult])
-
-  useEffect(() => {
-    if (agencyResult && agentsUpdating) {
-      setAgentsUpdating(false)
-      setAgentsMessage(
-        agencyResult.success
-          ? `Updated${agencyResult.count ? ` (${agencyResult.count} agents)` : ''}`
-          : `Failed: ${agencyResult.message}`
-      )
-      const t = setTimeout(() => setAgentsMessage(null), 5000)
-      return () => clearTimeout(t)
-    }
-  }, [agencyResult])
 
   const toggleSound = () => {
     const next = !soundEnabled
@@ -326,22 +310,6 @@ export default function SettingsModal({
         <div className="text-[10px] text-muted-foreground mt-1 pl-[112px]">
           {consoleCols} × {consoleRows} = {consoleCols * consoleRows} agents per page
         </div>
-      </div>
-
-      {/* ---- Actions ---- */}
-      <div className="border-t border-term-border-dim pt-2">
-        <button
-          onClick={() => { setAgentsUpdating(true); setAgentsMessage(null); sendCommand({ type: "UPDATE_AGENCY_AGENTS" }); }}
-          disabled={agentsUpdating}
-          className={cn(toggleCls, agentsUpdating && "opacity-50")}
-        >
-          <span>{agentsUpdating ? 'Updating Agents...' : agentsMessage ?? 'Update Agency Agents'}</span>
-          {agentsMessage && (
-            <span className={cn("text-[11px]", agentsMessage.startsWith('Failed') ? "text-sem-red" : "text-sem-green")}>
-              {agentsMessage.startsWith('Failed') ? '\u2717' : '\u2713'}
-            </span>
-          )}
-        </button>
       </div>
 
       {/* ---- Version ---- */}

@@ -167,10 +167,6 @@ export const LoadProjectCommand = z.object({
   projectId: z.string(),
 });
 
-export const UpdateAgencyAgentsCommand = z.object({
-  type: z.literal("UPDATE_AGENCY_AGENTS"),
-});
-
 export const GetConfigCommand = z.object({
   type: z.literal("GET_CONFIG"),
 });
@@ -241,7 +237,6 @@ export const CommandSchema = z.discriminatedUnion("type", [
   RateProjectCommand,
   ListProjectsCommand,
   LoadProjectCommand,
-  UpdateAgencyAgentsCommand,
   RequestReviewCommand,
   MergeWorktreeCommand,
   UndoMergeCommand,
@@ -276,7 +271,6 @@ export type SuggestCommand = z.infer<typeof SuggestCommand>;
 export type RateProjectCommand = z.infer<typeof RateProjectCommand>;
 export type ListProjectsCommand = z.infer<typeof ListProjectsCommand>;
 export type LoadProjectCommand = z.infer<typeof LoadProjectCommand>;
-export type UpdateAgencyAgentsCommand = z.infer<typeof UpdateAgencyAgentsCommand>;
 export type RequestReviewCommand = z.infer<typeof RequestReviewCommand>;
 export type GetConfigCommand = z.infer<typeof GetConfigCommand>;
 export type MergeWorktreeCommand = z.infer<typeof MergeWorktreeCommand>;

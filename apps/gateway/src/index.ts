@@ -5,7 +5,7 @@ import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "
 import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectBackends, getBackend, getAllBackends } from "./backends.js";
-import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, syncAgentDefs, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
@@ -916,40 +916,6 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       }
       break;
     }
-    case "UPDATE_AGENCY_AGENTS": {
-      console.log("[Gateway] Updating agency agents...");
-      const scriptPath = path.join(path.dirname(new URL(import.meta.url).pathname), "..", "..", "..", "scripts", "install-agents.sh");
-      if (!existsSync(scriptPath)) {
-        console.warn("[Gateway] install-agents.sh not found — only available in git checkout");
-        publishEvent({
-          type: "AGENCY_AGENTS_UPDATED",
-          success: false,
-          message: "Agency agents update is only available when running from the git checkout (not the npm package).",
-        });
-        break;
-      }
-      execFile("bash", [scriptPath, "--update"], { timeout: 60000 }, (err, stdout, stderr) => {
-        if (err) {
-          console.error("[Gateway] Agency agents update failed:", stderr || err.message);
-          publishEvent({
-            type: "AGENCY_AGENTS_UPDATED",
-            success: false,
-            message: stderr || err.message,
-          });
-        } else {
-          const countMatch = stdout.match(/(\d+) agents/);
-          const count = countMatch ? parseInt(countMatch[1], 10) : undefined;
-          console.log("[Gateway] Agency agents updated:", stdout.trim().split("\n").pop());
-          publishEvent({
-            type: "AGENCY_AGENTS_UPDATED",
-            success: true,
-            message: `Agency agents updated successfully`,
-            count,
-          });
-        }
-      });
-      break;
-    }
     case "GET_CONFIG": {
       const tgConnected = isChannelActive(telegramChannel);
       sendToClient(meta.clientId, {
@@ -1222,6 +1188,9 @@ async function main() {
   // Register all known backends so any can be selected from the UI.
   // Detection only determines the default; uninstalled ones will fail at spawn time with a clear error.
   const backendsToUse = getAllBackends();
+
+  // Sync bundled agent definitions to ~/.claude/agents/ for --agent resolution
+  syncAgentDefs();
 
   // Scope session storage to this gateway instance (prevents Tauri/Web/CLI context contamination)
   setSessionDir(config.instanceDir);

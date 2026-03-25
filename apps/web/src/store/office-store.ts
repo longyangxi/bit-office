@@ -133,7 +133,6 @@ interface OfficeStore {
   viewingProjectEvents: GatewayEvent[];
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
-  agencyAgentsResult: { success: boolean; message: string; count?: number } | null;
   configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
   configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
@@ -368,7 +367,6 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   viewingProjectEvents: [],
   viewingProjectName: null,
   pendingPreviewUrl: null,
-  agencyAgentsResult: null,
   configResult: null,
   configData: null,
   detectedBackends: [],
@@ -971,9 +969,6 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             imageUploadCallbacks.delete(event.requestId);
           }
           return { agents };
-        }
-        case "AGENCY_AGENTS_UPDATED": {
-          return { agents, agencyAgentsResult: { success: event.success, message: event.message, count: event.count } };
         }
         case "BACKENDS_AVAILABLE": {
           return { agents, detectedBackends: event.backends };

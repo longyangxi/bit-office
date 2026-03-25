@@ -1,3 +1,0 @@
-[submodule "vendor/agency-agents"]
-	path = vendor/agency-agents
-	url = https://github.com/msitarzewski/agency-agents.git

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
-import { ROLE_PRESETS, SKILLS_MAP, AGENCY_CATALOG, AGENCY_AGENT_MAP, PERSONALITY_PRESETS } from "./office-constants";
+import { ROLE_CATALOG, ROLE_DESC_MAP, ROLE_PRESETS, PERSONALITY_PRESETS } from "./office-constants";
 import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_GREEN, TERM_DIM, TERM_SEM_BLUE } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import { isRealEnter } from "./office-utils";
@@ -29,16 +29,13 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
 
   const query = search.toLowerCase();
   const filtered = query
-    ? AGENCY_CATALOG.map((cat) => ({
+    ? ROLE_CATALOG.map((cat) => ({
         ...cat,
-        subcategories: cat.subcategories.map((sub) => ({
-          ...sub,
-          agents: sub.agents.filter((a) =>
-            a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query) || cat.label.toLowerCase().includes(query)
-          ),
-        })).filter((sub) => sub.agents.length > 0),
-      })).filter((cat) => cat.subcategories.length > 0)
-    : AGENCY_CATALOG;
+        agents: cat.agents.filter((a) =>
+          a.name.toLowerCase().includes(query) || a.desc.toLowerCase().includes(query) || cat.label.toLowerCase().includes(query)
+        ),
+      })).filter((cat) => cat.agents.length > 0)
+    : ROLE_CATALOG;
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
@@ -46,7 +43,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
         value={open ? search : value}
         onChange={(e) => { setSearch(e.target.value); if (!open) setOpen(true); }}
         onFocus={() => { setOpen(true); setSearch(""); }}
-        placeholder="Search roles..."
+        placeholder="Search roles or type custom..."
       />
       {open && (
         <div data-scrollbar style={{
@@ -54,35 +51,33 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
           maxHeight: 250, overflowY: "auto", backgroundColor: TERM_BG,
           border: `1px solid ${TERM_BORDER}`, borderTop: "none",
         }}>
-          {filtered.map((cat) =>
-            cat.subcategories.map((sub) => (
-              <div key={`${cat.category}/${sub.name}`}>
-                <div style={{
-                  padding: "4px 10px", fontSize: 10, color: TERM_DIM,
-                  fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em",
-                  backgroundColor: TERM_BG, position: "sticky", top: 0,
-                }}>
-                  {cat.subcategories.length > 1 && sub.name !== "_root" ? `${cat.label} > ${sub.label}` : cat.label}
-                </div>
-                {sub.agents.map((a) => (
-                  <div
-                    key={a.name}
-                    onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
-                    style={{
-                      padding: "5px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
-                      color: a.name === value ? TERM_GREEN : TERM_TEXT,
-                      cursor: "pointer", backgroundColor: a.name === value ? `${TERM_GREEN}18` : "transparent",
-                    }}
-                    onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
-                    onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
-                  >
-                    {a.name}
-                  </div>
-                ))}
+          {filtered.map((cat) => (
+            <div key={cat.category}>
+              <div style={{
+                padding: "4px 10px", fontSize: 10, color: TERM_DIM,
+                fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em",
+                backgroundColor: TERM_BG, position: "sticky", top: 0,
+              }}>
+                {cat.label}
               </div>
-            ))
-          )}
-          {filtered.length === 0 && (
+              {cat.agents.map((a) => (
+                <div
+                  key={a.name}
+                  onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
+                  style={{
+                    padding: "5px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
+                    color: a.name === value ? TERM_GREEN : TERM_TEXT,
+                    cursor: "pointer", backgroundColor: a.name === value ? `${TERM_GREEN}18` : "transparent",
+                  }}
+                  onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
+                  onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
+                >
+                  {a.name}
+                </div>
+              ))}
+            </div>
+          ))}
+          {filtered.length === 0 && search.trim() && (
             <div
               onClick={() => { onSelect(search.trim()); setOpen(false); setSearch(""); }}
               style={{ padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-mono)", color: TERM_DIM, cursor: "pointer" }}
@@ -171,12 +166,6 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
     return idx >= 0 ? "" : editAgent.role;
   });
 
-  const [selectedSkills, setSelectedSkills] = useState<Set<string>>(() => {
-    if (!editAgent?.skills) return new Set(SKILLS_MAP[ROLE_PRESETS[0]]?.slice(0, 4) ?? []);
-    return new Set(editAgent.skills.split(",").map((s) => s.trim()).filter(Boolean));
-  });
-  const [customSkillInput, setCustomSkillInput] = useState("");
-
   // Skill files state
   const availableSkills = useOfficeStore((s) => s.availableSkills);
   const [selectedSkillFiles, setSelectedSkillFiles] = useState<Set<string>>(() => {
@@ -190,35 +179,9 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
   }, [sendCommand]);
 
   const currentRole = rolePresetIndex >= 0 ? ROLE_PRESETS[rolePresetIndex] : customRole.trim();
-  const suggestedSkills = rolePresetIndex >= 0 ? (SKILLS_MAP[ROLE_PRESETS[rolePresetIndex]] ?? []) : [];
 
   const handleRoleChange = (idx: number) => {
     setRolePresetIndex(idx);
-    if (idx >= 0) {
-      const preset = ROLE_PRESETS[idx];
-      const suggested = SKILLS_MAP[preset] ?? [];
-      const hasMatching = suggested.some((s) => selectedSkills.has(s));
-      if (!hasMatching) {
-        setSelectedSkills(new Set(suggested.slice(0, 4)));
-      }
-    }
-  };
-
-  const toggleSkill = (skill: string) => {
-    setSelectedSkills((prev) => {
-      const next = new Set(prev);
-      if (next.has(skill)) next.delete(skill);
-      else next.add(skill);
-      return next;
-    });
-  };
-
-  const addCustomSkill = () => {
-    const skill = customSkillInput.trim();
-    if (skill && !selectedSkills.has(skill)) {
-      setSelectedSkills((prev) => new Set(prev).add(skill));
-      setCustomSkillInput("");
-    }
   };
 
   const toggleSkillFile = (name: string) => {
@@ -260,7 +223,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
       id,
       name: defName.trim(),
       role: currentRole,
-      skills: Array.from(selectedSkills).join(", "),
+      skills: ROLE_DESC_MAP.get(currentRole) ?? "",
       personality: currentPersonality,
       palette,
       isBuiltin: editAgent?.isBuiltin ?? false,
@@ -320,70 +283,11 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
             }
           }}
         />
-        {AGENCY_AGENT_MAP.get(currentRole) && (
+        {ROLE_DESC_MAP.get(currentRole) && (
           <div style={{ fontSize: 11, color: TERM_DIM, marginTop: 4, fontFamily: "var(--font-mono)", lineHeight: 1.4 }}>
-            {AGENCY_AGENT_MAP.get(currentRole)}
+            {ROLE_DESC_MAP.get(currentRole)}
           </div>
         )}
-      </div>
-
-      {/* Skills */}
-      <div style={{ marginBottom: 8 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>SKILLS</div>
-        {suggestedSkills.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-            {suggestedSkills.map((skill) => {
-              const active = selectedSkills.has(skill);
-              return (
-                <button
-                  key={skill}
-                  onClick={() => toggleSkill(skill)}
-                  style={{
-                    padding: "4px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
-                    border: active ? `1px solid ${TERM_GREEN}80` : `1px solid ${TERM_BORDER}`,
-                    backgroundColor: active ? `${TERM_GREEN}18` : "transparent",
-                    color: active ? TERM_GREEN : TERM_DIM,
-                    cursor: "pointer",
-                  }}
-                >{skill}</button>
-              );
-            })}
-          </div>
-        )}
-        {(() => {
-          const customTags = Array.from(selectedSkills).filter((s) => !suggestedSkills.includes(s));
-          if (customTags.length === 0) return null;
-          return (
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 8 }}>
-              {customTags.map((skill) => (
-                <span
-                  key={skill}
-                  style={{
-                    padding: "4px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
-                    border: `1px solid ${TERM_SEM_BLUE}60`, backgroundColor: TERM_SURFACE,
-                    color: TERM_SEM_BLUE, display: "flex", alignItems: "center", gap: 4,
-                  }}
-                >
-                  {skill}
-                  <span
-                    onClick={() => toggleSkill(skill)}
-                    style={{ cursor: "pointer", fontSize: 15, lineHeight: 1, color: `${TERM_SEM_BLUE}80` }}
-                  >&times;</span>
-                </span>
-              ))}
-            </div>
-          );
-        })()}
-        <div style={{ display: "flex", gap: 4 }}>
-          <TermInput
-            value={customSkillInput}
-            onChange={(e) => setCustomSkillInput(e.target.value)}
-            onKeyDown={(e) => { if (isRealEnter(e as any)) { e.preventDefault(); addCustomSkill(); } }}
-            placeholder="Add custom skill..."
-            style={{ flex: 1 }}
-          />
-          <TermButton variant="dim" onClick={addCustomSkill} style={{ padding: "5px 12px", fontSize: 15, fontWeight: 700 }}>+</TermButton>
-        </div>
       </div>
 
       {/* Skill Files */}

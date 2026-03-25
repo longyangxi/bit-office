@@ -29,8 +29,8 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   const [hireName, setHireName] = useState(() => generateRandomName());
   const [workDir, setWorkDir] = useState<string>("");
 
-  const builtinAgents = agentDefs.filter((a) => a.isBuiltin && a.teamRole !== "leader");
-  const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole !== "leader");
+  const builtinAgents = agentDefs.filter((a) => a.isBuiltin && a.teamRole === "dev");
+  const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole === "dev");
 
   const handleSelectAgent = (def: AgentDefinition) => {
     if (selectedDef?.id === def.id) {

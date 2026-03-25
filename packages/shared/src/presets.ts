@@ -5,15 +5,20 @@ export interface AgentPreset {
   description: string;
   personality: string;
   isLeader?: boolean;
+  /** Hidden from hire list — auto-used by review system */
+  isReviewer?: boolean;
 }
 
-/** 5 predefined agents for team hiring — role names match agency-agents for subagent resolution */
+/** 6 built-in agent presets + 1 leader (hidden from hire list, auto-added in team mode) */
 export const AGENT_PRESETS: AgentPreset[] = [
-  { palette: 0, name: "Alex",   role: "Frontend Developer",  description: "UI, React/Vue/Next.js, CSS, accessibility",     personality: "Detail-oriented and user-centric. Focuses on performance, accessibility, and pixel-perfect implementation." },
-  { palette: 1, name: "Mia",    role: "Backend Architect",   description: "APIs, databases, system design, cloud",         personality: "Strategic and security-focused. Designs for scale, reliability, and maintainability." },
-  { palette: 2, name: "Leo",    role: "Rapid Prototyper",    description: "MVP, proof-of-concept, fast iteration",         personality: "Speed-focused and pragmatic. Ships working prototypes fast, iterates based on feedback." },
-  { palette: 5, name: "Marcus", role: "Team Lead",           description: "Creative direction, planning, delegation",      personality: "Strong product intuition, communicates with clarity and vision. Focuses on the big picture and keeps the team aligned.", isLeader: true },
-  { palette: 4, name: "Nova",   role: "UX Architect",        description: "UX foundations, CSS systems, layout, component architecture", personality: "Systematic and developer-empathetic. Bridges design vision and implementation with clear, buildable structures." },
+  { palette: 3, name: "Rex",    role: "Senior Developer",    description: "General-purpose dev, any language/framework",    personality: "" },
+  { palette: 0, name: "Alex",   role: "Frontend Developer",  description: "UI, React/Vue/Next.js, CSS, accessibility",      personality: "" },
+  { palette: 1, name: "Mia",    role: "Backend Architect",   description: "APIs, databases, system design, cloud",          personality: "" },
+  { palette: 2, name: "Leo",    role: "Rapid Prototyper",    description: "MVP, proof-of-concept, fast iteration",          personality: "" },
+  { palette: 4, name: "Nova",   role: "UI Designer",         description: "Design systems, spacing, color, accessibility",  personality: "" },
+  { palette: 6, name: "Luna",   role: "Product Manager",     description: "PRD, prioritization, user stories, outcomes",    personality: "" },
+  { palette: 5, name: "Marcus", role: "Team Lead",           description: "Creative direction, planning, delegation",       personality: "", isLeader: true },
+  { palette: 7, name: "Sophie", role: "Code Reviewer",       description: "Code review, bugs, security, quality",          personality: "", isReviewer: true },
 ];
 
 /** Index of the default (and mandatory) team leader preset. */

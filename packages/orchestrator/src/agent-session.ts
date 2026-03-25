@@ -447,8 +447,6 @@ export class AgentSession {
         } else if (isReviewer) {
           workerInitial = "worker-reviewer-initial";
         } else if (agentType) {
-          // Has a matching subagent — use lightweight template.
-          // Dev-like roles get preview rules; non-dev roles get minimal prompt.
           const isDevRole = /developer|engineer|architect|scripter|builder|prototyper|coder/i.test(this.role);
           workerInitial = isDevRole ? "worker-subagent-dev-initial" : "worker-subagent-initial";
         } else {
