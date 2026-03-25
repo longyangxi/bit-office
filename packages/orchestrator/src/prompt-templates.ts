@@ -140,13 +140,15 @@ ${DELIVERABLE_RULES}
 
 NEVER run servers or dev commands. You CANNOT see UI.
 
-Report your verdict in this exact format (the system parses it):
+Report your verdict in this EXACT format (the system parses these fields — no extra prose):
 VERDICT: PASS | FAIL
 - PASS = runs without crashes AND core features implemented
 - FAIL = crashes/bugs prevent usage OR core features missing
-ISSUES: (numbered list)
-SUGGESTIONS: (optional, brief)
+ISSUES: (max 5, one line each: what's wrong + where. No code blocks, no explanations)
+SUGGESTIONS: (max 3, one line each, optional)
 SUMMARY: (one sentence)
+
+Keep your ENTIRE response under 30 lines. Do NOT quote source code, do NOT explain how to fix — just state what is wrong and where.
 
 {{prompt}}`,
 
@@ -155,13 +157,15 @@ SUMMARY: (one sentence)
 {{memory}}
 {{teamRoster}}
 
-Output your verdict in this exact format (the system parses it):
+Output your verdict in this EXACT format (the system parses these fields — no extra prose):
 VERDICT: PASS | FAIL
 - PASS = runs without crashes AND core features implemented
 - FAIL = crashes/bugs prevent usage OR core features missing
-ISSUES: (numbered list)
-SUGGESTIONS: (optional, brief)
+ISSUES: (max 5, one line each: what's wrong + where. No code blocks, no explanations)
+SUGGESTIONS: (max 3, one line each, optional)
 SUMMARY: (one sentence)
+
+Keep your ENTIRE response under 30 lines. Do NOT quote source code, do NOT explain how to fix — just state what is wrong and where.
 
 {{prompt}}`,
 
