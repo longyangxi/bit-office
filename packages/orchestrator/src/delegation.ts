@@ -293,7 +293,12 @@ export class DelegationRouter {
       this.prepareWorktree?.(target.agentId, taskId, repoPath);
       // Inject lightweight team context so workers are aware of peers
       const workerTeamContext = this.buildWorkerTeamContext(target.agentId);
-      target.runTask(taskId, fullPrompt, repoPath, workerTeamContext);
+      // Reviewers don't get their own worktree, so point them at the developer's
+      // worktree so they can see the actual changes (git diff, file reads, etc.)
+      const effectiveRepoPath = targetRole.includes("review")
+        ? this.resolveDevWorktreePath(repoPath)
+        : repoPath;
+      target.runTask(taskId, fullPrompt, effectiveRepoPath, workerTeamContext);
     };
   }
 
@@ -363,7 +368,7 @@ export class DelegationRouter {
           const reReviewPrompt = this.promptEngine.render("worker-continue", {
             prompt: `[Re-review after fix] ${fromName} has fixed the issues you reported. Please review the code again.\n\nDev's fix report:\n${summary.slice(0, CONFIG.limits.chatMessageChars)}${originalContext}\n\n===== YOUR TASK =====\n1. Check if ALL previously reported ISSUES are resolved\n2. Verify the deliverable runs without crashes\n3. Verify core features work (compare against the original task requirements)\n\nVERDICT: PASS | FAIL\n- PASS = code runs without crashes AND core features are implemented (even if rough)\n- FAIL = crashes/bugs that prevent usage OR core features are missing/broken\nISSUES: (numbered list if FAIL — only real bugs or missing core features)\nSUMMARY: (one sentence overall assessment)`,
           });
-          const repoPath = this.teamProjectDir ?? undefined;
+          const repoPath = this.resolveDevWorktreePath(this.teamProjectDir ?? undefined);
 
           console.log(`[DirectFix] Dev ${fromName} fix complete → auto re-review by ${reviewerSession.name}`);
           this.emitEvent({
@@ -526,6 +531,22 @@ export class DelegationRouter {
     }
     if (lines.length === 0) return "";
     return `===== TEAM AWARENESS =====\nYour teammates (for context — do NOT delegate or coordinate with them):\n${lines.join("\n")}`;
+  }
+
+  /**
+   * Resolve the developer's worktree path for reviewer CWD.
+   * Reviewers don't get their own worktree, but they need to run inside the
+   * developer's worktree to see the actual code changes (git diff, file reads).
+   * Falls back to the provided repoPath if no dev worktree is available.
+   */
+  private resolveDevWorktreePath(fallback?: string): string | undefined {
+    if (this.lastDevAgentId) {
+      const devSession = this.agentManager.get(this.lastDevAgentId);
+      if (devSession?.worktreePath) {
+        return devSession.worktreePath;
+      }
+    }
+    return fallback;
   }
 
   /**
