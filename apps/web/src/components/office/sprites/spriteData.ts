@@ -1075,9 +1075,9 @@ function hueShiftSprites(sprites: CharacterSprites, hueShift: number): Character
 /** Get the standing-down frame (idle thumbnail) for a character palette index.
  *  Returns a SpriteData (16x32 pixel art) or null if assets not loaded yet. */
 export function getCharacterThumbnail(paletteIndex: number): SpriteData | null {
-  if (!loadedCharacters) return null
+  if (!loadedCharacters || loadedCharacters.length === 0) return null
   const char = loadedCharacters[paletteIndex % loadedCharacters.length]
-  return char.down[1] // standing frame facing down
+  return char?.down?.[1] ?? null // standing frame facing down
 }
 
 
@@ -1089,9 +1089,10 @@ export function getCharacterSprites(paletteIndex: number, hueShift = 0): Charact
 
   let sprites: CharacterSprites
 
-  if (loadedCharacters) {
+  if (loadedCharacters && loadedCharacters.length > 0) {
     // Use pre-colored character sprites directly (no palette swapping)
     const char = loadedCharacters[paletteIndex % loadedCharacters.length]
+    if (!char) return null
     const d = char.down
     const u = char.up
     const rt = char.right
