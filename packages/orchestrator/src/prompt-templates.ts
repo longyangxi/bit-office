@@ -26,37 +26,30 @@ export type TemplateName =
   | "leader-complete"
   | "leader-complete-continue";
 
-// Shared deliverable rules — injected into worker templates at definition time
-const DELIVERABLE_RULES = [
-  "**System constraints:**",
-  "- NEVER run long-running commands (npm run dev, npm start, npx vite, live-server, etc). They hang forever. The system serves previews automatically.",
-  "- Do NOT launch GUI apps or dev servers. You CANNOT see UI.",
-  "- For web servers, your app MUST read port from the PORT env variable (e.g. process.env.PORT || 3000).",
-  "",
-  "**Deliverable report format** (ONLY use when you created or modified files — for plain conversation, reply normally in text):",
-  "",
-  "```",
-  "STATUS: done | failed",
-  "FILES_CHANGED: (one per line)",
-  "ENTRY_FILE: (relative path for static web, e.g. index.html — NEVER absolute path)",
-  "PREVIEW_CMD: (for server/CLI apps)",
-  "PREVIEW_PORT: (for web servers)",
-  "SUMMARY: (one sentence)",
-  "```",
-].join("\n");
+// Shared report format — system parses these fields from agent output
+const REPORT_FORMAT = `\`\`\`
+STATUS: done | failed
+FILES_CHANGED: (one per line)
+ENTRY_FILE: (relative path, e.g. index.html — NEVER absolute)
+PREVIEW_CMD: (for server/CLI apps)
+PREVIEW_PORT: (for web servers)
+SUMMARY: (one sentence)
+\`\`\``;
 
-const DELIVERABLE_RULES_FIX = [
-  "Report your result (ONLY if you modified files):",
-  "",
-  "```",
-  "STATUS: done | failed",
-  "FILES_CHANGED: (list all files modified)",
-  "ENTRY_FILE: (relative path, if applicable — NEVER absolute path)",
-  "PREVIEW_CMD: (if applicable)",
-  "PREVIEW_PORT: (if applicable)",
-  "SUMMARY: (one sentence: what you fixed)",
-  "```",
-].join("\n");
+// Full deliverable rules — system constraints + report format (for initial tasks)
+const DELIVERABLE_RULES = `**System constraints:**
+- NEVER run long-running commands (npm run dev, npm start, npx vite, etc). They hang forever. The system serves previews automatically.
+- Do NOT launch GUI apps or dev servers. You CANNOT see UI.
+- For web servers, your app MUST read port from the PORT env variable (e.g. process.env.PORT || 3000).
+
+**Report format** (ONLY when you created or modified files — for plain conversation, reply normally):
+
+${REPORT_FORMAT}`;
+
+// Lighter version for fix tasks — no system constraints (agent already knows), just report format
+const DELIVERABLE_RULES_FIX = `Report your result (ONLY if you modified files):
+
+${REPORT_FORMAT}`;
 
 // Default base persona — synced to soul.md on startup (user-editable)
 const DEFAULT_SOUL = `Solve correctly, verify before declaring done, surface failures explicitly.`;
