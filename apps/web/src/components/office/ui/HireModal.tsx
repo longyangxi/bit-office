@@ -131,34 +131,37 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           </div>
         </div>
 
-        {/* Built-in agents */}
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
-          {builtinAgents.map((def) => renderAgentCard(def, false))}
-        </div>
+        {/* Scrollable agent list */}
+        <div data-scrollbar style={{ maxHeight: "50vh", overflowY: "auto", overflowX: "hidden" }}>
+          {/* Built-in agents */}
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+            {builtinAgents.map((def) => renderAgentCard(def, false))}
+          </div>
 
-        {/* Custom agents + Create New card */}
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>MY AGENTS</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
-          {customAgents.map((def) => renderAgentCard(def, true))}
-          {/* "+ Create New" card */}
-          <button
-            onClick={onCreate}
-            style={{
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              padding: "12px 6px 10px",
-              border: `1px dashed ${TERM_BORDER}`,
-              backgroundColor: "transparent",
-              cursor: "pointer", textAlign: "center",
-              transition: "border-color 0.15s, color 0.15s",
-              color: TERM_DIM, minHeight: 80,
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
-            onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
-          >
-            <span style={{ fontSize: 24, lineHeight: 1, fontWeight: 300 }}>+</span>
-            <span style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--font-mono)" }}>Create New</span>
-          </button>
+          {/* Custom agents + Create New card */}
+          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>MY AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+            {customAgents.map((def) => renderAgentCard(def, true))}
+            {/* "+ Create New" card */}
+            <button
+              onClick={onCreate}
+              style={{
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                padding: "12px 6px 10px",
+                border: `1px dashed ${TERM_BORDER}`,
+                backgroundColor: "transparent",
+                cursor: "pointer", textAlign: "center",
+                transition: "border-color 0.15s, color 0.15s",
+                color: TERM_DIM, minHeight: 80,
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
+            >
+              <span style={{ fontSize: 24, lineHeight: 1, fontWeight: 300 }}>+</span>
+              <span style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--font-mono)" }}>Create New</span>
+            </button>
+          </div>
         </div>
 
         {/* -- Centered overlay: workDir + name + hire -- */}
