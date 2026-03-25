@@ -142,6 +142,7 @@ export function renderScene(
   for (const ch of characters) {
     const sprites = getCharacterSprites(ch.palette, ch.hueShift)
     const spriteData = getCharacterSprite(ch, sprites)
+    if (!spriteData) continue
     const cached = getCachedSprite(spriteData, charZoom)
     const sittingOffset = ch.state === CharacterState.TYPE ? CHARACTER_SITTING_OFFSET_PX : 0
     const drawX = Math.round(offsetX + ch.x * zoom - cached.width / 2)

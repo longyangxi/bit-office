@@ -340,7 +340,8 @@ export function updateCharacter(
 }
 
 /** Get the correct sprite frame for a character's current state and direction */
-export function getCharacterSprite(ch: Character, sprites: CharacterSprites): SpriteData {
+export function getCharacterSprite(ch: Character, sprites: CharacterSprites | null): SpriteData | null {
+  if (!sprites) return null
   switch (ch.state) {
     case CharacterState.TYPE:
       if (isReadingTool(ch.currentTool)) {
