@@ -1,8 +1,8 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { ReviewerOverlayData } from "./AgentPane";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_PANEL, TERM_BORDER_DIM, TERM_BORDER, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_GREEN } from "./termTheme";
-import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
+import { TERM_GREEN, TERM_BORDER_DIM, TERM_BORDER } from "./termTheme";
+
 import { cn } from "@/lib/utils";
 
 const AgentPane = dynamic(() => import("./AgentPane"), { ssr: false });
@@ -87,54 +87,6 @@ const StableAgentPane = memo(function StableAgentPane({
 
   return (
     <>
-      {/* Inline avatar header for this pane (console mode only) */}
-      {meta && (() => {
-        const statusKey = data.status ?? "idle";
-        const cfg = getStatusConfig()[statusKey] ?? getStatusConfig().idle;
-        const backendName = data.backend ? (BACKEND_OPTIONS.find((b) => b.id === data.backend)?.name ?? data.backend) : null;
-        const roleName = data.role?.split("\u2014")[0]?.trim();
-        const statusColor = data.busy ? TERM_GREEN
-          : statusKey === "waiting_approval" ? TERM_SEM_YELLOW
-          : statusKey === "error" ? TERM_SEM_RED
-          : statusKey === "done" ? TERM_SEM_GREEN
-          : TERM_BORDER;
-        return (
-          <div className="term-info-bar flex items-center gap-2 px-3 py-2 bg-term-panel shrink-0">
-            {/* Avatar with status ring */}
-            <div className="relative w-[26px] h-[30px] overflow-hidden rounded-sm shrink-0" style={{ border: `1.5px solid ${TERM_BORDER}` }}>
-              <div className="-mt-px">
-                <SpriteAvatar palette={meta.palette} zoom={1.6} ready={assetsReady ?? false} />
-              </div>
-              {data.busy && (
-                <span
-                  className="absolute top-px right-px w-[5px] h-[5px] rounded-full animate-[px-pulse-gold_1.5s_ease_infinite]"
-                  style={{ backgroundColor: TERM_GREEN, boxShadow: `0 0 4px ${TERM_GREEN}40` }}
-                />
-              )}
-            </div>
-            {/* Name · Backend · Role */}
-            <div className="flex items-center gap-0 overflow-hidden whitespace-nowrap min-w-0 font-mono">
-              <span className="text-[13px] text-term-text-bright font-semibold tracking-tight shrink-0">{meta.name}</span>
-              {meta.isTeamLead && (
-                <span
-                  className="text-[8px] font-mono font-bold text-sem-yellow px-[3px] leading-[14px] ml-1.5 rounded-sm shrink-0"
-                  style={{ border: `1px solid ${TERM_SEM_YELLOW}40` }}
-                >LEAD</span>
-              )}
-              {backendName && (
-                <span className="text-[10px] text-term-text-bright opacity-70 shrink-0 px-1.5 ml-1.5 rounded-sm tracking-wide" style={{ background: `${TERM_DIM}18` }}>
-                  {backendName}
-                </span>
-              )}
-              {roleName && (
-                <span className="text-[10px] text-term-text-bright opacity-55 shrink-0 px-1.5 ml-1 rounded-sm overflow-hidden text-ellipsis tracking-wide" style={{ background: `${TERM_DIM}10` }}>
-                  {roleName}
-                </span>
-              )}
-            </div>
-          </div>
-        );
-      })()}
       <AgentPane
         agentId={agentId}
         name={data.name}
@@ -196,6 +148,7 @@ const StableAgentPane = memo(function StableAgentPane({
         onUndoMerge={onUndoMerge ? () => onUndoMerge(agentId) : undefined}
         scrollFrozen={scrollFrozen}
         hideInfoRole={!!meta}
+        inlineAvatar={meta ? { name: meta.name, palette: meta.palette, isTeamLead: meta.isTeamLead, assetsReady: assetsReady ?? false, AvatarComponent: SpriteAvatar } : null}
       />
     </>
   );

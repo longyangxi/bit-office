@@ -151,6 +151,8 @@ export interface AgentPaneProps {
   scrollFrozen?: boolean;
   /** Hide role/backend in info bar (shown in console header instead) */
   hideInfoRole?: boolean;
+  /** Inline avatar data (console mode) — renders avatar + name inside info bar */
+  inlineAvatar?: { name: string; palette: number; isTeamLead: boolean; assetsReady: boolean; AvatarComponent?: React.ComponentType<{ palette: number; zoom: number; ready: boolean }> } | null;
 }
 
 /** Memoized message list — decoupled from input state so typing doesn't re-render messages */
@@ -336,7 +338,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
     onQuickApprove, onReview, detectedBackends,
     autoMerge, pendingMerge, lastMergeCommit, lastMergeMessage, undoCount, onMerge, onRevert, onUndoMerge,
     reviewerOverlay, onReviewerLoadMore, onApplyReviewFixes, onDismissReview,
-    scrollFrozen, hideInfoRole,
+    scrollFrozen, hideInfoRole, inlineAvatar,
   } = props;
 
   const statusConfig = getStatusConfig();
@@ -401,12 +403,34 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-      {/* ── Info bar ── */}
+      {/* ── Info bar (single merged row) ── */}
       <div className={cn(
-        "term-info-bar flex items-center gap-2.5 px-3.5 py-1.5 bg-term-panel font-mono text-term shrink-0",
+        "term-info-bar flex items-center gap-2 px-3 py-1 bg-term-panel font-mono text-term shrink-0",
         status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
       )}>
-        {!hideInfoRole && (
+        {/* Inline avatar (console mode) */}
+        {inlineAvatar && (() => {
+          const AvatarComp = inlineAvatar.AvatarComponent;
+          return (
+            <>
+              {AvatarComp && (
+                <div className="relative w-[22px] h-[26px] overflow-hidden rounded-sm shrink-0" style={{ border: `1px solid ${TERM_BORDER_DIM}` }}>
+                  <div className="-mt-px">
+                    <AvatarComp palette={inlineAvatar.palette} zoom={1.4} ready={inlineAvatar.assetsReady} />
+                  </div>
+                </div>
+              )}
+              <span className="text-[12px] text-term-text-bright font-medium tracking-tight shrink-0">{inlineAvatar.name}</span>
+              {inlineAvatar.isTeamLead && (
+                <span
+                  className="text-[8px] font-mono font-bold text-sem-yellow px-[3px] leading-[14px] rounded-sm shrink-0"
+                  style={{ border: `1px solid ${TERM_SEM_YELLOW}40` }}
+                >LEAD</span>
+              )}
+            </>
+          );
+        })()}
+        {!hideInfoRole && !inlineAvatar && (
           <span className="text-term-text-bright shrink-0 tracking-tight">
             {role?.split("\u2014")[0]?.trim()}
           </span>
@@ -418,7 +442,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="term-path-scroll" style={{
-                  color: TERM_TEXT, flexShrink: 1, minWidth: 0, opacity: 0.6,
+                  color: TERM_TEXT, flexShrink: 1, minWidth: 0, opacity: 0.5,
                   overflow: "hidden", whiteSpace: "nowrap",
                   direction: "rtl", textAlign: "left",
                   fontSize: TERM_SIZE - 1,
@@ -431,10 +455,20 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           );
         })()}
         <span className="flex-1" />
-        <span
-          className="shrink-0 text-[10px] px-[7px] py-0.5 rounded-sm tracking-wide font-medium uppercase"
-          style={{ color: cfg.color, background: `${cfg.color}14`, border: `1px solid ${cfg.color}25` }}
-        >{cfg.label.replace("...", "")}</span>
+        {/* Status dot — replaces block badge */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span
+              className="shrink-0 w-[7px] h-[7px] rounded-full"
+              style={{
+                backgroundColor: cfg.color,
+                boxShadow: busy ? `0 0 6px ${cfg.color}60` : "none",
+                animation: busy ? "px-pulse-gold 1.5s ease infinite" : "none",
+              }}
+            />
+          </TooltipTrigger>
+          <TooltipContent side="bottom">{cfg.label}</TooltipContent>
+        </Tooltip>
         {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
         {!teamId && isOwner && (
           <Tooltip>
