@@ -306,13 +306,19 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
   // ── Drag-and-drop reorder state ──
   const dragSourceRef = useRef<string | null>(null);
+  const dragFromHeaderRef = useRef(false);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
 
-  const handleDragStart = useCallback((e: React.DragEvent, agentId: string) => {
-    // Only allow drag from info-bar area (the header)
+  // Track whether mousedown originated from the info-bar header
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
-    const infoBar = target.closest(".term-info-bar");
-    if (!infoBar) { e.preventDefault(); return; }
+    dragFromHeaderRef.current = !!target.closest(".term-info-bar");
+  }, []);
+
+  const handleDragStart = useCallback((e: React.DragEvent, agentId: string) => {
+    // Only allow drag that originated from the info-bar header
+    if (!dragFromHeaderRef.current) { e.preventDefault(); return; }
+    dragFromHeaderRef.current = false;
     dragSourceRef.current = agentId;
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", agentId);
@@ -510,6 +516,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                 key={agentId}
                 className={cn("mpv-cell", dragOverId === agentId && "mpv-drag-over")}
                 draggable={!!onReorderPanes}
+                onMouseDown={onReorderPanes ? handleMouseDown : undefined}
                 onDragStart={onReorderPanes ? (e) => handleDragStart(e, agentId) : undefined}
                 onDragOver={onReorderPanes ? (e) => handleDragOver(e, agentId) : undefined}
                 onDrop={onReorderPanes ? (e) => handleDrop(e, agentId) : undefined}
