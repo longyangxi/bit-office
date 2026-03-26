@@ -855,6 +855,53 @@
   color: var(--term-accent);
 }
 
+/* -- ProjectBar empty state CTA -- */
+.pbar-empty {
+  justify-content: center;
+  padding: var(--space-3) var(--space-4);
+}
+.pbar-cta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--term-border);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  font-family: var(--font-sans);
+  color: var(--term-text);
+  min-height: 40px;
+}
+.pbar-cta:hover {
+  border-color: var(--term-accent);
+  background: color-mix(in srgb, var(--term-accent) 6%, transparent);
+}
+.pbar-cta-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--term-accent) 12%, transparent);
+  color: var(--term-accent);
+  font-size: 16px;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+.pbar-cta-label {
+  font-size: var(--font-size-sm);
+  font-weight: 500;
+  color: var(--term-text-bright);
+}
+.pbar-cta-hint {
+  font-size: var(--font-size-xs);
+  color: var(--term-text);
+  opacity: 0.6;
+}
+
 /* ============================================================
    DRAG-AND-DROP REORDER — grab cursor on header, drop indicator
    ============================================================ */

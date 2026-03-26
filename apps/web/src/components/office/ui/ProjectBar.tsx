@@ -11,6 +11,7 @@ interface ProjectBarProps {
 /**
  * ProjectBar — Tab-style project switcher at top of workspace.
  * Shows active projects as tabs, with [+] for new project.
+ * Empty state shows a prominent "New Project" CTA.
  * Phase 1 of project-centric architecture.
  */
 export default function ProjectBar({ onNewProject }: ProjectBarProps) {
@@ -24,7 +25,6 @@ export default function ProjectBar({ onNewProject }: ProjectBarProps) {
     for (const [, p] of projects) {
       if (p.status === "active") list.push(p);
     }
-    // Sort by creation time (newest last — like browser tabs)
     list.sort((a, b) => a.createdAt - b.createdAt);
     return list;
   }, [projects]);
@@ -35,6 +35,22 @@ export default function ProjectBar({ onNewProject }: ProjectBarProps) {
     },
     [setActiveProject]
   );
+
+  // Empty state: no projects yet — show prominent CTA
+  if (activeProjects.length === 0) {
+    return (
+      <div className="pbar pbar-empty">
+        <button
+          className="pbar-cta"
+          onClick={onNewProject}
+        >
+          <span className="pbar-cta-icon">+</span>
+          <span className="pbar-cta-label">New Project</span>
+          <span className="pbar-cta-hint">Select a directory, then add agents</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="pbar">
