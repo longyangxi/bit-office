@@ -759,3 +759,18 @@
   line-height: 1;
   font-family: var(--font-mono);
 }
+
+/* ============================================================
+   DRAG-AND-DROP REORDER — grab cursor on header, drop indicator
+   ============================================================ */
+.mpv-cell[draggable="true"] > .term-info-bar {
+  cursor: grab;
+}
+.mpv-cell[draggable="true"] > .term-info-bar:active {
+  cursor: grabbing;
+}
+.mpv-drag-over {
+  outline: 2px solid var(--term-accent);
+  outline-offset: -2px;
+  background: color-mix(in srgb, var(--term-accent) 6%, transparent);
+}

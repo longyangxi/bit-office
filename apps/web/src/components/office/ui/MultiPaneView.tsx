@@ -190,6 +190,8 @@ export interface MultiPaneViewProps {
   getAgentData: (agentId: string) => AgentData | null;
   paneOffset: number;
   onPaneOffsetChange: (offset: number) => void;
+  /** Called when user drag-reorders panes — receives the new full ordering */
+  onReorderPanes?: (newOrder: string[]) => void;
   panePrompts: Map<string, string>;
   onPanePromptChange: (agentId: string, value: string) => void;
   isOwner: boolean;
@@ -293,6 +295,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onUndoMerge,
     onStopTeam,
     onFireTeam,
+    onReorderPanes,
     cols: propCols,
     rows: propRows,
   } = props;
@@ -300,6 +303,53 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const COLS = propCols ?? DEFAULT_COLS;
   const ROWS = propRows ?? DEFAULT_ROWS;
   const SLOTS_PER_PAGE = COLS * ROWS;
+
+  // ── Drag-and-drop reorder state ──
+  const dragSourceRef = useRef<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
+  const handleDragStart = useCallback((e: React.DragEvent, agentId: string) => {
+    // Only allow drag from info-bar area (the header)
+    const target = e.target as HTMLElement;
+    const infoBar = target.closest(".term-info-bar");
+    if (!infoBar) { e.preventDefault(); return; }
+    dragSourceRef.current = agentId;
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", agentId);
+    // Use the cell as drag image
+    const cell = (e.target as HTMLElement).closest(".mpv-cell") as HTMLElement | null;
+    if (cell) e.dataTransfer.setDragImage(cell, 40, 20);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, agentId: string) => {
+    if (!dragSourceRef.current || dragSourceRef.current === agentId) {
+      setDragOverId(null);
+      return;
+    }
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    setDragOverId(agentId);
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
+    e.preventDefault();
+    const sourceId = dragSourceRef.current;
+    setDragOverId(null);
+    dragSourceRef.current = null;
+    if (!sourceId || sourceId === targetId || !onReorderPanes) return;
+    const order = [...openPanes];
+    const srcIdx = order.indexOf(sourceId);
+    const tgtIdx = order.indexOf(targetId);
+    if (srcIdx === -1 || tgtIdx === -1) return;
+    order.splice(srcIdx, 1);
+    order.splice(tgtIdx, 0, sourceId);
+    onReorderPanes(order);
+  }, [openPanes, onReorderPanes]);
+
+  const handleDragEnd = useCallback(() => {
+    dragSourceRef.current = null;
+    setDragOverId(null);
+  }, []);
 
   // ── Simple state-driven pagination ──
   const [currentPage, setCurrentPage] = useState(0);
@@ -458,7 +508,13 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             return (
               <div
                 key={agentId}
-                className="mpv-cell"
+                className={cn("mpv-cell", dragOverId === agentId && "mpv-drag-over")}
+                draggable={!!onReorderPanes}
+                onDragStart={onReorderPanes ? (e) => handleDragStart(e, agentId) : undefined}
+                onDragOver={onReorderPanes ? (e) => handleDragOver(e, agentId) : undefined}
+                onDrop={onReorderPanes ? (e) => handleDrop(e, agentId) : undefined}
+                onDragEnd={onReorderPanes ? handleDragEnd : undefined}
+                onDragLeave={onReorderPanes ? () => setDragOverId(null) : undefined}
                 style={{
                   minWidth: 0,
                   minHeight: 0,

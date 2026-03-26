@@ -1003,10 +1003,22 @@ export default function OfficePage() {
   const activeAgentIds = (expandedSection === "agents" ? soloAgents
     : expandedSection === "team" ? teamAgents
     : externalAgents).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
-  // Sync open panes whenever agent list changes
+  // Sync open panes whenever agent list changes — preserve custom drag order
   useEffect(() => {
     if (!consoleMode) return;
-    setOpenPanes(activeAgentIds ? activeAgentIds.split(",") : []);
+    const ids = activeAgentIds ? activeAgentIds.split(",") : [];
+    setOpenPanes(prev => {
+      const activeSet = new Set(ids);
+      // Keep existing order, remove departed agents
+      const kept = prev.filter(id => activeSet.has(id));
+      // Append any new agents not in the current order
+      const keptSet = new Set(kept);
+      const added = ids.filter(id => !keptSet.has(id));
+      const merged = [...kept, ...added];
+      // Only update if actually changed (avoid re-renders)
+      if (merged.length === prev.length && merged.every((id, i) => id === prev[i])) return prev;
+      return merged;
+    });
   }, [consoleMode, activeAgentIds]);
   // Reset page offset ONLY on tab switch or entering console mode
   useEffect(() => {
@@ -1878,6 +1890,7 @@ export default function OfficePage() {
                   }
                 }}
                 scrollFrozen={scrollFrozen}
+                onReorderPanes={setOpenPanes}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
                 showHireButton={isOwner && (expandedSection === "agents" || (expandedSection === "team" && !hasTeam))}
