@@ -36,6 +36,11 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole === "dev");
 
   const handleSelectAgent = (def: AgentDefinition) => {
+    // Project mode: instant hire — skip the overlay (auto-name, project dir)
+    if (dirLocked) {
+      onHire(def, selectedBackend, workDir || undefined, undefined);
+      return;
+    }
     if (selectedDef?.id === def.id) {
       setSelectedDef(null);
     } else {
@@ -96,13 +101,28 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
       onClose={onClose}
       maxWidth={440}
       zIndex={100}
-      title="Hire Agent"
+      title={dirLocked ? "Add Agent to Project" : "Hire Agent"}
       className="max-h-[min(712px,85vh)]"
       footer={
         <TermButton variant="dim" onClick={onClose}>Cancel</TermButton>
       }
     >
       <div>
+        {/* Project context badge */}
+        {dirLocked && (
+          <div style={{
+            display: "flex", alignItems: "center", gap: 6,
+            padding: "6px 10px", marginBottom: 10,
+            backgroundColor: "color-mix(in srgb, var(--term-accent) 8%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--term-accent) 20%, transparent)",
+            borderRadius: "var(--radius-sm)",
+            fontSize: 11, fontFamily: "var(--font-mono)", color: TERM_TEXT,
+          }}>
+            <span style={{ color: TERM_DIM }}>DIR</span>
+            <span style={{ color: TERM_TEXT_BRIGHT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{workDir}</span>
+          </div>
+        )}
+
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>AI BACKEND</div>
@@ -168,8 +188,15 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           </div>
         </div>
 
-        {/* -- Centered overlay: workDir + name + hire -- */}
-        {selectedDef && (
+        {/* Project mode hint */}
+        {dirLocked && (
+          <div style={{ fontSize: 11, color: TERM_DIM, fontFamily: "var(--font-sans)", textAlign: "center", padding: "8px 0 2px", opacity: 0.7 }}>
+            Click an agent to add it instantly
+          </div>
+        )}
+
+        {/* -- Centered overlay: workDir + name + hire (non-project mode only) -- */}
+        {selectedDef && !dirLocked && (
           <div
             style={{
               position: "fixed", inset: 0, zIndex: 200,
