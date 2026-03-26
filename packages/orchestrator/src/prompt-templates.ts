@@ -157,6 +157,7 @@ Output your review in markdown. Use this exact structure:
 Rules:
 - PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
 - Max 5 issues, max 3 suggestions. Omit sections if empty.
+- ALWAYS use numbered list (1. 2. 3.) for issues and suggestions, even if there is only one item.
 - No source code. No fix instructions. Just state what is wrong and where.
 - Keep total output under 30 lines.
 
@@ -184,6 +185,7 @@ Output your review in markdown. Use this exact structure:
 Rules:
 - PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
 - Max 5 issues, max 3 suggestions. Omit sections if empty.
+- ALWAYS use numbered list (1. 2. 3.) for issues and suggestions, even if there is only one item.
 - No source code. No fix instructions. Just state what is wrong and where.
 - Keep total output under 30 lines.
 
