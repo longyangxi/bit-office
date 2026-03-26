@@ -3,7 +3,7 @@ import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
-import { SysMsg, TokenBadge } from "./MessageBubble";
+import { SysMsg, TokenBadge, MdContent } from "./MessageBubble";
 import { TermButton, TermInput, TermEmpty } from "./primitives";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -688,8 +688,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   }
                   if (reviewerOverlay.reviewResultText) {
                     return (
-                      <div style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "8px 0", whiteSpace: "pre-wrap", wordBreak: "break-word", lineHeight: 1.7 }}>
-                        {reviewerOverlay.reviewResultText}
+                      <div style={{ color: reviewerOverlay.status === "error" ? TERM_SEM_RED : TERM_TEXT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "8px 0", wordBreak: "break-word", lineHeight: 1.7 }} className="chat-markdown">
+                        <MdContent text={reviewerOverlay.reviewResultText} />
                       </div>
                     );
                   }

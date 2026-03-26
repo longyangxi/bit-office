@@ -421,5 +421,5 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   );
 });
 
-export { TokenBadge };
+export { TokenBadge, MdContent };
 export default MessageBubble;
