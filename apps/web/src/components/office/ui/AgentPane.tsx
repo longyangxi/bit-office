@@ -547,7 +547,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <div style={{
           position: "absolute", inset: 0, zIndex: 20,
           display: "flex", flexDirection: "column",
-          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
+          background: reviewerOverlay.busy
+            ? `${TERM_BG}cc`
+            : `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
           animation: "review-overlay-in 0.3s ease-out",
           overflow: "hidden",
         }}>
@@ -611,7 +613,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             }}>
               {/* Grid lines background */}
               <div className="review-scan-grid" style={{
-                position: "absolute", inset: 0, opacity: 0.2,
+                position: "absolute", inset: 0, opacity: 0.06,
                 backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
