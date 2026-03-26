@@ -351,8 +351,9 @@ function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
     const drops: Drop[] = [];
 
     function spawnDrop(randomY: boolean): Drop {
-      const w = cvs!.width / (window.devicePixelRatio || 1);
-      const h = cvs!.height / (window.devicePixelRatio || 1);
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(cvs!.width / dpr, cvs!.clientWidth || 300);
+      const h = Math.max(cvs!.height / dpr, cvs!.clientHeight || 150);
       return {
         x: Math.random() * w,
         y: randomY
@@ -362,11 +363,6 @@ function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
         opacity: 0.12 + Math.random() * 0.14,
         speed: speed + Math.random() * 40,
       };
-    }
-
-    // Init — scatter across the full visible area
-    for (let i = 0; i < colCount; i++) {
-      drops.push(spawnDrop(true));
     }
 
     function resize() {
@@ -380,12 +376,18 @@ function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
     const ro = new ResizeObserver(resize);
     ro.observe(cvs);
 
+    // Init AFTER resize so canvas dimensions are correct
+    for (let i = 0; i < colCount; i++) {
+      drops.push(spawnDrop(true));
+    }
+
     let lastT = performance.now();
     function draw(t: number) {
       const dt = (t - lastT) / 1000;
       lastT = t;
-      const w = cvs!.width / (window.devicePixelRatio || 1);
-      const h = cvs!.height / (window.devicePixelRatio || 1);
+      const dpr = window.devicePixelRatio || 1;
+      const w = Math.max(cvs!.width / dpr, cvs!.clientWidth || 300);
+      const h = Math.max(cvs!.height / dpr, cvs!.clientHeight || 150);
       ctx!.clearRect(0, 0, w, h);
       ctx!.font = `${fontSize}px ${font}`;
       ctx!.textAlign = "center";
