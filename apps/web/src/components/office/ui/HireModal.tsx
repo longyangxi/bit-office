@@ -13,7 +13,7 @@ import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
 import TermInput from "./primitives/TermInput";
 
-function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends }: {
+function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, assetsReady, detectedBackends, projectDir }: {
   agentDefs: AgentDefinition[];
   onHire: (def: AgentDefinition, backend: string, workDir?: string, displayName?: string) => void;
   onCreate: () => void;
@@ -22,12 +22,15 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
   onClose: () => void;
   assetsReady?: boolean;
   detectedBackends?: string[];
+  /** When set, directory is locked to project directory (project-centric mode) */
+  projectDir?: string;
 }) {
   const [selectedBackend, setSelectedBackend] = useState("claude");
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [selectedDef, setSelectedDef] = useState<AgentDefinition | null>(null);
   const [hireName, setHireName] = useState(() => generateRandomName());
-  const [workDir, setWorkDir] = useState<string>("");
+  const [workDir, setWorkDir] = useState<string>(projectDir ?? "");
+  const dirLocked = !!projectDir;
 
   const builtinAgents = agentDefs.filter((a) => a.isBuiltin && a.teamRole === "dev");
   const customAgents = agentDefs.filter((a) => !a.isBuiltin && a.teamRole === "dev");
@@ -197,27 +200,34 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               </div>
               {/* Working directory */}
               <div>
-                <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>WORKING DIRECTORY</div>
+                <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+                  WORKING DIRECTORY{dirLocked && <span style={{ opacity: 0.5, marginLeft: 6 }}>(project)</span>}
+                </div>
                 <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
                   <TermInput
                     type="text"
                     value={workDir}
-                    onChange={(e) => setWorkDir(e.target.value)}
+                    onChange={(e) => !dirLocked && setWorkDir(e.target.value)}
                     placeholder="~/.open-office/projects"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, opacity: dirLocked ? 0.6 : 1 }}
+                    readOnly={dirLocked}
                   />
-                  <TermButton
-                    variant="dim"
-                    onClick={() => {
-                      const rid = nanoid(6);
-                      folderPickCallbacks.set(rid, (p) => setWorkDir(p));
-                      sendCommand({ type: "PICK_FOLDER", requestId: rid });
-                    }}
-                  >Browse</TermButton>
+                  {!dirLocked && (
+                    <TermButton
+                      variant="dim"
+                      onClick={() => {
+                        const rid = nanoid(6);
+                        folderPickCallbacks.set(rid, (p) => setWorkDir(p));
+                        sendCommand({ type: "PICK_FOLDER", requestId: rid });
+                      }}
+                    >Browse</TermButton>
+                  )}
                 </div>
-                <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
-                  Empty = default workspace
-                </div>
+                {!dirLocked && (
+                  <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+                    Empty = default workspace
+                  </div>
+                )}
               </div>
               {/* Name */}
               <div>

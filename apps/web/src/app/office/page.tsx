@@ -673,11 +673,14 @@ export default function OfficePage() {
     if (workDir) {
       agentWorkDirMap.set(agentId, workDir);
     }
+    // Auto-associate agent with active project
+    const proj = getActiveProject();
+    if (proj) addAgentToProject(proj.id, agentId);
     setSelectedAgent(agentId);
     setChatOpen(true);
     setExpandedSection("agents");
     setShowHireModal(false);
-  }, [agents]);
+  }, [agents]); // addAgentToProject, getActiveProject are stable refs from getState()
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
     sendCommand({ type: "CREATE_TEAM", leadId, memberIds, backends, workDir });
@@ -2490,11 +2493,12 @@ export default function OfficePage() {
           onClose={() => setShowHireModal(false)}
           assetsReady={assetsReady}
           detectedBackends={detectedBackends}
+          projectDir={getActiveProject()?.directory}
         />
       )}
 
       {showHireTeamModal && (
-        <HireTeamModal agentDefs={agentDefs} onCreateTeam={handleCreateTeam} onClose={() => setShowHireTeamModal(false)} assetsReady={assetsReady} detectedBackends={detectedBackends} />
+        <HireTeamModal agentDefs={agentDefs} onCreateTeam={handleCreateTeam} onClose={() => setShowHireTeamModal(false)} assetsReady={assetsReady} detectedBackends={detectedBackends} projectDir={getActiveProject()?.directory} />
       )}
 
       {showCreateAgent && (

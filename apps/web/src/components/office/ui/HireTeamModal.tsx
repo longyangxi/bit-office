@@ -12,12 +12,14 @@ import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
 import TermInput from "./primitives/TermInput";
 
-function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends }: {
+function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detectedBackends, projectDir }: {
   agentDefs: AgentDefinition[];
   onCreateTeam: (leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => void;
   onClose: () => void;
   assetsReady?: boolean;
   detectedBackends?: string[];
+  /** When set, directory is locked to project directory (project-centric mode) */
+  projectDir?: string;
 }) {
   const leader = agentDefs.find((a) => a.teamRole === "leader");
   const reviewer = agentDefs.find((a) => a.teamRole === "reviewer");
@@ -25,7 +27,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
 
   const [selectedDevId, setSelectedDevId] = useState<string>(devAgents[0]?.id ?? "");
   const [backends, setBackends] = useState<Record<string, string>>({});
-  const [workDir, setWorkDir] = useState<string>("");
+  const [workDir, setWorkDir] = useState<string>(projectDir ?? "");
+  const dirLocked = !!projectDir;
 
   const handleCreate = () => {
     if (!leader) return;
@@ -55,27 +58,34 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
     >
       {/* Working directory picker */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>PROJECT DIRECTORY</div>
+        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+          PROJECT DIRECTORY{dirLocked && <span style={{ opacity: 0.5, marginLeft: 6 }}>(project)</span>}
+        </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
           <TermInput
             type="text"
             value={workDir}
-            onChange={(e) => setWorkDir(e.target.value)}
+            onChange={(e) => !dirLocked && setWorkDir(e.target.value)}
             placeholder="Paste path or click Browse"
-            style={{ flex: 1 }}
+            style={{ flex: 1, opacity: dirLocked ? 0.6 : 1 }}
+            readOnly={dirLocked}
           />
-          <TermButton
-            variant="dim"
-            onClick={() => {
-              const rid = nanoid(6);
-              folderPickCallbacks.set(rid, (p) => setWorkDir(p));
-              sendCommand({ type: "PICK_FOLDER", requestId: rid });
-            }}
-          >Browse</TermButton>
+          {!dirLocked && (
+            <TermButton
+              variant="dim"
+              onClick={() => {
+                const rid = nanoid(6);
+                folderPickCallbacks.set(rid, (p) => setWorkDir(p));
+                sendCommand({ type: "PICK_FOLDER", requestId: rid });
+              }}
+            >Browse</TermButton>
+          )}
         </div>
-        <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
-          Empty = default workspace
-        </div>
+        {!dirLocked && (
+          <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+            Empty = default workspace
+          </div>
+        )}
       </div>
 
       <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
