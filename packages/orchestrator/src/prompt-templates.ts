@@ -33,7 +33,7 @@ FILES_CHANGED: (one per line)
 ENTRY_FILE: (relative path, e.g. index.html — NEVER absolute)
 PREVIEW_CMD: (for server/CLI apps)
 PREVIEW_PORT: (for web servers)
-SUMMARY: (one sentence)
+SUMMARY: (one sentence, in English)
 \`\`\``;
 
 // Full deliverable rules — system constraints + report format (for initial tasks)
