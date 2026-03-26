@@ -54,9 +54,10 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
     onHire(selectedDef, selectedBackend, workDir || undefined, hireName.trim() || undefined);
   };
 
-  /** Render a single agent card — avatar + role only, no name */
+  /** Render a single agent card — avatar + role */
   const renderAgentCard = (def: AgentDefinition, showDelete: boolean) => {
     const isSelected = selectedDef?.id === def.id;
+    const isHovered = hoveredId === def.id;
     return (
       <button
         key={def.id}
@@ -66,26 +67,34 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         title={def.skills ? `Skills: ${def.skills}` : def.role}
         style={{
           display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "12px 6px 10px", position: "relative",
-          border: `1px solid ${isSelected ? TERM_GREEN : TERM_BORDER}`,
-          backgroundColor: isSelected ? `${TERM_GREEN}12` : "transparent",
+          padding: "10px 6px 8px", position: "relative",
+          border: `1px solid ${isSelected ? TERM_GREEN : isHovered ? TERM_BORDER : TERM_BORDER + "80"}`,
+          borderRadius: "var(--radius-md)",
+          backgroundColor: isSelected ? `${TERM_GREEN}12` : isHovered ? `${TERM_TEXT}08` : "transparent",
           cursor: "pointer", textAlign: "center",
           transition: "border-color 0.15s, background-color 0.15s",
+          gap: 6,
         }}
       >
-        <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-        <div style={{ fontSize: 12, color: isSelected ? TERM_GREEN : TERM_DIM, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "var(--font-mono)" }}>{def.role}</div>
-        {hoveredId === def.id && (
-          <span style={{ position: "absolute", top: 4, right: 4, display: "flex", gap: 2, alignItems: "center" }}>
+        <div style={{ width: 32, height: 48, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
+        </div>
+        <div style={{
+          fontSize: 11, fontFamily: "var(--font-sans)", fontWeight: 500,
+          color: isSelected ? TERM_GREEN : TERM_TEXT,
+          width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>{def.role}</div>
+        {isHovered && (
+          <span style={{ position: "absolute", top: 3, right: 3, display: "flex", gap: 2, alignItems: "center" }}>
             <span
               onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-              style={{ fontSize: 15, color: TERM_DIM, cursor: "pointer", padding: "2px 4px" }}
+              style={{ fontSize: 14, color: TERM_DIM, cursor: "pointer", padding: "2px 3px", lineHeight: 1 }}
               title="Edit"
             >&#9998;</span>
             {showDelete && (
               <span
                 onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
-                style={{ fontSize: 16, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 4px", fontWeight: 700 }}
+                style={{ fontSize: 15, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 3px", fontWeight: 700, lineHeight: 1 }}
                 title="Delete"
               >&times;</span>
             )}
@@ -125,7 +134,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
 
         {/* Backend selector */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>AI BACKEND</div>
+          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>AI BACKEND</div>
           <div style={{ display: "flex", gap: 4 }}>
             {BACKEND_OPTIONS.map((b) => {
               const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
@@ -135,12 +144,14 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   key={b.id}
                   onClick={() => setSelectedBackend(b.id)}
                   style={{
-                    flex: 1, padding: "6px 4px", fontSize: 13, fontWeight: 600,
-                    border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}`,
+                    flex: 1, padding: "6px 4px", fontSize: 12, fontWeight: 500,
+                    border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}80`,
+                    borderRadius: "var(--radius-sm)",
                     backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
                     color: isSelected ? TERM_GREEN : TERM_DIM,
-                    cursor: "pointer", fontFamily: "var(--font-mono)",
+                    cursor: "pointer", fontFamily: "var(--font-sans)",
                     opacity: available ? 1 : 0.7,
+                    transition: "border-color 0.15s, background-color 0.15s",
                   }}
                 >
                   <span style={{
@@ -158,32 +169,33 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         {/* Scrollable agent list */}
         <div data-scrollbar style={{ maxHeight: "55vh", overflowY: "auto", overflowX: "hidden" }}>
           {/* Built-in agents */}
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>BUILT-IN AGENTS</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>BUILT-IN AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
             {builtinAgents.map((def) => renderAgentCard(def, false))}
           </div>
 
           {/* Custom agents + Create New card */}
-          <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>MY AGENTS</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5, marginBottom: 10 }}>
+          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>MY AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
             {customAgents.map((def) => renderAgentCard(def, true))}
             {/* "+ Create New" card */}
             <button
               onClick={onCreate}
               style={{
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                padding: "12px 6px 10px",
-                border: `1px dashed ${TERM_BORDER}`,
+                gap: 4, padding: "10px 6px 8px",
+                border: `1px dashed ${TERM_BORDER}80`,
+                borderRadius: "var(--radius-md)",
                 backgroundColor: "transparent",
                 cursor: "pointer", textAlign: "center",
                 transition: "border-color 0.15s, color 0.15s",
                 color: TERM_DIM, minHeight: 80,
               }}
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
-              onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_DIM; }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER + "80"; e.currentTarget.style.color = TERM_DIM; }}
             >
-              <span style={{ fontSize: 24, lineHeight: 1, fontWeight: 300 }}>+</span>
-              <span style={{ fontSize: 11, marginTop: 4, fontFamily: "var(--font-mono)" }}>Create New</span>
+              <span style={{ fontSize: 22, lineHeight: 1, fontWeight: 300 }}>+</span>
+              <span style={{ fontSize: 11, fontFamily: "var(--font-sans)", fontWeight: 500 }}>Create New</span>
             </button>
           </div>
         </div>
