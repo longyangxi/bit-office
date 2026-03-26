@@ -618,24 +618,28 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               {/* Matrix-style falling binary digits */}
               <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
                 {[
-                  { left: "7%",  top: "-10%", dur: 3.2, delay: 0,    bits: "1 0 1 1 0 1 0 0 1 0 0 1 0 1 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0" },
-                  { left: "23%", top: "-40%", dur: 4.0, delay: 0.8,  bits: "0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0" },
-                  { left: "42%", top: "-25%", dur: 3.5, delay: 1.5,  bits: "1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 1" },
-                  { left: "61%", top: "-55%", dur: 4.2, delay: 0.3,  bits: "0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1" },
-                  { left: "78%", top: "-15%", dur: 3.0, delay: 1.1,  bits: "1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1" },
-                  { left: "93%", top: "-45%", dur: 3.8, delay: 0.5,  bits: "0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0 1 1 1 0 1 0" },
-                ].map((col, i) => (
-                  <div key={i} style={{
-                    position: "absolute", left: col.left, top: col.top, height: "250%",
-                    fontFamily: TERM_FONT, fontSize: 13, lineHeight: "20px",
-                    color: TERM_SEM_PURPLE, opacity: 0.18 + (i % 3) * 0.06,
-                    whiteSpace: "pre", textAlign: "center",
-                    display: "flex", flexDirection: "column",
-                    animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
-                  }}>
-                    {col.bits.split(" ").map((b, j) => <span key={j}>{b}</span>)}
-                  </div>
-                ))}
+                  { left: "7%",  dur: 3.2, delay: 0,   seed: "10110100" },
+                  { left: "23%", dur: 4.0, delay: 0.8, seed: "01101001" },
+                  { left: "42%", dur: 3.5, delay: 1.5, seed: "11001010" },
+                  { left: "61%", dur: 4.2, delay: 0.3, seed: "00101101" },
+                  { left: "78%", dur: 3.0, delay: 1.1, seed: "10011001" },
+                  { left: "93%", dur: 3.8, delay: 0.5, seed: "01010011" },
+                ].map((col, i) => {
+                  // Repeat seed to fill 200% of container height (~60 digits at 20px each = 1200px)
+                  const digits = Array.from({ length: 60 }, (_, j) => col.seed[j % col.seed.length]);
+                  return (
+                    <div key={i} style={{
+                      position: "absolute", left: col.left, top: "-100%", height: "200%",
+                      fontFamily: TERM_FONT, fontSize: 13, lineHeight: "20px",
+                      color: TERM_SEM_PURPLE, opacity: 0.18 + (i % 3) * 0.06,
+                      whiteSpace: "pre", textAlign: "center",
+                      display: "flex", flexDirection: "column",
+                      animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
+                    }}>
+                      {digits.map((b, j) => <span key={j}>{b}</span>)}
+                    </div>
+                  );
+                })}
               </div>
               {/* Sweep line */}
               <div className="review-scan-sweep" style={{
