@@ -1554,9 +1554,16 @@ export default function OfficePage() {
 
           {(() => {
             // Get the active agent list based on current tab (exclude temp reviewers)
-            const activeAgentList = (expandedSection === "agents" ? soloAgents
+            // Sort by openPanes order so drag-reorder in console mode is reflected in sidebar
+            const unsortedAgentList = (expandedSection === "agents" ? soloAgents
               : expandedSection === "team" ? teamAgents
               : externalAgents).filter(a => !tempReviewerIds.has(a.agentId));
+            const paneOrder = new Map(openPanes.map((id, i) => [id, i]));
+            const activeAgentList = [...unsortedAgentList].sort((a, b) => {
+              const ai = paneOrder.get(a.agentId) ?? Infinity;
+              const bi = paneOrder.get(b.agentId) ?? Infinity;
+              return ai - bi;
+            });
 
             // Auto-select first agent if none selected or selected is not in current tab
             const selectedInTab = activeAgentList.some((a) => a.agentId === selectedAgent);
