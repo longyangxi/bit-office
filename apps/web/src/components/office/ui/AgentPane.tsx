@@ -332,6 +332,94 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
   );
 }
 
+/** Matrix-style binary rain on canvas — each column spawns at random x/y */
+function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const cvs = canvasRef.current;
+    if (!cvs) return;
+    const ctx = cvs.getContext("2d");
+    if (!ctx) return;
+    let raf: number;
+    const fontSize = 14;
+    const lineH = 20;
+    const colCount = 6;      // max simultaneous columns
+    const digitCount = 12;   // digits per column
+    const speed = 60;        // px per second
+
+    interface Drop { x: number; y: number; digits: string[]; opacity: number; speed: number }
+    const drops: Drop[] = [];
+
+    function spawnDrop(): Drop {
+      const w = cvs!.width / (window.devicePixelRatio || 1);
+      const h = cvs!.height / (window.devicePixelRatio || 1);
+      return {
+        x: Math.random() * w,
+        y: -Math.random() * h * 0.5, // start above visible area, randomized
+        digits: Array.from({ length: digitCount }, () => Math.random() > 0.5 ? "1" : "0"),
+        opacity: 0.12 + Math.random() * 0.14,
+        speed: speed + Math.random() * 40,
+      };
+    }
+
+    // Init
+    for (let i = 0; i < colCount; i++) {
+      const d = spawnDrop();
+      d.y = Math.random() * (cvs.height / (window.devicePixelRatio || 1)) - digitCount * lineH; // scatter across
+      drops.push(d);
+    }
+
+    function resize() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = cvs!.getBoundingClientRect();
+      cvs!.width = rect.width * dpr;
+      cvs!.height = rect.height * dpr;
+      ctx!.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    resize();
+    const ro = new ResizeObserver(resize);
+    ro.observe(cvs);
+
+    let lastT = performance.now();
+    function draw(t: number) {
+      const dt = (t - lastT) / 1000;
+      lastT = t;
+      const w = cvs!.width / (window.devicePixelRatio || 1);
+      const h = cvs!.height / (window.devicePixelRatio || 1);
+      ctx!.clearRect(0, 0, w, h);
+      ctx!.font = `${fontSize}px ${font}`;
+      ctx!.textAlign = "center";
+
+      for (const d of drops) {
+        d.y += d.speed * dt;
+        ctx!.fillStyle = color;
+        ctx!.globalAlpha = d.opacity;
+        for (let j = 0; j < d.digits.length; j++) {
+          const dy = d.y + j * lineH;
+          if (dy > -lineH && dy < h + lineH) {
+            ctx!.fillText(d.digits[j], d.x, dy);
+          }
+        }
+        // Reset when fully off bottom
+        if (d.y > h + lineH) {
+          Object.assign(d, spawnDrop());
+        }
+      }
+      ctx!.globalAlpha = 1;
+      raf = requestAnimationFrame(draw);
+    }
+    raf = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(raf); ro.disconnect(); };
+  }, [color, font]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: "absolute", inset: 0, width: "100%", height: "100%", pointerEvents: "none" }}
+    />
+  );
+}
+
 const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   const {
     agentId, name, role, backend, status, cwd, workDir,
@@ -615,32 +703,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
-              {/* Matrix-style falling binary digits */}
-              <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
-                {[
-                  { left: "7%",  dur: 3.2, delay: 0,   seed: "10110100" },
-                  { left: "23%", dur: 4.0, delay: 0.8, seed: "01101001" },
-                  { left: "42%", dur: 3.5, delay: 1.5, seed: "11001010" },
-                  { left: "61%", dur: 4.2, delay: 0.3, seed: "00101101" },
-                  { left: "78%", dur: 3.0, delay: 1.1, seed: "10011001" },
-                  { left: "93%", dur: 3.8, delay: 0.5, seed: "01010011" },
-                ].map((col, i) => {
-                  // Repeat seed to fill 200% of container height (~60 digits at 20px each = 1200px)
-                  const digits = Array.from({ length: 60 }, (_, j) => col.seed[j % col.seed.length]);
-                  return (
-                    <div key={i} style={{
-                      position: "absolute", left: col.left, top: "-100%", height: "200%",
-                      fontFamily: TERM_FONT, fontSize: 13, lineHeight: "20px",
-                      color: TERM_SEM_PURPLE, opacity: 0.18 + (i % 3) * 0.06,
-                      whiteSpace: "pre", textAlign: "center",
-                      display: "flex", flexDirection: "column",
-                      animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
-                    }}>
-                      {digits.map((b, j) => <span key={j}>{b}</span>)}
-                    </div>
-                  );
-                })}
-              </div>
+              {/* Matrix-style falling binary digits — canvas */}
+              <MatrixRainCanvas color={TERM_SEM_PURPLE} font={TERM_FONT} />
               {/* Sweep line */}
               <div className="review-scan-sweep" style={{
                 position: "absolute", left: 0, right: 0, height: 2,
