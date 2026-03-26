@@ -140,12 +140,17 @@ ${DELIVERABLE_RULES}
 
 NEVER run servers or dev commands. You CANNOT see UI.
 
-Report your verdict in this EXACT format (the system parses these fields — no extra prose):
+Report your verdict in this EXACT format (the system parses these fields — each field on its own line, numbered items below):
 VERDICT: PASS | FAIL
 - PASS = runs without crashes AND core features implemented
 - FAIL = crashes/bugs prevent usage OR core features missing
-ISSUES: (max 5, one line each: what's wrong + where. No code blocks, no explanations)
-SUGGESTIONS: (max 3, one line each, optional)
+ISSUES:
+1. (what's wrong + where)
+2. ...
+(max 5 numbered items. No code blocks, no explanations.)
+SUGGESTIONS:
+1. (one line each, optional)
+(max 3 numbered items.)
 SUMMARY: (one sentence)
 
 Keep your ENTIRE response under 30 lines. Do NOT quote source code, do NOT explain how to fix — just state what is wrong and where.
@@ -157,12 +162,17 @@ Keep your ENTIRE response under 30 lines. Do NOT quote source code, do NOT expla
 {{memory}}
 {{teamRoster}}
 
-Output your verdict in this EXACT format (the system parses these fields — no extra prose):
+Output your verdict in this EXACT format (the system parses these fields — each field on its own line, numbered items below):
 VERDICT: PASS | FAIL
 - PASS = runs without crashes AND core features implemented
 - FAIL = crashes/bugs prevent usage OR core features missing
-ISSUES: (max 5, one line each: what's wrong + where. No code blocks, no explanations)
-SUGGESTIONS: (max 3, one line each, optional)
+ISSUES:
+1. (what's wrong + where)
+2. ...
+(max 5 numbered items. No code blocks, no explanations.)
+SUGGESTIONS:
+1. (one line each, optional)
+(max 3 numbered items.)
 SUMMARY: (one sentence)
 
 Keep your ENTIRE response under 30 lines. Do NOT quote source code, do NOT explain how to fix — just state what is wrong and where.
