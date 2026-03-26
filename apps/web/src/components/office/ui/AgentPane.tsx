@@ -547,9 +547,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <div style={{
           position: "absolute", inset: 0, zIndex: 20,
           display: "flex", flexDirection: "column",
-          background: reviewerOverlay.busy
-            ? `${TERM_BG}cc`
-            : `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
+          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
           animation: "review-overlay-in 0.3s ease-out",
           overflow: "hidden",
         }}>
