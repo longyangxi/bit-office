@@ -15,10 +15,12 @@
   gap: var(--space-1);
   padding: 6px 14px;
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--term-text);
-  font-size: var(--font-size-base);
-  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
   line-height: 20px;
   cursor: pointer;
   white-space: nowrap;
@@ -26,20 +28,15 @@
   transition:
     border-color var(--duration-fast) ease,
     color var(--duration-fast) ease,
-    background-color var(--duration-fast) ease,
-    box-shadow var(--duration-fast) ease,
-    transform var(--duration-fast) ease;
+    background-color var(--duration-fast) ease;
 }
 .tb:hover {
   border-color: var(--term-text);
   color: var(--term-text-bright);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
-  transform: translateY(-0.5px);
+  background: rgba(255, 255, 255, 0.04);
 }
 .tb:active {
   opacity: 0.85;
-  transform: translateY(0);
-  box-shadow: none;
 }
 .tb:disabled {
   opacity: 0.4;
@@ -114,6 +111,7 @@
   width: 100%;
   padding: 6px 10px;
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
   background: var(--term-bg);
   color: var(--term-text);
   font-size: var(--font-size-base);
@@ -167,6 +165,7 @@
 .tm-container {
   background: var(--term-panel);
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   width: 90%;
   max-width: 420px;
@@ -184,9 +183,11 @@
   align-items: center;
   justify-content: space-between;
   flex-shrink: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
+  font-weight: 600;
   font-size: var(--font-size-base);
   color: var(--term-text-bright);
+  letter-spacing: 0.01em;
   box-shadow:
     0 3px 6px -2px rgba(0, 0, 0, 0.4),
     inset 0 -1px 0 var(--separator-groove-dark),
@@ -198,10 +199,10 @@
   overflow-y: auto;
   flex: 1;
   min-height: 0;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-size: var(--font-size-base);
   color: var(--term-text);
-  line-height: 1.7;
+  line-height: 1.6;
 }
 
 .tm-footer {
@@ -221,10 +222,12 @@
 .tm-close {
   padding: 2px 8px;
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--term-green-dim);
-  font-size: var(--font-size-base);
-  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-sans);
+  font-weight: 500;
   cursor: pointer;
   line-height: 1;
   transition: color var(--duration-fast) ease, border-color var(--duration-fast) ease;
@@ -242,14 +245,15 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 1px 6px;
+  padding: 2px 7px;
   font-size: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 500;
   letter-spacing: 0.02em;
   white-space: nowrap;
   line-height: 1.4;
   border: 1px solid transparent;
+  border-radius: var(--radius-full);
 }
 
 .tg-green {
@@ -297,11 +301,11 @@
    Used for "AI BACKEND", "SKILLS", "WORKING DIRECTORY" etc.
    ============================================================ */
 .tsl {
-  font-size: 11px;
-  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-family: var(--font-sans);
   font-weight: 500;
   color: var(--term-green-dim);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-bottom: var(--space-1);
   line-height: 1.2;
@@ -376,6 +380,7 @@
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-lg);
   padding: 3px 4px;
   box-shadow:
     var(--shadow-lg),
@@ -384,9 +389,11 @@
 
 .btb-btn {
   padding: 5px 10px;
-  font-size: var(--font-size-base);
-  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-sans);
+  font-weight: 500;
   color: var(--term-green-dim);
+  border-radius: var(--radius-md);
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
@@ -540,6 +547,7 @@
   max-width: 480px;
   background: var(--term-panel);
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
   display: flex;
   flex-direction: column;
@@ -556,7 +564,7 @@
   background: transparent;
   color: var(--term-text-bright);
   font-size: 14px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   outline: none;
   caret-color: var(--term-green);
 }
@@ -612,16 +620,16 @@
   padding: 16px;
   text-align: center;
   font-size: var(--font-size-base);
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   color: var(--term-green-dim);
 }
 .cp-group-label {
   padding: 8px 16px 4px;
   font-size: 10px;
-  font-family: var(--font-mono);
+  font-family: var(--font-sans);
   font-weight: 500;
   color: var(--term-green-dim);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -796,9 +804,10 @@
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--term-text);
-  font-family: var(--font-mono);
-  font-size: 11px;
-  letter-spacing: 0.02em;
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.01em;
   cursor: pointer;
   white-space: nowrap;
   opacity: 0.6;
@@ -824,10 +833,12 @@
 }
 .pbar-tab-count {
   font-size: 10px;
+  font-family: var(--font-sans);
   padding: 0 5px;
   min-width: 16px;
   text-align: center;
   border: 1px solid var(--term-border);
+  border-radius: var(--radius-full);
   color: var(--term-text);
   opacity: 0.7;
   line-height: 16px;

@@ -7,7 +7,7 @@ html, body {
   height: 100%;
 }
 html {
-  background: #16122a;
+  background: #0a0a0b;
 }
 
 :root {
@@ -18,33 +18,36 @@ html {
   --office-text: #eddcb8;
   --office-gold: #e8b040;
 
-  /* ── Console/chat (terminal, office theme) ── */
-  --term-bg: #141218;
-  --term-panel: #1a1820;
-  --term-card: #201e28;
-  --term-surface: #201e28;
-  --term-border: #302a38;
-  --term-border-dim: #262030;
-  --term-green: #d4a860;
-  --term-green-dim: #685848;
-  --term-text: #c8b8a8;
-  --term-text-bright: #e0d4c8;
-  --term-accent: #d4a860;
-  --term-accent-rgb: 212,168,96;
-  --term-code-bg: #18161e;
-  --term-code-text: #a08858;
-  --term-scroll-thumb: #383040;
-  --term-sem-green: #48cc6a;
-  --term-sem-yellow: #e8b040;
-  --term-sem-red: #e04848;
-  --term-sem-blue: #5aacff;
-  --term-sem-purple: #c084fc;
-  --term-sem-cyan: #94e2d5;
+  /* ── Console/chat (Studio theme defaults — neutral gray + blue accent) ── */
+  --term-bg: #0a0a0b;
+  --term-panel: #111113;
+  --term-card: #18181b;
+  --term-surface: #18181b;
+  --term-border: #27272a;
+  --term-border-dim: #1c1c1f;
+  --term-green: #3b82f6;
+  --term-green-dim: #64748b;
+  --term-text: #94a3b8;
+  --term-text-bright: #e2e8f0;
+  --term-accent: #3b82f6;
+  --term-accent-rgb: 59,130,246;
+  --term-code-bg: #09090b;
+  --term-code-text: #94a3b8;
+  --term-scroll-thumb: #27272a;
+  --term-sem-green: #22c55e;
+  --term-sem-yellow: #eab308;
+  --term-sem-red: #ef4444;
+  --term-sem-blue: #3b82f6;
+  --term-sem-purple: #a78bfa;
+  --term-sem-cyan: #06b6d4;
 
   /* ── Design Tokens ── */
-  /* Font */
+  /* Font — sans for UI chrome, mono for code/data */
+  --font-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
-  --font-size-base: 12px;
+  --font-size-base: 13px;
+  --font-size-sm: 12px;
+  --font-size-xs: 11px;
 
   /* Spacing (4px grid) */
   --space-0: 0px;
@@ -57,10 +60,12 @@ html {
   --space-8: 32px;
   --space-10: 40px;
 
-  /* Border radius — terminal aesthetic: sharp */
+  /* Border radius — modern: rounded for UI, sharp for code */
   --radius-none: 0px;
-  --radius-sm: 2px;
-  --radius-md: 4px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 9999px;
 
   /* Shadows / Elevation — 4-tier depth system */
@@ -194,37 +199,15 @@ select option {
   from { opacity: 0; transform: translateY(3px); }
   to { opacity: 1; transform: translateY(0); }
 }
+/* CRT effects disabled — clean professional look */
 .crt-screen {
   position: relative;
-  animation: crt-flicker 4s linear infinite;
 }
 .crt-screen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 3px,
-    rgba(var(--term-accent-rgb),0.04) 3px,
-    rgba(var(--term-accent-rgb),0.04) 4px
-  );
-  pointer-events: none;
-  z-index: 1;
+  display: none;
 }
 .crt-scanline-bar {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 80px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(var(--term-accent-rgb),0.05) 50%,
-    transparent 100%
-  );
-  animation: crt-scanline 6s linear infinite;
-  pointer-events: none;
-  z-index: 2;
+  display: none;
 }
 .term-msg {
   animation: msg-fadein 0.12s ease-out;
@@ -234,41 +217,40 @@ select option {
   animation: cursor-blink 1s step-end infinite;
   color: var(--term-green);
 }
-/* ── Ghostty-inspired: unified typography ──
-   Single weight (400), single size (12px), hierarchy via color only.
-   Tight letter-spacing for that premium monospace feel. */
+/* ── Typography — Chat content uses mono, UI uses sans ──
+   Hierarchy via subtle size/weight differences. */
 .chat-markdown, .chat-markdown *,
 .term-msg, .term-msg *,
 .crt-screen a, .crt-screen code, .crt-screen span {
-  font-size: 12px !important; font-family: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace !important;
+  font-size: var(--font-size-base) !important; font-family: var(--font-mono) !important;
   font-weight: 400 !important; line-height: 1.7 !important;
   letter-spacing: -0.01em;
 }
-/* ── Headings: same size, same weight — fully flat ── */
+/* ── Headings: subtle differentiation ── */
 .chat-markdown h1 {
-  font-size: 12px !important; font-weight: 400 !important;
-  color: var(--term-text) !important;
+  font-size: var(--font-size-base) !important; font-weight: 500 !important;
+  color: var(--term-text-bright) !important;
   margin: 14px 0 6px !important; padding: 0 0 4px !important;
   border-bottom: 1px solid var(--term-border-dim) !important;
 }
 .chat-markdown h2 {
-  font-size: 12px !important; font-weight: 400 !important;
-  color: var(--term-text) !important;
+  font-size: var(--font-size-base) !important; font-weight: 500 !important;
+  color: var(--term-text-bright) !important;
   margin: 12px 0 4px !important; padding: 0 !important;
 }
 .chat-markdown h3 {
-  font-size: 12px !important; font-weight: 400 !important;
+  font-size: var(--font-size-base) !important; font-weight: 500 !important;
   color: var(--term-text) !important;
   margin: 10px 0 3px !important; padding: 0 !important;
 }
 .chat-markdown h4, .chat-markdown h5, .chat-markdown h6 {
-  font-size: 12px !important; font-weight: 400 !important;
+  font-size: var(--font-size-base) !important; font-weight: 400 !important;
   color: var(--term-text) !important;
   margin: 8px 0 2px !important; padding: 0 !important;
 }
-/* ── Inline emphasis: flat — no weight differentiation ── */
+/* ── Inline emphasis ── */
 .chat-markdown strong, .chat-markdown b {
-  font-weight: 400 !important; color: var(--term-text) !important;
+  font-weight: 500 !important; color: var(--term-text-bright) !important;
 }
 .chat-markdown em, .chat-markdown i {
   font-style: italic !important; color: var(--term-text) !important;
@@ -277,7 +259,7 @@ select option {
 .chat-markdown code {
   font-size: inherit !important; font-family: inherit !important;
   background: var(--term-code-bg) !important;
-  padding: 1px 5px !important; border-radius: 2px !important;
+  padding: 2px 6px !important; border-radius: var(--radius-sm) !important;
   border: none !important;
   color: var(--term-text) !important; opacity: 1 !important;
 }
@@ -400,7 +382,7 @@ select option {
   align-items: flex-end;
   gap: 0;
   background: var(--term-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   border: 1px solid var(--term-border);
   padding: 0 2px;
   transition: border-color var(--duration-fast) ease;

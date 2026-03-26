@@ -13,16 +13,16 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <meta name="theme-color" content="#1a1530" />
+        <meta name="theme-color" content="#0a0a0b" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400&family=Press+Start+2P&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@300;400;500&family=Press+Start+2P&display=swap"
           rel="stylesheet"
         />
       </head>
-      <body style={{ margin: 0, backgroundColor: "#16122a", color: "#eddcb8", fontFamily: "system-ui, sans-serif" }}>
+      <body style={{ margin: 0, backgroundColor: "#0a0a0b", color: "#e2e8f0", fontFamily: "'Inter', system-ui, sans-serif" }}>
         <TooltipProvider delayDuration={300} skipDelayDuration={100}>
         {children}
         </TooltipProvider>

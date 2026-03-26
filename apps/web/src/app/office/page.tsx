@@ -239,7 +239,7 @@ export default function OfficePage() {
   // ── Theme ──
   // Always start with default to avoid SSR/client hydration mismatch,
   // then restore saved theme in useEffect (client-only).
-  const [termTheme, setTermTheme] = useState("amber-noir");
+  const [termTheme, setTermTheme] = useState("studio");
   applyTermTheme(termTheme);
   useEffect(() => {
     const saved = localStorage.getItem("open-office-theme");
@@ -2031,68 +2031,6 @@ export default function OfficePage() {
 
             </>);
           })()}
-
-          {/* ── View Mode Toggle (Phase 2) — Console / Office switch ── */}
-          <div className="view-toggle" style={{
-            flexShrink: 0,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "var(--space-1)",
-            padding: "var(--space-2) var(--space-4)",
-            borderTop: `1px solid ${TERM_BORDER_DIM}`,
-            background: TERM_BG,
-          }}>
-            <button
-              className={`view-toggle-btn${consoleMode ? " view-toggle-btn-active" : ""}`}
-              onClick={() => {
-                if (consoleMode) return;
-                setScrollFrozen(true);
-                setSceneVisible(false);
-                localStorage.setItem("office-view-mode", "console");
-                requestAnimationFrame(() => setConsoleMode(true));
-                setTimeout(() => setScrollFrozen(false), 350);
-              }}
-              style={{
-                flex: 1,
-                padding: "5px 0",
-                border: `1px solid ${consoleMode ? TERM_GREEN + "50" : TERM_BORDER_DIM}`,
-                background: consoleMode ? TERM_GREEN + "12" : "transparent",
-                color: consoleMode ? TERM_TEXT_BRIGHT : TERM_DIM,
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                cursor: consoleMode ? "default" : "pointer",
-                transition: "all 0.15s ease",
-                letterSpacing: "0.04em",
-              }}
-            >
-              Console
-            </button>
-            <button
-              className={`view-toggle-btn${!consoleMode ? " view-toggle-btn-active" : ""}`}
-              onClick={() => {
-                if (!consoleMode) return;
-                setScrollFrozen(true);
-                setConsoleMode(false);
-                localStorage.setItem("office-view-mode", "office");
-                setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
-              }}
-              style={{
-                flex: 1,
-                padding: "5px 0",
-                border: `1px solid ${!consoleMode ? TERM_GREEN + "50" : TERM_BORDER_DIM}`,
-                background: !consoleMode ? TERM_GREEN + "12" : "transparent",
-                color: !consoleMode ? TERM_TEXT_BRIGHT : TERM_DIM,
-                fontFamily: "var(--font-mono)",
-                fontSize: 11,
-                cursor: !consoleMode ? "default" : "pointer",
-                transition: "all 0.15s ease",
-                letterSpacing: "0.04em",
-              }}
-            >
-              Office
-            </button>
-          </div>
 
           </div>
         </div>

@@ -25,6 +25,30 @@ export type TermTheme = {
 };
 
 export const TERM_THEMES: Record<string, TermTheme> = {
+  studio: {
+    name: "Studio",
+    accent: "#3b82f6",
+    accentRgb: "59,130,246",
+    dim: "#64748b",
+    text: "#94a3b8",
+    textBright: "#e2e8f0",
+    bg: "#0a0a0b",
+    panel: "#111113",
+    surface: "#18181b",
+    hover: "#1e1e22",
+    border: "#27272a",
+    borderDim: "#1c1c1f",
+    codeBg: "#09090b",
+    codeText: "#94a3b8",
+    scrollThumb: "#27272a",
+    clean: true,
+    green: "#22c55e",
+    yellow: "#eab308",
+    red: "#ef4444",
+    blue: "#3b82f6",
+    purple: "#a78bfa",
+    cyan: "#06b6d4",
+  },
   "amber-noir": {
     name: "Amber Noir",
     accent: "#e8b040",
@@ -460,7 +484,7 @@ export let TERM_SEM_PURPLE = "#a07cc0";
 export let TERM_SEM_CYAN = "#5aaa98";
 
 export function applyTermTheme(key: string) {
-  const t = TERM_THEMES[key] ?? TERM_THEMES["amber-noir"];
+  const t = TERM_THEMES[key] ?? TERM_THEMES["studio"];
   TERM_GREEN = t.accent;
   TERM_DIM = t.dim;
   TERM_TEXT = t.text;
