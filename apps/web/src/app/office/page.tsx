@@ -994,7 +994,12 @@ export default function OfficePage() {
   }, [suggestText]);
 
   const [showShareMenu, setShowShareMenu] = useState(false);
-  const [consoleMode, setConsoleMode] = useState(false);
+  // Phase 2: Console mode is now default. Persisted to localStorage.
+  const [consoleMode, setConsoleMode] = useState(() => {
+    if (typeof window === "undefined") return true;
+    const saved = localStorage.getItem("office-view-mode");
+    return saved === "office" ? false : true; // default: console
+  });
   // Freeze scroll during CSS width transition (300ms) to prevent scroll corruption
   const [scrollFrozen, setScrollFrozen] = useState(false);
   // Multi-pane state (console mode only)
@@ -1002,7 +1007,11 @@ export default function OfficePage() {
   const [paneOffset, setPaneOffset] = useState(0);
   type ImageItem = { name: string; dataUrl: string; base64: string };
   const [panePendingImages, setPanePendingImages] = useState<Map<string, ImageItem[]>>(new Map());
-  const [sceneVisible, setSceneVisible] = useState(true); // delays scene mount until collapse animation ends
+  const [sceneVisible, setSceneVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+    const saved = localStorage.getItem("office-view-mode");
+    return saved === "office"; // hidden by default in console mode
+  });
   // Review overlay: reviewer floats on top of source agent's pane
   const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
   const reviewInProgress = useRef(false);
@@ -1508,9 +1517,11 @@ export default function OfficePage() {
               setScrollFrozen(true);
               if (consoleMode) {
                 setConsoleMode(false);
+                localStorage.setItem("office-view-mode", "office");
                 setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
               } else {
                 setSceneVisible(false);
+                localStorage.setItem("office-view-mode", "console");
                 requestAnimationFrame(() => setConsoleMode(true));
                 setTimeout(() => setScrollFrozen(false), 350);
               }
@@ -2020,6 +2031,68 @@ export default function OfficePage() {
 
             </>);
           })()}
+
+          {/* ── View Mode Toggle (Phase 2) — Console / Office switch ── */}
+          <div className="view-toggle" style={{
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "var(--space-1)",
+            padding: "var(--space-2) var(--space-4)",
+            borderTop: `1px solid ${TERM_BORDER_DIM}`,
+            background: TERM_BG,
+          }}>
+            <button
+              className={`view-toggle-btn${consoleMode ? " view-toggle-btn-active" : ""}`}
+              onClick={() => {
+                if (consoleMode) return;
+                setScrollFrozen(true);
+                setSceneVisible(false);
+                localStorage.setItem("office-view-mode", "console");
+                requestAnimationFrame(() => setConsoleMode(true));
+                setTimeout(() => setScrollFrozen(false), 350);
+              }}
+              style={{
+                flex: 1,
+                padding: "5px 0",
+                border: `1px solid ${consoleMode ? TERM_GREEN + "50" : TERM_BORDER_DIM}`,
+                background: consoleMode ? TERM_GREEN + "12" : "transparent",
+                color: consoleMode ? TERM_TEXT_BRIGHT : TERM_DIM,
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                cursor: consoleMode ? "default" : "pointer",
+                transition: "all 0.15s ease",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Console
+            </button>
+            <button
+              className={`view-toggle-btn${!consoleMode ? " view-toggle-btn-active" : ""}`}
+              onClick={() => {
+                if (!consoleMode) return;
+                setScrollFrozen(true);
+                setConsoleMode(false);
+                localStorage.setItem("office-view-mode", "office");
+                setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
+              }}
+              style={{
+                flex: 1,
+                padding: "5px 0",
+                border: `1px solid ${!consoleMode ? TERM_GREEN + "50" : TERM_BORDER_DIM}`,
+                background: !consoleMode ? TERM_GREEN + "12" : "transparent",
+                color: !consoleMode ? TERM_TEXT_BRIGHT : TERM_DIM,
+                fontFamily: "var(--font-mono)",
+                fontSize: 11,
+                cursor: !consoleMode ? "default" : "pointer",
+                transition: "all 0.15s ease",
+                letterSpacing: "0.04em",
+              }}
+            >
+              Office
+            </button>
+          </div>
 
           </div>
         </div>
