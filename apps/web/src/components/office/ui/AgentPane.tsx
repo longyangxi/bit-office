@@ -611,32 +611,35 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             }}>
               {/* Grid lines background */}
               <div className="review-scan-grid" style={{
-                position: "absolute", inset: 0, opacity: 0.15,
+                position: "absolute", inset: 0, opacity: 0.06,
                 backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
               {/* Matrix-style falling binary digits */}
               <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
                 {[
-                  { left: "6%",  dur: 4.2, delay: 0,    bits: "1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n0\n1\n0\n1\n1" },
-                  { left: "14%", dur: 5.8, delay: 1.2,  bits: "0\n1\n1\n0\n1\n0\n0\n1\n1\n0\n0\n1\n0\n1\n1\n0" },
-                  { left: "22%", dur: 3.6, delay: 0.5,  bits: "1\n1\n0\n0\n1\n0\n1\n0\n0\n1\n1\n0\n1\n0\n1" },
-                  { left: "34%", dur: 6.4, delay: 2.1,  bits: "0\n0\n1\n0\n1\n1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n1\n1\n0" },
-                  { left: "46%", dur: 4.8, delay: 0.8,  bits: "1\n0\n0\n1\n1\n0\n1\n0\n0\n1\n1\n0\n0\n1\n0" },
-                  { left: "58%", dur: 5.2, delay: 1.8,  bits: "0\n1\n0\n1\n0\n0\n1\n1\n1\n0\n1\n0\n1\n1\n0\n0" },
-                  { left: "68%", dur: 3.9, delay: 0.3,  bits: "1\n1\n1\n0\n0\n0\n1\n0\n0\n1\n0\n1\n1\n1\n0" },
-                  { left: "78%", dur: 6.1, delay: 1.5,  bits: "0\n0\n1\n1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n0\n1\n1" },
-                  { left: "88%", dur: 4.5, delay: 2.4,  bits: "1\n0\n1\n0\n1\n0\n1\n0\n0\n1\n0\n1\n1\n0\n0" },
-                  { left: "96%", dur: 5.5, delay: 0.7,  bits: "0\n1\n1\n1\n0\n0\n0\n1\n1\n0\n0\n1\n1\n1\n0" },
+                  { left: "4%",  dur: 2.8, delay: 0,   bits: "1 0 1 1 0 1 0 0 1 0 0 1 0 1 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 0" },
+                  { left: "12%", dur: 3.4, delay: 0.6,  bits: "0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0" },
+                  { left: "20%", dur: 2.2, delay: 0.3,  bits: "1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0" },
+                  { left: "28%", dur: 3.8, delay: 1.2,  bits: "0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1" },
+                  { left: "36%", dur: 2.5, delay: 0.8,  bits: "1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0" },
+                  { left: "44%", dur: 3.2, delay: 0.4,  bits: "0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0" },
+                  { left: "52%", dur: 2.6, delay: 1.0,  bits: "1 1 1 0 0 0 1 0 0 1 0 1 1 1 0 1 0 1 0 0 1 1 1 0 0 0 1 0 0 1 0 1 1 1 1 0 0 0 1 0 0 1 0 1 1 1 0 1 0 1 0 0 1 1 1 0" },
+                  { left: "60%", dur: 3.6, delay: 0.2,  bits: "0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 1 0 1 1 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 1 0 1 1 0 0 0 1" },
+                  { left: "68%", dur: 2.4, delay: 0.9,  bits: "1 0 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 1 0 1 0 1 0 1 0 0 1 0 1 1 0 1 0 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 1 0 1 0 1 0" },
+                  { left: "76%", dur: 3.0, delay: 1.5,  bits: "0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 0 1 1 0 1 0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 0 1 1 0 1 0 1" },
+                  { left: "84%", dur: 2.3, delay: 0.5,  bits: "1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 0 1 1 0 0 1" },
+                  { left: "92%", dur: 3.3, delay: 0.7,  bits: "0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1" },
                 ].map((col, i) => (
                   <div key={i} style={{
-                    position: "absolute", left: col.left, top: 0,
+                    position: "absolute", left: col.left, top: 0, height: "200%",
                     fontFamily: TERM_FONT, fontSize: 10, lineHeight: "14px",
                     color: TERM_SEM_PURPLE, opacity: 0.15 + (i % 3) * 0.06,
                     whiteSpace: "pre", textAlign: "center",
+                    display: "flex", flexDirection: "column",
                     animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
                   }}>
-                    {col.bits}
+                    {col.bits.split(" ").map((b, j) => <span key={j}>{b}</span>)}
                   </div>
                 ))}
               </div>

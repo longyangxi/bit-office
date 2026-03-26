@@ -436,8 +436,8 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
   50% { transform: scale(1.3); opacity: 1; }
 }
 @keyframes review-matrix-fall {
-  0% { transform: translateY(-100%); }
-  100% { transform: translateY(100%); }
+  0% { transform: translateY(-50%); }
+  100% { transform: translateY(0%); }
 }
 /* ── Chat area — recessed surface with subtle inset shadow ── */
 .term-chat-area {
