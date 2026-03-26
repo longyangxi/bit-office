@@ -1,7 +1,7 @@
 import { useRef, useEffect, memo, useCallback, useState } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge, MdContent } from "./MessageBubble";
 import { TermButton, TermInput, TermEmpty } from "./primitives";
@@ -288,8 +288,8 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
 
   return (
     <div className="px-3.5 py-2 font-mono text-term shrink-0" style={{
-      background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 5%, ${TERM_PANEL})`,
-      boxShadow: `inset 0 1px 0 ${TERM_SEM_PURPLE}10`,
+      background: `color-mix(in srgb, ${TERM_GREEN} 5%, ${TERM_PANEL})`,
+      boxShadow: `inset 0 1px 0 ${TERM_GREEN}10`,
     }}>
       {/* Feedback input — only show when fixes are available */}
       {onApplyReviewFixes && (
@@ -637,7 +637,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <div style={{
           position: "absolute", inset: 0, zIndex: 20,
           display: "flex", flexDirection: "column",
-          background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
+          background: `color-mix(in srgb, ${TERM_GREEN} 4%, ${TERM_BG})`,
           animation: "review-overlay-in 0.3s ease-out",
           overflow: "hidden",
         }}>
@@ -645,18 +645,18 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "7px 14px",
-            background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 6%, ${TERM_PANEL})`,
-            boxShadow: `inset 0 -1px 0 ${TERM_SEM_PURPLE}15`,
+            background: `color-mix(in srgb, ${TERM_GREEN} 6%, ${TERM_PANEL})`,
+            boxShadow: `inset 0 -1px 0 ${TERM_GREEN}15`,
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            <span style={{ color: TERM_SEM_PURPLE, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_PURPLE}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
+            <span style={{ color: TERM_GREEN, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_GREEN}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.name}
             </span>
             {/* Scanning indicator (busy) */}
             {reviewerOverlay.busy && (
-              <span className="working-dots" style={{ color: TERM_SEM_PURPLE }}>
+              <span className="working-dots" style={{ color: TERM_GREEN }}>
                 <span className="working-dots-mid" />
               </span>
             )}
@@ -702,22 +702,22 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               {/* Grid lines background */}
               <div className="review-scan-grid" style={{
                 position: "absolute", inset: 0, opacity: 0.06,
-                backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
+                backgroundImage: `linear-gradient(${TERM_GREEN} 1px, transparent 1px), linear-gradient(90deg, ${TERM_GREEN} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
               {/* Matrix-style falling binary digits — canvas */}
-              <MatrixRainCanvas color={TERM_SEM_PURPLE} font={TERM_FONT} />
+              <MatrixRainCanvas color={TERM_GREEN} font={TERM_FONT} />
               {/* Sweep line */}
               <div className="review-scan-sweep" style={{
                 position: "absolute", left: 0, right: 0, height: 2,
-                background: `linear-gradient(90deg, transparent, ${TERM_SEM_PURPLE}, transparent)`,
-                boxShadow: `0 0 20px 4px ${TERM_SEM_PURPLE}50, 0 0 60px 8px ${TERM_SEM_PURPLE}20`,
+                background: `linear-gradient(90deg, transparent, ${TERM_GREEN}, transparent)`,
+                boxShadow: `0 0 20px 4px ${TERM_GREEN}50, 0 0 60px 8px ${TERM_GREEN}20`,
                 animation: "review-scan-sweep 2.4s ease-in-out infinite",
               }} />
               {/* Glow trail behind sweep */}
               <div className="review-scan-trail" style={{
                 position: "absolute", left: 0, right: 0, height: 40,
-                background: `linear-gradient(180deg, ${TERM_SEM_PURPLE}12, transparent)`,
+                background: `linear-gradient(180deg, ${TERM_GREEN}12, transparent)`,
                 animation: "review-scan-sweep 2.4s ease-in-out infinite",
               }} />
               {/* Center content */}
@@ -729,24 +729,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 <div style={{ position: "relative", width: 40, height: 40 }}>
                   <div className="review-scan-ring" style={{
                     position: "absolute", inset: 0, borderRadius: "50%",
-                    border: `1.5px solid ${TERM_SEM_PURPLE}60`,
+                    border: `1.5px solid ${TERM_GREEN}60`,
                     animation: "review-scan-pulse 2s ease-in-out infinite",
                   }} />
                   <div style={{
                     position: "absolute", inset: 8, borderRadius: "50%",
-                    background: `radial-gradient(circle, ${TERM_SEM_PURPLE}30, transparent 70%)`,
+                    background: `radial-gradient(circle, ${TERM_GREEN}30, transparent 70%)`,
                     animation: "review-scan-pulse 2s ease-in-out infinite 0.3s",
                   }} />
                   {/* Center dot */}
                   <div style={{
                     position: "absolute", top: "50%", left: "50%", width: 4, height: 4,
                     marginTop: -2, marginLeft: -2, borderRadius: "50%",
-                    backgroundColor: TERM_SEM_PURPLE,
-                    boxShadow: `0 0 8px ${TERM_SEM_PURPLE}`,
+                    backgroundColor: TERM_GREEN,
+                    boxShadow: `0 0 8px ${TERM_GREEN}`,
                   }} />
                 </div>
                 <span style={{
-                  fontFamily: TERM_FONT, fontSize: TERM_SIZE, color: TERM_SEM_PURPLE,
+                  fontFamily: TERM_FONT, fontSize: TERM_SIZE, color: TERM_GREEN,
                   letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500,
                   opacity: 0.8,
                 }}>
@@ -755,10 +755,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               </div>
               {/* Corner brackets — decorative */}
               {[
-                { top: 12, left: 12, borderTop: `1px solid ${TERM_SEM_PURPLE}30`, borderLeft: `1px solid ${TERM_SEM_PURPLE}30` },
-                { top: 12, right: 12, borderTop: `1px solid ${TERM_SEM_PURPLE}30`, borderRight: `1px solid ${TERM_SEM_PURPLE}30` },
-                { bottom: 12, left: 12, borderBottom: `1px solid ${TERM_SEM_PURPLE}30`, borderLeft: `1px solid ${TERM_SEM_PURPLE}30` },
-                { bottom: 12, right: 12, borderBottom: `1px solid ${TERM_SEM_PURPLE}30`, borderRight: `1px solid ${TERM_SEM_PURPLE}30` },
+                { top: 12, left: 12, borderTop: `1px solid ${TERM_GREEN}30`, borderLeft: `1px solid ${TERM_GREEN}30` },
+                { top: 12, right: 12, borderTop: `1px solid ${TERM_GREEN}30`, borderRight: `1px solid ${TERM_GREEN}30` },
+                { bottom: 12, left: 12, borderBottom: `1px solid ${TERM_GREEN}30`, borderLeft: `1px solid ${TERM_GREEN}30` },
+                { bottom: 12, right: 12, borderBottom: `1px solid ${TERM_GREEN}30`, borderRight: `1px solid ${TERM_GREEN}30` },
               ].map((pos, i) => (
                 <div key={i} style={{ position: "absolute", width: 16, height: 16, ...pos } as React.CSSProperties} />
               ))}
