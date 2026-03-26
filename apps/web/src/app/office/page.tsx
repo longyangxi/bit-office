@@ -1602,7 +1602,10 @@ export default function OfficePage() {
 
             {/* -- Project Bar (console mode: tab switcher at top) -- */}
             {consoleMode && (
-              <ProjectBar onNewProject={() => setShowNewProjectModal(true)} />
+              <ProjectBar
+                onNewProject={() => setShowNewProjectModal(true)}
+                onHireAgent={() => setShowHireModal(true)}
+              />
             )}
 
             {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}

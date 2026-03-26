@@ -866,6 +866,37 @@
   color: var(--term-accent);
 }
 
+/* -- ProjectBar: Add Agent button (right-aligned) -- */
+.pbar-hire {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0 var(--space-3);
+  margin-left: auto;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--term-text);
+  opacity: 0.5;
+  transition: opacity 0.15s, color 0.15s;
+}
+.pbar-hire:hover {
+  opacity: 1;
+  color: var(--term-accent);
+}
+.pbar-hire-icon {
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1;
+}
+.pbar-hire-label {
+  letter-spacing: 0.03em;
+}
+
 /* -- ProjectBar empty state CTA -- */
 .pbar-empty {
   justify-content: center;
