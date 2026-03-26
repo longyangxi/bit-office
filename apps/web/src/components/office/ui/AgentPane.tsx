@@ -322,10 +322,10 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
         )}
         {onDismissReview && (
           <TermButton
-            variant="dim"
+            variant="ghost"
             size="sm"
             onClick={onDismissReview}
-          >dismiss</TermButton>
+          >Dismiss</TermButton>
         )}
       </div>
     </div>
