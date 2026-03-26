@@ -87,10 +87,10 @@ export interface ParsedReviewerFeedback {
  * Returns a compact `formatted` string suitable for prompt injection (no raw truncation).
  */
 export function parseReviewerFeedback(raw: string): ParsedReviewerFeedback {
-  const verdictMatch = raw.match(/VERDICT:\s*(PASS|FAIL)/i);
+  const verdictMatch = raw.match(/\*{0,2}VERDICT:?\*{0,2}\s*(PASS|FAIL)/i);
   const verdict = verdictMatch ? (verdictMatch[1].toUpperCase() as "PASS" | "FAIL") : "UNKNOWN";
 
-  const summaryMatch = raw.match(/SUMMARY:\s*(.+)/i);
+  const summaryMatch = raw.match(/\*{0,2}SUMMARY:?\*{0,2}\s*(.+)/i);
   const summary = summaryMatch?.[1]?.trim() ?? "";
 
   const issues = extractNumberedList(raw, "ISSUES");
@@ -116,14 +116,14 @@ export function parseReviewerFeedback(raw: string): ParsedReviewerFeedback {
  * Handles both "ISSUES: 1. foo 2. bar" inline and multi-line numbered lists.
  */
 function extractNumberedList(raw: string, label: string): string[] {
-  // Find the section starting from the label
-  const labelRe = new RegExp(`${label}:\\s*(.*)`, "i");
+  // Find the section starting from the label (supports **LABEL:** markdown bold)
+  const labelRe = new RegExp(`\\*{0,2}${label}:?\\*{0,2}\\s*(.*)`, "i");
   const labelMatch = raw.match(labelRe);
   if (!labelMatch) return [];
 
   // Get everything from the label to the next known section or end
   const startIdx = raw.indexOf(labelMatch[0]) + labelMatch[0].length;
-  const remainingSections = /\n\s*(?:VERDICT|ISSUES|SUGGESTIONS|SUMMARY|STATUS|FILES_CHANGED|ENTRY_FILE):/i;
+  const remainingSections = /\n\s*\*{0,2}(?:VERDICT|ISSUES|SUGGESTIONS|SUMMARY|STATUS|FILES_CHANGED|ENTRY_FILE):?\*{0,2}/i;
   const endMatch = raw.slice(startIdx).match(remainingSections);
   const block = labelMatch[1] + (endMatch ? raw.slice(startIdx, startIdx + endMatch.index!) : raw.slice(startIdx));
 

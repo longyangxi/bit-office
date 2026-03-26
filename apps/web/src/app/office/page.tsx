@@ -1074,14 +1074,14 @@ export default function OfficePage() {
     // Extract structured section (VERDICT...ISSUES...SUMMARY) from reviewer output
     // to avoid sending the reviewer's full analysis/reasoning as fix context
     const extractStructured = (text: string): string => {
-      // Try to extract from VERDICT onwards
-      const verdictMatch = text.match(/VERDICT[\s:].*/i);
+      // Try to extract from VERDICT onwards (supports **VERDICT:** markdown bold)
+      const verdictMatch = text.match(/\*{0,2}VERDICT[\s:].*/i);
       if (verdictMatch) {
         const startIdx = text.indexOf(verdictMatch[0]);
         return text.slice(startIdx).trim();
       }
       // Try ISSUES section
-      const issuesMatch = text.match(/ISSUES[\s:].*/i);
+      const issuesMatch = text.match(/\*{0,2}ISSUES[\s:].*/i);
       if (issuesMatch) {
         const startIdx = text.indexOf(issuesMatch[0]);
         return text.slice(startIdx).trim();
@@ -1154,7 +1154,7 @@ export default function OfficePage() {
       busy: reviewResultText === null,
       reviewDone: reviewResultText !== null,
       reviewResultText: reviewResultText ?? undefined,
-      verdict: reviewResultText ? (reviewResultText.match(/VERDICT:\s*(PASS|FAIL)/i)?.[1]?.toUpperCase() as "PASS" | "FAIL" ?? "UNKNOWN") : undefined,
+      verdict: reviewResultText ? (reviewResultText.match(/\*{0,2}VERDICT:?\*{0,2}\s*(PASS|FAIL)/i)?.[1]?.toUpperCase() as "PASS" | "FAIL" ?? "UNKNOWN") : undefined,
     };
   }, [agents, getVisibleMessages, reviewResultText]);
 

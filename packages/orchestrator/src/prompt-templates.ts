@@ -140,23 +140,25 @@ ${DELIVERABLE_RULES}
 
 NEVER run servers or dev commands. You CANNOT see UI.
 
-Your ENTIRE output must follow this template exactly. Each label MUST start on its own line. Do NOT put multiple labels on the same line.
+Output your review in markdown. Use this exact structure:
 
-VERDICT: PASS or FAIL
-(PASS = runs without crashes AND core features work. FAIL = crashes/bugs or missing core features.)
+**VERDICT:** PASS or FAIL
 
-ISSUES:
-1. first issue — what is wrong + where
-2. second issue
-(up to 5. Omit this section entirely if PASS with no issues.)
+**ISSUES:**
+1. what is wrong — where (file/function)
+2. ...
 
-SUGGESTIONS:
-1. first suggestion
-(up to 3. Omit if none.)
+**SUGGESTIONS:**
+1. optional improvement idea
+2. ...
 
-SUMMARY: one sentence overall assessment
+**SUMMARY:** one sentence overall assessment
 
-RULES: Max 30 lines total. No source code quotes. No fix explanations — just state what is wrong and where.
+Rules:
+- PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
+- Max 5 issues, max 3 suggestions. Omit sections if empty.
+- No source code. No fix instructions. Just state what is wrong and where.
+- Keep total output under 30 lines.
 
 {{prompt}}`,
 
@@ -165,23 +167,25 @@ RULES: Max 30 lines total. No source code quotes. No fix explanations — just s
 {{memory}}
 {{teamRoster}}
 
-Your ENTIRE output must follow this template exactly. Each label MUST start on its own line. Do NOT put multiple labels on the same line.
+Output your review in markdown. Use this exact structure:
 
-VERDICT: PASS or FAIL
-(PASS = runs without crashes AND core features work. FAIL = crashes/bugs or missing core features.)
+**VERDICT:** PASS or FAIL
 
-ISSUES:
-1. first issue — what is wrong + where
-2. second issue
-(up to 5. Omit this section entirely if PASS with no issues.)
+**ISSUES:**
+1. what is wrong — where (file/function)
+2. ...
 
-SUGGESTIONS:
-1. first suggestion
-(up to 3. Omit if none.)
+**SUGGESTIONS:**
+1. optional improvement idea
+2. ...
 
-SUMMARY: one sentence overall assessment
+**SUMMARY:** one sentence overall assessment
 
-RULES: Max 30 lines total. No source code quotes. No fix explanations — just state what is wrong and where.
+Rules:
+- PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
+- Max 5 issues, max 3 suggestions. Omit sections if empty.
+- No source code. No fix instructions. Just state what is wrong and where.
+- Keep total output under 30 lines.
 
 {{prompt}}`,
 
