@@ -995,11 +995,7 @@ export default function OfficePage() {
 
   const [showShareMenu, setShowShareMenu] = useState(false);
   // Phase 2: Console mode is now default. Persisted to localStorage.
-  const [consoleMode, setConsoleMode] = useState(() => {
-    if (typeof window === "undefined") return true;
-    const saved = localStorage.getItem("office-view-mode");
-    return saved === "office" ? false : true; // default: console
-  });
+  const [consoleMode, setConsoleMode] = useState(true); // SSR-safe default; restored from localStorage in useEffect
   // Freeze scroll during CSS width transition (300ms) to prevent scroll corruption
   const [scrollFrozen, setScrollFrozen] = useState(false);
   // Multi-pane state (console mode only)
@@ -1007,11 +1003,17 @@ export default function OfficePage() {
   const [paneOffset, setPaneOffset] = useState(0);
   type ImageItem = { name: string; dataUrl: string; base64: string };
   const [panePendingImages, setPanePendingImages] = useState<Map<string, ImageItem[]>>(new Map());
-  const [sceneVisible, setSceneVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
+  const [sceneVisible, setSceneVisible] = useState(false); // SSR-safe default; restored from localStorage in useEffect
+
+  // Restore view mode from localStorage after hydration (avoids SSR mismatch)
+  useEffect(() => {
     const saved = localStorage.getItem("office-view-mode");
-    return saved === "office"; // hidden by default in console mode
-  });
+    if (saved === "office") {
+      setConsoleMode(false);
+      setSceneVisible(true);
+    }
+  }, []);
+
   // Review overlay: reviewer floats on top of source agent's pane
   const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
   const reviewInProgress = useRef(false);
@@ -1592,7 +1594,7 @@ export default function OfficePage() {
             return (<>
 
             {/* -- Project Bar (console mode: tab switcher at top) -- */}
-            {consoleMode && projects.size > 0 && (
+            {consoleMode && (
               <ProjectBar onNewProject={() => setShowNewProjectModal(true)} />
             )}
 

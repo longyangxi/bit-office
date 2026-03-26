@@ -36,9 +36,6 @@ export default function ProjectBar({ onNewProject }: ProjectBarProps) {
     [setActiveProject]
   );
 
-  // Don't render if no projects exist yet
-  if (activeProjects.length === 0) return null;
-
   return (
     <div className="pbar">
       <div className="pbar-tabs">
