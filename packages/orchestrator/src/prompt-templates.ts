@@ -155,7 +155,8 @@ Output your review in markdown. Use this exact structure:
 **SUMMARY:** one sentence overall assessment
 
 Rules:
-- PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
+- If you list ANY issues, verdict MUST be FAIL. PASS means zero issues — omit the ISSUES section entirely.
+- FAIL = any bug, security flaw, missing feature, or correctness problem. PASS = nothing to fix.
 - Max 5 issues, max 3 suggestions. Omit sections if empty.
 - ALWAYS use numbered list (1. 2. 3.) for issues and suggestions, even if there is only one item.
 - No source code. No fix instructions. Just state what is wrong and where.
@@ -183,7 +184,8 @@ Output your review in markdown. Use this exact structure:
 **SUMMARY:** one sentence overall assessment
 
 Rules:
-- PASS = runs without crashes AND core features work. FAIL = crashes/bugs or core features missing.
+- If you list ANY issues, verdict MUST be FAIL. PASS means zero issues — omit the ISSUES section entirely.
+- FAIL = any bug, security flaw, missing feature, or correctness problem. PASS = nothing to fix.
 - Max 5 issues, max 3 suggestions. Omit sections if empty.
 - ALWAYS use numbered list (1. 2. 3.) for issues and suggestions, even if there is only one item.
 - No source code. No fix instructions. Just state what is wrong and where.

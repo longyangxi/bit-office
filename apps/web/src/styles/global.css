@@ -298,7 +298,8 @@ select option {
 /* ── Block elements ── */
 .chat-markdown p { margin: 0 0 6px !important; }
 .chat-markdown p:last-child { margin-bottom: 0 !important; }
-.chat-markdown ul, .chat-markdown ol { margin: 4px 0 8px !important; padding-left: 20px !important; }
+.chat-markdown ul { margin: 4px 0 8px !important; padding-left: 20px !important; list-style-type: disc !important; }
+.chat-markdown ol { margin: 4px 0 8px !important; padding-left: 20px !important; list-style-type: decimal !important; }
 .chat-markdown li { margin: 2px 0 !important; }
 .chat-markdown li::marker { color: var(--term-dim) !important; }
 .chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border-dim) !important; margin: 10px 0 !important; }

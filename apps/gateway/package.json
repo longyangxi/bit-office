@@ -1,6 +1,6 @@
 {
   "name": "bit-office",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Control AI agents from your phone — pixel office UI + real-time gateway",
   "type": "module",
   "bin": {

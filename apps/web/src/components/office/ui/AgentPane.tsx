@@ -794,7 +794,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 <div ref={reviewChatEndRef} />
               </div>
               <ReviewFooter
-                onApplyReviewFixes={reviewerOverlay.verdict !== "PASS" ? onApplyReviewFixes : undefined}
+                onApplyReviewFixes={reviewerOverlay.verdict === "FAIL" || (reviewerOverlay.reviewResultText && /\*{0,2}ISSUES:?\*{0,2}/i.test(reviewerOverlay.reviewResultText)) ? onApplyReviewFixes : undefined}
                 onDismissReview={onDismissReview}
               />
             </>
