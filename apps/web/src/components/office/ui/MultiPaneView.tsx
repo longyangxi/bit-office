@@ -599,11 +599,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
               {pi === hireSlotIndex && onHire && (
                 <button
                   onClick={onHire}
-                  title="Hire an agent"
-                  aria-label="Hire an agent"
+                  title={hireLabel}
+                  aria-label={hireLabel}
                   className="mpv-placeholder-hire"
                 >
                   <span className="mpv-placeholder-hire-icon">+</span>
+                  <span className="mpv-placeholder-hire-label">{hireLabel}</span>
                 </button>
               )}
 

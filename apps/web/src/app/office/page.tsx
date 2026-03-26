@@ -966,8 +966,15 @@ export default function OfficePage() {
   }, []);
 
   const agentList = Array.from(agents.values());
+  // When an active project exists, filter solo agents to only those belonging to it
+  const projectAgentSet = useMemo(() => {
+    if (!activeProjectId) return null; // null = show all (no project filter)
+    const proj = projects.get(activeProjectId);
+    return proj ? new Set(proj.agentIds) : null;
+  }, [activeProjectId, projects]);
   const teamAgents = agentList.filter((a) => !!a.teamId);
-  const soloAgents = agentList.filter((a) => !a.teamId && !a.isExternal && !a.agentId.startsWith("reviewer-"));
+  const soloAgents = agentList.filter((a) => !a.teamId && !a.isExternal && !a.agentId.startsWith("reviewer-"))
+    .filter(a => projectAgentSet === null || projectAgentSet.has(a.agentId));
   const externalAgents = agentList.filter((a) => !!a.isExternal);
   const editor = editorRef.current;
 
@@ -1744,11 +1751,11 @@ export default function OfficePage() {
                   </button>
                 );
               })}
-              {/* Hire "+" button — same size as agent cell */}
+              {/* Hire "+" button — same size as agent cell (routes to New Project when no active project) */}
               {isOwner && expandedSection === "agents" && (
                 <button
-                  onClick={() => setShowHireModal(true)}
-                  title="Hire Agent"
+                  onClick={() => activeProjectId ? setShowHireModal(true) : setShowNewProjectModal(true)}
+                  title={activeProjectId ? "Hire Agent" : "New Project"}
                   style={{
                     display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                     width: 52, minHeight: 52, flexShrink: 0,
@@ -1929,8 +1936,11 @@ export default function OfficePage() {
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
                 showHireButton={isOwner && (expandedSection === "agents" || (expandedSection === "team" && !hasTeam))}
-                hireLabel={expandedSection === "team" ? "hire team" : "hire"}
-                onHire={() => expandedSection === "team" ? setShowHireTeamModal(true) : setShowHireModal(true)}
+                hireLabel={!activeProjectId ? "new project" : expandedSection === "team" ? "hire team" : "hire"}
+                onHire={() => {
+                  if (!activeProjectId) { setShowNewProjectModal(true); return; }
+                  expandedSection === "team" ? setShowHireTeamModal(true) : setShowHireModal(true);
+                }}
                 showTeamControls={isOwner && expandedSection === "team" && hasTeam}
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
