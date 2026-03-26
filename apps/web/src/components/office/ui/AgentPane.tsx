@@ -545,12 +545,9 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
       {/* ── Review overlay — unified panel: scanning animation (busy) → results (done) ── */}
       {reviewerOverlay && (
         <div style={{
-          position: "absolute", bottom: 0, left: 0, right: 0, zIndex: 20,
-          height: "55%", minHeight: 180,
+          position: "absolute", inset: 0, zIndex: 20,
           display: "flex", flexDirection: "column",
           background: `color-mix(in srgb, ${TERM_SEM_PURPLE} 4%, ${TERM_BG})`,
-          borderTop: `1px solid ${TERM_SEM_PURPLE}25`,
-          boxShadow: `0 -4px 16px -4px rgba(0,0,0,0.5)`,
           animation: "review-overlay-in 0.3s ease-out",
           overflow: "hidden",
         }}>
