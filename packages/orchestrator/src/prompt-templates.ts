@@ -33,7 +33,7 @@ FILES_CHANGED: (one per line)
 ENTRY_FILE: (relative path, e.g. index.html — NEVER absolute)
 PREVIEW_CMD: (for server/CLI apps)
 PREVIEW_PORT: (for web servers)
-SUMMARY: (one sentence, in English)
+SUMMARY: (one sentence, MUST be in English regardless of conversation language)
 \`\`\``;
 
 // Full deliverable rules — system constraints + report format (for initial tasks)
@@ -199,6 +199,8 @@ Rules:
 {{teamRoster}}
 {{recoveryContext}}
 
+${DELIVERABLE_RULES_FIX}
+
 {{prompt}}`,
 
   "worker-subagent-dev-initial": `Your name is {{name}}. {{personality}}
@@ -216,6 +218,9 @@ ${DELIVERABLE_RULES}
 {{memory}}
 {{recoveryContext}}
 {{teamRoster}}
+
+${DELIVERABLE_RULES_FIX}
+
 {{prompt}}`,
 
   "worker-direct-fix": `[Direct fix request from {{reviewerName}}]
