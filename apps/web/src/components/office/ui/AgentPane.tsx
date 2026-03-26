@@ -350,23 +350,23 @@ function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
     interface Drop { x: number; y: number; digits: string[]; opacity: number; speed: number }
     const drops: Drop[] = [];
 
-    function spawnDrop(): Drop {
+    function spawnDrop(randomY: boolean): Drop {
       const w = cvs!.width / (window.devicePixelRatio || 1);
       const h = cvs!.height / (window.devicePixelRatio || 1);
       return {
         x: Math.random() * w,
-        y: -Math.random() * h * 0.5, // start above visible area, randomized
+        y: randomY
+          ? Math.random() * h              // anywhere in visible area
+          : -(Math.random() * 0.3 + 0.1) * h, // just above visible area
         digits: Array.from({ length: digitCount }, () => Math.random() > 0.5 ? "1" : "0"),
         opacity: 0.12 + Math.random() * 0.14,
         speed: speed + Math.random() * 40,
       };
     }
 
-    // Init
+    // Init — scatter across the full visible area
     for (let i = 0; i < colCount; i++) {
-      const d = spawnDrop();
-      d.y = Math.random() * (cvs.height / (window.devicePixelRatio || 1)) - digitCount * lineH; // scatter across
-      drops.push(d);
+      drops.push(spawnDrop(true));
     }
 
     function resize() {
@@ -402,7 +402,7 @@ function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
         }
         // Reset when fully off bottom
         if (d.y > h + lineH) {
-          Object.assign(d, spawnDrop());
+          Object.assign(d, spawnDrop(false));
         }
       }
       ctx!.globalAlpha = 1;
