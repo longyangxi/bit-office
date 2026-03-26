@@ -23,6 +23,7 @@ import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/of
 import type { Ratings } from "@/components/office/ui/office-constants";
 import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
 import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
+import { computeAutoGrid } from "@/components/office/ui/autoGrid";
 import { APP_VERSION, APP_BUILD_TIME } from "@/lib/appMeta";
 
 // Extracted components — regular imports for hooks and inline-rendered components
@@ -53,6 +54,8 @@ const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal
 const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
 const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
+const ProjectBar = dynamic(() => import("@/components/office/ui/ProjectBar"), { ssr: false });
+const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
@@ -178,11 +181,13 @@ export default function OfficePage() {
   const suggestions = useOfficeStore(s => s.suggestions);
   const detectedBackends = useOfficeStore(s => s.detectedBackends);
   const agentLogLines = useOfficeStore(s => s.agentLogLines);
+  const projects = useOfficeStore(s => s.projects);
+  const activeProjectId = useOfficeStore(s => s.activeProjectId);
   // Subscribe so component re-renders when loadMoreMessages() updates the count
   const visibleMessageCount = useOfficeStore(s => s.visibleMessageCount); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   // Stable refs — these functions never change identity, no need to trigger re-renders
-  const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages } = useOfficeStore.getState();
+  const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages, addAgentToProject, getActiveProject } = useOfficeStore.getState();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRatings, setPreviewRatings] = useState<Ratings>({});
@@ -193,6 +198,7 @@ export default function OfficePage() {
   const [showHireModal, setShowHireModal] = useState(false);
   const [showHireTeamModal, setShowHireTeamModal] = useState(false);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
+  const [showNewProjectModal, setShowNewProjectModal] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
@@ -221,6 +227,7 @@ export default function OfficePage() {
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [consoleCols, setConsoleCols] = useState(3);
   const [consoleRows, setConsoleRows] = useState(1);
+  const [autoGridEnabled, setAutoGridEnabled] = useState(true);
   const [, forceUpdate] = useState(0);
   const editorRef = useRef(new EditorState());
   const officeStateRef = useRef<OfficeState | null>(null);
@@ -1570,6 +1577,11 @@ export default function OfficePage() {
 
             return (<>
 
+            {/* -- Project Bar (console mode: tab switcher at top) -- */}
+            {consoleMode && projects.size > 0 && (
+              <ProjectBar onNewProject={() => setShowNewProjectModal(true)} />
+            )}
+
             {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}
             {!consoleMode && (
             <div
@@ -1907,8 +1919,8 @@ export default function OfficePage() {
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
                 onFireTeam={handleFireTeam}
-                cols={expandedSection === "team" ? 3 : consoleCols}
-                rows={expandedSection === "team" ? 1 : consoleRows}
+                cols={expandedSection === "team" ? 3 : autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).cols : consoleCols}
+                rows={expandedSection === "team" ? 1 : autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).rows : consoleRows}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -2453,6 +2465,19 @@ export default function OfficePage() {
           </div>
           <TeamChatView messages={teamMessages} agents={agents} assetsReady={assetsReady} />
         </div>
+      )}
+
+      {showNewProjectModal && (
+        <NewProjectModal
+          open={showNewProjectModal}
+          onClose={() => setShowNewProjectModal(false)}
+          onCreated={(projectId, mode) => {
+            setShowNewProjectModal(false);
+            if (mode === "solo") setShowHireModal(true);
+            else if (mode === "team") setShowHireTeamModal(true);
+            // "empty" — just switch to the new project, no hire flow
+          }}
+        />
       )}
 
       {showHireModal && (

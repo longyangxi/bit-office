@@ -105,6 +105,18 @@ export interface Suggestion {
   timestamp: number;
 }
 
+// ── Project concept (Phase 1: project-centric architecture) ──
+
+export interface Project {
+  id: string;
+  name: string;
+  directory: string;       // set once at creation
+  agentIds: string[];      // agents in this project
+  teamId?: string;         // if team mode
+  status: "active" | "archived";
+  createdAt: number;
+}
+
 export interface ProjectSummary {
   id: string;
   name: string;
@@ -129,6 +141,9 @@ interface OfficeStore {
   agentDefs: AgentDefinition[];
   role: UserRole;
   suggestions: Suggestion[];
+  // ── Project-centric state ──
+  projects: Map<string, Project>;
+  activeProjectId: string | null;
   projectList: ProjectSummary[];
   viewingProjectId: string | null;
   viewingProjectEvents: GatewayEvent[];
@@ -156,6 +171,14 @@ interface OfficeStore {
   removeAgent: (agentId: string) => void;
   clearTeamMessages: () => void;
   clearViewingProject: () => void;
+  // ── Project actions ──
+  createProject: (name: string, directory: string) => string;
+  setActiveProject: (projectId: string | null) => void;
+  addAgentToProject: (projectId: string, agentId: string) => void;
+  removeAgentFromProject: (projectId: string, agentId: string) => void;
+  archiveProject: (projectId: string) => void;
+  getActiveProject: () => Project | null;
+  getProjectAgentIds: () => string[];
 }
 
 // ── localStorage persistence ──
@@ -316,6 +339,30 @@ function loadTeamMessages(): TeamChatMessage[] {
   }
 }
 
+// ── Project persistence ──
+
+const PROJECT_STORAGE_KEY_BASE = "office-projects";
+
+function saveProjects(projects: Map<string, Project>) {
+  if (!isBrowser()) return;
+  try {
+    const data: Project[] = Array.from(projects.values());
+    localStorage.setItem(scopedKey(PROJECT_STORAGE_KEY_BASE), JSON.stringify(data));
+  } catch { /* quota exceeded */ }
+}
+
+function loadProjects(): Map<string, Project> {
+  if (!isBrowser()) return new Map();
+  try {
+    const raw = localStorage.getItem(scopedKey(PROJECT_STORAGE_KEY_BASE));
+    if (!raw) return new Map();
+    const data: Project[] = JSON.parse(raw);
+    const map = new Map<string, Project>();
+    for (const p of data) map.set(p.id, p);
+    return map;
+  } catch { return new Map(); }
+}
+
 // ── Team phase persistence ──
 
 const TEAM_PHASE_KEY_BASE = "office-team-phase";
@@ -366,6 +413,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   teamPhases: new Map(),
   role: "owner" as UserRole,
   suggestions: [],
+  projects: new Map(),
+  activeProjectId: null,
   projectList: [],
   viewingProjectId: null,
   viewingProjectEvents: [],
@@ -393,7 +442,11 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
     const saved = getCachedStorage();
     const savedTeamMessages = loadTeamMessages();
     const savedTeamPhases = loadTeamPhases();
-    if (saved.size === 0 && savedTeamMessages.length === 0 && savedTeamPhases.size === 0) { set({ hydrated: true, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases }); return; }
+    const savedProjects = loadProjects();
+    const savedActiveProject = isBrowser()
+      ? (localStorage.getItem(scopedKey("office-active-project")) || null)
+      : null;
+    if (saved.size === 0 && savedTeamMessages.length === 0 && savedTeamPhases.size === 0 && savedProjects.size === 0) { set({ hydrated: true, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases, projects: savedProjects, activeProjectId: savedActiveProject }); return; }
     set((state) => {
       const agents = new Map(state.agents);
       for (const [agentId, persisted] of saved) {
@@ -409,7 +462,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           });
         }
       }
-      return { agents, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases, hydrated: true };
+      return { agents, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases, projects: savedProjects, activeProjectId: savedActiveProject, hydrated: true };
     });
   },
 
@@ -453,6 +506,75 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
 
   clearViewingProject: () => {
     set({ viewingProjectId: null, viewingProjectEvents: [], viewingProjectName: null });
+  },
+
+  // ── Project actions ──
+
+  createProject: (name, directory) => {
+    const id = "proj-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const project: Project = { id, name, directory, agentIds: [], status: "active", createdAt: Date.now() };
+    set((state) => {
+      const projects = new Map(state.projects);
+      projects.set(id, project);
+      saveProjects(projects);
+      return { projects, activeProjectId: id };
+    });
+    return id;
+  },
+
+  setActiveProject: (projectId) => {
+    set({ activeProjectId: projectId });
+    if (isBrowser()) {
+      try { localStorage.setItem(scopedKey("office-active-project"), projectId ?? ""); } catch {}
+    }
+  },
+
+  addAgentToProject: (projectId, agentId) => {
+    set((state) => {
+      const projects = new Map(state.projects);
+      const project = projects.get(projectId);
+      if (!project) return state;
+      if (project.agentIds.includes(agentId)) return state;
+      projects.set(projectId, { ...project, agentIds: [...project.agentIds, agentId] });
+      saveProjects(projects);
+      return { projects };
+    });
+  },
+
+  removeAgentFromProject: (projectId, agentId) => {
+    set((state) => {
+      const projects = new Map(state.projects);
+      const project = projects.get(projectId);
+      if (!project) return state;
+      projects.set(projectId, { ...project, agentIds: project.agentIds.filter(id => id !== agentId) });
+      saveProjects(projects);
+      return { projects };
+    });
+  },
+
+  archiveProject: (projectId) => {
+    set((state) => {
+      const projects = new Map(state.projects);
+      const project = projects.get(projectId);
+      if (!project) return state;
+      projects.set(projectId, { ...project, status: "archived" });
+      const nextActive = state.activeProjectId === projectId
+        ? (Array.from(projects.values()).find(p => p.id !== projectId && p.status === "active")?.id ?? null)
+        : state.activeProjectId;
+      saveProjects(projects);
+      return { projects, activeProjectId: nextActive };
+    });
+  },
+
+  getActiveProject: () => {
+    const { projects, activeProjectId } = get();
+    return activeProjectId ? projects.get(activeProjectId) ?? null : null;
+  },
+
+  getProjectAgentIds: () => {
+    const { projects, activeProjectId } = get();
+    if (!activeProjectId) return [];
+    return projects.get(activeProjectId)?.agentIds ?? [];
   },
 
   addUserMessage: (agentId, taskId, prompt) => {

@@ -761,6 +761,90 @@
 }
 
 /* ============================================================
+   PROJECT BAR — .pbar
+   Tab-style project switcher at top of workspace.
+   Phase 1: project-centric architecture.
+   ============================================================ */
+.pbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--term-border-dim);
+  background: var(--term-bg);
+  padding: 0 var(--space-2);
+  min-height: 36px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.pbar::-webkit-scrollbar { display: none; }
+
+.pbar-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  min-width: 0;
+}
+
+.pbar-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-4);
+  min-height: 36px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--term-text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  white-space: nowrap;
+  opacity: 0.6;
+  transition:
+    opacity var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    background-color var(--duration-fast) ease;
+}
+.pbar-tab:hover {
+  opacity: 0.85;
+  background: color-mix(in srgb, var(--term-text) 4%, transparent);
+}
+.pbar-tab-active {
+  opacity: 1;
+  color: var(--term-text-bright);
+  border-bottom-color: var(--term-accent);
+}
+.pbar-tab-name {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pbar-tab-count {
+  font-size: 10px;
+  padding: 0 5px;
+  min-width: 16px;
+  text-align: center;
+  border: 1px solid var(--term-border);
+  color: var(--term-text);
+  opacity: 0.7;
+  line-height: 16px;
+}
+.pbar-tab-new {
+  font-size: 16px;
+  font-weight: 300;
+  opacity: 0.4;
+  padding: 0 var(--space-3);
+  color: var(--term-text);
+}
+.pbar-tab-new:hover {
+  opacity: 0.8;
+  color: var(--term-accent);
+}
+
+/* ============================================================
    DRAG-AND-DROP REORDER — grab cursor on header, drop indicator
    ============================================================ */
 .mpv-cell[draggable="true"] > .term-info-bar {

@@ -61,7 +61,8 @@ const BOOT_LINES = [
   { text: "> SYSTEM INIT...", color: "#22c55e", delay: 0 },
   { text: "> LOADING NEURAL CORE", color: "#22c55e", delay: 600 },
   { text: "> OPEN OFFICE ENGINE V1.0", color: "#818cf8", delay: 1200 },
-  { text: "> OFFICE MODE READY", color: "#f97316", delay: 1800 },
+  { text: "> MULTI-AGENT SOFTWARE DELIVERY", color: "#a1a1aa", delay: 1600 },
+  { text: "> OFFICE MODE READY", color: "#f97316", delay: 2000 },
 ];
 
 export default function OfficeSplash({ onComplete }: { onComplete: () => void }) {
@@ -117,11 +118,11 @@ export default function OfficeSplash({ onComplete }: { onComplete: () => void })
     BOOT_LINES.forEach((line, i) => {
       timers.push(setTimeout(() => setBootLine(i + 1), line.delay));
     });
-    timers.push(setTimeout(() => setPhase("title"), 2800));
+    timers.push(setTimeout(() => setPhase("title"), 3200));
     timers.push(setTimeout(() => {
       setPhase("ready");
       setShowPress(true);
-    }, 4200));
+    }, 4600));
     return () => timers.forEach(clearTimeout);
   }, []);
 
@@ -192,7 +193,7 @@ export default function OfficeSplash({ onComplete }: { onComplete: () => void })
       }
 
       // ── Boot text ─────────────────────────────────────
-      if (elapsed < 3000) {
+      if (elapsed < 3400) {
         ctx.font = "16px monospace";
         for (let i = 0; i < bootLine; i++) {
           const line = BOOT_LINES[i];
@@ -211,8 +212,8 @@ export default function OfficeSplash({ onComplete }: { onComplete: () => void })
       }
 
       // ── Title sequence ────────────────────────────────
-      if (elapsed > 2800) {
-        const titleAlpha = Math.min(1, (elapsed - 2800) / 800);
+      if (elapsed > 3200) {
+        const titleAlpha = Math.min(1, (elapsed - 3200) / 800);
 
         // Glow behind title
         const grd = ctx.createRadialGradient(width / 2, height / 2 - 30, 0, width / 2, height / 2 - 30, 200);
@@ -237,18 +238,18 @@ export default function OfficeSplash({ onComplete }: { onComplete: () => void })
         ctx.stroke();
 
         // Subtitle
-        if (elapsed > 3400) {
-          const subAlpha = Math.min(1, (elapsed - 3400) / 600);
+        if (elapsed > 3800) {
+          const subAlpha = Math.min(1, (elapsed - 3800) / 600);
           ctx.font = "13px monospace";
           ctx.fillStyle = `rgba(170, 170, 170, ${subAlpha})`;
           ctx.textAlign = "center";
-          ctx.fillText("CONTROL YOUR AI AGENTS", width / 2, height / 2 + 76);
+          ctx.fillText("PARALLEL AI AGENTS. ONE WORKSPACE.", width / 2, height / 2 + 76);
           ctx.textAlign = "start";
         }
       }
 
       // ── PRESS START ───────────────────────────────────
-      if (elapsed > 4200) {
+      if (elapsed > 4600) {
         const blink = Math.floor(elapsed / 500) % 2 === 0;
         if (blink) {
           drawPixelText(ctx, "PRESS START", width / 2, height / 2 + 110, 2, "#22c55e");
