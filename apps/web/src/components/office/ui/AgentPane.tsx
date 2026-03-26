@@ -618,23 +618,17 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               {/* Matrix-style falling binary digits */}
               <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
                 {[
-                  { left: "4%",  dur: 2.8, delay: 0,   bits: "1 0 1 1 0 1 0 0 1 0 0 1 0 1 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 0" },
-                  { left: "12%", dur: 3.4, delay: 0.6,  bits: "0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0" },
-                  { left: "20%", dur: 2.2, delay: 0.3,  bits: "1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0" },
-                  { left: "28%", dur: 3.8, delay: 1.2,  bits: "0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1" },
-                  { left: "36%", dur: 2.5, delay: 0.8,  bits: "1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0" },
-                  { left: "44%", dur: 3.2, delay: 0.4,  bits: "0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0" },
-                  { left: "52%", dur: 2.6, delay: 1.0,  bits: "1 1 1 0 0 0 1 0 0 1 0 1 1 1 0 1 0 1 0 0 1 1 1 0 0 0 1 0 0 1 0 1 1 1 1 0 0 0 1 0 0 1 0 1 1 1 0 1 0 1 0 0 1 1 1 0" },
-                  { left: "60%", dur: 3.6, delay: 0.2,  bits: "0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 1 0 1 1 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 0 1 1 0 1 1 0 1 0 0 1 0 0 1 1 0 1 1 0 0 0 1" },
-                  { left: "68%", dur: 2.4, delay: 0.9,  bits: "1 0 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 1 0 1 0 1 0 1 0 0 1 0 1 1 0 1 0 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 1 0 1 0 1 0" },
-                  { left: "76%", dur: 3.0, delay: 1.5,  bits: "0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 0 1 1 0 1 0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 1 1 1 0 0 0 1 1 0 0 1 1 1 0 0 1 1 0 1 0 1" },
-                  { left: "84%", dur: 2.3, delay: 0.5,  bits: "1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 0 1 1 0 0 1 1 0 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 0 1 1 0 0 1" },
-                  { left: "92%", dur: 3.3, delay: 0.7,  bits: "0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0 1 0 1 0 0 1 1 0 1 1 0 0 1 0 1" },
+                  { left: "7%",  top: "-10%", dur: 3.2, delay: 0,    bits: "1 0 1 1 0 1 0 0 1 0 0 1 0 1 1 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0" },
+                  { left: "23%", top: "-40%", dur: 4.0, delay: 0.8,  bits: "0 1 1 0 1 0 0 1 1 0 0 1 0 1 1 0 1 0 1 0 0 1 1 0 1 0 0 1 1 0" },
+                  { left: "42%", top: "-25%", dur: 3.5, delay: 1.5,  bits: "1 1 0 0 1 0 1 0 0 1 1 0 1 0 1 0 1 1 0 0 1 0 1 0 0 1 1 0 1 1" },
+                  { left: "61%", top: "-55%", dur: 4.2, delay: 0.3,  bits: "0 0 1 0 1 1 0 1 1 0 1 0 0 1 0 1 1 0 0 1 0 1 1 0 1 0 0 1 0 1" },
+                  { left: "78%", top: "-15%", dur: 3.0, delay: 1.1,  bits: "1 0 0 1 1 0 1 0 0 1 1 0 0 1 0 1 0 1 1 0 1 0 0 1 1 0 0 1 0 1" },
+                  { left: "93%", top: "-45%", dur: 3.8, delay: 0.5,  bits: "0 1 0 1 0 0 1 1 1 0 1 0 1 1 0 0 1 0 0 1 0 1 0 0 1 1 1 0 1 0" },
                 ].map((col, i) => (
                   <div key={i} style={{
-                    position: "absolute", left: col.left, top: 0, height: "200%",
-                    fontFamily: TERM_FONT, fontSize: 10, lineHeight: "14px",
-                    color: TERM_SEM_PURPLE, opacity: 0.15 + (i % 3) * 0.06,
+                    position: "absolute", left: col.left, top: col.top, height: "250%",
+                    fontFamily: TERM_FONT, fontSize: 13, lineHeight: "20px",
+                    color: TERM_SEM_PURPLE, opacity: 0.18 + (i % 3) * 0.06,
                     whiteSpace: "pre", textAlign: "center",
                     display: "flex", flexDirection: "column",
                     animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
