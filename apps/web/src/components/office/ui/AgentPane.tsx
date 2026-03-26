@@ -613,7 +613,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             }}>
               {/* Grid lines background */}
               <div className="review-scan-grid" style={{
-                position: "absolute", inset: 0, opacity: 0.1,
+                position: "absolute", inset: 0, opacity: 0.15,
                 backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
