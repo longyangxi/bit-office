@@ -748,7 +748,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500,
                   opacity: 0.8,
                 }}>
-                  scanning
+                  reviewing
                 </span>
               </div>
               {/* Corner brackets — decorative */}
