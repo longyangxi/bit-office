@@ -615,6 +615,31 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 backgroundImage: `linear-gradient(${TERM_SEM_PURPLE} 1px, transparent 1px), linear-gradient(90deg, ${TERM_SEM_PURPLE} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
+              {/* Matrix-style falling binary digits */}
+              <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none" }}>
+                {[
+                  { left: "6%",  dur: 4.2, delay: 0,    bits: "1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n0\n1\n0\n1\n1" },
+                  { left: "14%", dur: 5.8, delay: 1.2,  bits: "0\n1\n1\n0\n1\n0\n0\n1\n1\n0\n0\n1\n0\n1\n1\n0" },
+                  { left: "22%", dur: 3.6, delay: 0.5,  bits: "1\n1\n0\n0\n1\n0\n1\n0\n0\n1\n1\n0\n1\n0\n1" },
+                  { left: "34%", dur: 6.4, delay: 2.1,  bits: "0\n0\n1\n0\n1\n1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n1\n1\n0" },
+                  { left: "46%", dur: 4.8, delay: 0.8,  bits: "1\n0\n0\n1\n1\n0\n1\n0\n0\n1\n1\n0\n0\n1\n0" },
+                  { left: "58%", dur: 5.2, delay: 1.8,  bits: "0\n1\n0\n1\n0\n0\n1\n1\n1\n0\n1\n0\n1\n1\n0\n0" },
+                  { left: "68%", dur: 3.9, delay: 0.3,  bits: "1\n1\n1\n0\n0\n0\n1\n0\n0\n1\n0\n1\n1\n1\n0" },
+                  { left: "78%", dur: 6.1, delay: 1.5,  bits: "0\n0\n1\n1\n0\n1\n1\n0\n1\n0\n0\n1\n0\n0\n1\n1" },
+                  { left: "88%", dur: 4.5, delay: 2.4,  bits: "1\n0\n1\n0\n1\n0\n1\n0\n0\n1\n0\n1\n1\n0\n0" },
+                  { left: "96%", dur: 5.5, delay: 0.7,  bits: "0\n1\n1\n1\n0\n0\n0\n1\n1\n0\n0\n1\n1\n1\n0" },
+                ].map((col, i) => (
+                  <div key={i} style={{
+                    position: "absolute", left: col.left, top: 0,
+                    fontFamily: TERM_FONT, fontSize: 10, lineHeight: "14px",
+                    color: TERM_SEM_PURPLE, opacity: 0.15 + (i % 3) * 0.06,
+                    whiteSpace: "pre", textAlign: "center",
+                    animation: `review-matrix-fall ${col.dur}s linear ${col.delay}s infinite`,
+                  }}>
+                    {col.bits}
+                  </div>
+                ))}
+              </div>
               {/* Sweep line */}
               <div className="review-scan-sweep" style={{
                 position: "absolute", left: 0, right: 0, height: 2,
