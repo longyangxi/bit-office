@@ -7,9 +7,6 @@
 - `packages/orchestrator` - Multi-agent engine (worktree, delegation, phases)
 - `packages/memory` - Persistent agent memory (sessions, facts, shared knowledge)
 
-## Git
-- All git commit messages MUST be in English.
-
 ## Key Commands
 - `pnpm dev:web` - Start web dev server
 - `pnpm dev:gateway` - Start gateway
