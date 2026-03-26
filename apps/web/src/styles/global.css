@@ -423,12 +423,17 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
   to { opacity: 0; visibility: hidden; }
 }
 @keyframes review-overlay-in {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
-@keyframes review-slide-up {
-  from { opacity: 0; transform: translateY(40px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Review scanning animation */
+@keyframes review-scan-sweep {
+  0%, 100% { top: 8%; }
+  50% { top: 88%; }
+}
+@keyframes review-scan-pulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 1; }
 }
 /* ── Chat area — recessed surface with subtle inset shadow ── */
 .term-chat-area {
