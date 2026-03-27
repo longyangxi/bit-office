@@ -18,6 +18,7 @@ import type { DecompositionPlan, TaskNode } from "./decomposer/index.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
 import { getManagedWorktreeBranch, resetWorktreeToMain, isGitRepo, initGitRepo } from "./worktree.js";
 import { WorktreeWorkspace } from "./workspace/index.js";
+import { selectAgent } from "./agent-selector.js";
 import type { Workspace } from "./workspace/types.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
@@ -1284,37 +1285,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   private selectAgentForTask(task: TaskNode): string | null {
-    // Simple role-based selection: find idle non-lead agent matching role
-    const requestedRole = task.role ?? "Developer";
-    const agents = this.agentManager.getAll();
-
-    // Prefer exact role match
-    for (const session of agents) {
-      if (this.agentManager.isTeamLead(session.agentId)) continue;
-      if (session.status !== "idle") continue;
-      if (session.role?.toLowerCase() === requestedRole.toLowerCase()) {
-        return session.agentId;
-      }
-    }
-
-    // Partial match
-    for (const session of agents) {
-      if (this.agentManager.isTeamLead(session.agentId)) continue;
-      if (session.status !== "idle") continue;
-      if (session.role?.toLowerCase().includes(requestedRole.toLowerCase()) ||
-          requestedRole.toLowerCase().includes(session.role?.toLowerCase() ?? "")) {
-        return session.agentId;
-      }
-    }
-
-    // Any idle non-lead
-    for (const session of agents) {
-      if (this.agentManager.isTeamLead(session.agentId)) continue;
-      if (session.status !== "idle") continue;
-      return session.agentId;
-    }
-
-    return null;
+    const candidates = this.agentManager.getAll().map(s => ({
+      agentId: s.agentId,
+      role: s.role ?? "",
+      status: s.status,
+      isTeamLead: this.agentManager.isTeamLead(s.agentId),
+    }));
+    return selectAgent(candidates, task.role ?? "Developer");
   }
 
   private checkSchedulerCompletion(): void {

@@ -30,6 +30,8 @@ export { StuckDetector } from "./stuck-detector.js";
 export type { WorkingAgent, StuckDetectorConfig } from "./stuck-detector.js";
 export type { PluginRegistry, PluginSlot, PluginManifest } from "./plugin-registry.js";
 export { syncAgentDefs } from "./agent-defs.js";
+export { selectAgent } from "./agent-selector.js";
+export type { AgentCandidate } from "./agent-selector.js";
 export { TaskScheduler, tryParseDecomposition, parseDecompositionBlock, formatLineage, formatSiblings, DEFAULT_DECOMPOSER_CONFIG } from "./decomposer/index.js";
 export type { TaskNode, DecompositionPlan, DecompositionBlock, DecomposerConfig, TaskKind, TaskStatus } from "./decomposer/index.js";
 export type { TeamPhaseInfo } from "./phase-machine.js";
