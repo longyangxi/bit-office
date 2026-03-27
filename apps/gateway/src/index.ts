@@ -641,6 +641,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         const greetTaskId = nanoid();
         orc.runTask(leadAgentId, greetTaskId, "Greet the user and ask what they would like to build.", { phaseOverride: "create" });
       }
+      orc.setAutoReview(parsed.autoReview ?? false);
       break;
     }
     case "STOP_TEAM": {
