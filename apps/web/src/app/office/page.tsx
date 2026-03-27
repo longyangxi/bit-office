@@ -202,7 +202,6 @@ export default function OfficePage() {
   const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
-  const [expandedSection, setExpandedSection] = useState<"team" | "agents" | "external">("agents");
   const [prompt, setPrompt] = useState("");
   const [pendingImages, setPendingImages] = useState<{ name: string; dataUrl: string; base64: string }[]>([]);
   const pasteMapRef = useRef(new Map<string, string>()); // label → full text
@@ -648,17 +647,7 @@ export default function OfficePage() {
   const handleAgentClick = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
     setChatOpen(true);
-    const agent = agents.get(agentId);
-    if (agent) {
-      if (agent.isExternal) {
-        setExpandedSection("external");
-      } else if (agent.teamId) {
-        setExpandedSection("team");
-      } else {
-        setExpandedSection("agents");
-      }
-    }
-  }, [agents]);
+  }, []);
 
   const handleHire = useCallback((def: AgentDefinition, backend: string, workDir?: string, displayName?: string) => {
     const name = displayName?.trim() || (() => {
@@ -678,14 +667,12 @@ export default function OfficePage() {
     if (proj) addAgentToProject(proj.id, agentId);
     setSelectedAgent(agentId);
     setChatOpen(true);
-    setExpandedSection("agents");
     setShowHireModal(false);
   }, [agents]); // addAgentToProject, getActiveProject are stable refs from getState()
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
     sendCommand({ type: "CREATE_TEAM", leadId, memberIds, backends, workDir });
     setShowHireTeamModal(false);
-    setExpandedSection("team");
     setSelectedAgent(null);
     setChatOpen(false);
     setMobileTeamOpen(true);
@@ -704,13 +691,8 @@ export default function OfficePage() {
 
   const handleFire = useCallback(async (agentId: string) => {
     const agent = agents.get(agentId);
-    if (agent?.isExternal) {
-      if (!await confirm(`Kill external process ${agent.name}? (PID ${agent.pid})`)) return;
-      sendCommand({ type: "KILL_EXTERNAL", agentId });
-    } else {
-      if (!await confirm(`Fire ${agent?.name ?? agentId}?`)) return;
-      sendCommand({ type: "FIRE_AGENT", agentId });
-    }
+    if (!await confirm(`Fire ${agent?.name ?? agentId}?`)) return;
+    sendCommand({ type: "FIRE_AGENT", agentId });
     if (selectedAgent === agentId) {
       setSelectedAgent(null);
       setChatOpen(false);
@@ -736,20 +718,7 @@ export default function OfficePage() {
     }
   }, [agents]);
 
-  const handleFireTeam = useCallback(async () => {
-    const teamAgents = Array.from(agents.values()).filter((a) => !!a.teamId);
-    if (teamAgents.length === 0) return;
-    const msg = `Fire the entire team (${teamAgents.length} agents)?`;
-    if (!await confirm(msg)) return;
-    sendCommand({ type: "FIRE_TEAM" });
-    for (const a of teamAgents) {
-      sendCommand({ type: "FIRE_AGENT", agentId: a.agentId });
-    }
-    clearTeamMessages();
-    setSelectedAgent(null);
-    setChatOpen(false);
-    setMobileTeamOpen(false);
-  }, [agents, clearTeamMessages, confirm]);
+
 
   const addImageFromFile = useCallback((file: File, agentId?: string) => {
     if (!file.type.startsWith("image/")) return;
@@ -884,7 +853,7 @@ export default function OfficePage() {
   const handleRunTask = useCallback(async () => {
     if (!selectedAgent || (!prompt.trim() && pendingImages.length === 0)) return;
     const agent = agents.get(selectedAgent);
-    if (agent?.isExternal) return;
+    if (!agent) return;
 
     // Upload images first, collect paths
     const imagePaths = await uploadImages(pendingImages);
@@ -966,16 +935,6 @@ export default function OfficePage() {
   }, []);
 
   const agentList = Array.from(agents.values());
-  // When an active project exists, filter solo agents to only those belonging to it
-  const projectAgentSet = useMemo(() => {
-    if (!activeProjectId) return null; // null = show all (no project filter)
-    const proj = projects.get(activeProjectId);
-    return proj ? new Set(proj.agentIds) : null;
-  }, [activeProjectId, projects]);
-  const teamAgents = agentList.filter((a) => !!a.teamId);
-  const soloAgents = agentList.filter((a) => !a.teamId && !a.isExternal && !a.agentId.startsWith("reviewer-"))
-    .filter(a => projectAgentSet === null || projectAgentSet.has(a.agentId));
-  const externalAgents = agentList.filter((a) => !!a.isExternal);
   const editor = editorRef.current;
 
   // Responsive: detect mobile
@@ -1027,14 +986,12 @@ export default function OfficePage() {
   // When review is done, store the result text for user confirmation (null = still working or no overlay)
   const [reviewResultText, setReviewResultText] = useState<string | null>(null);
 
-  // Auto-populate openPanes in console mode: show all agents (exclude temp reviewers)
-  const allConsoleAgents = [...soloAgents, ...teamAgents, ...externalAgents];
-  const activeAgentIds = (consoleMode
-    ? allConsoleAgents
-    : expandedSection === "agents" ? soloAgents
-    : expandedSection === "team" ? teamAgents
-    : externalAgents
-  ).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
+  // Show agents belonging to the active project, or all solo agents if no project
+  const activeProject = activeProjectId ? projects.get(activeProjectId) : undefined;
+  const allAgents = activeProject
+    ? agentList.filter(a => activeProject.agentIds.includes(a.agentId) && !a.agentId.startsWith("reviewer-"))
+    : agentList.filter(a => !a.teamId && !a.agentId.startsWith("reviewer-"));
+  const activeAgentIds = allAgents.map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
   // Sync open panes whenever agent list changes — preserve custom drag order
   useEffect(() => {
     if (!consoleMode) return;
@@ -1414,8 +1371,6 @@ export default function OfficePage() {
           <BottomToolbar
             editMode={editMode}
             onToggleEditMode={toggleEditMode}
-            onOpenSettings={() => setShowSettings(true)}
-            onOpenHistory={() => setShowHistory(true)}
             onOpenOfficeSwitcher={() => setShowOfficeSwitcher(true)}
             showEditorControls={showEditorControls}
             testActive={testActive}
@@ -1475,10 +1430,29 @@ export default function OfficePage() {
                 localStorage.setItem("office-view-mode", "office");
                 setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
               }}
+              onCloseProject={(projectId) => {
+                const proj = projects.get(projectId);
+                if (!proj) return;
+                const hasTeamAgents = proj.agentIds.some(id => agents.get(id)?.teamId);
+                if (hasTeamAgents) {
+                  sendCommand({ type: "FIRE_TEAM" });
+                  clearTeamMessages();
+                }
+                for (const agentId of proj.agentIds) {
+                  if (agents.has(agentId)) {
+                    sendCommand({ type: "FIRE_AGENT", agentId });
+                  }
+                }
+                useOfficeStore.getState().archiveProject(projectId);
+              }}
+              onHireToProject={(projectId) => {
+                useOfficeStore.getState().setActiveProject(projectId);
+                setShowHireModal(true);
+              }}
             />
           )}
 
-          {/* ── Office mode: Bookmark tabs — absolutely positioned to the left of sidebar ── */}
+          {/* ── Office mode: arrow + theme picker — absolutely positioned to the left of sidebar ── */}
           {!consoleMode && (
           <div style={{
             position: "absolute",
@@ -1494,47 +1468,6 @@ export default function OfficePage() {
             opacity: sceneVisible ? 1 : 0,
             pointerEvents: sceneVisible ? "auto" : "none",
           }}>
-          {[
-            { key: "agents" as const, label: "Agents" },
-            { key: "team" as const, label: "Team" },
-            { key: "external" as const, label: "Ext" },
-          ].map((tab) => {
-            const active = expandedSection === tab.key;
-            const accentColor = TERM_GREEN;
-            return (
-              <button
-                key={tab.key}
-                onClick={() => {
-                  setExpandedSection(tab.key);
-                  const list = tab.key === "agents" ? soloAgents : tab.key === "team" ? teamAgents : externalAgents;
-                  if (list.length > 0) { setSelectedAgent(list[0].agentId); setChatOpen(true); }
-                }}
-                style={{
-                  writingMode: "vertical-lr",
-                  textOrientation: "mixed",
-                  padding: "0 5px",
-                  height: 72,
-                  border: "none", cursor: "pointer",
-                  background: active ? accentColor + "20" : TERM_PANEL + "80",
-                  borderRadius: "6px 0 0 6px",
-                  borderTop: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
-                  borderBottom: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
-                  borderLeft: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
-                  borderRight: "none",
-                  color: active ? accentColor : TERM_DIM,
-                  fontSize: 13, fontFamily: TERM_FONT, fontWeight: 600,
-                  letterSpacing: "0.1em",
-                  boxShadow: active ? `0 2px 8px ${accentColor}15, inset 0 -4px 8px ${accentColor}08` : "2px 0 8px rgba(0,0,0,0.4)",
-                  transition: "all 0.15s",
-                }}
-                onMouseEnter={(e) => { if (!active) e.currentTarget.style.color = accentColor; }}
-                onMouseLeave={(e) => { if (!active) e.currentTarget.style.color = TERM_DIM; }}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-
           {/* Arrow button — switch to console mode */}
           <button
             onClick={() => {
@@ -1547,7 +1480,7 @@ export default function OfficePage() {
             style={{
               width: 28, height: 40, border: "none", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
-              padding: 0, marginTop: 4,
+              padding: 0,
               background: TERM_PANEL + "80",
               borderRadius: "10px 0 0 10px",
               borderTop: `1px solid ${TERM_GREEN}40`,
@@ -1593,13 +1526,7 @@ export default function OfficePage() {
           <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
 
           {(() => {
-            // In console mode show all agents; in office mode filter by tab
-            const unsortedAgentList = (consoleMode
-              ? allConsoleAgents
-              : expandedSection === "agents" ? soloAgents
-              : expandedSection === "team" ? teamAgents
-              : externalAgents
-            ).filter(a => !tempReviewerIds.has(a.agentId));
+            const unsortedAgentList = allAgents.filter(a => !tempReviewerIds.has(a.agentId));
             const paneOrder = new Map(openPanes.map((id, i) => [id, i]));
             const activeAgentList = [...unsortedAgentList].sort((a, b) => {
               const ai = paneOrder.get(a.agentId) ?? Infinity;
@@ -1650,11 +1577,6 @@ export default function OfficePage() {
               scrollbarWidth: "none",
               cursor: "grab",
             }}>
-              {activeAgentList.length === 0 && expandedSection === "external" && (
-                <div style={{ padding: "12px 10px", color: TERM_DIM, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
-                  No external agents detected
-                </div>
-              )}
               {activeAgentList.map((agent, idx) => {
                 const isActive = selectedAgent === agent.agentId;
                 const agentState = agents.get(agent.agentId);
@@ -1760,7 +1682,7 @@ export default function OfficePage() {
                 );
               })}
               {/* Hire "+" button — same size as agent cell (routes to New Project when no active project) */}
-              {isOwner && expandedSection === "agents" && (
+              {isOwner && (
                 <button
                   onClick={() => activeProjectId ? setShowHireModal(true) : setShowNewProjectModal(true)}
                   title={activeProjectId ? "Hire Agent" : "New Project"}
@@ -1780,7 +1702,7 @@ export default function OfficePage() {
                 >+</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}
-              {isOwner && expandedSection === "team" && !hasTeam && (
+              {isOwner && !hasTeam && (
                 <button onClick={() => setShowHireTeamModal(true)} title="Hire Team"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -1794,7 +1716,7 @@ export default function OfficePage() {
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
                 ><span style={{ fontSize: 15, lineHeight: 1 }}>+</span> hire team</button>
               )}
-              {isOwner && expandedSection === "team" && hasTeam && teamBusy && (
+              {isOwner && hasTeam && teamBusy && (
                 <button onClick={handleStopTeam} title="Stop Team Work"
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
@@ -1807,20 +1729,6 @@ export default function OfficePage() {
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}20`; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}10`; }}
                 >stop</button>
-              )}
-              {isOwner && expandedSection === "team" && hasTeam && (
-                <button onClick={handleFireTeam} title="Fire Team"
-                  style={{
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    flexShrink: 0, padding: "6px 14px", height: 52,
-                    border: `1px solid ${TERM_SEM_RED}30`, cursor: "pointer",
-                    backgroundColor: "transparent", color: TERM_SEM_RED,
-                    fontSize: 10, fontFamily: TERM_FONT,
-                    borderRadius: 6, transition: "all 0.2s ease", opacity: 0.7,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.backgroundColor = `${TERM_SEM_RED}12`; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.backgroundColor = "transparent"; }}
-                >fire</button>
               )}
             </div>
             )}
@@ -1846,7 +1754,7 @@ export default function OfficePage() {
                     hasMoreMessages: visible.length < ag.messages.length,
                     tokenUsage: ag.tokenUsage, isTeamLead: ag.isTeamLead,
                     isTeamMember: !!ag.teamId && !ag.isTeamLead,
-                    isExternal: !!ag.isExternal, teamId: ag.teamId,
+                    isExternal: false, teamId: ag.teamId,
                     teamPhase: ag.isTeamLead ? getAgentPhase(agentId) : null,
                     pendingApproval: ag.pendingApproval ?? null,
                     awaitingApproval: ag.awaitingApproval,
@@ -1877,7 +1785,7 @@ export default function OfficePage() {
                   const paneImages = panePendingImages.get(agentId) || [];
                   if (!p && paneImages.length === 0) return;
                   const ag = agents.get(agentId);
-                  if (!ag || ag.isExternal) return;
+                  if (!ag) return;
 
                   // Upload images first, collect paths
                   const imagePaths = await uploadImages(paneImages);
@@ -1952,7 +1860,6 @@ export default function OfficePage() {
                 showTeamControls={isOwner && hasTeam}
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
-                onFireTeam={handleFireTeam}
                 cols={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).cols : consoleCols}
                 rows={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).rows : consoleRows}
               />
@@ -1978,7 +1885,7 @@ export default function OfficePage() {
                   tokenUsage={ag.tokenUsage}
                   isTeamLead={ag.isTeamLead}
                   isTeamMember={isTeamMember}
-                  isExternal={!!ag.isExternal}
+                  isExternal={false}
                   teamId={ag.teamId}
                   teamPhase={ag.isTeamLead ? getAgentPhase(selectedAgent) : null}
                   pendingApproval={ag.pendingApproval ?? null}
@@ -2045,7 +1952,7 @@ export default function OfficePage() {
             )}
 
             {/* Team Activity log */}
-            {(consoleMode || expandedSection === "team") && teamMessages.length > 0 && (
+            {teamMessages.length > 0 && (
               <TeamActivityLog messages={teamMessages} agents={agents} assetsReady={assetsReady} onClear={clearTeamMessages} />
             )}
 

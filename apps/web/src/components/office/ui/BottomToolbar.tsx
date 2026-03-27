@@ -1,13 +1,10 @@
 "use client"
 
-import { APP_VERSION } from '@/lib/appMeta'
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip"
 
 interface BottomToolbarProps {
   editMode: boolean
   onToggleEditMode: () => void
-  onOpenSettings: () => void
-  onOpenHistory?: () => void
   onOpenOfficeSwitcher?: () => void
   onToggleTest?: () => void
   testActive?: boolean
@@ -37,7 +34,7 @@ function TipButton({
   )
 }
 
-export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettings, onOpenHistory, onOpenOfficeSwitcher, onToggleTest, testActive, showEditorControls = true }: BottomToolbarProps) {
+export default function BottomToolbar({ editMode, onToggleEditMode, onOpenOfficeSwitcher, onToggleTest, testActive, showEditorControls = true }: BottomToolbarProps) {
   return (
     <div className="btb">
       {onOpenOfficeSwitcher && (
@@ -56,20 +53,6 @@ export default function BottomToolbar({ editMode, onToggleEditMode, onOpenSettin
           onClick={onToggleEditMode}
         />
       )}
-      {onOpenHistory && (
-        <TipButton
-          label="History"
-          tip="Project history"
-          className="btb-btn"
-          onClick={onOpenHistory}
-        />
-      )}
-      <TipButton
-        label="Settings"
-        tip={`Settings \u00b7 Web UI v${APP_VERSION}`}
-        className="btb-btn"
-        onClick={onOpenSettings}
-      />
       {onToggleTest && (
         <TipButton
           label={testActive ? 'Clear Test' : 'Test'}

@@ -236,11 +236,10 @@ export interface MultiPaneViewProps {
   showHireButton?: boolean;
   hireLabel?: string;
   onHire?: () => void;
-  /** Team controls (stop/fire) shown after last pane */
+  /** Team controls (stop) shown after last pane */
   showTeamControls?: boolean;
   teamBusy?: boolean;
   onStopTeam?: () => void;
-  onFireTeam?: () => void;
   /** Grid dimensions — configurable via Settings */
   cols?: number;
   rows?: number;
@@ -294,7 +293,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onRevert,
     onUndoMerge,
     onStopTeam,
-    onFireTeam,
     onReorderPanes,
     cols: propCols,
     rows: propRows,
@@ -376,12 +374,14 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   // Ensure we always have `totalPages` entries (extra empty pages for placeholders)
   while (pages.length < totalPages) pages.push([]);
 
-  // Clamp currentPage when panes change
+  // Clamp currentPage when panes change (deferred to avoid setState during render)
   const clampedPage = Math.max(0, Math.min(currentPage, totalPages - 1));
-  if (clampedPage !== currentPage) {
-    setCurrentPage(clampedPage);
-    onPaneOffsetChange(clampedPage * SLOTS_PER_PAGE);
-  }
+  useEffect(() => {
+    if (clampedPage !== currentPage) {
+      setCurrentPage(clampedPage);
+      onPaneOffsetChange(clampedPage * SLOTS_PER_PAGE);
+    }
+  }, [clampedPage, currentPage, onPaneOffsetChange]);
 
   // Blur auto-focused inputs so keyboard arrows work for pagination
   useEffect(() => {
@@ -484,11 +484,6 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             <button onClick={onStopTeam} title="Stop Team" className="tb tb-sm" style={{
               color: "var(--term-accent)", borderColor: "var(--term-accent)",
             }}>stop</button>
-          )}
-          {onFireTeam && (
-            <button onClick={onFireTeam} title="Fire Team" className="tb tb-sm" style={{
-              color: "var(--term-text)", borderColor: "var(--term-text)",
-            }}>fire team</button>
           )}
         </div>
       )}

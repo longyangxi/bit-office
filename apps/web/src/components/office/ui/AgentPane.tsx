@@ -596,42 +596,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         )}
       </div>
 
-      {/* ── External agent panel ── */}
-      {isExternal && (
-        <div className="flex-1 flex flex-col bg-background min-h-0 overflow-hidden">
-          {/* Compact info header */}
-          <div className="px-3 py-2 bg-term-panel shrink-0 shadow-[0_3px_6px_-2px_rgba(0,0,0,0.45),inset_0_-1px_0_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.03)]">
-            <div className="font-mono text-term text-muted-foreground mb-1 tracking-wide">
-              EXTERNAL PROCESS
-            </div>
-            <div className="flex gap-3 font-mono text-term text-muted-foreground flex-wrap">
-              <span>{backend ?? "unknown"}</span>
-              <span>PID {pid ?? "\u2014"}</span>
-              <span className="term-path-scroll max-w-[300px]" title={cwd ?? undefined}>
-                {cwd ?? "\u2014"}
-              </span>
-            </div>
-          </div>
-
-          {/* Scrollable messages */}
-          <div data-scrollbar className="crt-screen flex-1 overflow-y-auto px-2.5 py-2 flex flex-col min-h-0">
-            {messages.length === 0 && (
-              <TermEmpty message="waiting for output" />
-            )}
-            {hasMoreMessages && <LoadMoreSentinel onLoadMore={onLoadMore} />}
-            {visibleMessages.map((msg) => (
-              <MessageBubble key={msg.id} msg={msg} agentName={name} />
-            ))}
-            <div ref={chatEndRef} />
-          </div>
-
-          {/* Read-only footer */}
-          <div className="px-3 py-1.5 bg-muted font-mono text-term text-muted-foreground text-center shrink-0">
-            Read-only — this process is running externally
-          </div>
-        </div>
-      )}
-
       {/* ── Review overlay — unified panel: scanning animation (busy) → results (done) ── */}
       {reviewerOverlay && (
         <div style={{
@@ -802,9 +766,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         </div>
       )}
 
-      {/* ── Normal agent panel ── */}
-      {!isExternal && (
-        <div
+      {/* ── Agent panel ── */}
+      <div
           onPaste={onPasteImage}
           onDragOver={(e) => { if (e.dataTransfer?.types?.includes("Files")) { e.preventDefault(); e.currentTarget.style.outline = `2px solid ${TERM_SEM_YELLOW}60`; } }}
           onDragLeave={(e) => { e.currentTarget.style.outline = "none"; }}
@@ -1165,7 +1128,6 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             );
           })()}
         </div>
-      )}
     </div>
   );
 });

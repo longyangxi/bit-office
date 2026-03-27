@@ -235,8 +235,7 @@ function _flushSave() {
   try {
     const data: PersistedAgent[] = [];
     for (const [, agent] of agents) {
-      // Skip external agents and temporary reviewers — they are transient
-      if (agent.isExternal) continue;
+      // Skip temporary reviewers — they are transient
       if (agent.agentId.startsWith("reviewer-")) continue;
       const recentMessages = filterRecentMessages(agent.messages);
       if (recentMessages.length > 0 || agent.name !== agent.agentId) {
@@ -637,8 +636,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               undoCount: event.undoCount ?? existing.undoCount,
             });
           } else {
-            // Restore saved messages from localStorage (skip for external agents)
-            const saved = event.isExternal ? undefined : getCachedStorage().get(event.agentId);
+            const saved = getCachedStorage().get(event.agentId);
             const agent = defaultAgent(event.agentId, event.name, event.role);
             agent.palette = event.palette ?? saved?.palette;
             agent.personality = event.personality ?? saved?.personality;
@@ -660,8 +658,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             }
             agents.set(event.agentId, agent);
           }
-          // Skip localStorage persistence for external agents and temporary reviewers
-          if (!event.isExternal && !event.agentId.startsWith("reviewer-")) {
+          // Skip localStorage persistence for temporary reviewers
+          if (!event.agentId.startsWith("reviewer-")) {
             // Debug: detect isTeamLead loss
             const updated = agents.get(event.agentId);
             if (existing?.isTeamLead && !updated?.isTeamLead) {
@@ -669,6 +667,21 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               console.trace();
             }
             saveToStorage(agents);
+          }
+          // Auto-associate team agents with the active project (only if not already in any project)
+          if (event.teamId && state.activeProjectId) {
+            const alreadyInProject = Array.from(state.projects.values()).some(
+              p => p.status === "active" && p.agentIds.includes(event.agentId),
+            );
+            if (!alreadyInProject) {
+              const proj = state.projects.get(state.activeProjectId);
+              if (proj && !proj.agentIds.includes(event.agentId)) {
+                const projects = new Map(state.projects);
+                projects.set(proj.id, { ...proj, agentIds: [...proj.agentIds, event.agentId] });
+                saveProjects(projects);
+                return { agents, projects };
+              }
+            }
           }
           break;
         }
@@ -946,23 +959,6 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
               _accumulatedText: accumulated,
             };
             agents.set(event.agentId, { ...agent, messages: updatedMessages });
-          } else if (agent.isExternal) {
-            // External agents: accumulate text into the latest agent message (no task:done to replace)
-            const now = Date.now();
-            if (lastMsg && lastMsg.role === "agent" && (now - lastMsg.timestamp) < 10000) {
-              // Append new content to existing message
-              const prev = lastMsg.text;
-              const newText = prev ? prev + "\n" + event.chunk : event.chunk;
-              const updatedMessages = [...agent.messages];
-              updatedMessages[updatedMessages.length - 1] = { ...lastMsg, text: newText, timestamp: now };
-              agents.set(event.agentId, { ...agent, messages: updatedMessages });
-            } else {
-              // New message block (gap > 10 seconds = new "turn")
-              agents.set(event.agentId, {
-                ...agent,
-                messages: [...agent.messages, { id: `ext-log-${now}`, role: "agent", text: event.chunk, timestamp: now }],
-              });
-            }
           }
           return { agents, agentLogLines: logLines };
         }

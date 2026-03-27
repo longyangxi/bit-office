@@ -1044,6 +1044,39 @@
   flex-shrink: 0;
 }
 
+.csb-item-action {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--term-text);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.4;
+  flex-shrink: 0;
+  padding: 0;
+  line-height: 1;
+  transition: opacity 0.1s, color 0.1s;
+}
+.csb-item:hover .csb-item-action {
+  display: flex;
+}
+.csb-item-add:hover {
+  opacity: 1;
+  color: var(--term-accent, #4f4);
+}
+.csb-item-close {
+  font-size: 9px;
+}
+.csb-item-close:hover {
+  opacity: 1;
+  color: var(--term-sem-red, #e55);
+}
+
 .csb-nav-btn {
   display: flex;
   align-items: center;

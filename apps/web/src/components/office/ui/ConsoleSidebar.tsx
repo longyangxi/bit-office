@@ -9,9 +9,11 @@ interface ConsoleSidebarProps {
   onOpenHistory: () => void;
   onOpenSettings: () => void;
   onBackToOffice: () => void;
+  onCloseProject: (projectId: string) => void;
+  onHireToProject: (projectId: string) => void;
 }
 
-export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onBackToOffice }: ConsoleSidebarProps) {
+export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
   const projects = useOfficeStore((s) => s.projects);
   const activeProjectId = useOfficeStore((s) => s.activeProjectId);
   const agents = useOfficeStore((s) => s.agents);
@@ -28,6 +30,15 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
 
   return (
     <div className="csb">
+      {/* Back to Office — top */}
+      <button className="csb-nav-btn" onClick={onBackToOffice}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+        <span>Office</span>
+      </button>
+
       {/* Projects section */}
       <div className="csb-section">
         <div className="csb-section-header">
@@ -45,7 +56,7 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
             const isActive = p.id === activeProjectId;
             const agentCount = p.agentIds.filter((id) => agents.has(id)).length;
             return (
-              <button
+              <div
                 key={p.id}
                 className={`csb-item${isActive ? " csb-item-active" : ""}`}
                 onClick={() => setActiveProject(p.id)}
@@ -56,11 +67,28 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
                 {agentCount > 0 && (
                   <span className="csb-item-badge">{agentCount}</span>
                 )}
-              </button>
+                <button
+                  className="csb-item-action csb-item-add"
+                  onClick={(e) => { e.stopPropagation(); onHireToProject(p.id); }}
+                  title="Add agent to project"
+                >
+                  +
+                </button>
+                <button
+                  className="csb-item-action csb-item-close"
+                  onClick={(e) => { e.stopPropagation(); onCloseProject(p.id); }}
+                  title="Close project"
+                >
+                  ✕
+                </button>
+              </div>
             );
           })}
         </div>
       </div>
+
+      {/* Spacer */}
+      <div className="csb-spacer" />
 
       {/* History */}
       <button className="csb-nav-btn" onClick={onOpenHistory}>
@@ -71,19 +99,7 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
         <span>History</span>
       </button>
 
-      {/* Spacer */}
-      <div className="csb-spacer" />
-
-      {/* Back to Office */}
-      <button className="csb-nav-btn" onClick={onBackToOffice}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-          <polyline points="9 22 9 12 15 12 15 22" />
-        </svg>
-        <span>Office</span>
-      </button>
-
-      {/* Settings at bottom */}
+      {/* Settings — bottom */}
       <button className="csb-nav-btn csb-nav-bottom" onClick={onOpenSettings}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <circle cx="12" cy="12" r="3" />
