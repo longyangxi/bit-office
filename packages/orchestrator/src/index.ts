@@ -23,6 +23,8 @@ export type { Workspace, WorkspaceInfo, PostCreateConfig } from "./workspace/ind
 export type { CleanupWorktreeOptions, MergeResult, RuntimeOwnerInfo, WorktreeOwnerInfo } from "./worktree.js";
 export type { AIBackend, BuildArgsOpts, BackendStability, GuardType } from "./ai-backend.js";
 export { syncAgentDefs } from "./agent-defs.js";
+export { TaskScheduler, tryParseDecomposition, formatLineage, formatSiblings, DEFAULT_DECOMPOSER_CONFIG } from "./decomposer/index.js";
+export type { TaskNode, DecompositionPlan, DecomposerConfig, TaskKind, TaskStatus } from "./decomposer/index.js";
 export type { TeamPhaseInfo } from "./phase-machine.js";
 export type {
   AgentStatus,

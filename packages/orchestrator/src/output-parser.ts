@@ -136,6 +136,9 @@ function extractNumberedList(raw: string, label: string): string[] {
   return items;
 }
 
+// ── Decomposition block parsing ──
+export { parseDecompositionBlock, tryParseDecomposition } from "./decomposer/parser.js";
+
 /**
  * Extract a human-readable summary from raw output when no SUMMARY field is present.
  * Filters out delegation lines, system noise, and returns the first meaningful content.

@@ -127,6 +127,7 @@ You MUST include ENTRY_FILE or PREVIEW_CMD — the user needs this to preview.`,
   "worker-initial": `Your name is {{name}}, your role is {{role}}. {{personality}}
 {{soul}}
 {{memory}}
+{{taskContext}}
 {{recoveryContext}}
 {{teamRoster}}
 
@@ -224,7 +225,7 @@ ${DELIVERABLE_RULES_FIX}
 {{prompt}}`,
 
   "worker-direct-fix": `[Direct fix request from {{reviewerName}}]
-
+{{taskContext}}
 The Code Reviewer found issues in your work. Fix them and re-verify.
 
 ===== REVIEWER FEEDBACK =====
