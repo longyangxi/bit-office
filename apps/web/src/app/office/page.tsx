@@ -650,11 +650,15 @@ export default function OfficePage() {
   }, []);
 
   const handleHire = useCallback((def: AgentDefinition, backend: string, workDir?: string, displayName?: string) => {
+    const AUTO_NAMES = [
+      "Alex", "Mia", "Leo", "Nova", "Luna", "Rex", "Kai", "Zoe", "Jay", "Sam",
+      "Ava", "Max", "Ivy", "Nix", "Eli", "Rio", "Sky", "Ada", "Fin", "Eve",
+      "Ash", "Ren", "Kit", "Juno", "Sage", "Aria", "Cole", "Tess", "Hugo", "Nell",
+    ];
     const name = displayName?.trim() || (() => {
-      const existing = Array.from(agents.values()).filter(
-        (a) => a.name === def.name || a.name.match(new RegExp(`^${def.name} \\d+$`))
-      );
-      return existing.length === 0 ? def.name : `${def.name} ${existing.length + 1}`;
+      const usedNames = new Set(Array.from(agents.values()).map(a => a.name.toLowerCase()));
+      const available = AUTO_NAMES.find(n => !usedNames.has(n.toLowerCase()));
+      return available ?? `Agent${usedNames.size + 1}`;
     })();
     const agentId = `agent-${nanoid(6)}`;
     sendCommand({ type: "CREATE_AGENT", agentId, name, role: def.skills ? `${def.role} — ${def.skills}` : def.role, palette: def.palette, personality: def.personality, backend, workDir, skillFiles: def.skillFiles });
