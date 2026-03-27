@@ -244,6 +244,8 @@ export class AgentSession {
   private _lastFullOutput: string | null = null;
   private currentTaskStartedAt: string | null = null;
   private currentTaskPrompt: string | null = null;
+  /** The prompt for the currently-running (or most-recently-run) task. */
+  get lastPrompt(): string | undefined { return this.currentTaskPrompt ?? undefined; }
   private lastActivityText: string | null = null;
   private lastWorkStatePersistAt = 0;
   get lastFullOutput(): string | null { return this._lastFullOutput; }

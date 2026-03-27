@@ -7,7 +7,8 @@ import { AgentSession, clearSessionId } from "./agent-session.js";
 import { AgentManager } from "./agent-manager.js";
 import { DelegationRouter } from "./delegation.js";
 import { PromptEngine } from "./prompt-templates.js";
-import { RetryTracker } from "./retry.js";
+import { ReactionEngine, DEFAULT_RULES } from "./reaction/index.js";
+import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./reaction/index.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
@@ -29,7 +30,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private agentManager = new AgentManager();
   private delegationRouter: DelegationRouter;
   private promptEngine: PromptEngine;
-  private retryTracker: RetryTracker | null;
+  private reactionEngine: ReactionEngine;
   private phaseMachine = new PhaseMachine();
   private backends = new Map<string, AIBackend>();
   private defaultBackendId: string;
@@ -97,13 +98,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       (agentId, taskId, repoPath) => this.setupWorktreeForAgent(agentId, taskId, repoPath),
     );
 
-    // Retry
-    if (opts.retry === false) {
-      this.retryTracker = null;
-    } else {
-      const r = opts.retry ?? {};
-      this.retryTracker = new RetryTracker(r.maxRetries, r.escalateToLeader);
-    }
+    // Reaction engine (replaces RetryTracker)
+    this.reactionEngine = new ReactionEngine({
+      rules: opts.reactions ?? DEFAULT_RULES,
+    });
   }
 
   // ---------------------------------------------------------------------------
@@ -250,9 +248,6 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       this.teamChangedFiles.clear();
       this.teamFinalized = false;
     }
-
-    // Track for retry
-    this.retryTracker?.track(taskId, prompt);
 
     const repoPath = opts?.repoPath;
     // Team lead gets full roster (to decide delegation).
@@ -841,6 +836,43 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   // Internal
   // ---------------------------------------------------------------------------
 
+  private buildSessionFacade(session: AgentSession): AgentSessionFacade {
+    return {
+      prependTask: (taskId, prompt) => session.prependTask(taskId, prompt),
+      getAgentId: () => session.agentId,
+      getRole: () => session.role ?? "",
+    };
+  }
+
+  private buildOrchestratorFacade(): OrchestratorFacade {
+    return {
+      getTeamLead: () => {
+        const leadId = this.agentManager.getTeamLead();
+        if (!leadId) return null;
+        const leadSession = this.agentManager.get(leadId);
+        return leadSession ? this.buildSessionFacade(leadSession) : null;
+      },
+      runTask: (agentId, taskId, prompt) => this.runTask(agentId, taskId, prompt),
+      forceFinalize: (agentId) => {
+        this.emitEvent({
+          type: "task:done",
+          agentId,
+          taskId: "forced",
+          result: {
+            summary: "Force-finalized by reaction engine (budget exceeded)",
+            changedFiles: [],
+            diffStat: "",
+            testResult: "unknown",
+          },
+          isFinalResult: true,
+        });
+      },
+      emitNotification: (notification) => {
+        this.emitEvent({ type: "notification", ...notification } as any);
+      },
+    };
+  }
+
   private handleSessionEvent(event: OrchestratorEvent, agentId: string): void {
     try {
       this._handleSessionEventUnsafe(event, agentId);
@@ -850,52 +882,38 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   private _handleSessionEventUnsafe(event: OrchestratorEvent, agentId: string): void {
-    // Handle retry logic on task failure (skip if timeout — retrying won't help)
-    if (event.type === "task:failed" && this.retryTracker) {
+    // Handle retry/escalation logic on task failure via ReactionEngine
+    if (event.type === "task:failed") {
       const taskId = event.taskId;
       const session = this.agentManager.get(agentId);
-      const wasCancelled = event.error === "Task cancelled by user";
-      const wasTimeout = session?.wasTimeout ?? false;
-      const isReviewer = session?.role?.toLowerCase().includes("review") ?? false;
-      if (!wasCancelled && !wasTimeout && !isReviewer && this.retryTracker.shouldRetry(taskId) && !this.delegationRouter.isDelegated(taskId)) {
-        const state = this.retryTracker.recordAttempt(taskId, event.error);
-        if (state) {
+      if (session) {
+        const isReviewer = session.role?.toLowerCase().includes("review") ?? false;
+        const ctx: ReactionContext = {
+          agentId,
+          taskId,
+          error: event.error,
+          role: session.role,
+          wasTimeout: session.wasTimeout ?? false,
+          wasCancellation: event.error === "Task cancelled by user",
+          isDelegated: this.delegationRouter.isDelegated(taskId),
+          isReviewer,
+          originalPrompt: session.lastPrompt,
+          session: this.buildSessionFacade(session),
+          orchestrator: this.buildOrchestratorFacade(),
+        };
+        const result = this.reactionEngine.handle("task:failed", ctx);
+        if (result.action === "retry") {
           this.emitEvent({
             type: "task:retrying",
             agentId,
             taskId,
-            attempt: state.attempt,
-            maxRetries: state.maxRetries,
+            attempt: result.attempt ?? 1,
+            maxRetries: result.maxRetries ?? 2,
             error: event.error,
           });
-          const retryPrompt = this.retryTracker.getRetryPrompt(taskId);
-          if (retryPrompt) {
-            const session = this.agentManager.get(agentId);
-            if (session) {
-              // Use prependTask to insert retry at the FRONT of the queue.
-              // This eliminates the race condition where dequeueDelayMs (100ms) < retryDelayMs (500ms)
-              // caused user-queued messages to execute before retries, overwriting session context.
-              session.prependTask(taskId, retryPrompt);
-              return; // Don't emit the task:failed — we're retrying
-            }
-          }
+          return; // Don't emit task:failed — we're retrying
         }
       }
-
-      // Retries exhausted — check for escalation (skip on cancel)
-      const escalation = wasCancelled ? null : this.retryTracker.getEscalation(taskId);
-      if (escalation) {
-        const leadId = this.agentManager.getTeamLead();
-        if (leadId && leadId !== agentId) {
-          const leadSession = this.agentManager.get(leadId);
-          if (leadSession) {
-            const escalationTaskId = nanoid();
-            const teamContext = this.agentManager.getTeamRoster();
-            leadSession.runTask(escalationTaskId, escalation.prompt, undefined, teamContext);
-          }
-        }
-      }
-      this.retryTracker.clear(taskId);
     }
 
     // ── Memory: record reviewer feedback for learning ──
@@ -926,7 +944,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     if (event.type === "task:done") {
-      this.retryTracker?.clear(event.taskId);
+      this.reactionEngine.clearTask(event.taskId);
 
       // Worktree merge strategy:
       // - Team workers: keep worktree alive, merge all at once when team result is finalized.

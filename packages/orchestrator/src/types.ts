@@ -309,8 +309,10 @@ export interface OrchestratorOptions {
   defaultBackend?: string;
   /** Worktree isolation options. false to disable entirely. */
   worktree?: WorktreeOptions | false;
-  /** Auto-retry options. false to disable entirely. */
+  /** Auto-retry options. false to disable entirely. @deprecated Use reactions instead. */
   retry?: RetryOptions | false;
+  /** Reaction rules. Defaults to DEFAULT_RULES if not specified. */
+  reactions?: import("./reaction/types.js").ReactionRule[];
   /** FS directory for prompt template overrides */
   promptsDir?: string;
   /** Sandbox mode: "full" gives agent full access, "safe" restricts */
