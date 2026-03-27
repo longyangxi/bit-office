@@ -4,7 +4,7 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SURFACE, TERM_TEXT_BRIGHT, TERM_TEXT, TERM_DIM, TERM_SIZE_SM, TERM_SIZE_XS, TERM_SIZE_3XS } from "./termTheme";
 
 export function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
   return {
@@ -40,22 +40,22 @@ function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow, ex
         {fromAgent?.palette !== undefined && (
           <SpriteAvatar palette={fromAgent.palette} zoom={1} ready={assetsReady} />
         )}
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#eddcb8" }}>
+        <span style={{ fontSize: TERM_SIZE_SM, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
           {msg.fromAgentName ?? msg.fromAgentId}
         </span>
         {msg.toAgentName && (
           <>
-            <span style={{ fontSize: 11, color: "#6a5848" }}>&rarr;</span>
+            <span style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM }}>&rarr;</span>
             {toAgent?.palette !== undefined && (
               <SpriteAvatar palette={toAgent.palette} zoom={1} ready={assetsReady} />
             )}
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#eddcb8" }}>
+            <span style={{ fontSize: TERM_SIZE_SM, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
               {msg.toAgentName}
             </span>
           </>
         )}
         <span style={{
-          marginLeft: "auto", fontSize: 9, padding: "1px 4px",
+          marginLeft: "auto", fontSize: TERM_SIZE_3XS, padding: "1px 4px",
           backgroundColor: cfg.border + "20", color: cfg.border,
           border: `1px solid ${cfg.border}40`, fontFamily: "monospace",
         }}>
@@ -66,7 +66,7 @@ function TeamActivityCard({ msg, agents, assetsReady, maxChars = 150, shadow, ex
         ? <ExpandableText text={msgText} maxChars={maxChars} maxHeight={80} />
         : (
           <div style={{
-            fontSize: 12, color: "#b09878", wordBreak: "break-word",
+            fontSize: TERM_SIZE_SM, color: TERM_TEXT, wordBreak: "break-word",
             maxHeight: 80, overflow: "hidden", fontFamily: "monospace",
           }}>
             {msgText.slice(0, maxChars)}{msgText.length > maxChars ? "..." : ""}

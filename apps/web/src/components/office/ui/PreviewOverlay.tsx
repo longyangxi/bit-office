@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { TERM_BG, TERM_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_BG, TERM_DIM, TERM_ACCENT, TERM_BORDER, TERM_TEXT, TERM_SIZE, TERM_SIZE_XS, TERM_SIZE_SM, TERM_SIZE_LG, TERM_SEM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
 import { RATING_DIMENSIONS } from "./office-constants";
 import type { Ratings } from "./office-constants";
 import TermModal from "./primitives/TermModal";
@@ -23,7 +23,7 @@ function StarRow({ label, icon, value, onChange }: {
             onClick={() => onChange(n === value ? 0 : n)}
             onMouseEnter={() => setHover(n)}
             style={{
-              cursor: "pointer", fontSize: 16, lineHeight: 1,
+              cursor: "pointer", fontSize: TERM_SIZE_LG, lineHeight: 1,
               color: n <= (hover || value) ? TERM_SEM_YELLOW : "rgba(255,255,255,0.15)",
               transition: "color 0.1s",
             }}
@@ -31,7 +31,7 @@ function StarRow({ label, icon, value, onChange }: {
         ))}
       </div>
       {value > 0 && (
-        <span style={{ fontSize: 11, color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-mono)" }}>{value}/5</span>
+        <span style={{ fontSize: TERM_SIZE_XS, color: "rgba(255,255,255,0.3)", fontFamily: "var(--font-mono)" }}>{value}/5</span>
       )}
     </div>
   );
@@ -177,7 +177,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
         padding: "0 12px", backgroundColor: TERM_BG, gap: 8,
       }}>
         <span style={{
-          flex: 1, color: "#888", fontSize: 13,
+          flex: 1, color: TERM_DIM, fontSize: TERM_SIZE,
           fontFamily: "monospace", overflow: "hidden",
           textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{url}</span>
@@ -186,7 +186,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
           style={{
             background: submitted ? `${TERM_SEM_GREEN}18` : "none",
             border: submitted ? `1px solid ${TERM_SEM_GREEN}30` : `1px solid ${TERM_SEM_YELLOW}30`,
-            color: submitted ? TERM_SEM_GREEN : TERM_SEM_YELLOW, fontSize: 11, cursor: "pointer",
+            color: submitted ? TERM_SEM_GREEN : TERM_SEM_YELLOW, fontSize: TERM_SIZE_XS, cursor: "pointer",
             padding: "2px 10px", fontFamily: "monospace",
           }}
         >{submitted ? "Rated \u2713" : "\u2605 Rate"}</button>
@@ -195,15 +195,15 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
           target="_blank"
           rel="noopener noreferrer"
           style={{
-            color: "#e8b040", fontSize: 12, textDecoration: "none",
-            padding: "2px 8px", border: "1px solid #3d2d10", fontFamily: "monospace",
+            color: TERM_ACCENT, fontSize: TERM_SIZE_SM, textDecoration: "none",
+            padding: "2px 8px", border: `1px solid ${TERM_BORDER}`, fontFamily: "monospace",
           }}
         >Open in tab</a>
         <button
           onClick={handleClose}
           style={{
-            background: "none", border: "1px solid #444",
-            color: "#aaa", fontSize: 16, cursor: "pointer",
+            background: "none", border: `1px solid ${TERM_BORDER}`,
+            color: TERM_TEXT, fontSize: TERM_SIZE_LG, cursor: "pointer",
             borderRadius: 6, width: 28, height: 28,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
@@ -216,11 +216,11 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
             alignItems: "center", justifyContent: "center", gap: 16,
           }}>
             <div style={{
-              width: 32, height: 32, border: "3px solid #333",
-              borderTopColor: "#818cf8", borderRadius: "50%",
+              width: 32, height: 32, border: `3px solid ${TERM_DIM}`,
+              borderTopColor: TERM_ACCENT, borderRadius: "50%",
               animation: "preview-spin 0.8s linear infinite",
             }} />
-            <div style={{ color: "#888", fontSize: 13 }}>Starting server...</div>
+            <div style={{ color: TERM_DIM, fontSize: TERM_SIZE }}>Starting server...</div>
             <style>{`@keyframes preview-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}

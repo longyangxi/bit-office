@@ -1,7 +1,7 @@
 import { useRef, useEffect, memo, useCallback, useState } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, getPhaseInfo, BACKEND_OPTIONS } from "./office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_SIZE_2XS, TERM_SIZE_SM, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import { isRealEnter, autoResize } from "./office-utils";
 import { TokenBadge } from "./MessageBubble";
 import { TermEmpty } from "./primitives";
@@ -490,7 +490,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       position: "absolute", top: -4, right: -4,
                       width: 16, height: 16, borderRadius: "50%",
                       border: "none", backgroundColor: TERM_SEM_RED, color: "#fff",
-                      fontSize: 10, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+                      fontSize: TERM_SIZE_2XS, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
                       padding: 0, lineHeight: 1,
                     }}
                   >{"\u00d7"}</button>
@@ -588,7 +588,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                     {!busy && (
                       <span
                         onClick={onEndProject}
-                        style={{ padding: "2px 8px 4px", color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: TERM_FONT }}
+                        style={{ padding: "2px 8px 4px", color: TERM_DIM, fontSize: TERM_SIZE_SM, cursor: "pointer", fontFamily: TERM_FONT }}
                       >close project</span>
                     )}
                   </div>

@@ -3,6 +3,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { sendCommand } from "@/lib/connection";
 import { useOfficeStore } from "@/store/office-store";
 import TermModal from "./primitives/TermModal";
+import { TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_PANEL, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ACCENT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SIZE, TERM_SIZE_SM, TERM_SIZE_XS, TERM_SIZE_2XS, TERM_SIZE_3XS, TERM_SIZE_2XL } from "./termTheme";
 
 interface ModelUsage {
   model: string;
@@ -92,21 +93,21 @@ function fmtDate(iso: string): string {
 }
 
 const S = {
-  card: { background: "#1a1a1a", border: "1px solid #2a2a2a", borderRadius: 6, padding: "10px 12px", marginBottom: 8 } as const,
+  card: { background: TERM_SURFACE, border: `1px solid ${TERM_BORDER}`, borderRadius: 6, padding: "10px 12px", marginBottom: 8 } as const,
   mono: { fontFamily: "monospace" } as const,
   grid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "2px 12px" } as const,
 };
 
 function QuotaBar({ quota }: { quota: QuotaInfo }) {
   const pct = Math.min(quota.usedPercent, 100);
-  const color = pct > 90 ? "#ef4444" : pct > 70 ? "#f59e0b" : "#22c55e";
+  const color = pct > 90 ? TERM_SEM_RED : pct > 70 ? TERM_SEM_YELLOW : TERM_SEM_GREEN;
   const isExtraUsage = quota.spentUsd !== undefined;
 
   return (
     <div style={{ marginTop: 8 }}>
-      <div style={{ fontWeight: 600, fontSize: 12, marginBottom: 4 }}>{quota.label}</div>
+      <div style={{ fontWeight: 600, fontSize: TERM_SIZE_SM, marginBottom: 4 }}>{quota.label}</div>
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <div style={{ height: 6, flex: 1, background: "#333", borderRadius: 3, overflow: "hidden" }}>
+        <div style={{ height: 6, flex: 1, background: TERM_BORDER, borderRadius: 3, overflow: "hidden" }}>
           <div style={{
             width: `${pct}%`,
             height: "100%",
@@ -116,7 +117,7 @@ function QuotaBar({ quota }: { quota: QuotaInfo }) {
           }} />
         </div>
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginTop: 3, opacity: 0.7 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: TERM_SIZE_2XS, marginTop: 3, opacity: 0.7 }}>
         {isExtraUsage ? (
           <>
             <span>This month: {fmtCost(quota.spentUsd!)} / {fmtCost(quota.limitUsd ?? 0)}</span>
@@ -130,7 +131,7 @@ function QuotaBar({ quota }: { quota: QuotaInfo }) {
         )}
       </div>
       {quota.paceDescription && (
-        <div style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>{quota.paceDescription}</div>
+        <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginTop: 2 }}>{quota.paceDescription}</div>
       )}
     </div>
   );
@@ -138,7 +139,7 @@ function QuotaBar({ quota }: { quota: QuotaInfo }) {
 
 function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsage; expanded: boolean; onToggle: () => void }) {
   const hasData = provider.localUsage || provider.quotas?.length || provider.quota;
-  const dotColor = provider.available ? (hasData ? "#22c55e" : "#f59e0b") : "#666";
+  const dotColor = provider.available ? (hasData ? TERM_SEM_GREEN : TERM_SEM_YELLOW) : TERM_DIM;
   const allQuotas = provider.quotas ?? (provider.quota ? [provider.quota] : []);
 
   return (
@@ -149,17 +150,17 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
       >
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: dotColor, flexShrink: 0 }} />
         <div style={{ flex: 1 }}>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>{provider.displayName}</span>
+          <span style={{ fontWeight: 600, fontSize: TERM_SIZE }}>{provider.displayName}</span>
           {provider.account?.plan && (
-            <span style={{ fontSize: 10, opacity: 0.5, marginLeft: 6 }}>{provider.account.plan}</span>
+            <span style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginLeft: 6 }}>{provider.account.plan}</span>
           )}
         </div>
         {provider.localUsage && (
-          <span style={{ ...S.mono, fontSize: 11, opacity: 0.8 }}>
+          <span style={{ ...S.mono, fontSize: TERM_SIZE_XS, opacity: 0.8 }}>
             {fmtCost(provider.localUsage.costUsd)}
           </span>
         )}
-        <span style={{ fontSize: 10, opacity: 0.4, transition: "transform 0.2s", transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
+        <span style={{ fontSize: TERM_SIZE_2XS, opacity: 0.4, transition: "transform 0.2s", transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
       </div>
 
       {allQuotas.length > 0 && (
@@ -171,8 +172,8 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
       )}
 
       {expanded && provider.localUsage && (
-        <div style={{ marginTop: 12, fontSize: 11, lineHeight: "1.6" }}>
-          <div style={{ fontSize: 10, opacity: 0.5, marginBottom: 4 }}>Local usage ({provider.localUsage.periodLabel})</div>
+        <div style={{ marginTop: 12, fontSize: TERM_SIZE_XS, lineHeight: "1.6" }}>
+          <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginBottom: 4 }}>Local usage ({provider.localUsage.periodLabel})</div>
           <div style={{ ...S.grid, opacity: 0.8 }}>
             <span>Sessions</span>
             <span style={{ textAlign: "right", ...S.mono }}>{provider.localUsage.sessionCount}</span>
@@ -192,9 +193,9 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
 
           {provider.models.length > 0 && (
             <div style={{ marginTop: 8 }}>
-              <div style={{ fontSize: 10, opacity: 0.5, marginBottom: 4 }}>By model</div>
+              <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginBottom: 4 }}>By model</div>
               {provider.models.map(m => (
-                <div key={m.model} style={{ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.7, padding: "1px 0" }}>
+                <div key={m.model} style={{ display: "flex", justifyContent: "space-between", fontSize: TERM_SIZE_2XS, opacity: 0.7, padding: "1px 0" }}>
                   <span style={S.mono}>{m.model}</span>
                   <span style={S.mono}>{fmtCost(m.costUsd)} ({m.requestCount})</span>
                 </div>
@@ -203,7 +204,7 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
           )}
 
           {provider.lastActivity && (
-            <div style={{ fontSize: 9, opacity: 0.4, marginTop: 6 }}>
+            <div style={{ fontSize: TERM_SIZE_3XS, opacity: 0.4, marginTop: 6 }}>
               Last activity: {fmtDate(provider.lastActivity)}
             </div>
           )}
@@ -211,7 +212,7 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
       )}
 
       {expanded && !hasData && provider.available && (
-        <div style={{ marginTop: 8, fontSize: 10, opacity: 0.5 }}>
+        <div style={{ marginTop: 8, fontSize: TERM_SIZE_2XS, opacity: 0.5 }}>
           Detected but no usage data available yet.
         </div>
       )}
@@ -233,7 +234,7 @@ function CostChart({ providers }: { providers: ProviderUsage[] }) {
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: 10, opacity: 0.5, marginBottom: 6 }}>Daily cost (14d)</div>
+      <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginBottom: 6 }}>Daily cost (14d)</div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 40 }}>
         {entries.map(([date, cost]) => (
           <div
@@ -249,7 +250,7 @@ function CostChart({ providers }: { providers: ProviderUsage[] }) {
           />
         ))}
       </div>
-      <div style={{ display: "flex", justifyContent: "space-between", fontSize: 8, opacity: 0.3, marginTop: 2 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", fontSize: TERM_SIZE_3XS, opacity: 0.3, marginTop: 2 }}>
         <span>{entries[0]?.[0]?.slice(5)}</span>
         <span>{entries[entries.length - 1]?.[0]?.slice(5)}</span>
       </div>
@@ -295,11 +296,11 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
               onClick={() => setDays(d)}
               style={{
                 padding: "3px 10px",
-                fontSize: 10,
+                fontSize: TERM_SIZE_2XS,
                 fontFamily: "monospace",
-                background: days === d ? "#3b82f6" : "#222",
-                color: days === d ? "#fff" : "#999",
-                border: "1px solid " + (days === d ? "#3b82f6" : "#333"),
+                background: days === d ? TERM_ACCENT : TERM_SURFACE,
+                color: days === d ? TERM_TEXT_BRIGHT : TERM_DIM,
+                border: "1px solid " + (days === d ? TERM_ACCENT : TERM_BORDER),
                 borderRadius: 4,
                 cursor: "pointer",
               }}
@@ -313,11 +314,11 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
             disabled={loading}
             style={{
               padding: "3px 10px",
-              fontSize: 10,
+              fontSize: TERM_SIZE_2XS,
               fontFamily: "monospace",
-              background: "#222",
-              color: "#999",
-              border: "1px solid #333",
+              background: TERM_SURFACE,
+              color: TERM_DIM,
+              border: `1px solid ${TERM_BORDER}`,
               borderRadius: 4,
               cursor: loading ? "wait" : "pointer",
               opacity: loading ? 0.5 : 1,
@@ -328,7 +329,7 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
         </div>
 
         {loading && !report && (
-          <div style={{ textAlign: "center", padding: 40, opacity: 0.5, fontSize: 12 }}>
+          <div style={{ textAlign: "center", padding: 40, opacity: 0.5, fontSize: TERM_SIZE_SM }}>
             Scanning CLI usage data...
           </div>
         )}
@@ -337,8 +338,8 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
           <>
             {report.totals.costUsd > 0 && (
               <div style={{
-                background: "#111",
-                border: "1px solid #2a2a2a",
+                background: TERM_PANEL,
+                border: `1px solid ${TERM_BORDER}`,
                 borderRadius: 6,
                 padding: "12px 14px",
                 marginBottom: 12,
@@ -347,12 +348,12 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
                 alignItems: "center",
               }}>
                 <div>
-                  <div style={{ fontSize: 10, opacity: 0.5 }}>Estimated total ({days}d)</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, fontFamily: "monospace" }}>
+                  <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5 }}>Estimated total ({days}d)</div>
+                  <div style={{ fontSize: TERM_SIZE_2XL, fontWeight: 700, fontFamily: "monospace" }}>
                     {fmtCost(report.totals.costUsd)}
                   </div>
                 </div>
-                <div style={{ textAlign: "right", fontSize: 10, opacity: 0.6, lineHeight: "1.6" }}>
+                <div style={{ textAlign: "right", fontSize: TERM_SIZE_2XS, opacity: 0.6, lineHeight: "1.6" }}>
                   <div>{fmtTokens(report.totals.inputTokens)} in / {fmtTokens(report.totals.outputTokens)} out</div>
                   <div>{report.totals.sessionCount} sessions</div>
                 </div>
@@ -372,14 +373,14 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
 
             {unavailableProviders.length > 0 && (
               <div style={{ marginTop: 12 }}>
-                <div style={{ fontSize: 10, opacity: 0.4, marginBottom: 6 }}>Not detected</div>
+                <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.4, marginBottom: 6 }}>Not detected</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {unavailableProviders.map(p => (
                     <span key={p.provider} style={{
-                      fontSize: 10,
+                      fontSize: TERM_SIZE_2XS,
                       padding: "2px 8px",
-                      background: "#1a1a1a",
-                      border: "1px solid #222",
+                      background: TERM_SURFACE,
+                      border: `1px solid ${TERM_BORDER_DIM}`,
                       borderRadius: 4,
                       opacity: 0.4,
                     }}>
@@ -390,7 +391,7 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
               </div>
             )}
 
-            <div style={{ fontSize: 9, opacity: 0.3, marginTop: 12, textAlign: "right" }}>
+            <div style={{ fontSize: TERM_SIZE_3XS, opacity: 0.3, marginTop: 12, textAlign: "right" }}>
               Scanned at {fmtDate(report.generatedAt)}
             </div>
           </>

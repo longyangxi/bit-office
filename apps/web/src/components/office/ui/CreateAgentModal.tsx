@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
 import { ROLE_CATALOG, ROLE_DESC_MAP, ROLE_PRESETS, PERSONALITY_PRESETS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_ACCENT, TERM_DIM, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_ACCENT, TERM_DIM, TERM_SEM_BLUE, TERM_SIZE, TERM_SIZE_SM, TERM_SIZE_XS, TERM_SIZE_2XS, TERM_SIZE_ICON } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import { isRealEnter } from "./office-utils";
 import TermModal from "./primitives/TermModal";
@@ -54,7 +54,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
           {filtered.map((cat) => (
             <div key={cat.category}>
               <div style={{
-                padding: "4px 10px", fontSize: 10, color: TERM_DIM,
+                padding: "4px 10px", fontSize: TERM_SIZE_2XS, color: TERM_DIM,
                 fontFamily: "var(--font-mono)", textTransform: "uppercase", letterSpacing: "0.05em",
                 backgroundColor: TERM_BG, position: "sticky", top: 0,
               }}>
@@ -65,7 +65,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
                   key={a.name}
                   onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
                   style={{
-                    padding: "5px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
+                    padding: "5px 10px", fontSize: TERM_SIZE, fontFamily: "var(--font-mono)",
                     color: a.name === value ? TERM_ACCENT : TERM_TEXT,
                     cursor: "pointer", backgroundColor: a.name === value ? `${TERM_ACCENT}18` : "transparent",
                   }}
@@ -80,7 +80,7 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
           {filtered.length === 0 && search.trim() && (
             <div
               onClick={() => { onSelect(search.trim()); setOpen(false); setSearch(""); }}
-              style={{ padding: "8px 10px", fontSize: 13, fontFamily: "var(--font-mono)", color: TERM_DIM, cursor: "pointer" }}
+              style={{ padding: "8px 10px", fontSize: TERM_SIZE, fontFamily: "var(--font-mono)", color: TERM_DIM, cursor: "pointer" }}
             >
               Use custom: &quot;{search.trim()}&quot;
             </div>
@@ -112,7 +112,7 @@ function CreateSkillInline({ onSave, onCancel }: {
       padding: 10,
       marginTop: 6,
     }}>
-      <div style={{ fontSize: 11, color: TERM_YELLOW, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+      <div style={{ fontSize: TERM_SIZE_XS, color: TERM_YELLOW, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
         NEW SKILL FILE
       </div>
       <TermInput
@@ -130,14 +130,14 @@ function CreateSkillInline({ onSave, onCancel }: {
         style={{ resize: "vertical", marginBottom: 6, width: "100%", boxSizing: "border-box" }}
       />
       <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
-        <TermButton variant="dim" onClick={onCancel} style={{ padding: "4px 10px", fontSize: 12 }}>
+        <TermButton variant="dim" onClick={onCancel} style={{ padding: "4px 10px", fontSize: TERM_SIZE_SM }}>
           Cancel
         </TermButton>
         <TermButton
           variant="primary"
           onClick={handleSave}
           disabled={!skillName.trim() || !skillContent.trim()}
-          style={{ padding: "4px 10px", fontSize: 12 }}
+          style={{ padding: "4px 10px", fontSize: TERM_SIZE_SM }}
         >
           Save Skill
         </TermButton>
@@ -285,7 +285,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
           }}
         />
         {ROLE_DESC_MAP.get(currentRole) && (
-          <div style={{ fontSize: 11, color: TERM_DIM, marginTop: 4, fontFamily: "var(--font-mono)", lineHeight: 1.4 }}>
+          <div style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM, marginTop: 4, fontFamily: "var(--font-mono)", lineHeight: 1.4 }}>
             {ROLE_DESC_MAP.get(currentRole)}
           </div>
         )}
@@ -294,11 +294,11 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
       {/* Skill Files */}
       <div style={{ marginBottom: 8 }}>
         <div style={{
-          fontSize: 12, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em",
+          fontSize: TERM_SIZE_SM, color: TERM_DIM, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em",
           display: "flex", alignItems: "center", justifyContent: "space-between",
         }}>
           <span>SKILL FILES</span>
-          <span style={{ fontSize: 10, color: TERM_DIM, fontWeight: 400 }}>
+          <span style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, fontWeight: 400 }}>
             .md instructions auto-loaded by AI
           </span>
         </div>
@@ -311,7 +311,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                   key={skill.name}
                   style={{
                     display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
-                    cursor: "pointer", fontSize: 13, fontFamily: "var(--font-mono)",
+                    cursor: "pointer", fontSize: TERM_SIZE, fontFamily: "var(--font-mono)",
                     color: active ? TERM_TEXT : TERM_DIM,
                     backgroundColor: active ? `${TERM_ACCENT}0c` : "transparent",
                     border: `1px solid ${active ? TERM_ACCENT + "30" : "transparent"}`,
@@ -325,7 +325,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                   />
                   <span style={{ flex: 1 }}>{skill.title}</span>
                   {skill.isFolder && (
-                    <span style={{ fontSize: 10, color: TERM_DIM, opacity: 0.6 }} title="Folder with multiple files">
+                    <span style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, opacity: 0.6 }} title="Folder with multiple files">
                       [dir]
                     </span>
                   )}
@@ -345,7 +345,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                 <span
                   key={name}
                   style={{
-                    padding: "2px 8px", fontSize: 12, fontFamily: "var(--font-mono)",
+                    padding: "2px 8px", fontSize: TERM_SIZE_SM, fontFamily: "var(--font-mono)",
                     border: `1px solid ${TERM_BORDER}`, color: TERM_DIM, opacity: 0.5,
                     display: "flex", alignItems: "center", gap: 4,
                   }}
@@ -353,7 +353,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                   {name}
                   <span
                     onClick={() => toggleSkillFile(name)}
-                    style={{ cursor: "pointer", fontSize: 14, lineHeight: 1 }}
+                    style={{ cursor: "pointer", fontSize: TERM_SIZE_ICON, lineHeight: 1 }}
                   >&times;</span>
                 </span>
               ))}
@@ -361,7 +361,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
           );
         })()}
         {availableSkills.length === 0 && !showCreateSkill && (
-          <div style={{ fontSize: 12, color: TERM_DIM, fontFamily: "var(--font-mono)", marginBottom: 4, opacity: 0.7 }}>
+          <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, fontFamily: "var(--font-mono)", marginBottom: 4, opacity: 0.7 }}>
             No skill files yet.
           </div>
         )}
@@ -369,7 +369,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
           <TermButton
             variant="dim"
             onClick={() => setShowCreateSkill(true)}
-            style={{ padding: "4px 10px", fontSize: 12, width: "100%" }}
+            style={{ padding: "4px 10px", fontSize: TERM_SIZE_SM, width: "100%" }}
           >
             + Create Skill File
           </TermButton>

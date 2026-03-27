@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { nanoid } from "nanoid";
 import { useOfficeStore, folderPickCallbacks } from "@/store/office-store";
 import { sendCommand } from "@/lib/connection";
+import { TERM_SIZE_2XS } from "./termTheme";
 
 type InitialMode = "solo" | "team" | "empty";
 
@@ -139,7 +140,7 @@ export default function NewProjectModal({
                   </span>
                   <span
                     style={{
-                      fontSize: "10px",
+                      fontSize: TERM_SIZE_2XS,
                       fontFamily: "var(--font-mono)",
                       color: "var(--term-text)",
                       opacity: 0.6,

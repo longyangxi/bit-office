@@ -7,7 +7,7 @@ import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
 import { generateRandomName } from "./office-utils";
-import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
+import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SIZE, TERM_SIZE_ICON, TERM_SIZE_XS, TERM_SIZE_XL, TERM_SIZE_2XS, TERM_SIZE_LG } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
@@ -88,13 +88,13 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           <span style={{ position: "absolute", top: 3, right: 3, display: "flex", gap: 2, alignItems: "center" }}>
             <span
               onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-              style={{ fontSize: 13, color: TERM_DIM, cursor: "pointer", padding: "2px 3px", lineHeight: 1 }}
+              style={{ fontSize: TERM_SIZE, color: TERM_DIM, cursor: "pointer", padding: "2px 3px", lineHeight: 1 }}
               title="Edit"
             >&#9998;</span>
             {showDelete && (
               <span
                 onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
-                style={{ fontSize: 14, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 3px", fontWeight: 700, lineHeight: 1 }}
+                style={{ fontSize: TERM_SIZE_ICON, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 3px", fontWeight: 700, lineHeight: 1 }}
                 title="Delete"
               >&times;</span>
             )}
@@ -194,15 +194,15 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_ACCENT; e.currentTarget.style.color = TERM_ACCENT; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER + "80"; e.currentTarget.style.color = TERM_DIM; }}
             >
-              <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 300 }}>+</span>
-              <span style={{ fontSize: 11, fontFamily: "var(--font-sans)", fontWeight: 500 }}>Create New</span>
+              <span style={{ fontSize: TERM_SIZE_XL, lineHeight: 1, fontWeight: 300 }}>+</span>
+              <span style={{ fontSize: TERM_SIZE_XS, fontFamily: "var(--font-sans)", fontWeight: 500 }}>Create New</span>
             </button>
           </div>
         </div>
 
         {/* Project mode hint */}
         {dirLocked && (
-          <div style={{ fontSize: 11, color: TERM_DIM, fontFamily: "var(--font-sans)", textAlign: "center", padding: "8px 0 2px", opacity: 0.7 }}>
+          <div style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM, fontFamily: "var(--font-sans)", textAlign: "center", padding: "8px 0 2px", opacity: 0.7 }}>
             Click an agent to add it instantly
           </div>
         )}
@@ -235,7 +235,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 </div>
                 <button
                   onClick={() => setSelectedDef(null)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: TERM_DIM, fontSize: 16, padding: "2px 4px", lineHeight: 1 }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: TERM_DIM, fontSize: TERM_SIZE_LG, padding: "2px 4px", lineHeight: 1 }}
                 >&times;</button>
               </div>
               {/* Working directory */}
@@ -264,7 +264,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   )}
                 </div>
                 {!dirLocked && (
-                  <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+                  <div style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, marginTop: 2, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
                     Empty = default workspace
                   </div>
                 )}
@@ -278,7 +278,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                     title="Randomize name"
                     style={{
                       background: "none", border: "none", cursor: "pointer",
-                      color: TERM_DIM, fontSize: 13, padding: 0, lineHeight: 1,
+                      color: TERM_DIM, fontSize: TERM_SIZE, padding: 0, lineHeight: 1,
                       fontFamily: "var(--font-mono)",
                     }}
                     onMouseEnter={(e) => { e.currentTarget.style.color = TERM_ACCENT; }}

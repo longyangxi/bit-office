@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { TERM_DIM, TERM_BORDER_DIM, TERM_SEM_RED } from "./termTheme";
+import { TERM_DIM, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_RED, TERM_SIZE_2XS, TERM_SIZE_3XS } from "./termTheme";
 import type { TeamChatMessage } from "@/store/office-store";
 import TeamActivityCard from "./TeamActivityCard";
 
@@ -24,14 +24,14 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
 
   return (
     <div style={{
-      borderTop: "1px solid #152515",
+      borderTop: `1px solid ${TERM_BORDER_DIM}`,
       padding: "6px 0",
     }}>
       <div
         onClick={() => setCollapsed(!collapsed)}
         style={{
           padding: "4px 12px 6px",
-          fontSize: 10, color: "#6a5848", fontFamily: "monospace",
+          fontSize: TERM_SIZE_2XS, color: TERM_DIM, fontFamily: "monospace",
           letterSpacing: "0.05em", textTransform: "uppercase",
           cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
         }}
@@ -42,7 +42,7 @@ function TeamActivityLog({ messages, agents, assetsReady, onClear }: {
           <span
             onClick={(e) => { e.stopPropagation(); onClear(); }}
             style={{
-              marginLeft: "auto", fontSize: 9, padding: "1px 5px",
+              marginLeft: "auto", fontSize: TERM_SIZE_3XS, padding: "1px 5px",
               color: TERM_DIM, border: `1px solid ${TERM_BORDER_DIM}80`,
               cursor: "pointer",
             }}

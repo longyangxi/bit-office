@@ -5,7 +5,7 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_RED, TERM_SEM_YELLOW, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_TEXT, TERM_FONT, TERM_SIZE } from "./termTheme";
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_RED, TERM_SEM_YELLOW, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_TEXT, TERM_FONT, TERM_SIZE, TERM_SIZE_XS, TERM_SIZE_2XS, TERM_SIZE_3XS } from "./termTheme";
 
 function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
   return {
@@ -99,7 +99,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
               </span>
               {msg.toAgentName && (
                 <>
-                  <span aria-hidden="true" style={{ fontSize: 11, color: TERM_DIM }}>&rarr;</span>
+                  <span aria-hidden="true" style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM }}>&rarr;</span>
                   {toAgent?.palette !== undefined && (
                     <SpriteAvatar palette={toAgent.palette} zoom={1} ready={assetsReady} />
                   )}
@@ -109,7 +109,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
                 </>
               )}
               <span style={{
-                marginLeft: "auto", fontSize: 9, padding: "1px 4px",
+                marginLeft: "auto", fontSize: TERM_SIZE_3XS, padding: "1px 4px",
                 backgroundColor: cfg.border + "20", color: cfg.border,
                 border: `1px solid ${cfg.border}40`, fontFamily: "monospace",
               }}>
@@ -117,7 +117,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
               </span>
             </div>
             <ExpandableText text={msgText} maxChars={300} maxHeight={120} />
-            <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 4, fontFamily: TERM_FONT }}>
+            <div style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, marginTop: 4, fontFamily: TERM_FONT }}>
               {new Date(msg.timestamp).toLocaleTimeString()}
             </div>
           </div>

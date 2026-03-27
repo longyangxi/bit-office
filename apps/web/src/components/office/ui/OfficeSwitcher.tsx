@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import JSZip from 'jszip'
 import type { OfficeLayout } from '../types'
 import { loadRoomZipFromUrl } from '../layout/roomZipLoader'
+import { TERM_SIZE_ICON, TERM_SIZE, TERM_SIZE_XS } from './termTheme'
 
 interface OfficeEntry {
   id: string
@@ -149,7 +150,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
             borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
           }}
         >
-          <span style={{ fontSize: '15px', color: 'rgba(255, 255, 255, 0.9)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
+          <span style={{ fontSize: TERM_SIZE_ICON, color: 'rgba(255, 255, 255, 0.9)', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif' }}>
             Switch Office
           </span>
           <button
@@ -160,7 +161,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
               background: hovered === 'close' ? 'rgba(255, 255, 255, 0.08)' : 'transparent',
               border: 'none',
               color: 'rgba(255, 255, 255, 0.6)',
-              fontSize: '15px',
+              fontSize: TERM_SIZE_ICON,
               cursor: 'pointer',
               padding: '0 4px',
               lineHeight: 1,
@@ -186,7 +187,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
           }}
         >
           {offices.length === 0 && (
-            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 13, padding: 20, textAlign: 'center', gridColumn: '1 / -1' }}>
+            <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: TERM_SIZE, padding: 20, textAlign: 'center', gridColumn: '1 / -1' }}>
               Loading...
             </div>
           )}
@@ -252,7 +253,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
                         alignItems: 'center',
                         justifyContent: 'center',
                         color: 'rgba(160, 185, 255, 0.9)',
-                        fontSize: 13,
+                        fontSize: TERM_SIZE,
                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                       }}
                     >
@@ -264,7 +265,7 @@ export default function OfficeSwitcher({ isOpen, onClose, onSelect, currentOffic
                 <div
                   style={{
                     padding: '5px 4px',
-                    fontSize: 11,
+                    fontSize: TERM_SIZE_XS,
                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
                     color: isCurrent ? 'rgba(160, 185, 255, 0.9)' : 'rgba(255, 255, 255, 0.6)',
                     textAlign: 'center',

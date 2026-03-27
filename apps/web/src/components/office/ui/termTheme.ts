@@ -540,4 +540,43 @@ export function applyTermTheme(key: string) {
 }
 
 export const TERM_FONT = `"Berkeley Mono", "JetBrains Mono", "Fira Code", "SF Mono", "Cascadia Code", "Menlo", monospace`;
+
+/* ─────────────────────────────────────────────────
+ * TYPE SCALE — the ONLY font sizes allowed in this app.
+ * Do NOT use raw pixel numbers in fontSize. Pick from:
+ *
+ *   TERM_SIZE_3XS  (9)   micro badges, status pills
+ *   TERM_SIZE_2XS  (10)  timestamps, sub-labels
+ *   TERM_SIZE_XS   (11)  secondary text, captions
+ *   TERM_SIZE_SM   (12)  small body, metadata
+ *   TERM_SIZE      (13)  base body, inputs, buttons
+ *   TERM_SIZE_ICON (14)  inline icons (×, ←, ✏)
+ *   TERM_SIZE_LG   (16)  button icons (★, ✕), close btns
+ *   TERM_SIZE_XL   (18)  large icons (+), CTA symbols
+ *   TERM_SIZE_2XL  (20)  dashboard metrics, hero numbers
+ *
+ * CSS equivalents:  var(--font-size-3xs)  …  var(--font-size-2xl)
+ * ───────────────────────────────────────────────── */
+export const TERM_SIZE_3XS = 9;
+export const TERM_SIZE_2XS = 10;
+export const TERM_SIZE_XS = 11;
+export const TERM_SIZE_SM = 12;
 export const TERM_SIZE = 13;
+export const TERM_SIZE_ICON = 14;
+export const TERM_SIZE_LG = 16;
+export const TERM_SIZE_XL = 18;
+export const TERM_SIZE_2XL = 20;
+
+/* ─────────────────────────────────────────────────
+ * COLOR TOKENS — the ONLY colors allowed for text/bg.
+ * Do NOT use raw hex strings like "#eddcb8" or "#888".
+ *
+ * Text:       TERM_TEXT, TERM_TEXT_BRIGHT, TERM_DIM
+ * Accent:     TERM_ACCENT (primary), TERM_SEM_* (status)
+ * Background: TERM_BG < TERM_PANEL < TERM_SURFACE < TERM_HOVER
+ * Border:     TERM_BORDER, TERM_BORDER_DIM
+ * Status:     TERM_SEM_GREEN / YELLOW / RED / BLUE / PURPLE / CYAN
+ *
+ * All colors auto-update when the user switches themes.
+ * Hardcoded hex values will NOT respond to theme changes.
+ * ───────────────────────────────────────────────── */

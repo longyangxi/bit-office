@@ -44,10 +44,17 @@ html {
   /* Font — sans for UI chrome, mono for code/data */
   --font-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
-  --font-size-base: 13px;
-  --font-size-chat: 13px;   /* chat messages / body text — matches terminal aesthetic */
-  --font-size-sm: 12px;
-  --font-size-xs: 11px;
+  /* Type scale — ONLY these sizes are allowed. See termTheme.ts for JS constants. */
+  --font-size-3xs: 9px;     /* micro badges, status pills */
+  --font-size-2xs: 10px;    /* timestamps, sub-labels */
+  --font-size-xs: 11px;     /* secondary text, captions */
+  --font-size-sm: 12px;     /* small body, metadata */
+  --font-size-base: 13px;   /* base body, inputs, buttons */
+  --font-size-chat: 13px;   /* chat messages — matches terminal aesthetic */
+  --font-size-icon: 14px;   /* inline icons (×, ←, ✏) */
+  --font-size-lg: 16px;     /* button icons (★, ✕), close btns */
+  --font-size-xl: 18px;     /* large icons (+), CTA symbols */
+  --font-size-2xl: 20px;    /* dashboard metrics, hero numbers */
 
   /* Spacing (4px grid) */
   --space-0: 0px;

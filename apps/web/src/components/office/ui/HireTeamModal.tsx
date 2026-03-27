@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_SEM_YELLOW, TERM_SIZE, TERM_SIZE_SM, TERM_SIZE_XS, TERM_SIZE_2XS } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
@@ -58,7 +58,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
     >
       {/* Working directory picker */}
       <div style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+        <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
           PROJECT DIRECTORY{dirLocked && <span style={{ opacity: 0.5, marginLeft: 6 }}>(project)</span>}
         </div>
         <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
@@ -82,13 +82,13 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           )}
         </div>
         {!dirLocked && (
-          <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
+          <div style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, marginTop: 3, fontFamily: "var(--font-mono)", opacity: 0.7 }}>
             Empty = default workspace
           </div>
         )}
       </div>
 
-      <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
+      <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, marginBottom: 6, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>SELECT TEAM MEMBERS</div>
       <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 12 }}>
         {/* Fixed rows: leader and reviewer */}
         {fixedRows.map(({ def, label }) => (
@@ -104,10 +104,10 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           >
             <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
-                {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: 11, fontFamily: "var(--font-mono)" }}>{label}</span>
+              <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
+                {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: TERM_SIZE_XS, fontFamily: "var(--font-mono)" }}>{label}</span>
               </div>
-              <div style={{ fontSize: 13, color: TERM_DIM }}>{def.role}</div>
+              <div style={{ fontSize: TERM_SIZE, color: TERM_DIM }}>{def.role}</div>
             </div>
             <select
               value={backends[def.id] ?? "claude"}
@@ -115,7 +115,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
               onChange={(e) => setBackends((prev) => ({ ...prev, [def.id]: e.target.value }))}
               style={{
                 padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
-                backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)",
+                backgroundColor: TERM_BG, color: TERM_DIM, fontSize: TERM_SIZE_SM, cursor: "pointer", fontFamily: "var(--font-mono)",
               }}
             >
               {BACKEND_OPTIONS.map((b) => (
@@ -126,7 +126,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
         ))}
 
         {/* Dev cards */}
-        <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 4, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
+        <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, marginTop: 4, marginBottom: 4, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>DEV AGENT (pick 1)</div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
           {devAgents.map((def) => {
             const selected = selectedDevId === def.id;
@@ -146,15 +146,15 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 }}
               >
                 <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-                <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
-                <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
+                <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+                <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
                 <select
                   value={backends[def.id] ?? "claude"}
                   onClick={(e) => { e.stopPropagation(); setSelectedDevId(def.id); }}
                   onChange={(e) => { setSelectedDevId(def.id); setBackends((prev) => ({ ...prev, [def.id]: e.target.value })); }}
                   style={{
                     marginTop: 6, padding: "3px 6px", border: `1px solid ${TERM_BORDER}`,
-                    backgroundColor: TERM_BG, color: TERM_DIM, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-mono)",
+                    backgroundColor: TERM_BG, color: TERM_DIM, fontSize: TERM_SIZE_SM, cursor: "pointer", fontFamily: "var(--font-mono)",
                   }}
                 >
                   {BACKEND_OPTIONS.map((b) => (

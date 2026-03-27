@@ -1,4 +1,4 @@
-import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_SIZE_3XS, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_BORDER, TERM_SEM_GREEN, TERM_SEM_RED } from "./termTheme";
 import { TokenBadge, MdContent } from "./MessageBubble";
 import { MatrixRainCanvas } from "./MatrixRainCanvas";
 import { ReviewFooter } from "./ReviewFooter";
@@ -41,7 +41,7 @@ export function ReviewerOverlay({
         fontSize: TERM_SIZE, fontFamily: TERM_FONT,
         flexShrink: 0,
       }}>
-        <span style={{ color: TERM_ACCENT, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_ACCENT}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
+        <span style={{ color: TERM_ACCENT, fontSize: TERM_SIZE_3XS, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_ACCENT}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
         <span style={{ color: TERM_TEXT_BRIGHT }}>
           {reviewerOverlay.name}
         </span>
@@ -54,14 +54,14 @@ export function ReviewerOverlay({
         {/* Verdict badge (done) */}
         {!reviewerOverlay.busy && reviewerOverlay.verdict && reviewerOverlay.verdict !== "UNKNOWN" && (
           <span style={{
-            fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3,
+            fontSize: TERM_SIZE_3XS, fontWeight: 600, padding: "1px 6px", borderRadius: 3,
             letterSpacing: "0.04em", textTransform: "uppercase",
             color: reviewerOverlay.verdict === "PASS" ? TERM_SEM_GREEN : TERM_SEM_RED,
             background: reviewerOverlay.verdict === "PASS" ? `${TERM_SEM_GREEN}18` : `${TERM_SEM_RED}18`,
           }}>{reviewerOverlay.verdict}</span>
         )}
         {!reviewerOverlay.busy && reviewerOverlay.status === "error" && (
-          <span style={{ color: TERM_SEM_RED, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_RED}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>ERROR</span>
+          <span style={{ color: TERM_SEM_RED, fontSize: TERM_SIZE_3XS, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_SEM_RED}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>ERROR</span>
         )}
         <span style={{ flex: 1 }} />
         {reviewerOverlay.tokenUsage.inputTokens > 0 && (

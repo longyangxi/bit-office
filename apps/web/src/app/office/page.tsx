@@ -21,7 +21,7 @@ import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 // Extracted constants, theme, and utils
 import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
+import { TERM_FONT, TERM_SIZE_3XS, TERM_SIZE_2XS, TERM_SIZE_XS, TERM_SIZE_SM, TERM_SIZE, TERM_SIZE_ICON, TERM_SIZE_LG, TERM_SIZE_XL, TERM_SIZE_2XL, TERM_THEMES, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
 import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
 import { computeAutoGrid } from "@/components/office/ui/autoGrid";
 import { APP_VERSION, APP_BUILD_TIME } from "@/lib/appMeta";
@@ -1270,11 +1270,11 @@ export default function OfficePage() {
           pointerEvents: "none",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, pointerEvents: "auto" }}>
-            <h1 className="px-font" style={{ fontSize: 12, margin: 0, color: "#e8b040", textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Open Office</h1>
+            <h1 className="px-font" style={{ fontSize: TERM_SIZE_SM, margin: 0, color: TERM_ACCENT, textShadow: "2px 2px 0px rgba(0,0,0,0.8), 0 0 12px rgba(200,155,48,0.3)", letterSpacing: "0.05em" }}>Open Office</h1>
             <span
               title={APP_BUILD_TIME ? `Web UI v${APP_VERSION}\nBuild ${APP_BUILD_TIME}` : `Web UI v${APP_VERSION}`}
               style={{
-                fontSize: 9,
+                fontSize: TERM_SIZE_3XS,
                 color: "rgba(232, 220, 184, 0.4)",
                 fontFamily: "monospace",
                 letterSpacing: "0.04em",
@@ -1282,7 +1282,7 @@ export default function OfficePage() {
               }}
             >v{APP_VERSION}</span>
             <span style={{
-              fontSize: 10, padding: "3px 7px",
+              fontSize: TERM_SIZE_2XS, padding: "3px 7px",
               border: `1px solid ${connected ? `${TERM_SEM_GREEN}40` : `${TERM_SEM_RED}40`}`,
               backgroundColor: connected ? `${TERM_SEM_GREEN}15` : `${TERM_SEM_RED}15`,
               color: connected ? TERM_SEM_GREEN : TERM_SEM_RED,
@@ -1292,7 +1292,7 @@ export default function OfficePage() {
             </span>
             {editMode && (
               <span style={{
-                fontSize: 10, padding: "3px 7px",
+                fontSize: TERM_SIZE_2XS, padding: "3px 7px",
                 border: "1px solid #5a3a10",
                 backgroundColor: "#1a0e00", color: "#e8b040",
                 fontFamily: "monospace",
@@ -1302,7 +1302,7 @@ export default function OfficePage() {
             )}
             {isSpectator && (
               <span style={{
-                fontSize: 10, padding: "3px 7px",
+                fontSize: TERM_SIZE_2XS, padding: "3px 7px",
                 border: "1px solid #3b82f6",
                 backgroundColor: "#1a2744", color: "#7ab8f5",
                 fontFamily: "monospace", letterSpacing: "0.05em",
@@ -1312,9 +1312,9 @@ export default function OfficePage() {
             )}
             {isCollaborator && (
               <span style={{
-                fontSize: 10, padding: "3px 7px",
+                fontSize: TERM_SIZE_2XS, padding: "3px 7px",
                 border: "1px solid #a855f7",
-                backgroundColor: "#2d1a44", color: "#c084fc",
+                backgroundColor: "#2d1a44", color: TERM_SEM_PURPLE,
                 fontFamily: "monospace", letterSpacing: "0.05em",
               }}>
                 COLLABORATOR
@@ -1325,9 +1325,9 @@ export default function OfficePage() {
                 <span
                   onClick={() => setShowShareMenu(!showShareMenu)}
                   style={{
-                    fontSize: 10, padding: "3px 7px", cursor: "pointer",
+                    fontSize: TERM_SIZE_2XS, padding: "3px 7px", cursor: "pointer",
                     border: "1px solid #a855f760",
-                    backgroundColor: showShareMenu ? "#a855f720" : "transparent", color: "#c084fc",
+                    backgroundColor: showShareMenu ? "#a855f720" : "transparent", color: TERM_SEM_PURPLE,
                     fontFamily: "monospace", letterSpacing: "0.05em",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#a855f720"; }}
@@ -1345,7 +1345,7 @@ export default function OfficePage() {
                       onClick={() => handleCreateShareLink("collaborator")}
                       style={{
                         padding: "8px 12px", border: "none", backgroundColor: "transparent",
-                        color: "#c084fc", fontSize: 12, cursor: "pointer", textAlign: "left",
+                        color: TERM_SEM_PURPLE, fontSize: TERM_SIZE_SM, cursor: "pointer", textAlign: "left",
                         fontFamily: "monospace",
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#a855f720"; }}
@@ -1355,7 +1355,7 @@ export default function OfficePage() {
                       onClick={() => handleCreateShareLink("spectator")}
                       style={{
                         padding: "8px 12px", border: "none", backgroundColor: "transparent",
-                        color: "#7ab8f5", fontSize: 12, cursor: "pointer", textAlign: "left",
+                        color: TERM_SEM_BLUE, fontSize: TERM_SIZE_SM, cursor: "pointer", textAlign: "left",
                         fontFamily: "monospace",
                       }}
                       onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#3b82f620"; }}
@@ -1656,7 +1656,7 @@ export default function OfficePage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
                         <span style={{
-                          fontSize: 11, fontWeight: 600,
+                          fontSize: TERM_SIZE_XS, fontWeight: 600,
                           color: isActive ? TERM_TEXT_BRIGHT : TERM_TEXT,
                           fontFamily: TERM_FONT, maxWidth: 80,
                           overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -1664,7 +1664,7 @@ export default function OfficePage() {
                         }}>{agent.name}</span>
                         {isLead && (
                           <span style={{
-                            fontSize: 8, fontFamily: TERM_FONT,
+                            fontSize: TERM_SIZE_3XS, fontFamily: TERM_FONT,
                             color: TERM_SEM_YELLOW, fontWeight: 700,
                             padding: "0 3px", lineHeight: "14px",
                             border: `1px solid ${TERM_SEM_YELLOW}40`,
@@ -1675,7 +1675,7 @@ export default function OfficePage() {
                       <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                         {(agentState?.backend || agent.backend) && (
                           <span style={{
-                            fontSize: 9, color: TERM_DIM,
+                            fontSize: TERM_SIZE_3XS, color: TERM_DIM,
                             fontFamily: TERM_FONT, maxWidth: 70,
                             overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
                           }}>{BACKEND_OPTIONS.find((b) => b.id === (agentState?.backend || agent.backend))?.name ?? (agentState?.backend || agent.backend)}</span>
@@ -1706,12 +1706,12 @@ export default function OfficePage() {
                     gap: 5, padding: "6px 16px", height: 52, flexShrink: 0,
                     border: `1px solid ${TERM_ACCENT}50`, cursor: "pointer",
                     backgroundColor: `${TERM_ACCENT}12`, color: `${TERM_ACCENT}cc`,
-                    fontSize: 11, fontFamily: TERM_FONT, fontWeight: 500,
+                    fontSize: TERM_SIZE_XS, fontFamily: TERM_FONT, fontWeight: 500,
                     borderRadius: 6, transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}25`; e.currentTarget.style.borderColor = `${TERM_ACCENT}90`; e.currentTarget.style.color = TERM_ACCENT; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}12`; e.currentTarget.style.borderColor = `${TERM_ACCENT}50`; e.currentTarget.style.color = `${TERM_ACCENT}cc`; }}
-                ><span style={{ fontSize: 14, lineHeight: 1 }}>+</span> hire team</button>
+                ><span style={{ fontSize: TERM_SIZE_ICON, lineHeight: 1 }}>+</span> hire team</button>
               )}
               {isOwner && hasTeam && teamBusy && (
                 <button onClick={handleStopTeam} title="Stop Team Work"
@@ -1720,7 +1720,7 @@ export default function OfficePage() {
                     flexShrink: 0, padding: "6px 14px", height: 52,
                     border: `1px solid ${TERM_SEM_YELLOW}60`, cursor: "pointer",
                     backgroundColor: `${TERM_SEM_YELLOW}10`, color: TERM_SEM_YELLOW,
-                    fontSize: 10, fontFamily: TERM_FONT,
+                    fontSize: TERM_SIZE_2XS, fontFamily: TERM_FONT,
                     borderRadius: 6, transition: "all 0.2s ease",
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_SEM_YELLOW}20`; }}
@@ -1988,7 +1988,7 @@ export default function OfficePage() {
               style={{
                 width: 44, height: 44, flexShrink: 0,
                 border: `1px solid ${TERM_ACCENT}60`, backgroundColor: `${TERM_ACCENT}1e`,
-                color: TERM_ACCENT, fontSize: 18, cursor: "pointer",
+                color: TERM_ACCENT, fontSize: TERM_SIZE_XL, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >+</button>
@@ -1999,7 +1999,7 @@ export default function OfficePage() {
             style={{
               width: 44, height: 44, flexShrink: 0,
               border: `1px solid ${TERM_SEM_YELLOW}70`, backgroundColor: `${TERM_SEM_YELLOW}20`,
-              color: TERM_SEM_YELLOW, fontSize: 11, fontWeight: 700, cursor: "pointer",
+              color: TERM_SEM_YELLOW, fontSize: TERM_SIZE_XS, fontWeight: 700, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               fontFamily: "monospace",
             }}
@@ -2061,23 +2061,23 @@ export default function OfficePage() {
                 width: "100%", textAlign: "left",
               }}
             >
-              <span aria-hidden="true" style={{ fontSize: 14, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
+              <span aria-hidden="true" style={{ fontSize: TERM_SIZE_ICON, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
               <SpriteAvatar palette={agentState.palette ?? 0} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
+                <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
                   {agentState.name}
                   {agentState.isTeamLead && (
-                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}28`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}60`, fontFamily: "monospace" }}>LEAD</span>
+                    <span style={{ fontSize: TERM_SIZE_3XS, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}28`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}60`, fontFamily: "monospace" }}>LEAD</span>
                   )}
                   {mobileIsTeamMember && (
-                    <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}20`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}50`, fontFamily: "monospace" }}>TEAM</span>
+                    <span style={{ fontSize: TERM_SIZE_3XS, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}20`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}50`, fontFamily: "monospace" }}>TEAM</span>
                   )}
                   {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} cacheReadTokens={agentState.tokenUsage.cacheReadTokens} cacheWriteTokens={agentState.tokenUsage.cacheWriteTokens} costUsd={agentState.tokenUsage.costUsd} />}
                 </div>
-                <div style={{ fontSize: 11, color: TERM_DIM }}>{agentState.role}</div>
+                <div style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM }}>{agentState.role}</div>
               </div>
               <span style={{
-                fontSize: 10, padding: "2px 6px",
+                fontSize: TERM_SIZE_2XS, padding: "2px 6px",
                 backgroundColor: cfg.color + "18", color: cfg.color,
                 border: `1px solid ${cfg.color}40`,
                 flexShrink: 0, fontFamily: "monospace",
@@ -2111,17 +2111,17 @@ export default function OfficePage() {
                     WebkitBackdropFilter: "blur(6px)",
                     border: `1px solid ${info.color}30`,
                     display: "flex", alignItems: "center", gap: 6,
-                    fontSize: 11, fontFamily: "monospace",
+                    fontSize: TERM_SIZE_XS, fontFamily: "monospace",
                   }}>
                     <span aria-hidden="true">{info.icon}</span>
-                    <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 9, letterSpacing: "0.05em" }}>{phase}</span>
+                    <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: TERM_SIZE_3XS, letterSpacing: "0.05em" }}>{phase}</span>
                     <span style={{ color: TERM_DIM }}>{info.hint}</span>
                   </div>
                 );
               })()}
 
               {agentState.messages.length === 0 && (
-                <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13, fontFamily: "monospace" }}>
+                <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: TERM_SIZE, fontFamily: "monospace" }}>
                   {mobileIsTeamMember ? "This agent is managed by the Team Lead" : ""}
                 </div>
               )}
@@ -2143,20 +2143,20 @@ export default function OfficePage() {
                   marginBottom: 8, padding: 12,
                   backgroundColor: TERM_SURFACE, border: `1px solid ${TERM_SEM_YELLOW}`,
                 }}>
-                  <div style={{ fontSize: 12, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
+                  <div style={{ fontSize: TERM_SIZE_SM, fontWeight: "bold", color: TERM_SEM_YELLOW, marginBottom: 6, fontFamily: "monospace" }}>
                     ▲ {agentState.pendingApproval.title}
                   </div>
-                  <div style={{ fontSize: 13, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: TERM_SIZE, color: TERM_TEXT, marginBottom: 10, lineHeight: 1.5 }}>
                     {agentState.pendingApproval.summary}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
                       onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "yes")}
-                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_GREEN}`, backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, cursor: "pointer", fontWeight: "bold", fontSize: TERM_SIZE_SM, fontFamily: "monospace" }}
                     >▶ Approve</button>
                     <button
                       onClick={() => handleApproval(agentState.pendingApproval!.approvalId, "no")}
-                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: 12, fontFamily: "monospace" }}
+                      style={{ flex: 1, padding: "8px", border: `1px solid ${TERM_SEM_RED}`, backgroundColor: TERM_PANEL, color: TERM_SEM_RED, cursor: "pointer", fontWeight: "bold", fontSize: TERM_SIZE_SM, fontFamily: "monospace" }}
                     >✕ Reject</button>
                   </div>
                 </div>
@@ -2171,9 +2171,9 @@ export default function OfficePage() {
                 padding: "6px 10px", borderTop: "1px solid #152515",
                 backgroundColor: TERM_BG, maxHeight: 80, overflowY: "auto",
               }}>
-                <div style={{ fontSize: 10, color: "#a855f7", fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
+                <div style={{ fontSize: TERM_SIZE_2XS, color: TERM_SEM_PURPLE, fontFamily: "monospace", marginBottom: 4, letterSpacing: "0.05em" }}>SUGGESTIONS</div>
                 {suggestions.slice(-5).map((s, i) => (
-                  <div key={i} style={{ fontSize: 11, color: "#c084fc", marginBottom: 2, lineHeight: 1.3 }}>
+                  <div key={i} style={{ fontSize: TERM_SIZE_XS, color: TERM_SEM_PURPLE, marginBottom: 2, lineHeight: 1.3 }}>
                     <span style={{ color: "#7c3aed", fontWeight: 600 }}>{s.author}:</span> {s.text}
                   </div>
                 ))}
@@ -2190,7 +2190,7 @@ export default function OfficePage() {
                   <div style={{
                     padding: "8px 10px", borderTop: "1px solid #152515",
                     backgroundColor: "#182844", flexShrink: 0,
-                    fontSize: 12, color: "#7ab8f5", fontFamily: "monospace", textAlign: "center",
+                    fontSize: TERM_SIZE_SM, color: TERM_SEM_BLUE, fontFamily: "monospace", textAlign: "center",
                   }}>
                     Watching — read-only mode
                   </div>
@@ -2213,7 +2213,7 @@ export default function OfficePage() {
                         maxLength={500}
                         style={{
                           flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
-                          backgroundColor: TERM_BG, color: "#c084fc", fontSize: TERM_SIZE, outline: "none",
+                          backgroundColor: TERM_BG, color: TERM_SEM_PURPLE, fontSize: TERM_SIZE, outline: "none",
                         }}
                       />
                       <button
@@ -2222,8 +2222,8 @@ export default function OfficePage() {
                         style={{
                           padding: "9px 14px", border: "none",
                           backgroundColor: suggestText.trim() ? "#a855f7" : TERM_PANEL,
-                          color: suggestText.trim() ? "#fff" : "#5a4838",
-                          fontSize: 13, cursor: suggestText.trim() ? "pointer" : "default",
+                          color: suggestText.trim() ? "#fff" : TERM_DIM,
+                          fontSize: TERM_SIZE, cursor: suggestText.trim() ? "pointer" : "default",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Suggest</button>
@@ -2239,7 +2239,7 @@ export default function OfficePage() {
                 }}>
                   {mobileIsTeamMember ? (
                     <div style={{
-                      textAlign: "center", color: "#5a4838", fontSize: 12, padding: "8px 0", fontFamily: "monospace",
+                      textAlign: "center", color: TERM_DIM, fontSize: TERM_SIZE_SM, padding: "8px 0", fontFamily: "monospace",
                     }}>
                       Tasks are assigned by the Team Lead
                     </div>
@@ -2248,7 +2248,7 @@ export default function OfficePage() {
                       onClick={async () => { if (await confirm("Cancel current work?")) handleCancel(); }}
                       style={{
                         width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_RED}`,
-                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
+                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer", fontFamily: "monospace",
                       }}
                     >✕ Cancel current work</button>
                   ) : mobilePhase === "execute" && !busy ? (
@@ -2272,7 +2272,7 @@ export default function OfficePage() {
                             padding: "9px 14px", border: "none",
                             backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_SEM_YELLOW : TERM_SURFACE,
                             color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
-                            fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
+                            fontSize: TERM_SIZE, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
                         >Send</button>
@@ -2281,7 +2281,7 @@ export default function OfficePage() {
                         onClick={async () => { if (await confirm("End this project and start a new one?")) handleEndProject(); }}
                         style={{
                           width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_YELLOW}`,
-                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: 13, cursor: "pointer",
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: TERM_SIZE, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Close Project</button>
@@ -2292,7 +2292,7 @@ export default function OfficePage() {
                         onClick={handleApprovePlan}
                         style={{
                           width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_GREEN}`,
-                          backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, fontSize: 13, cursor: "pointer",
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >▶ Approve Plan</button>
@@ -2305,7 +2305,7 @@ export default function OfficePage() {
                           placeholder="Or give feedback..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
+                            backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                           }}
                         />
                         <button
@@ -2315,7 +2315,7 @@ export default function OfficePage() {
                             padding: "9px 14px", border: "none",
                             backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_ACCENT : TERM_PANEL,
                             color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
-                            fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
+                            fontSize: TERM_SIZE, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
                         >Send</button>
@@ -2332,7 +2332,7 @@ export default function OfficePage() {
                           placeholder="Request changes..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
+                            backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                           }}
                         />
                         <button
@@ -2342,7 +2342,7 @@ export default function OfficePage() {
                             padding: "9px 14px", border: "none",
                             backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_SEM_YELLOW : TERM_SURFACE,
                             color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
-                            fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
+                            fontSize: TERM_SIZE, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
                           }}
                         >Send</button>
@@ -2351,7 +2351,7 @@ export default function OfficePage() {
                         onClick={async () => { if (await confirm("End this project and start a new one?")) handleEndProject(); }}
                         style={{
                           width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_YELLOW}`,
-                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: 13, cursor: "pointer",
+                          backgroundColor: TERM_PANEL, color: TERM_SEM_YELLOW, fontSize: TERM_SIZE, cursor: "pointer",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Close Project</button>
@@ -2361,7 +2361,7 @@ export default function OfficePage() {
                       onClick={async () => { if (await confirm("Cancel current work?")) handleCancel(); }}
                       style={{
                         width: "100%", padding: "9px 16px", border: `1px solid ${TERM_SEM_RED}`,
-                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: 13, cursor: "pointer", fontFamily: "monospace",
+                        backgroundColor: TERM_PANEL, color: TERM_SEM_RED, fontSize: TERM_SIZE, cursor: "pointer", fontFamily: "monospace",
                       }}
                     >✕ Cancel current work</button>
                   ) : (
@@ -2374,7 +2374,7 @@ export default function OfficePage() {
                         placeholder="Send a message..."
                         style={{
                           flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                          backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
+                          backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                         }}
                         autoFocus
                       />
@@ -2385,7 +2385,7 @@ export default function OfficePage() {
                           padding: "9px 14px", border: "none",
                           backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_ACCENT : TERM_PANEL,
                           color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
-                          fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
+                          fontSize: TERM_SIZE, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                           fontWeight: 700, fontFamily: "monospace",
                         }}
                       >Send</button>
@@ -2413,9 +2413,9 @@ export default function OfficePage() {
               backgroundColor: TERM_PANEL, cursor: "pointer",
             }}
           >
-            <span style={{ fontSize: 14, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
-            <div style={{ fontSize: 13, fontWeight: 700, color: "#eddcb8" }}>Team Chat</div>
-            <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "monospace" }}>{teamMessages.length} messages</span>
+            <span style={{ fontSize: TERM_SIZE_ICON, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
+            <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>Team Chat</div>
+            <span style={{ fontSize: TERM_SIZE_XS, color: TERM_DIM, fontFamily: "monospace" }}>{teamMessages.length} messages</span>
           </div>
           <TeamChatView messages={teamMessages} agents={agents} assetsReady={assetsReady} />
         </div>
@@ -2545,14 +2545,14 @@ export default function OfficePage() {
             backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
             padding: 24, maxWidth: 420, width: "90%",
           }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: "#eddcb8", marginBottom: 12 }}>Share Link Created</div>
-            <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 8 }}>Link copied to clipboard!</div>
+            <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginBottom: 12 }}>Share Link Created</div>
+            <div style={{ fontSize: TERM_SIZE_SM, color: TERM_DIM, marginBottom: 8 }}>Link copied to clipboard!</div>
             <input
               readOnly
               value={shareUrl}
               style={{
                 width: "100%", padding: "8px 10px", border: `1px solid ${TERM_BORDER}`,
-                backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 12,
+                backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE_SM,
                 fontFamily: "monospace", outline: "none",
               }}
               onFocus={(e) => e.target.select()}
@@ -2561,7 +2561,7 @@ export default function OfficePage() {
               onClick={() => setShareUrl(null)}
               style={{
                 marginTop: 12, padding: "8px 20px", border: "none",
-                backgroundColor: TERM_ACCENT, color: TERM_BG, fontSize: 13,
+                backgroundColor: TERM_ACCENT, color: TERM_BG, fontSize: TERM_SIZE,
                 cursor: "pointer", fontWeight: 700, fontFamily: "monospace",
               }}
             >OK</button>
@@ -2592,7 +2592,7 @@ export default function OfficePage() {
             position: "fixed", bottom: 16, left: 16, zIndex: 50,
             background: `${TERM_ACCENT}26`, border: `1px solid ${TERM_ACCENT}66`,
             color: TERM_ACCENT, padding: "6px 14px", cursor: "pointer",
-            fontSize: 11, fontFamily: "monospace", fontWeight: 600,
+            fontSize: TERM_SIZE_XS, fontFamily: "monospace", fontWeight: 600,
           }}
         >
           Run Demo

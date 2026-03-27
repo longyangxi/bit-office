@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+import { TERM_SIZE_ICON } from "./termTheme";
 
 /** Matrix-style binary rain on canvas — each column spawns at random x/y */
 export function MatrixRainCanvas({ color, font }: { color: string; font: string }) {
@@ -9,7 +10,7 @@ export function MatrixRainCanvas({ color, font }: { color: string; font: string 
     const ctx = cvs.getContext("2d");
     if (!ctx) return;
     let raf: number;
-    const fontSize = 14;
+    const fontSize = TERM_SIZE_ICON;
     const lineH = 20;
     const colCount = 6;      // max simultaneous columns
     const digitCount = 12;   // digits per column
