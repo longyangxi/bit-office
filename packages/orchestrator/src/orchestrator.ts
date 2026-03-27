@@ -1412,6 +1412,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (!this.activeScheduler || !this.activePlan) return;
     if (!this.activeScheduler.isComplete()) return;
 
+    // Wait for auto-review queue to drain before finalizing
+    if (this.autoReview && (this.reviewQueue.length > 0 || this.reviewerBusy)) {
+      console.log(`[Orchestrator] Scheduler done but reviews pending (queue: ${this.reviewQueue.length}, busy: ${this.reviewerBusy})`);
+      return;
+    }
+
     const plan = this.activePlan;
     const allDone = plan.tree.children.every(c => c.status === "done");
     const results = plan.tree.children
