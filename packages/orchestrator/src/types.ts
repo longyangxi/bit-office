@@ -203,6 +203,23 @@ export interface AutoMergeUpdatedEvent {
   autoMerge: boolean;
 }
 
+export interface ReviewFailEvent {
+  type: "review:fail";
+  agentId: string;
+  taskId: string;
+  reviewerOutput: string;
+  devAgentId?: string;
+}
+
+export interface NotificationEvent {
+  type: "notification";
+  title: string;
+  message: string;
+  priority: "urgent" | "action" | "warning" | "info";
+  agentId?: string;
+  taskId?: string;
+}
+
 export interface TokenUpdateEvent {
   type: "token:update";
   agentId: string;
@@ -231,7 +248,9 @@ export type OrchestratorEvent =
   | TeamPhaseChangedEvent
   | TokenUpdateEvent
   | WorktreeReadyEvent
-  | AutoMergeUpdatedEvent;
+  | AutoMergeUpdatedEvent
+  | ReviewFailEvent
+  | NotificationEvent;
 
 // ---------------------------------------------------------------------------
 // Event map for typed EventEmitter
@@ -253,6 +272,8 @@ export interface OrchestratorEventMap {
   "worktree:merged": [WorktreeMergedEvent];
   "worktree:ready": [WorktreeReadyEvent];
   "autoMerge:updated": [AutoMergeUpdatedEvent];
+  "review:fail": [ReviewFailEvent];
+  "notification": [NotificationEvent];
   "agent:activity": [AgentActivityEvent];
   "agent:created": [AgentCreatedEvent];
   "agent:fired": [AgentFiredEvent];
