@@ -205,7 +205,8 @@ export default function OfficePage() {
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [pendingImages, setPendingImages] = useState<{ name: string; dataUrl: string; base64: string }[]>([]);
-  const pasteMapRef = useRef(new Map<string, string>()); // label → full text
+  const pasteMapRef = useRef(new Map<string, string>()); // label → full text (shared: single-pane mode)
+  const panePasteMapRef = useRef(new Map<string, Map<string, string>>()); // agentId → (label → full text)
   const pasteCountRef = useRef(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
   // Editor state
@@ -800,6 +801,7 @@ export default function OfficePage() {
   const [panePrompts, setPanePrompts] = useState<Map<string, string>>(new Map());
 
   // Multi-pane text paste — updates per-pane prompt instead of shared prompt
+  // Uses per-agent paste map so clearing one agent's data doesn't affect others
   const handlePanePasteText = useCallback((agentId: string, e: React.ClipboardEvent<HTMLElement>) => {
     const text = e.clipboardData?.getData("text/plain");
     if (text) {
@@ -809,7 +811,11 @@ export default function OfficePage() {
         pasteCountRef.current++;
         const info = lines.length > 1 ? `+${lines.length} lines` : `${text.length} chars`;
         const label = `[Pasted text #${pasteCountRef.current} ${info}]`;
-        pasteMapRef.current.set(label, text);
+        // Store in per-agent map (isolated from other agents)
+        if (!panePasteMapRef.current.has(agentId)) {
+          panePasteMapRef.current.set(agentId, new Map());
+        }
+        panePasteMapRef.current.get(agentId)!.set(label, text);
         const input = e.currentTarget as HTMLInputElement | HTMLTextAreaElement;
         const curPrompt = panePrompts.get(agentId) || "";
         const pos = input.selectionStart ?? curPrompt.length;
@@ -894,6 +900,7 @@ export default function OfficePage() {
     });
     setPrompt("");
     setPendingImages([]);
+    // Only clear shared paste map — per-agent maps are untouched
     pasteMapRef.current.clear();
   }, [selectedAgent, prompt, pendingImages, addUserMessage, agents, uploadImages]);
 
@@ -1781,7 +1788,15 @@ export default function OfficePage() {
                   const imagePaths = await uploadImages(paneImages);
 
                   // Expand pasted text labels back to full content
+                  // Try per-agent paste map first, then fall back to shared map
                   let finalPrompt = p;
+                  const agentPasteMap = panePasteMapRef.current.get(agentId);
+                  if (agentPasteMap) {
+                    for (const [label, fullText] of agentPasteMap) {
+                      finalPrompt = finalPrompt.replace(label, fullText);
+                    }
+                  }
+                  // Also check shared map (backward compat: paste done in single-pane, submit in multi-pane)
                   for (const [label, fullText] of pasteMapRef.current) {
                     finalPrompt = finalPrompt.replace(label, fullText);
                   }
@@ -1796,7 +1811,8 @@ export default function OfficePage() {
                   sendCommand({ type: "RUN_TASK", agentId, taskId, prompt: finalPrompt, repoPath: agentWorkDirMap.get(agentId) });
                   setPanePrompts(prev => { const m = new Map(prev); m.set(agentId, ''); return m; });
                   setPanePendingImages(prev => { const m = new Map(prev); m.delete(agentId); return m; });
-                  pasteMapRef.current.clear();
+                  // Only clear this agent's paste data, not everyone's
+                  panePasteMapRef.current.delete(agentId);
                 }}
                 onCancel={(agentId) => sendCommand({ type: "CANCEL_TASK", agentId, taskId: "" })}
                 onFire={handleFire}
