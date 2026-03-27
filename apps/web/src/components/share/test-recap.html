@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Project Recap GIF — Test</title>
+<style>
+  body { background: #0d1117; color: #e6edf3; font-family: 'SF Mono', monospace; padding: 40px; }
+  h1 { font-size: 18px; color: #58a6ff; }
+  .section { margin: 20px 0; padding: 16px; border: 1px solid #30363d; border-radius: 8px; }
+  button { background: transparent; border: 1px solid #58a6ff; color: #58a6ff; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; margin: 4px; }
+  button:hover { opacity: 0.8; }
+  .log { font-size: 12px; color: #8b949e; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
+  img { max-width: 800px; border: 1px solid #30363d; border-radius: 6px; margin-top: 12px; }
+  .stats { display: flex; gap: 20px; flex-wrap: wrap; }
+  .stat { text-align: center; }
+  .stat .value { font-size: 24px; font-weight: bold; color: #58a6ff; }
+  .stat .label { font-size: 11px; color: #8b949e; }
+</style>
+</head>
+<body>
+<h1>Project Recap GIF — Test Harness</h1>
+
+<div class="section">
+  <strong>Test Controls</strong><br>
+  <button onclick="testLivePath()">Test Live Path (RecapCollector)</button>
+  <button onclick="testArchivePath()">Test Archive Path (extractRecapData)</button>
+  <button onclick="testSoloProject()">Test Solo (no review)</button>
+  <button onclick="testEmptyProject()">Test Empty Project</button>
+</div>
+
+<div class="section">
+  <strong>RecapData</strong>
+  <div id="recap-data" class="log">Click a test button above...</div>
+</div>
+
+<div class="section">
+  <strong>Rendered Frames</strong>
+  <div id="frame-stats" class="stats"></div>
+  <div id="frame-preview"></div>
+</div>
+
+<div class="section">
+  <strong>GIF Output</strong>
+  <div id="gif-stats"></div>
+  <div id="gif-preview"></div>
+</div>
+
+<div class="section">
+  <strong>Log</strong>
+  <div id="log" class="log"></div>
+</div>
+
+<script type="module">
+// ---- Import the modules (adjust paths for your bundler / dev server) ----
+// Since this is a raw HTML test, we inline the logic. In production, import from the module.
+
+// ---- INLINE: recap-data.ts core logic ----
+
+function normalizeRole(role) {
+  const r = role.toLowerCase();
+  if (r.includes("review")) return "reviewer";
+  if (r.includes("lead")) return "leader";
+  if (r.includes("dev")) return "dev";
+  return r;
+}
+
+class RecapCollector {
+  constructor(projectName) {
+    this.projectName = projectName;
+    this.agents = new Map();
+    this.agentNames = new Map();
+    this.startedAt = 0;
+    this.endedAt = 0;
+    this.filesChanged = 0;
+    this.linesAdded = 0;
+    this.linesRemoved = 0;
+    this.diffStat = "";
+    this.testResult = "unknown";
+    this.inputTokens = 0;
+    this.outputTokens = 0;
+    this.tokenSource = "none";
+    this.reviewRounds = [];
+    this.reviewCount = 0;
+    this.milestones = [];
+  }
+
+  addAgent(agentId, name, role, palette) {
+    this.agents.set(agentId, { name, role: normalizeRole(role), palette });
+    this.agentNames.set(agentId, name);
+  }
+
+  getName(agentId) { return this.agentNames.get(agentId) ?? agentId; }
+
+  onEvent(ev) {
+    const now = Date.now();
+    switch (ev.type) {
+      case "TASK_STARTED": {
+        if (!this.startedAt) this.startedAt = now;
+        const name = this.getName(ev.agentId);
+        this.milestones.push({ type: "start", agentName: name, timestamp: now, label: "Task started" });
+        break;
+      }
+      case "TASK_DONE": {
+        this.endedAt = now;
+        const agentId = ev.agentId;
+        const name = this.getName(agentId);
+        const result = ev.result;
+        if (!result) break;
+        const cf = result.changedFiles?.length ?? 0;
+        this.filesChanged += cf;
+        if (result.diffStat) {
+          this.diffStat = result.diffStat;
+          const addMatch = this.diffStat.match(/(\d+)\s*insertion/);
+          const delMatch = this.diffStat.match(/(\d+)\s*deletion/);
+          if (addMatch) this.linesAdded += parseInt(addMatch[1], 10);
+          if (delMatch) this.linesRemoved += parseInt(delMatch[1], 10);
+        }
+        if (result.testResult === "passed" || result.testResult === "failed") this.testResult = result.testResult;
+        const tu = result.tokenUsage;
+        if (tu && this.tokenSource !== "stream" && this.tokenSource !== "archive") {
+          this.inputTokens += tu.inputTokens ?? 0;
+          this.outputTokens += tu.outputTokens ?? 0;
+          this.tokenSource = "task";
+        }
+        const role = this.agents.get(agentId)?.role ?? "";
+        const summary = result.summary ?? "";
+        if (role === "reviewer" || /verdict/i.test(summary)) {
+          this.reviewCount++;
+          const verdict = /pass/i.test(summary) ? "pass" : /fail/i.test(summary) ? "fail" : "unknown";
+          this.reviewRounds.push({ round: this.reviewCount, verdict, snippet: summary.slice(0, 120) });
+          this.milestones.push({ type: verdict === "pass" ? "pass" : "review", agentName: name, timestamp: now, label: `Review ${verdict.toUpperCase()} (Round ${this.reviewCount})` });
+        } else {
+          this.milestones.push({ type: ev.isFinalResult ? "done" : "coding", agentName: name, timestamp: now, label: ev.isFinalResult ? "Project complete" : "Code delivered" });
+        }
+        break;
+      }
+      case "TOKEN_UPDATE": {
+        if (this.tokenSource === "task") { this.inputTokens = 0; this.outputTokens = 0; }
+        this.tokenSource = "stream";
+        this.inputTokens += ev.inputTokens ?? 0;
+        this.outputTokens += ev.outputTokens ?? 0;
+        break;
+      }
+    }
+  }
+
+  toRecapData() {
+    const endedAt = this.endedAt || Date.now();
+    const startedAt = this.startedAt || endedAt;
+    const lastReview = this.reviewRounds[this.reviewRounds.length - 1];
+    return {
+      projectName: this.projectName,
+      agents: [...this.agents.values()],
+      startedAt, endedAt,
+      durationSec: Math.round((endedAt - startedAt) / 1000),
+      filesChanged: this.filesChanged, linesAdded: this.linesAdded, linesRemoved: this.linesRemoved, diffStat: this.diffStat,
+      totalInputTokens: this.inputTokens, totalOutputTokens: this.outputTokens, totalTokens: this.inputTokens + this.outputTokens,
+      reviewRounds: [...this.reviewRounds], finalVerdict: lastReview?.verdict ?? "unknown",
+      testResult: this.testResult, milestones: [...this.milestones],
+    };
+  }
+}
+
+// ---- INLINE: recap-renderer.ts ----
+const FRAME_W = 800, FRAME_H = 420;
+const BG = "#0d1117", ACCENT = "#58a6ff", GREEN = "#3fb950", RED = "#f85149", ORANGE = "#d29922", DIM = "#8b949e", TEXT = "#e6edf3", BRAND = "#c9d1d9";
+
+function drawBg(ctx) {
+  ctx.fillStyle = BG; ctx.fillRect(0, 0, FRAME_W, FRAME_H);
+  ctx.strokeStyle = "#161b22"; ctx.lineWidth = 1;
+  for (let x = 0; x < FRAME_W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, FRAME_H); ctx.stroke(); }
+  for (let y = 0; y < FRAME_H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(FRAME_W, y); ctx.stroke(); }
+}
+function drawTop(ctx) {
+  ctx.fillStyle = "#161b22"; ctx.fillRect(0, 0, FRAME_W, 44);
+  ctx.font = "bold 14px monospace"; ctx.fillStyle = BRAND; ctx.textAlign = "left"; ctx.fillText("OPEN OFFICE", 20, 28);
+  ["#f85149","#d29922","#3fb950"].forEach((c, i) => { ctx.beginPath(); ctx.arc(FRAME_W-80+i*20, 22, 5, 0, Math.PI*2); ctx.fillStyle = c; ctx.fill(); });
+}
+function drawBot(ctx) {
+  ctx.fillStyle = "#161b22"; ctx.fillRect(0, FRAME_H-32, FRAME_W, 32);
+  ctx.font = "11px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("open-office.dev", FRAME_W/2, FRAME_H-12);
+}
+function ease(t) { return 1 - Math.pow(1 - t, 3); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function renderFrames(data) {
+  const canvas = new OffscreenCanvas(FRAME_W, FRAME_H);
+  const ctx = canvas.getContext("2d");
+  const frames = [];
+  const push = (d = 100) => frames.push({ imageData: ctx.getImageData(0, 0, FRAME_W, FRAME_H), delayMs: d });
+
+  // Slide 1: Title
+  for (let i = 0; i < 12; i++) {
+    const t = i / 11; drawBg(ctx); drawTop(ctx); drawBot(ctx);
+    const name = data.projectName, vis = name.slice(0, Math.ceil(name.length * t));
+    ctx.font = "bold 36px monospace"; ctx.fillStyle = TEXT; ctx.textAlign = "center"; ctx.fillText(vis, FRAME_W/2, 180);
+    if (t < 1) { const w = ctx.measureText(vis).width; ctx.fillStyle = ACCENT; ctx.fillRect(FRAME_W/2 + w/2 + 2, 158, 3, 28); }
+    if (t > 0.5) { ctx.globalAlpha = (t-0.5)*2; ctx.font = "16px monospace"; ctx.fillStyle = DIM; ctx.fillText("AI Team Project Recap", FRAME_W/2, 220); ctx.globalAlpha = 1; }
+    push(i === 11 ? 600 : 100);
+  }
+
+  // Slide 2: Team
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9; drawBg(ctx); drawTop(ctx); drawBot(ctx);
+    ctx.font = "bold 14px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("TEAM", FRAME_W/2, 100);
+    const agents = data.agents, tw = agents.length * 160, sx = (FRAME_W - tw) / 2 + 80;
+    const colors = ["#f78166","#d2a8ff","#7ee787","#79c0ff","#ffa657","#ff7b72","#d29922","#58a6ff"];
+    agents.forEach((a, idx) => {
+      const at = clamp((t * agents.length - idx * 0.3) / 0.7, 0, 1); if (at <= 0) return;
+      const x = sx + idx * 160, y = 190; ctx.globalAlpha = at;
+      ctx.beginPath(); ctx.arc(x, y-30, 24, 0, Math.PI*2); ctx.fillStyle = colors[a.palette ?? idx % 8]; ctx.fill();
+      ctx.font = "bold 20px monospace"; ctx.fillStyle = BG; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.fillText(a.name[0].toUpperCase(), x, y-30); ctx.textBaseline = "alphabetic";
+      ctx.font = "bold 16px monospace"; ctx.fillStyle = TEXT; ctx.fillText(a.name, x, y+10);
+      ctx.font = "12px monospace"; ctx.fillStyle = DIM; ctx.fillText(a.role === "reviewer" ? "Review" : a.role === "leader" ? "Lead" : "Dev", x, y+30);
+      ctx.globalAlpha = 1;
+    });
+    push(i === 9 ? 500 : 100);
+  }
+
+  // Slide 3: Code stats
+  for (let i = 0; i < 12; i++) {
+    const t = ease(i / 11); drawBg(ctx); drawTop(ctx); drawBot(ctx);
+    ctx.font = "bold 14px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("CODE CHANGES", FRAME_W/2, 100);
+    ctx.font = "bold 48px monospace"; ctx.fillStyle = ACCENT; ctx.fillText(`${Math.round(data.filesChanged*t)}`, FRAME_W/2, 175);
+    ctx.font = "14px monospace"; ctx.fillStyle = DIM; ctx.fillText("files changed", FRAME_W/2, 200);
+    ctx.font = "bold 28px monospace"; ctx.fillStyle = GREEN; ctx.textAlign = "right"; ctx.fillText(`+${Math.round(data.linesAdded*t)}`, FRAME_W/2-30, 265);
+    ctx.fillStyle = RED; ctx.textAlign = "left"; ctx.fillText(`-${Math.round(data.linesRemoved*t)}`, FRAME_W/2+30, 265);
+    push(i === 11 ? 500 : 100);
+  }
+
+  // Slide 4: Review
+  for (let i = 0; i < 10; i++) {
+    const t = i / 9; drawBg(ctx); drawTop(ctx); drawBot(ctx);
+    if (data.reviewRounds.length === 0) {
+      ctx.font = "bold 14px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("SOLO MODE", FRAME_W/2, 100);
+      ctx.font = "24px monospace"; ctx.fillStyle = TEXT; ctx.fillText("No review — direct delivery", FRAME_W/2, 200);
+    } else {
+      ctx.font = "bold 14px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("CODE REVIEW", FRAME_W/2, 100);
+      data.reviewRounds.forEach((r, idx) => {
+        const rt = clamp((t * data.reviewRounds.length - idx * 0.4) / 0.6, 0, 1); if (rt <= 0) return;
+        ctx.globalAlpha = rt; const y = 140 + idx * 50;
+        ctx.font = "14px monospace"; ctx.textAlign = "left"; ctx.fillStyle = DIM; ctx.fillText(`Round ${r.round}`, 180, y);
+        ctx.fillStyle = r.verdict === "pass" ? GREEN : r.verdict === "fail" ? RED : ORANGE;
+        ctx.font = "bold 14px monospace"; ctx.textAlign = "right"; ctx.fillText(r.verdict.toUpperCase(), 620, y);
+        ctx.globalAlpha = 1;
+      });
+      if (t > 0.6 && data.finalVerdict !== "unknown") {
+        const st = (t-0.6)/0.4, sc = 1 + (1-st)*2;
+        ctx.save(); ctx.translate(FRAME_W/2, 300); ctx.scale(sc, sc); ctx.globalAlpha = st;
+        ctx.font = "bold 48px monospace"; ctx.fillStyle = data.finalVerdict === "pass" ? GREEN : RED; ctx.textAlign = "center"; ctx.fillText(data.finalVerdict.toUpperCase(), 0, 0);
+        ctx.strokeStyle = ctx.fillStyle; ctx.lineWidth = 3; ctx.strokeRect(-80, -40, 160, 56);
+        ctx.restore(); ctx.globalAlpha = 1;
+      }
+    }
+    push(i === 9 ? 500 : 100);
+  }
+
+  // Slide 5: Stats
+  for (let i = 0; i < 12; i++) {
+    const t = ease(i / 11); drawBg(ctx); drawTop(ctx); drawBot(ctx);
+    const dur = data.durationSec, dm = Math.floor(dur/60), ds = dur%60, durStr = dm > 0 ? `${dm}m ${ds}s` : `${ds}s`;
+    const tk = Math.round((data.totalTokens * t) / 1000);
+    const stats = [
+      { label: "DURATION", value: durStr, color: ACCENT },
+      { label: "TOKENS", value: `${tk}K`, color: "#d2a8ff" },
+      { label: "TEST", value: data.testResult === "passed" ? "PASS" : data.testResult === "failed" ? "FAIL" : "N/A", color: data.testResult === "passed" ? GREEN : data.testResult === "failed" ? RED : DIM },
+    ];
+    stats.forEach((s, idx) => {
+      const x = 160 + idx * 240;
+      ctx.font = "bold 12px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText(s.label, x, 140);
+      ctx.font = "bold 32px monospace"; ctx.fillStyle = s.color; ctx.fillText(s.value, x, 180);
+    });
+    if (t > 0.5) { ctx.globalAlpha = (t-0.5)*2; ctx.font = "18px monospace"; ctx.fillStyle = TEXT; ctx.textAlign = "center"; ctx.fillText("Built by AI, managed by you", FRAME_W/2, 280); ctx.globalAlpha = 1; }
+    push(i === 11 ? 600 : 100);
+  }
+
+  // Slide 6: Branding
+  for (let i = 0; i < 8; i++) {
+    const t = i / 7; drawBg(ctx);
+    ctx.save(); ctx.font = "bold 28px monospace"; ctx.textAlign = "center"; ctx.fillStyle = ACCENT; ctx.shadowColor = ACCENT; ctx.shadowBlur = 20*t; ctx.fillText("OPEN OFFICE", FRAME_W/2, 195); ctx.restore();
+    ctx.font = "14px monospace"; ctx.fillStyle = DIM; ctx.textAlign = "center"; ctx.fillText("Your AI team, working visibly", FRAME_W/2, 230);
+    push(i === 7 ? 800 : 100);
+  }
+  return frames;
+}
+
+// ---- INLINE: gif-encoder.ts core ----
+function medianCut(colors, depth) {
+  if (depth === 0 || colors.length <= 1) return [colors];
+  let minR=255,maxR=0,minG=255,maxG=0,minB=255,maxB=0;
+  for (const [r,g,b] of colors) { if(r<minR)minR=r;if(r>maxR)maxR=r;if(g<minG)minG=g;if(g>maxG)maxG=g;if(b<minB)minB=b;if(b>maxB)maxB=b; }
+  let ch=0; if(maxG-minG>=maxR-minR&&maxG-minG>=maxB-minB)ch=1; else if(maxB-minB>=maxR-minR&&maxB-minB>=maxG-minG)ch=2;
+  colors.sort((a,b)=>a[ch]-b[ch]); const mid=Math.floor(colors.length/2);
+  return [...medianCut(colors.slice(0,mid),depth-1),...medianCut(colors.slice(mid),depth-1)];
+}
+function findClosest(palette,r,g,b) {
+  let best=0,bd=Infinity;
+  for(let i=0;i<256;i++){const dr=palette[i*3]-r,dg=palette[i*3+1]-g,db=palette[i*3+2]-b,d=dr*dr+dg*dg+db*db;if(d<bd){bd=d;best=i;}}
+  return best;
+}
+function quantize(rgba, n) {
+  const step=Math.max(1,Math.floor(n/10000)),colors=[];
+  for(let i=0;i<n;i+=step){const o=i*4;colors.push([rgba[o],rgba[o+1],rgba[o+2]]);}
+  const buckets=medianCut(colors,8),palette=[];
+  for(const b of buckets){let r=0,g=0,bl=0;for(const[cr,cg,cb]of b){r+=cr;g+=cg;bl+=cb;}const l=b.length||1;palette.push(Math.round(r/l),Math.round(g/l),Math.round(bl/l));}
+  while(palette.length<768)palette.push(0,0,0);
+  const lookup=new Map();
+  for(let i=0;i<256&&i*3+2<palette.length;i++){const k=((palette[i*3]>>3)<<10)|((palette[i*3+1]>>3)<<5)|(palette[i*3+2]>>3);if(!lookup.has(k))lookup.set(k,i);}
+  const indexed=new Uint8Array(n);
+  for(let i=0;i<n;i++){const o=i*4,r=rgba[o],g=rgba[o+1],b=rgba[o+2],k=((r>>3)<<10)|((g>>3)<<5)|(b>>3);let idx=lookup.get(k);if(idx===undefined){idx=findClosest(palette,r,g,b);lookup.set(k,idx);}indexed[i]=idx;}
+  return{palette,indexed};
+}
+function lzwEncode(indexed, minCodeSize) {
+  const clearCode=1<<minCodeSize,eoiCode=clearCode+1,output=[];
+  let codeSize=minCodeSize+1,nextCode=eoiCode+1;const maxCode=4096;
+  let table; const init=()=>{table=new Map();for(let i=0;i<clearCode;i++)table.set(String(i),i);codeSize=minCodeSize+1;nextCode=eoiCode+1;};
+  let bitBuf=0,bitCount=0;const emit=(c)=>{bitBuf|=c<<bitCount;bitCount+=codeSize;while(bitCount>=8){output.push(bitBuf&0xFF);bitBuf>>=8;bitCount-=8;}};
+  init();emit(clearCode);if(!indexed.length){emit(eoiCode);if(bitCount>0)output.push(bitBuf&0xFF);return new Uint8Array(output);}
+  let prefix=String(indexed[0]);
+  for(let i=1;i<indexed.length;i++){const b=indexed[i],key=prefix+","+b;if(table.has(key)){prefix=key;}else{emit(table.get(prefix));if(nextCode<maxCode){table.set(key,nextCode++);if(nextCode>(1<<codeSize)&&codeSize<12)codeSize++;}else{emit(clearCode);init();}prefix=String(b);}}
+  emit(table.get(prefix));emit(eoiCode);if(bitCount>0)output.push(bitBuf&0xFF);return new Uint8Array(output);
+}
+function strBytes(s){const a=new Uint8Array(s.length);for(let i=0;i<s.length;i++)a[i]=s.charCodeAt(i);return a;}
+function encodeGif(frames,w,h) {
+  const chunks=[];const wb=(b)=>chunks.push(new Uint8Array([b&0xFF]));const w16=(v)=>chunks.push(new Uint8Array([v&0xFF,(v>>8)&0xFF]));const wbs=(d)=>chunks.push(d);
+  wbs(strBytes("GIF89a"));w16(w);w16(h);wb(0);wb(0);wb(0);
+  wb(0x21);wb(0xFF);wb(11);wbs(strBytes("NETSCAPE2.0"));wb(3);wb(1);w16(0);wb(0);
+  for(const frame of frames){
+    const{palette,indexed}=quantize(frame.imageData.data,w*h);const delay=Math.round(frame.delayMs/10);
+    wb(0x21);wb(0xF9);wb(4);wb(0);w16(delay);wb(0);wb(0);
+    wb(0x2C);w16(0);w16(0);w16(w);w16(h);wb(0x87);
+    const lct=new Uint8Array(768);for(let i=0;i<768;i++)lct[i]=palette[i]??0;wbs(lct);
+    wb(8);const comp=lzwEncode(indexed,8);let off=0;while(off<comp.length){const bs=Math.min(255,comp.length-off);wb(bs);wbs(comp.subarray(off,off+bs));off+=bs;}wb(0);
+  }
+  wb(0x3B);
+  return new Blob(chunks,{type:"image/gif"});
+}
+
+// ---- Mock Data ----
+
+function mockTeamProject() {
+  const collector = new RecapCollector("Portfolio Landing Page");
+  collector.addAgent("mia-1", "Mia", "developer", 0);
+  collector.addAgent("leo-1", "Leo", "code_reviewer", 1);
+  collector.addAgent("marcus-1", "Marcus", "team_lead", 7);
+
+  collector.onEvent({ type: "TASK_STARTED", agentId: "mia-1", taskId: "t1" });
+  collector.onEvent({ type: "TASK_DONE", agentId: "mia-1", taskId: "t1", result: {
+    summary: "Built responsive portfolio page with 3 project cards, dark theme, and smooth scroll",
+    changedFiles: ["src/index.html", "src/style.css", "src/app.js", "src/components/Card.tsx", "src/components/Hero.tsx", "package.json", "tsconfig.json", "README.md"],
+    diffStat: "8 files changed, 340 insertions(+), 12 deletions(-)",
+    testResult: "passed",
+    tokenUsage: { inputTokens: 32000, outputTokens: 8500 },
+  }});
+
+  collector.onEvent({ type: "TASK_DONE", agentId: "leo-1", taskId: "t2", result: {
+    summary: "VERDICT: FAIL — Missing alt text on images, no meta description, one unused import",
+    changedFiles: [],
+    diffStat: "",
+    testResult: "unknown",
+    tokenUsage: { inputTokens: 5000, outputTokens: 2000 },
+  }});
+
+  collector.onEvent({ type: "TASK_DONE", agentId: "mia-1", taskId: "t3", result: {
+    summary: "Fixed all review issues: added alt text, meta description, removed unused import",
+    changedFiles: ["src/index.html", "src/components/Hero.tsx"],
+    diffStat: "2 files changed, 15 insertions(+), 3 deletions(-)",
+    testResult: "passed",
+    tokenUsage: { inputTokens: 8000, outputTokens: 2500 },
+  }});
+
+  collector.onEvent({ type: "TASK_DONE", agentId: "leo-1", taskId: "t4", result: {
+    summary: "VERDICT: PASS — All issues resolved, code quality is good, ready to ship",
+    changedFiles: [],
+    diffStat: "",
+    testResult: "unknown",
+    tokenUsage: { inputTokens: 4000, outputTokens: 1500 },
+  }});
+
+  return collector.toRecapData();
+}
+
+function mockSoloProject() {
+  const collector = new RecapCollector("CLI Weather Tool");
+  collector.addAgent("alex-1", "Alex", "developer", 3);
+  collector.onEvent({ type: "TASK_STARTED", agentId: "alex-1", taskId: "t1" });
+  collector.onEvent({ type: "TASK_DONE", agentId: "alex-1", taskId: "t1", isFinalResult: true, result: {
+    summary: "Built CLI weather tool with OpenWeather API, colored output, and caching",
+    changedFiles: ["src/main.rs", "src/api.rs", "src/display.rs", "Cargo.toml"],
+    diffStat: "4 files changed, 220 insertions(+), 0 deletions(-)",
+    testResult: "passed",
+    tokenUsage: { inputTokens: 18000, outputTokens: 6000 },
+  }});
+  return collector.toRecapData();
+}
+
+function mockEmptyProject() {
+  const collector = new RecapCollector("Empty Test");
+  collector.addAgent("bot-1", "Bot", "developer", 5);
+  return collector.toRecapData();
+}
+
+function mockArchive() {
+  return {
+    name: "REST API Server",
+    startedAt: Date.now() - 720000,
+    endedAt: Date.now(),
+    agents: [
+      { agentId: "mia-1", name: "Mia", role: "developer", palette: 0 },
+      { agentId: "leo-1", name: "Leo", role: "code_reviewer", palette: 1 },
+    ],
+    events: [
+      { type: "TASK_STARTED", agentId: "mia-1", taskId: "t1" },
+      { type: "TASK_DONE", agentId: "mia-1", taskId: "t1", result: {
+        summary: "Built Express REST API with CRUD endpoints and JWT auth",
+        changedFiles: ["src/server.ts", "src/routes/users.ts", "src/routes/auth.ts", "src/middleware/jwt.ts", "src/db.ts", "package.json"],
+        diffStat: "6 files changed, 480 insertions(+), 0 deletions(-)",
+        testResult: "passed",
+        tokenUsage: { inputTokens: 28000, outputTokens: 9000 },
+      }},
+      { type: "TASK_DONE", agentId: "leo-1", taskId: "t2", result: {
+        summary: "VERDICT: PASS — Clean architecture, good error handling",
+        changedFiles: [], diffStat: "", testResult: "unknown",
+        tokenUsage: { inputTokens: 6000, outputTokens: 2000 },
+      }},
+    ],
+    tokenUsage: { inputTokens: 34000, outputTokens: 11000 },
+  };
+}
+
+// ---- Test Runners ----
+
+function log(msg) { document.getElementById("log").textContent += msg + "\n"; }
+
+async function runTest(label, data) {
+  document.getElementById("log").textContent = "";
+  log(`[${label}] Starting...`);
+
+  // Show RecapData
+  document.getElementById("recap-data").textContent = JSON.stringify(data, null, 2);
+  log(`[${label}] RecapData: ${data.agents.length} agents, ${data.filesChanged} files, ${data.totalTokens} tokens, ${data.reviewRounds.length} reviews`);
+
+  // Render frames
+  const t0 = performance.now();
+  const frames = renderFrames(data);
+  const renderMs = (performance.now() - t0).toFixed(1);
+  log(`[${label}] Rendered ${frames.length} frames in ${renderMs}ms`);
+
+  // Show frame stats
+  document.getElementById("frame-stats").innerHTML = `
+    <div class="stat"><div class="value">${frames.length}</div><div class="label">frames</div></div>
+    <div class="stat"><div class="value">${renderMs}ms</div><div class="label">render time</div></div>
+    <div class="stat"><div class="value">${FRAME_W}x${FRAME_H}</div><div class="label">resolution</div></div>
+  `;
+
+  // Show first frame as preview
+  const previewCanvas = document.createElement("canvas");
+  previewCanvas.width = FRAME_W; previewCanvas.height = FRAME_H;
+  const pctx = previewCanvas.getContext("2d");
+  pctx.putImageData(frames[0].imageData, 0, 0);
+  document.getElementById("frame-preview").innerHTML = "<p style='font-size:12px;color:#8b949e'>First frame preview:</p>";
+  document.getElementById("frame-preview").appendChild(previewCanvas);
+  previewCanvas.style.maxWidth = "800px"; previewCanvas.style.width = "100%"; previewCanvas.style.borderRadius = "6px"; previewCanvas.style.border = "1px solid #30363d";
+
+  // Encode GIF
+  const t1 = performance.now();
+  const blob = encodeGif(frames, FRAME_W, FRAME_H);
+  const encodeMs = (performance.now() - t1).toFixed(1);
+  log(`[${label}] Encoded GIF: ${(blob.size/1024).toFixed(0)}KB in ${encodeMs}ms`);
+
+  // Show GIF
+  const url = URL.createObjectURL(blob);
+  document.getElementById("gif-stats").innerHTML = `
+    <div class="stats">
+      <div class="stat"><div class="value">${(blob.size/1024).toFixed(0)}KB</div><div class="label">file size</div></div>
+      <div class="stat"><div class="value">${encodeMs}ms</div><div class="label">encode time</div></div>
+    </div>
+  `;
+  document.getElementById("gif-preview").innerHTML = `<p style='font-size:12px;color:#8b949e'>Animated GIF:</p><img src="${url}" alt="GIF preview">`;
+
+  log(`[${label}] Done! Total: ${(parseFloat(renderMs) + parseFloat(encodeMs)).toFixed(1)}ms`);
+}
+
+window.testLivePath = () => runTest("Live Path (Team)", mockTeamProject());
+window.testArchivePath = () => {
+  const archive = mockArchive();
+  const collector = new RecapCollector(archive.name);
+  for (const a of archive.agents) collector.addAgent(a.agentId, a.name, a.role, a.palette);
+  for (const ev of archive.events) collector.onEvent(ev);
+  // Don't call setTokenUsage — test that archive-level tokens come from events correctly
+  runTest("Archive Path", collector.toRecapData());
+};
+window.testSoloProject = () => runTest("Solo (no review)", mockSoloProject());
+window.testEmptyProject = () => runTest("Empty Project", mockEmptyProject());
+</script>
+</body>
+</html>
