@@ -24,7 +24,7 @@ export type { CleanupWorktreeOptions, MergeResult, RuntimeOwnerInfo, WorktreeOwn
 export type { AIBackend, BuildArgsOpts, BackendStability, GuardType } from "./ai-backend.js";
 export type { AgentPlugin, ActivityState, AgentSessionRef, AgentSessionInfo, WorkspaceHooksConfig } from "./agent/index.js";
 export { createWebSocketNotifier } from "./notifier/index.js";
-export type { Notifier, Notification, NotificationPriority } from "./notifier/index.js";
+export type { Notifier, OrchestratorNotification, OrchestratorNotification as Notification, NotificationPriority } from "./notifier/index.js";
 export { createPluginRegistry } from "./plugin-registry.js";
 export type { PluginRegistry, PluginSlot, PluginManifest } from "./plugin-registry.js";
 export { syncAgentDefs } from "./agent-defs.js";

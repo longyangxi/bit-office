@@ -2,7 +2,7 @@
 
 export type NotificationPriority = "urgent" | "action" | "warning" | "info";
 
-export interface Notification {
+export interface OrchestratorNotification {
   title: string;
   message: string;
   priority: NotificationPriority;
@@ -13,5 +13,5 @@ export interface Notification {
 
 export interface Notifier {
   readonly name: string;
-  send(notification: Notification): Promise<void>;
+  send(notification: OrchestratorNotification): Promise<void>;
 }

@@ -4,6 +4,7 @@ import type {
   ReactionRule,
   ReactionContext,
   ReactionEngineConfig,
+  OrchestratorNotification,
 } from "./types.js";
 
 export interface ReactionResult {
@@ -114,13 +115,14 @@ export class ReactionEngine {
         break;
       }
       case "notify": {
-        ctx.orchestrator.emitNotification({
+        const notification: OrchestratorNotification = {
           title: `Agent ${ctx.agentId} needs attention`,
           message: ctx.error ?? `Trigger: ${ctx.taskId}`,
           priority: "urgent",
           agentId: ctx.agentId,
           taskId: ctx.taskId,
-        });
+        };
+        ctx.orchestrator.emitNotification(notification);
         break;
       }
       case "force-finalize": {

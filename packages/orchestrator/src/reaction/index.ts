@@ -10,5 +10,5 @@ export type {
   ReactionEngineConfig,
   AgentSessionFacade,
   OrchestratorFacade,
-  Notification,
+  OrchestratorNotification,
 } from "./types.js";

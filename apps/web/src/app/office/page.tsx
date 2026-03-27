@@ -55,7 +55,7 @@ const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ss
 const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
 const ConsoleSidebar = dynamic(() => import("@/components/office/ui/ConsoleSidebar"), { ssr: false });
-const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
+const UsagePanel = dynamic(() => import("@/components/office/ui/UsagePanel"), { ssr: false });
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
@@ -211,6 +211,7 @@ export default function OfficePage() {
   const [editMode, setEditMode] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [showUsage, setShowUsage] = useState(false);
   const [showOfficeSwitcher, setShowOfficeSwitcher] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [currentOfficeId, setCurrentOfficeId] = useState<string | null>(null);
@@ -1441,33 +1442,14 @@ export default function OfficePage() {
           {/* ── Console mode: left sidebar ── */}
           {consoleMode && (
             <ConsoleSidebar
-              onNewProject={() => setShowNewProjectModal(true)}
               onOpenHistory={() => setShowHistory(true)}
               onOpenSettings={() => setShowSettings(true)}
+              onOpenUsage={() => setShowUsage(true)}
               onBackToOffice={() => {
                 setScrollFrozen(true);
                 setConsoleMode(false);
                 localStorage.setItem("office-view-mode", "office");
                 setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
-              }}
-              onCloseProject={(projectId) => {
-                const proj = projects.get(projectId);
-                if (!proj) return;
-                const hasTeamAgents = proj.agentIds.some(id => agents.get(id)?.teamId);
-                if (hasTeamAgents) {
-                  sendCommand({ type: "FIRE_TEAM" });
-                  clearTeamMessages();
-                }
-                for (const agentId of proj.agentIds) {
-                  if (agents.has(agentId)) {
-                    sendCommand({ type: "FIRE_AGENT", agentId });
-                  }
-                }
-                useOfficeStore.getState().archiveProject(projectId);
-              }}
-              onHireToProject={(projectId) => {
-                useOfficeStore.getState().setActiveProject(projectId);
-                setShowHireModal(true);
               }}
             />
           )}
@@ -2402,18 +2384,7 @@ export default function OfficePage() {
         </div>
       )}
 
-      {showNewProjectModal && (
-        <NewProjectModal
-          open={showNewProjectModal}
-          onClose={() => setShowNewProjectModal(false)}
-          onCreated={(projectId, mode) => {
-            setShowNewProjectModal(false);
-            if (mode === "solo") setShowHireModal(true);
-            else if (mode === "team") setShowHireTeamModal(true);
-            // "empty" — just switch to the new project, no hire flow
-          }}
-        />
-      )}
+      {/* NewProjectModal — TODO: implement */}
 
       {showHireModal && (
         <HireModal
@@ -2481,6 +2452,11 @@ export default function OfficePage() {
             setPreviewRated(true);
           }
         }}
+      />
+
+      <UsagePanel
+        isOpen={showUsage}
+        onClose={() => setShowUsage(false)}
       />
 
       {previewUrl && (

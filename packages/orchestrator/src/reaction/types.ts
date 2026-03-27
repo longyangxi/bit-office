@@ -1,6 +1,7 @@
 // packages/orchestrator/src/reaction/types.ts
 
-export type { Notification } from "../notifier/types.js";
+import type { OrchestratorNotification } from "../notifier/types.js";
+export type { OrchestratorNotification, OrchestratorNotification as Notification } from "../notifier/types.js";
 
 // ── Triggers ──
 export type ReactionTrigger =
@@ -30,7 +31,7 @@ export interface OrchestratorFacade {
   getTeamLead(): AgentSessionFacade | null;
   runTask(agentId: string, taskId: string, prompt: string): void;
   forceFinalize(agentId: string): void;
-  emitNotification(notification: Notification): void;
+  emitNotification(notification: OrchestratorNotification): void;
 }
 
 // ── Context passed with every event ──

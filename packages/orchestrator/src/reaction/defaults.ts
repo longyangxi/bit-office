@@ -12,7 +12,7 @@ export const DEFAULT_RULES: ReactionRule[] = [
   // Skip timeouts and cancellations (they won't benefit from retry)
   {
     trigger: "task:failed",
-    match: { wasTimeout: false },
+    match: { wasTimeout: false, isDelegated: false },
     action: "retry",
     retries: 2,
     escalateAction: "escalate-to-leader",

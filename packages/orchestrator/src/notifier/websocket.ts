@@ -1,6 +1,6 @@
 // packages/orchestrator/src/notifier/websocket.ts
 
-import type { Notifier, Notification } from "./types.js";
+import type { Notifier, OrchestratorNotification } from "./types.js";
 
 /**
  * WebSocket notifier — emits notifications as orchestrator events.
@@ -12,7 +12,7 @@ export function createWebSocketNotifier(
 ): Notifier {
   return {
     name: "websocket",
-    async send(notification: Notification): Promise<void> {
+    async send(notification: OrchestratorNotification): Promise<void> {
       emitEvent({
         type: "notification",
         ...notification,
