@@ -3,55 +3,76 @@
 /**
  * ProjectRecap.tsx — "Share Recap" button + GIF generation UI.
  *
- * Standalone component. Receives project archive data as props.
- * Generates an animated GIF recap on demand and offers download/copy/share.
+ * Two input modes:
+ *   1. `data` prop — pre-built RecapData from a live RecapCollector (zero extraction cost)
+ *   2. `archive` prop — raw ProjectArchive (will run extractRecapData on click)
+ *
+ * Rendering only happens when user clicks "Share Recap" — never during project execution.
  */
 
 import { useState, useCallback, useRef } from "react";
+import type { RecapData } from "./recap-data";
 import { extractRecapData } from "./recap-data";
 import { renderRecapFrames, FRAME_W, FRAME_H } from "./recap-renderer";
 import { encodeGif } from "./gif-encoder";
 
-export interface ProjectRecapProps {
-  /** Raw project archive (from gateway's PROJECT_DATA or project-history JSON) */
-  archive: {
-    name?: string;
-    startedAt?: number;
-    endedAt?: number;
-    agents?: Array<{ agentId?: string; name: string; role: string; palette?: number }>;
-    events?: Array<{ type: string; [key: string]: unknown }>;
-    tokenUsage?: { inputTokens: number; outputTokens: number };
-  };
+export type ProjectRecapProps = {
   /** Optional: render as a compact icon button instead of full button */
   compact?: boolean;
-}
+  /** Project name for file naming (auto-derived from data/archive if omitted) */
+  projectName?: string;
+} & (
+  | {
+      /** Pre-built RecapData from RecapCollector.toRecapData() — preferred, zero extraction cost */
+      data: RecapData;
+      archive?: never;
+    }
+  | {
+      /** Raw project archive — fallback, runs extraction on click */
+      archive: {
+        name?: string;
+        startedAt?: number;
+        endedAt?: number;
+        agents?: Array<{ agentId?: string; name: string; role: string; palette?: number }>;
+        events?: Array<{ type: string; [key: string]: unknown }>;
+        tokenUsage?: { inputTokens: number; outputTokens: number };
+      };
+      data?: never;
+    }
+);
 
 type RecapState = "idle" | "generating" | "ready" | "error";
 
-export default function ProjectRecap({ archive, compact }: ProjectRecapProps) {
+export default function ProjectRecap({ data, archive, compact, projectName }: ProjectRecapProps) {
   const [state, setState] = useState<RecapState>("idle");
   const [progress, setProgress] = useState("");
   const [gifUrl, setGifUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const blobRef = useRef<Blob | null>(null);
 
+  const name = projectName ?? data?.projectName ?? archive?.name ?? "project";
+
   const generate = useCallback(async () => {
     setState("generating");
     setError(null);
-    setProgress("Extracting milestones...");
 
     try {
-      // Step 1: Extract data
-      const data = extractRecapData(archive);
-      setProgress(`Rendering ${data.agents.length} agents, ${data.filesChanged} files...`);
+      // Step 1: Get RecapData (instant if live, extraction if archive)
+      let recapData: RecapData;
+      if (data) {
+        setProgress("Preparing frames...");
+        recapData = data;
+      } else {
+        setProgress("Extracting milestones...");
+        recapData = extractRecapData(archive!);
+      }
 
-      // Yield to UI
-      await new Promise(r => setTimeout(r, 16));
+      setProgress(`Rendering ${recapData.agents.length} agents, ${recapData.filesChanged} files...`);
+      await new Promise(r => setTimeout(r, 16)); // yield to UI
 
       // Step 2: Render frames
-      const frames = renderRecapFrames(data);
+      const frames = renderRecapFrames(recapData);
       setProgress(`Encoding ${frames.length} frames to GIF...`);
-
       await new Promise(r => setTimeout(r, 16));
 
       // Step 3: Encode GIF
@@ -70,16 +91,16 @@ export default function ProjectRecap({ archive, compact }: ProjectRecapProps) {
       setState("error");
       setError(e instanceof Error ? e.message : "Failed to generate recap");
     }
-  }, [archive, gifUrl]);
+  }, [data, archive, gifUrl]);
 
   const download = useCallback(() => {
     if (!blobRef.current) return;
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blobRef.current);
-    a.download = `open-office-recap-${archive.name ?? "project"}.gif`;
+    a.download = `open-office-recap-${name}.gif`;
     a.click();
     URL.revokeObjectURL(a.href);
-  }, [archive.name]);
+  }, [name]);
 
   const copyToClipboard = useCallback(async () => {
     if (!blobRef.current) return;
@@ -90,7 +111,6 @@ export default function ProjectRecap({ archive, compact }: ProjectRecapProps) {
       setProgress("Copied to clipboard!");
       setTimeout(() => setProgress(`GIF ready (${((blobRef.current?.size ?? 0) / 1024).toFixed(0)}KB)`), 2000);
     } catch {
-      // Fallback: download instead
       download();
     }
   }, [download]);
@@ -99,18 +119,15 @@ export default function ProjectRecap({ archive, compact }: ProjectRecapProps) {
     if (!blobRef.current) return;
     const file = new File(
       [blobRef.current],
-      `open-office-recap-${archive.name ?? "project"}.gif`,
+      `open-office-recap-${name}.gif`,
       { type: "image/gif" },
     );
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
-      await navigator.share({
-        title: `Open Office: ${archive.name ?? "Project"} Recap`,
-        files: [file],
-      });
+      await navigator.share({ title: `Open Office: ${name} Recap`, files: [file] });
     } else {
       download();
     }
-  }, [archive.name, download]);
+  }, [name, download]);
 
   // ---- Render ----
 
@@ -150,18 +167,11 @@ export default function ProjectRecap({ archive, compact }: ProjectRecapProps) {
   // state === "ready"
   return (
     <div style={readyContainerStyle}>
-      {/* Preview */}
       {gifUrl && (
         <div style={previewWrapStyle}>
-          <img
-            src={gifUrl}
-            alt="Project Recap"
-            style={previewImgStyle}
-          />
+          <img src={gifUrl} alt="Project Recap" style={previewImgStyle} />
         </div>
       )}
-
-      {/* Actions */}
       <div style={actionsStyle}>
         <span style={progressStyle}>{progress}</span>
         <div style={btnGroupStyle}>
