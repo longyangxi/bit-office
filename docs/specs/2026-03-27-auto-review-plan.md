@@ -464,27 +464,19 @@ Dev completes → system queues review → reviewer picks up → PASS/FAIL.
 
 ---
 
-## Task 4: Gateway + Integration
+## Task 4: Gateway Integration
 
 **Files:**
 - Modify: `apps/gateway/src/index.ts`
+- Modify: `packages/orchestrator/src/orchestrator.ts`
 
-- [ ] **Step 1: Pass autoReview from CREATE_TEAM to orchestrator**
+The UI panel determines autoReview: if the user selected a Code Reviewer member, `autoReview=true` is passed in CREATE_TEAM. The gateway does NOT auto-create a reviewer — the reviewer is a normal team member selected by the user.
 
-In `apps/gateway/src/index.ts`, find the `CREATE_TEAM` command handler. When creating the orchestrator or setting team config, pass through the `autoReview` and `reviewerBackend` fields:
+- [ ] **Step 1: Add setAutoReview to Orchestrator**
 
-Find where the team is created and add:
-```typescript
-// After team creation, configure auto-review
-if (parsed.autoReview !== undefined) {
-  orc.setAutoReview(parsed.autoReview);
-}
-```
-
-This means we need a public `setAutoReview` method on the Orchestrator:
+In `packages/orchestrator/src/orchestrator.ts`:
 
 ```typescript
-// In orchestrator.ts
 setAutoReview(enabled: boolean): void {
   this.autoReview = enabled;
 }
@@ -494,29 +486,17 @@ getAutoReview(): boolean {
 }
 ```
 
-- [ ] **Step 2: Create reviewer agent on team creation if autoReview**
+- [ ] **Step 2: Pass autoReview from CREATE_TEAM to orchestrator**
 
-In the CREATE_TEAM handler, after creating the team members, if `autoReview` is enabled (default true) and no reviewer is in the member list, auto-create one:
+In `apps/gateway/src/index.ts`, find the `CREATE_TEAM` command handler. After the team is created, pass the flag:
 
 ```typescript
-// After all team members are created
-const hasReviewer = orc.getAllAgents().some(a =>
-  a.role?.toLowerCase().includes("review") && a.teamId
-);
-if (parsed.autoReview !== false && !hasReviewer) {
-  const reviewerId = `reviewer-${nanoid(6)}`;
-  const reviewerBackendId = parsed.reviewerBackend ?? config.defaultBackend;
-  orc.createAgent({
-    agentId: reviewerId,
-    name: "Sophie",
-    role: "Code Reviewer",
-    personality: "Constructive and thorough reviewer.",
-    backend: reviewerBackendId,
-    teamId: teamId,
-  });
-  console.log(`[Gateway] Auto-created reviewer agent: ${reviewerId} (backend: ${reviewerBackendId})`);
-}
+// After team members are created:
+// autoReview is true when user selected a reviewer in the UI panel
+orc.setAutoReview(parsed.autoReview ?? false);
 ```
+
+The `autoReview` field comes from the UI — the web frontend sets it to `true` when the user has a Code Reviewer in their team member selection, `false` otherwise.
 
 - [ ] **Step 3: Build + verify gateway compiles**
 
@@ -524,10 +504,10 @@ if (parsed.autoReview !== false && !hasReviewer) {
 
 ```bash
 git add -A
-git commit -m "feat(auto-review): gateway passes autoReview config, auto-creates reviewer agent
+git commit -m "feat(auto-review): gateway passes autoReview flag from CREATE_TEAM
 
-CREATE_TEAM with autoReview=true (default) auto-creates a Code Reviewer
-agent if none is in the member list."
+autoReview=true when user selected a reviewer in the team panel.
+No auto-creation — reviewer is a normal team member chosen by the user."
 ```
 
 ---
