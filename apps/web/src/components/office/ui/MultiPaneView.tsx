@@ -656,7 +656,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       </div>
 
       {/* Bottom bar: page dots */}
-      <div className="term-info-bar flex justify-center items-center px-3 py-1.5 font-mono text-[11px] text-muted-foreground bg-term-panel shrink-0 relative gap-2 border-t border-term-border-dim shadow-[0_-3px_8px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)]">
+      <div className="term-info-bar flex justify-center items-center px-3 py-1.5 font-mono text-term-xs text-muted-foreground bg-term-panel shrink-0 relative gap-2 border-t border-term-border-dim shadow-[0_-3px_8px_-2px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.04)]">
 
         {/* Center: page indicator dots */}
         {totalPages > 1 && (

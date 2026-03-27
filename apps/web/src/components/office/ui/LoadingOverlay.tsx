@@ -83,7 +83,7 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
           animation: "loading-walk-sprite 0.5s steps(1) infinite, loading-walk-move 3s linear infinite",
         }} />
       </div>
-      <div className="font-mono text-[13px] text-muted-foreground tracking-wide">
+      <div className="font-mono text-term text-muted-foreground tracking-wide">
         Loading office<span className="inline-block w-6 text-left">
           <LoadingDots />
         </span>

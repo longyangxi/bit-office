@@ -85,7 +85,16 @@ const config: Config = {
         pixel: ["Press Start 2P", "monospace"],
       },
       fontSize: {
-        term: ["12px", { lineHeight: "1.7" }],
+        /* ── Type scale tokens — use these, not text-[Npx] ── */
+        "term-3xs": ["var(--font-size-3xs)", { lineHeight: "1.5" }],   /* 9px  — micro badges */
+        "term-2xs": ["var(--font-size-2xs)", { lineHeight: "1.5" }],   /* 10px — timestamps */
+        "term-xs":  ["var(--font-size-xs)",  { lineHeight: "1.6" }],   /* 11px — captions */
+        "term-sm":  ["var(--font-size-sm)",  { lineHeight: "1.6" }],   /* 12px — small body */
+        term:       ["var(--font-size-base)", { lineHeight: "1.7" }],  /* 13px — base body */
+        "term-icon": ["var(--font-size-icon)", { lineHeight: "1" }],   /* 14px — icons */
+        "term-lg":  ["var(--font-size-lg)",  { lineHeight: "1" }],     /* 16px — button icons */
+        "term-xl":  ["var(--font-size-xl)",  { lineHeight: "1" }],     /* 18px — large icons */
+        "term-2xl": ["var(--font-size-2xl)", { lineHeight: "1.2" }],   /* 20px — display */
       },
       spacing: {
         // Map design token spacing (already in global.css as --space-*)

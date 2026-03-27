@@ -130,10 +130,10 @@ function ProjectViewer({ events, name, preview, onBack, onPreview }: {
           return (
             <div key={msg.id} className={cn("mb-1.5 px-2.5 py-2 border-l-2", s.twBorder, s.twBg)}>
               <div className="flex gap-2 items-center mb-0.5">
-                <span className={cn("text-[9px] font-bold tracking-widest font-mono uppercase", s.twLabel)}>
+                <span className={cn("text-term-3xs font-bold tracking-widest font-mono uppercase", s.twLabel)}>
                   {s.label}
                 </span>
-                <span className="text-foreground text-[11px] font-semibold font-mono">
+                <span className="text-foreground text-term-xs font-semibold font-mono">
                   {msg.agent.replace(/^agent-/, "").split("-")[0]}
                 </span>
               </div>
@@ -232,18 +232,18 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                     </div>
                     {/* Meta row */}
                     <div className="flex gap-3 items-center flex-wrap">
-                      <span className="text-[10px] font-mono text-muted-foreground">
+                      <span className="text-term-2xs font-mono text-muted-foreground">
                         {formatRelativeDate(p.endedAt)}
                       </span>
-                      <span className="text-[10px] font-mono text-accent opacity-60">
+                      <span className="text-term-2xs font-mono text-accent opacity-60">
                         {formatDuration(p.startedAt, p.endedAt)}
                       </span>
-                      <span className="text-[10px] font-mono text-sem-blue/50">
+                      <span className="text-term-2xs font-mono text-sem-blue/50">
                         {p.agentNames.length} agent{p.agentNames.length !== 1 ? "s" : ""}
                       </span>
                       {p.tokenUsage && (p.tokenUsage.inputTokens > 0 || p.tokenUsage.outputTokens > 0) && (
                         <span
-                          className="text-[10px] font-mono text-sem-green opacity-60"
+                          className="text-term-2xs font-mono text-sem-green opacity-60"
                           title={[
                             `Input: ${p.tokenUsage.inputTokens.toLocaleString()}`,
                             `Output: ${p.tokenUsage.outputTokens.toLocaleString()}`,
@@ -256,7 +256,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                       )}
                     </div>
                     {/* Agent names */}
-                    <div className="text-[10px] font-mono text-muted-foreground mt-1 opacity-70 truncate">
+                    <div className="text-term-2xs font-mono text-muted-foreground mt-1 opacity-70 truncate">
                       {p.agentNames.join(" / ")}
                     </div>
                     {/* Ratings */}
@@ -265,7 +265,7 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                         {Object.entries(p.ratings).map(([key, val]) => {
                           const stars = Math.min(5, Math.max(0, Math.round(val)));
                           return (
-                            <span key={key} className="text-[9px] font-mono text-accent/70">
+                            <span key={key} className="text-term-3xs font-mono text-accent/70">
                               {key.slice(0, 4)} {"★".repeat(stars)}{"☆".repeat(5 - stars)}
                             </span>
                           );

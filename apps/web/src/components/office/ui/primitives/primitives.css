@@ -1133,7 +1133,7 @@
   background: transparent;
   color: var(--term-text);
   font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-base);
   font-weight: 400;
   cursor: pointer;
   opacity: 0.6;

@@ -388,7 +388,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
           {PERSONALITY_PRESETS.map((p, i) => (
             <label
               key={i}
-              className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-[13px]"
+              className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-term"
               style={{ color: personalityMode === i ? TERM_TEXT : TERM_DIM }}
             >
               <input
@@ -402,7 +402,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
             </label>
           ))}
           <label
-            className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-[13px]"
+            className="flex items-center gap-1.5 px-1.5 py-1 cursor-pointer font-mono text-term"
             style={{ color: personalityMode === 3 ? TERM_TEXT : TERM_DIM }}
           >
             <input

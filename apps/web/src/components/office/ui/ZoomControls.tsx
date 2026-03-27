@@ -68,7 +68,7 @@ export default function ZoomControls({ zoom, onZoomChange }: ZoomControlsProps) 
             "bg-[rgba(20,20,25,0.85)] backdrop-blur-xl",
             "border border-white/10 rounded-lg",
             "px-3 py-1 shadow-lg",
-            "text-[15px] text-white/80",
+            "text-term-icon text-white/80",
             "select-none pointer-events-none",
             "transition-opacity duration-500 ease-out",
           )}

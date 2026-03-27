@@ -30,7 +30,7 @@ function FormRow({ label, hint, children }: { label: string; hint?: string; chil
     <div className="flex items-center gap-3 mb-2">
       <label className="text-term text-muted-foreground shrink-0 w-[100px] text-right">
         {label}
-        {hint && <span className="block text-[10px] opacity-50 mt-0.5">{hint}</span>}
+        {hint && <span className="block text-term-2xs opacity-50 mt-0.5">{hint}</span>}
       </label>
       <div className="flex-1 min-w-0">{children}</div>
     </div>
@@ -148,7 +148,7 @@ export default function SettingsModal({
 
   const checkboxCls = (checked: boolean) => cn(
     "w-3.5 h-3.5 border-2 border-muted-foreground rounded-sm shrink-0",
-    "flex items-center justify-center text-[11px] leading-none",
+    "flex items-center justify-center text-term-xs leading-none",
     checked ? "bg-accent text-background" : "bg-transparent",
   )
 
@@ -166,7 +166,7 @@ export default function SettingsModal({
       <div className="border-b border-term-border-dim pb-3 mb-3">
         <div className="flex items-center gap-1.5 mb-3">
           <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tgConnected ? "bg-sem-green" : "bg-muted-foreground")} />
-          <span className="text-[13px] text-foreground font-medium">
+          <span className="text-term text-foreground font-medium">
             Telegram {tgConnected ? '(connected)' : '(disconnected)'}
           </span>
         </div>
@@ -212,7 +212,7 @@ export default function SettingsModal({
       <div className="border-b border-term-border-dim pb-3 mb-3">
         <div className="flex items-center gap-1.5 mb-3">
           <span className={cn("inline-block w-2 h-2 rounded-full shrink-0", tunnelRunning ? "bg-sem-green" : "bg-muted-foreground")} />
-          <span className="text-[13px] text-foreground font-medium">
+          <span className="text-term text-foreground font-medium">
             Tunnel {tunnelRunning ? '(running)' : '(stopped)'}
           </span>
         </div>
@@ -272,7 +272,7 @@ export default function SettingsModal({
 
       {/* ---- Console Grid ---- */}
       <div className="border-b border-term-border-dim pb-3 mb-2">
-        <span className="text-[13px] text-foreground font-medium block mb-2">Console Grid</span>
+        <span className="text-term text-foreground font-medium block mb-2">Console Grid</span>
         <div className="flex items-center gap-4">
           <FormRow label="Columns">
             <div className="flex items-center gap-1.5">
@@ -307,19 +307,19 @@ export default function SettingsModal({
             </div>
           </FormRow>
         </div>
-        <div className="text-[10px] text-muted-foreground mt-1 pl-[112px]">
+        <div className="text-term-2xs text-muted-foreground mt-1 pl-[112px]">
           {consoleCols} × {consoleRows} = {consoleCols * consoleRows} agents per page
         </div>
       </div>
 
       {/* ---- Version ---- */}
-      <div className="border-t border-term-border-dim mt-1 pt-2 text-[11px] text-muted-foreground font-mono leading-snug select-text" title="From monorepo root package.json at build time">
+      <div className="border-t border-term-border-dim mt-1 pt-2 text-term-xs text-muted-foreground font-mono leading-snug select-text" title="From monorepo root package.json at build time">
         <div>
           <span className="opacity-75">Web UI</span>{' '}
           <span className="text-foreground">v{APP_VERSION}</span>
         </div>
         {APP_BUILD_TIME ? (
-          <div className="mt-0.5 text-[10px] opacity-90">
+          <div className="mt-0.5 text-term-2xs opacity-90">
             build {APP_BUILD_TIME.replace('T', ' ').replace(/\.\d{3}Z$/, ' UTC')}
           </div>
         ) : null}

@@ -312,20 +312,20 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 </div>
               )}
-              <span className="text-[13px] text-term-text-bright font-medium tracking-tight shrink-0">{inlineAvatar.name}</span>
+              <span className="text-term text-term-text-bright font-medium tracking-tight shrink-0">{inlineAvatar.name}</span>
               {inlineAvatar.isTeamLead && (
                 <span
-                  className="text-[9px] font-mono font-bold text-sem-yellow px-[3px] leading-[15px] rounded-sm shrink-0"
+                  className="text-term-3xs font-mono font-bold text-sem-yellow px-[3px] leading-[15px] rounded-sm shrink-0"
                   style={{ border: `1px solid ${TERM_SEM_YELLOW}40` }}
                 >LEAD</span>
               )}
               {backendName && (
-                <span className="text-[11px] text-term-text opacity-60 shrink-0 tracking-wide">
+                <span className="text-term-xs text-term-text opacity-60 shrink-0 tracking-wide">
                   {backendName}
                 </span>
               )}
               {roleName && (
-                <span className="text-[11px] text-term-text opacity-45 shrink-0 tracking-wide hidden sm:inline">
+                <span className="text-term-xs text-term-text opacity-45 shrink-0 tracking-wide hidden sm:inline">
                   {roleName}
                 </span>
               )}
