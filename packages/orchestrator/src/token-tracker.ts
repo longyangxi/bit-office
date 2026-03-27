@@ -258,11 +258,25 @@ export class TokenTracker {
       return content;
     }
 
+    // response.output_text.delta → streaming text chunks (Codex Responses API)
+    if (msg.type === "response.output_text.delta") {
+      const delta = msg.delta as string | undefined;
+      if (typeof delta === "string" && delta) {
+        content.textBlocks.push(delta);
+      }
+      return content;
+    }
+
     // item.completed → reasoning or message content
     if (msg.type === "item.completed") {
       const item = msg.item as Record<string, unknown> | undefined;
       if (!item) return content;
       const itemType = item.type as string | undefined;
+
+      // Diagnostic: log unrecognized item types so we can see what Codex actually sends
+      if (itemType !== "reasoning" && itemType !== "message" && itemType !== "function_call" && itemType !== "function_call_output") {
+        console.log(`[TokenTracker] item.completed unknown type="${itemType}", keys=${Object.keys(item).join(",")}, preview=${JSON.stringify(item).slice(0, 300)}`);
+      }
 
       if (itemType === "reasoning" && typeof item.text === "string") {
         // Reasoning text — treat as thinking block (visible in log but not main output)
@@ -325,6 +339,9 @@ export class TokenTracker {
 
     // turn.completed — may contain usage summary
     if (msg.type === "turn.completed") {
+      // Diagnostic: dump turn.completed structure to find where final text lives
+      const keys = Object.keys(msg).filter(k => k !== "type");
+      console.log(`[TokenTracker] turn.completed keys=${keys.join(",")}, preview=${JSON.stringify(msg).slice(0, 500)}`);
       return content;
     }
 

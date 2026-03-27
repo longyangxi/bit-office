@@ -603,8 +603,13 @@ export class AgentSession {
               const parsed = this.tracker.processMessage(msg);
 
               // Diagnostic: log event types for Codex streams to trace text flow
-              if (msg.type && msg.type !== "response.output_text.delta") {
-                console.log(`[Agent ${this.name} stream] type=${msg.type}, textBlocks=${parsed.textBlocks.length}, toolUses=${parsed.toolUses.length}`);
+              if (msg.type) {
+                if (msg.type === "response.output_text.delta") {
+                  const delta = (msg as Record<string, unknown>).delta as string | undefined;
+                  console.log(`[Agent ${this.name} delta] len=${delta?.length ?? 0}, tb=${parsed.textBlocks.length}`);
+                } else {
+                  console.log(`[Agent ${this.name} stream] type=${msg.type}, textBlocks=${parsed.textBlocks.length}, toolUses=${parsed.toolUses.length}`);
+                }
               }
 
               if (parsed.sessionId) {
