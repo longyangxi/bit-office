@@ -128,6 +128,37 @@ export function buildPreviewCommand(result: { previewPath?: string; previewCmd?:
   return null;
 }
 
+/** Auto-resize a textarea to fit content (1-row min, maxRows cap).
+ *  Works consistently across Chrome (Blink) and Tauri/Safari (WebKit). */
+export function autoResize(el: HTMLTextAreaElement | null, maxRows = 5) {
+  if (!el) return;
+  const cs = getComputedStyle(el);
+  const lineHeight = parseInt(cs.lineHeight) || 20;
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const borderY = parseFloat(cs.borderTopWidth) + parseFloat(cs.borderBottomWidth);
+  const maxHeight = lineHeight * maxRows;
+
+  // Collapse to 0 so scrollHeight reports the minimum needed height.
+  // Using "0" instead of "auto" avoids WebKit quirks where "auto" keeps
+  // the rows-based default height, inflating scrollHeight.
+  el.style.height = "0";
+  const sh = el.scrollHeight; // always content + padding (never border)
+
+  // For content-box (textarea default): height = content only -> subtract padding
+  // For border-box (e.g. Tailwind reset): height = content + padding + border
+  const isBorderBox = cs.boxSizing === "border-box";
+  const contentH = isBorderBox ? sh + borderY : sh - padY;
+
+  // Clamp: ensure at least 1 lineHeight of content
+  const minH = isBorderBox ? lineHeight + padY + borderY : lineHeight;
+  const h = Math.max(minH, Math.min(contentH, maxHeight + (isBorderBox ? padY + borderY : 0)));
+
+  el.style.height = h + "px";
+  // Decide overflow from unclamped content height, not the clamped `h`
+  const rawContentH = isBorderBox ? contentH - padY - borderY : contentH;
+  el.style.overflowY = rawContentH > maxHeight ? "auto" : "hidden";
+}
+
 export function formatTokenCount(n: number): string {
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1) + "k";

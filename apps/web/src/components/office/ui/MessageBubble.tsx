@@ -1,49 +1,15 @@
 "use client";
 
-import { useState, useEffect, useRef, memo } from "react";
+import { useState, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_PANEL, TERM_ERROR } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
-import { BACKEND_OPTIONS } from "./office-constants";
-
-/** Typewriter reveal — adaptive speed: slow for small chunks, faster for large backlogs. */
-function TypewriterText({ text }: { text: string }) {
-  const [revealed, setRevealed] = useState(0);
-  const targetRef = useRef(text.length);
-  const rafRef = useRef<number>(0);
-  const lastTimeRef = useRef(0);
-
-  useEffect(() => {
-    targetRef.current = text.length;
-    if (rafRef.current) return; // already animating
-    const step = (time: number) => {
-      if (!lastTimeRef.current) lastTimeRef.current = time;
-      const dt = time - lastTimeRef.current;
-      if (dt >= 25) { // ~40fps cap to avoid too-fast updates
-        lastTimeRef.current = time;
-        setRevealed((prev) => {
-          const remaining = targetRef.current - prev;
-          if (remaining <= 0) { rafRef.current = 0; return prev; }
-          // Adaptive: 1 char when <20 behind, ramp up for larger backlogs
-          const speed = remaining < 20 ? 1 : remaining < 80 ? 2 : Math.ceil(remaining * 0.08);
-          return Math.min(prev + speed, targetRef.current);
-        });
-      }
-      if (rafRef.current) rafRef.current = requestAnimationFrame(step);
-    };
-    rafRef.current = requestAnimationFrame(step);
-    return () => { if (rafRef.current) { cancelAnimationFrame(rafRef.current); rafRef.current = 0; } };
-  }, [text]);
-
-  useEffect(() => {
-    if (text.length < revealed) { setRevealed(0); lastTimeRef.current = 0; }
-  }, [text.length]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  return <>{text.slice(0, revealed)}</>;
-}
+import { DiffHighlightedCode } from "./DiffHighlightedCode";
+import { ReviewButton } from "./ReviewButton";
+import { previewBtnStyle } from "./messageBubbleStyles";
 
 function ThinkingBubble({ logLine }: { logLine: string | null }) {
   return (
@@ -85,26 +51,6 @@ function TokenBadge({ inputTokens, outputTokens, cacheReadTokens, cacheWriteToke
     }} title={titleParts.join(" / ")}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}{costStr}
     </span>
-  );
-}
-
-/** Render diff-highlighted lines for code blocks with language "diff" */
-function DiffHighlightedCode({ text }: { text: string }) {
-  return (
-    <>
-      {text.split("\n").map((line, i) => {
-        let color = "inherit";
-        let bg = "transparent";
-        if (line.startsWith("+")) { color = TERM_SEM_GREEN; bg = `${TERM_SEM_GREEN}08`; }
-        else if (line.startsWith("-")) { color = TERM_SEM_RED; bg = `${TERM_SEM_RED}08`; }
-        else if (line.startsWith("@@")) { color = TERM_DIM; }
-        return (
-          <span key={i} style={{ display: "block", color, backgroundColor: bg, padding: "0 6px", margin: "0 -6px", borderRadius: 1 }}>
-            {line}
-          </span>
-        );
-      })}
-    </>
   );
 }
 
@@ -204,93 +150,6 @@ export function SysMsg({ ts, tag, text, firstLine, isLong, isError }: { ts: stri
     </div>
   );
 }
-
-/** Inline backend picker for review button */
-function ReviewButton({ result, onReview, detectedBackends }: {
-  result: NonNullable<ChatMessage["result"]>;
-  onReview: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void;
-  detectedBackends: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [open]);
-
-  return (
-    <div ref={ref} style={{ position: "relative", display: "inline-block" }}>
-      <button
-        className="term-btn"
-        onClick={() => setOpen(!open)}
-        style={reviewBtnStyle}
-      >review {open ? "\u25B4" : "\u25BE"}</button>
-      {open && (
-        <div style={{
-          position: "absolute", bottom: "100%", left: 0, marginBottom: 4, zIndex: 50,
-          backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
-          minWidth: 150, boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-        }}>
-          <div style={{ padding: "4px 8px", color: TERM_DIM, fontFamily: TERM_FONT, fontSize: TERM_SIZE, letterSpacing: "0.05em", borderBottom: `1px solid ${TERM_BORDER}` }}>
-            SELECT AI
-          </div>
-          {BACKEND_OPTIONS.map((b) => {
-            const available = detectedBackends.length === 0 || detectedBackends.includes(b.id);
-            return (
-              <button
-                key={b.id}
-                disabled={!available}
-                onClick={() => { if (!available) return; setOpen(false); onReview(result, b.id); }}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8, width: "100%",
-                  padding: "6px 10px", border: "none",
-                  cursor: available ? "pointer" : "not-allowed",
-                  backgroundColor: "transparent", textAlign: "left",
-                  fontFamily: TERM_FONT, fontSize: TERM_SIZE,
-                  color: available ? TERM_TEXT : TERM_DIM,
-                  opacity: available ? 1 : 0.4,
-                }}
-                onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
-                onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; }}
-              >
-                <span style={{
-                  width: 5, height: 5, borderRadius: "50%",
-                  backgroundColor: available ? TERM_SEM_GREEN : TERM_DIM,
-                  flexShrink: 0,
-                }} />
-                <span>{b.name}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── Action button style — follows theme accent via CSS var ── */
-const accentBtnStyle: React.CSSProperties = {
-  color: "var(--term-accent)",
-  border: "1px solid color-mix(in srgb, var(--term-accent) 55%, transparent)",
-  padding: "3px 10px", fontSize: TERM_SIZE, fontFamily: TERM_FONT,
-  backgroundColor: "transparent",
-  transition: "border-color 0.15s ease, color 0.15s ease",
-  display: "inline-block", verticalAlign: "middle",
-  letterSpacing: "0.02em",
-  borderRadius: 4,
-  cursor: "pointer",
-};
-const previewBtnStyle = accentBtnStyle;
-const reviewBtnStyle: React.CSSProperties = {
-  ...accentBtnStyle,
-  color: "var(--term-text)",
-  border: "1px solid color-mix(in srgb, var(--term-text) 40%, transparent)",
-};
 
 const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, onReview, isTeamLead, isTeamMember, teamPhase, detectedBackends }: { msg: ChatMessage; agentName?: string; onPreview?: (url: string) => void; onReview?: (result: NonNullable<ChatMessage["result"]>, backend?: string) => void; isTeamLead?: boolean; isTeamMember?: boolean; teamPhase?: string | null; detectedBackends?: string[] }) {
   const ts = new Date(msg.timestamp).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
@@ -431,5 +290,5 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   );
 });
 
-export { TokenBadge, MdContent };
+export { TokenBadge, MdContent, ThinkingBubble };
 export default MessageBubble;

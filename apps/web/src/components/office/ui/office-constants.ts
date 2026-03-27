@@ -69,6 +69,15 @@ export const ROLE_CATALOG: RoleCatalogCategory[] = [
   ]},
 ];
 
+export function getPhaseInfo(): Record<string, { color: string; icon: string; hint: string }> {
+  return {
+    create: { color: TERM_SEM_BLUE, icon: "\uD83D\uDCAC", hint: "Chat with your team lead to define the project" },
+    design: { color: TERM_SEM_YELLOW, icon: "\uD83D\uDCCB", hint: "Review the plan \u2014 approve it or give feedback" },
+    execute: { color: TERM_SEM_YELLOW, icon: "\u26A1", hint: "Team is building your project" },
+    complete: { color: TERM_SEM_GREEN, icon: "\u2713", hint: "Review results \u2014 give feedback or end project" },
+  };
+}
+
 /** Flat lookup: role name -> description */
 export const ROLE_DESC_MAP = new Map<string, string>();
 for (const cat of ROLE_CATALOG) {
