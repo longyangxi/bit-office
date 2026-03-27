@@ -1165,17 +1165,17 @@
   user-select: none;
   font-size: 14px;
   line-height: 1;
-  color: rgba(180, 180, 180, 0.5);
+  color: rgba(255, 255, 255, 0.7);
   padding: 0 2px;
   margin-left: -4px;
   transition: color 0.15s;
 }
 .mpv-drag-handle:hover {
-  color: rgba(200, 200, 200, 0.85);
+  color: rgba(255, 255, 255, 0.9);
 }
 .mpv-drag-handle:active {
   cursor: grabbing;
-  color: rgba(220, 220, 220, 1);
+  color: #fff;
 }
 .mpv-drag-over {
   outline: 2px solid var(--term-accent);
@@ -1193,10 +1193,10 @@
 }
 .mpv-cell:hover .term-info-bar .drag-handle,
 .mpv-cell .term-info-bar:active .drag-handle {
-  opacity: 0.4;
+  opacity: 0.7;
 }
 .mpv-cell .term-info-bar .drag-handle:hover {
-  opacity: 0.7;
+  opacity: 1;
 }
 
 /* ============================================================
