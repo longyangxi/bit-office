@@ -258,29 +258,22 @@ export class TokenTracker {
       return content;
     }
 
-    // response.output_text.delta → streaming text chunks (Codex Responses API)
-    if (msg.type === "response.output_text.delta") {
-      const delta = msg.delta as string | undefined;
-      if (typeof delta === "string" && delta) {
-        content.textBlocks.push(delta);
-      }
-      return content;
-    }
-
     // item.completed → reasoning or message content
     if (msg.type === "item.completed") {
       const item = msg.item as Record<string, unknown> | undefined;
       if (!item) return content;
       const itemType = item.type as string | undefined;
 
-      // Diagnostic: log unrecognized item types so we can see what Codex actually sends
-      if (itemType !== "reasoning" && itemType !== "message" && itemType !== "function_call" && itemType !== "function_call_output") {
-        console.log(`[TokenTracker] item.completed unknown type="${itemType}", keys=${Object.keys(item).join(",")}, preview=${JSON.stringify(item).slice(0, 300)}`);
-      }
-
       if (itemType === "reasoning" && typeof item.text === "string") {
         // Reasoning text — treat as thinking block (visible in log but not main output)
         content.thinkingBlocks.push(item.text);
+        return content;
+      }
+
+      // Codex uses "agent_message" (with item.text string), OpenAI uses "message"
+      // (with item.content array of blocks). Handle both formats.
+      if (itemType === "agent_message" && typeof item.text === "string") {
+        content.textBlocks.push(item.text);
         return content;
       }
 
@@ -337,11 +330,22 @@ export class TokenTracker {
       return content;
     }
 
-    // turn.completed — may contain usage summary
+    // turn.completed — contains usage summary for Codex
     if (msg.type === "turn.completed") {
-      // Diagnostic: dump turn.completed structure to find where final text lives
-      const keys = Object.keys(msg).filter(k => k !== "type");
-      console.log(`[TokenTracker] turn.completed keys=${keys.join(",")}, preview=${JSON.stringify(msg).slice(0, 500)}`);
+      const usage = msg.usage as Record<string, unknown> | undefined;
+      if (usage) {
+        const input = (usage.input_tokens as number) ?? 0;
+        const output = (usage.output_tokens as number) ?? 0;
+        const cached = (usage.cached_input_tokens as number) ?? 0;
+        if (input > 0 || output > 0) {
+          this.inputTokens += input;
+          this.outputTokens += output;
+          this.cacheReadTokens += cached;
+          const pricing = findPricing(this.detectedModel || "codex", CODEX_PRICING, CODEX_DEFAULT);
+          this.costUsd += costFor(pricing, input, output, cached, 0);
+          this._updated = true;
+        }
+      }
       return content;
     }
 

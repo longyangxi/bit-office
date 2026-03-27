@@ -602,16 +602,6 @@ export class AgentSession {
               seenFirstJson = true;
               const parsed = this.tracker.processMessage(msg);
 
-              // Diagnostic: log event types for Codex streams to trace text flow
-              if (msg.type) {
-                if (msg.type === "response.output_text.delta") {
-                  const delta = (msg as Record<string, unknown>).delta as string | undefined;
-                  console.log(`[Agent ${this.name} delta] len=${delta?.length ?? 0}, tb=${parsed.textBlocks.length}`);
-                } else {
-                  console.log(`[Agent ${this.name} stream] type=${msg.type}, textBlocks=${parsed.textBlocks.length}, toolUses=${parsed.toolUses.length}`);
-                }
-              }
-
               if (parsed.sessionId) {
                 this.sessionId = parsed.sessionId;
                 saveSessionId(this.agentId, parsed.sessionId);
@@ -665,18 +655,13 @@ export class AgentSession {
 
               if (msg.type === "result" && msg.result) {
                 const resultStr = typeof msg.result === "string" ? msg.result : JSON.stringify(msg.result);
-                console.log(`[Agent ${this.name} result] len=${resultStr.length}, preview=${resultStr.slice(0, 200)}`);
-                console.log(`[Agent ${this.name} result] stdoutBuffer before=${this.stdoutBuffer.length}ch, hasVERDICT=${/VERDICT/i.test(this.stdoutBuffer)}`);
                 this._lastResultText = resultStr;
-                // Codex emits the final assistant text via "result" event, but
-                // item.completed may not always fire for message items.  Append
-                // to stdoutBuffer so parseAgentOutput (which prefers raw over
-                // fallback) can find VERDICT / SUMMARY fields from reviewers.
+                // Fallback: if result text wasn't already captured via textBlocks,
+                // append to stdoutBuffer so parseAgentOutput can find structured fields.
                 if (!this.stdoutBuffer.includes(resultStr)) {
                   this.stdoutBuffer += resultStr + "\n";
                   handleTextLine(resultStr, true);
                 }
-                console.log(`[Agent ${this.name} result] stdoutBuffer after=${this.stdoutBuffer.length}ch, hasVERDICT=${/VERDICT/i.test(this.stdoutBuffer)}`);
               }
               continue;
             } catch {
@@ -736,7 +721,6 @@ export class AgentSession {
                 }
                 if (msg.type === "result" && msg.result) {
                   const resultStr = typeof msg.result === "string" ? msg.result : JSON.stringify(msg.result);
-                  console.log(`[Agent ${this.name} flush-result] len=${resultStr.length}, preview=${resultStr.slice(0, 200)}`);
                   this._lastResultText = resultStr;
                   if (!this.stdoutBuffer.includes(resultStr)) {
                     this.stdoutBuffer += resultStr + "\n";
@@ -760,8 +744,7 @@ export class AgentSession {
         const wasCancelled = this.cancelled;
         this.cancelled = false;
 
-        console.log(`[Agent ${this.agentId}] ${this.backend.name} exited: code=${code}, cancelled=${wasCancelled}, stdout=${this.stdoutBuffer.length}ch, lastResultText=${this._lastResultText?.length ?? 0}ch`);
-        console.log(`[Agent ${this.name} exit-diag] stdoutBuffer hasVERDICT=${/VERDICT/i.test(this.stdoutBuffer)}, hasSUMMARY=${/SUMMARY/i.test(this.stdoutBuffer)}, first200=${this.stdoutBuffer.slice(0, 200).replace(/\n/g, "\\n")}`);
+        console.log(`[Agent ${this.agentId}] ${this.backend.name} exited: code=${code}, cancelled=${wasCancelled}, stdout=${this.stdoutBuffer.length}ch`);
 
         try {
           if (wasCancelled) {
