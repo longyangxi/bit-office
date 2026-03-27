@@ -56,6 +56,7 @@ const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView
 const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
 const ConsoleSidebar = dynamic(() => import("@/components/office/ui/ConsoleSidebar"), { ssr: false });
 const UsagePanel = dynamic(() => import("@/components/office/ui/UsagePanel"), { ssr: false });
+const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
@@ -1442,6 +1443,7 @@ export default function OfficePage() {
           {/* ── Console mode: left sidebar ── */}
           {consoleMode && (
             <ConsoleSidebar
+              onNewProject={() => setShowNewProjectModal(true)}
               onOpenHistory={() => setShowHistory(true)}
               onOpenSettings={() => setShowSettings(true)}
               onOpenUsage={() => setShowUsage(true)}
@@ -1450,6 +1452,25 @@ export default function OfficePage() {
                 setConsoleMode(false);
                 localStorage.setItem("office-view-mode", "office");
                 setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
+              }}
+              onCloseProject={(projectId: string) => {
+                const proj = projects.get(projectId);
+                if (!proj) return;
+                const hasTeamAgents = proj.agentIds.some((id: string) => agents.get(id)?.teamId);
+                if (hasTeamAgents) {
+                  sendCommand({ type: "FIRE_TEAM" });
+                  clearTeamMessages();
+                }
+                for (const agentId of proj.agentIds) {
+                  if (agents.has(agentId)) {
+                    sendCommand({ type: "FIRE_AGENT", agentId });
+                  }
+                }
+                useOfficeStore.getState().archiveProject(projectId);
+              }}
+              onHireToProject={(projectId: string) => {
+                useOfficeStore.getState().setActiveProject(projectId);
+                setShowHireModal(true);
               }}
             />
           )}
@@ -2384,7 +2405,17 @@ export default function OfficePage() {
         </div>
       )}
 
-      {/* NewProjectModal — TODO: implement */}
+      {showNewProjectModal && (
+        <NewProjectModal
+          open={showNewProjectModal}
+          onClose={() => setShowNewProjectModal(false)}
+          onCreated={(projectId: string, mode: string) => {
+            setShowNewProjectModal(false);
+            if (mode === "solo") setShowHireModal(true);
+            else if (mode === "team") setShowHireTeamModal(true);
+          }}
+        />
+      )}
 
       {showHireModal && (
         <HireModal

@@ -154,6 +154,7 @@ interface OfficeStore {
   configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
   availableSkills: Array<{ name: string; title: string; isFolder: boolean }>;
+  usageReport: Record<string, unknown> | null;
   connected: boolean;
   hydrated: boolean;
   /** Separated from agents to avoid full Map clone on every LOG_APPEND */
@@ -425,6 +426,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   configData: null,
   detectedBackends: [],
   availableSkills: [],
+  usageReport: null,
   connected: false,
   hydrated: false,
   agentLogLines: new Map(),
@@ -1160,6 +1162,9 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             viewingProjectName: event.name,
             viewingProjectEvents: event.events as GatewayEvent[],
           };
+        }
+        case "USAGE_REPORT": {
+          return { agents, usageReport: event.report as Record<string, unknown> };
         }
       }
 

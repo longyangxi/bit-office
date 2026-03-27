@@ -224,6 +224,12 @@ export const LoadChatHistoryCommand = z.object({
   type: z.literal("LOAD_CHAT_HISTORY"),
 });
 
+export const GetUsageCommand = z.object({
+  type: z.literal("GET_USAGE"),
+  days: z.number().optional(),
+  providers: z.array(z.string()).optional(),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -259,6 +265,7 @@ export const CommandSchema = z.discriminatedUnion("type", [
   DeleteSkillCommand,
   SyncChatHistoryCommand,
   LoadChatHistoryCommand,
+  GetUsageCommand,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -293,4 +300,5 @@ export type SaveConfigCommand = z.infer<typeof SaveConfigCommand>;
 export type ListSkillsCommand = z.infer<typeof ListSkillsCommand>;
 export type SaveSkillCommand = z.infer<typeof SaveSkillCommand>;
 export type DeleteSkillCommand = z.infer<typeof DeleteSkillCommand>;
+export type GetUsageCommand = z.infer<typeof GetUsageCommand>;
 export type Command = z.infer<typeof CommandSchema>;

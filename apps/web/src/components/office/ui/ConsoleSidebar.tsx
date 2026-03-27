@@ -1,13 +1,34 @@
 "use client";
 
+import { useOfficeStore } from "@/store/office-store";
+import type { Project } from "@/store/office-store";
+import { useMemo } from "react";
+
 interface ConsoleSidebarProps {
+  onNewProject: () => void;
   onOpenHistory: () => void;
   onOpenSettings: () => void;
   onOpenUsage: () => void;
   onBackToOffice: () => void;
+  onCloseProject: (projectId: string) => void;
+  onHireToProject: (projectId: string) => void;
 }
 
-export default function ConsoleSidebar({ onOpenHistory, onOpenSettings, onOpenUsage, onBackToOffice }: ConsoleSidebarProps) {
+export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onOpenUsage, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
+  const projects = useOfficeStore((s) => s.projects);
+  const activeProjectId = useOfficeStore((s) => s.activeProjectId);
+  const agents = useOfficeStore((s) => s.agents);
+  const setActiveProject = useOfficeStore((s) => s.setActiveProject);
+
+  const activeProjects = useMemo(() => {
+    const list: Project[] = [];
+    for (const [, p] of projects) {
+      if (p.status === "active") list.push(p);
+    }
+    list.sort((a, b) => a.createdAt - b.createdAt);
+    return list;
+  }, [projects]);
+
   return (
     <div className="csb">
       {/* Back to Office — top */}
@@ -18,6 +39,58 @@ export default function ConsoleSidebar({ onOpenHistory, onOpenSettings, onOpenUs
         </svg>
         <span>Office</span>
       </button>
+
+      {/* Projects section */}
+      <div className="csb-section">
+        <div className="csb-section-header">
+          <span className="csb-section-title">Projects</span>
+          <button
+            className="csb-add-btn"
+            onClick={onNewProject}
+            title="New Project"
+          >
+            +
+          </button>
+        </div>
+        <div className="csb-list">
+          {activeProjects.map((p) => {
+            const isActive = p.id === activeProjectId;
+            const agentCount = p.agentIds.filter((id: string) => agents.has(id)).length;
+            return (
+              <div
+                key={p.id}
+                className={`csb-item${isActive ? " csb-item-active" : ""}`}
+                onClick={() => setActiveProject(p.id)}
+                title={p.directory}
+              >
+                <span className="csb-item-icon">📁</span>
+                <span className="csb-item-name">{p.name}</span>
+                {agentCount > 0 && (
+                  <span className="csb-item-badge">{agentCount}</span>
+                )}
+                <button
+                  className="csb-item-action csb-item-add"
+                  onClick={(e) => { e.stopPropagation(); onHireToProject(p.id); }}
+                  title="Add agent to project"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+                <button
+                  className="csb-item-action csb-item-close"
+                  onClick={(e) => { e.stopPropagation(); onCloseProject(p.id); }}
+                  title="Close project"
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+                    <line x1="6" y1="6" x2="18" y2="18" /><line x1="18" y1="6" x2="6" y2="18" />
+                  </svg>
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       {/* Spacer */}
       <div className="csb-spacer" />
