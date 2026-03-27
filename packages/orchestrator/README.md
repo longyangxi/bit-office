@@ -5,47 +5,74 @@ Multi-agent team collaboration engine. Manages agent lifecycles, task delegation
 ## Architecture
 
 ```
-                        +-----------------------+
-                        |    Orchestrator        |
-                        |  (EventEmitter)        |
-                        +-----------+-----------+
-                                    |
-          +------------+------------+------------+------------+
-          |            |            |            |            |
-   AgentManager  DelegationRouter PhaseMachine ResultFinalizer PreviewResolver
-   (sessions)    (task routing)   (phases)     (team merge)   (URL resolve)
-          |            |
-     AgentSession  PromptEngine
-     (process mgr) (templates)
+                         +------------------------+
+                         |     Orchestrator        |
+                         |   (EventEmitter)        |
+                         +------------+-----------+
+                                      |
+    +--------+--------+-------+-------+-------+--------+--------+
+    |        |        |       |       |       |        |        |
+ Reaction Workspace  Agent  Decomp  Notifier Plugin   Legacy
+ Engine   Adapter   Plugin  oser    (WS)    Registry  Modules
+    |        |        |       |       |        |        |
+ rules +  Worktree  Claude  Parser  send()  register DelegationRouter
+ match +  PostCreate Codex  Sched.          get      PhaseMachine
+ action   Symlinks   ...9   Context         list     AgentManager
+          Commands                                    ResultFinalizer
 ```
 
 **Key design decisions:**
 - Orchestrator is a **pure logic library** — no I/O, no HTTP, no persistence. The consumer (gateway) handles all external concerns.
 - All communication via **typed events** (`EventEmitter<OrchestratorEventMap>`). The consumer subscribes and forwards to its own transport (WebSocket, Ably, etc.).
-- **AI-backend agnostic** — any CLI that accepts a prompt and outputs text can be wrapped as an `AIBackend`.
+- **Plugin-driven** — Reaction rules, workspace strategy, agent backends, and notifiers are pluggable via typed interfaces.
+- **Backward compatible** — legacy `@AgentName:` delegation coexists with new `[DECOMPOSITION]` structured dispatch.
 
 ## Module Map
 
 ```
 src/
-  orchestrator.ts      700 lines  Core engine: lifecycle, events, finalization, memory hooks
-  agent-session.ts     715 lines  Process management: spawn, stream parse, timeout
-  delegation.ts        585 lines  Task routing: depth/budget limits, result batching, direct fix
-  prompt-templates.ts  450 lines  15 typed templates (leader/worker/reviewer/direct-fix phases)
-  memory.ts            210 lines  Persistent learning: review patterns, tech prefs, project history
-  phase-machine.ts     169 lines  State machine: CREATE -> DESIGN -> EXECUTE -> COMPLETE
-  result-finalizer.ts  155 lines  Team-level merge: changedFiles, preview, entryFile
-  preview-resolver.ts  116 lines  7-step cascading preview URL resolution
-  preview-server.ts    128 lines  Static serve (npx serve) + command execution
-  output-parser.ts     101 lines  Structured field extraction from agent stdout
-  config.ts             58 lines  Centralized constants (delegation, timing, preview)
-  types.ts             264 lines  All event types, options, payloads
-  retry.ts             111 lines  Auto-retry with leader escalation
-  worktree.ts          ~930 lines Git worktree isolation: create/merge/remove/cleanup/undo/revert/owner
-  agent-manager.ts      80 lines  Session registry + team lead tracking
-  resolve-path.ts       36 lines  4-strategy path resolution for agent-reported paths
-  ai-backend.ts         29 lines  AIBackend interface
-  index.ts              63 lines  Public exports + factory
+  ── Plugin Modules (new) ──────────────────────────────────────
+  reaction/
+    engine.ts            Rule matching + action execution (replaces retry.ts)
+    defaults.ts          Default rules: retry, review-fail, budget, stuck
+    types.ts             ReactionTrigger, ReactionAction, ReactionContext, facades
+  workspace/
+    worktree.ts          WorktreeWorkspace adapter (wraps worktree.ts)
+    post-create.ts       Symlink + command execution after workspace creation
+    types.ts             Workspace interface, PostCreateConfig
+  decomposer/
+    parser.ts            Parse [DECOMPOSITION] blocks from leader output
+    scheduler.ts         Group-based task dispatch + status propagation
+    context.ts           formatLineage(), formatSiblings() for prompt injection
+    types.ts             TaskNode, DecompositionPlan, DecomposerConfig
+  agent/
+    types.ts             AgentPlugin interface (superset of AIBackend)
+  notifier/
+    websocket.ts         WebSocket notifier (emits orchestrator events)
+    types.ts             OrchestratorNotification, Notifier interface
+  plugin-registry.ts     Lightweight register/get/list for 3 plugin slots
+  agent-selector.ts      Role-based agent matching for decomposed tasks
+  stuck-detector.ts      Polling loop for idle agent detection
+
+  ── Core Modules ──────────────────────────────────────────────
+  orchestrator.ts        Core engine: lifecycle, events, decomposition dispatch
+  agent-session.ts       Process management: spawn, stream parse, timeout
+  delegation.ts          Task routing: depth/budget limits, result batching, direct fix
+  prompt-templates.ts    Typed templates (leader/worker/reviewer phases)
+  memory.ts              Re-export shim for @bit-office/memory
+  phase-machine.ts       State machine: CREATE -> DESIGN -> EXECUTE -> COMPLETE
+  result-finalizer.ts    Team-level merge: changedFiles, preview, entryFile
+  preview-resolver.ts    7-step cascading preview URL resolution
+  preview-server.ts      Static serve (npx serve) + command execution
+  output-parser.ts       Structured field extraction + decomposition re-export
+  config.ts              Centralized constants (delegation, timing, preview)
+  types.ts               All event types, options, payloads
+  worktree.ts            Git worktree isolation (underlying implementation)
+  agent-manager.ts       Session registry + team lead tracking
+  resolve-path.ts        4-strategy path resolution for agent-reported paths
+  ai-backend.ts          AIBackend interface (legacy, kept for compat)
+  token-tracker.ts       Per-task token usage + cost calculation
+  index.ts               Public exports + factory
 ```
 
 ## Team Collaboration Flow
@@ -69,41 +96,73 @@ User: "Build a pixel art snake game"
 
 ### Execute Phase Detail
 
+**Structured decomposition (new default):**
+
 ```
 Leader (no tools, delegates only)
   |
-  | @Dev: Build the game with PixiJS...
+  | Outputs [DECOMPOSITION] block:
+  | { "tasks": [...], "groups": [["dev-1","dev-2"], ["review-1"]] }
   v
-Developer (full tools)
-  |  writes code, runs build, reports ENTRY_FILE
+Orchestrator parses → creates TaskScheduler
+  |
+  | Group 1: dispatches dev-1 + dev-2 in parallel
+  | (each gets lineage context + sibling awareness)
   v
-Leader receives result
+Developers work concurrently (each in own worktree)
   |
-  | @Reviewer: Check the code, verify features...
+  | Group 1 complete → Group 2 dispatched
   v
-Code Reviewer (full tools)
-  |  VERDICT: PASS or FAIL + ISSUES
+Code Reviewer evaluates
+  |  VERDICT: PASS or FAIL
   |
-  +-- PASS --> Leader --> FINAL SUMMARY (isFinalResult = true)
+  +-- PASS → plan complete (isFinalResult = true)
   |
-  +-- FAIL (1st time) --> Direct Fix: Dev fixes issues, Reviewer re-reviews
-  |                       (skips Leader — saves time and tokens)
-  |
-  +-- FAIL (2nd time) --> Escalate to Leader for strategic decision
+  +-- FAIL → Reaction Engine decides:
+              1st FAIL → send to dev for direct fix
+              2nd FAIL → escalate to leader
 ```
 
-### Direct Fix Shortcut (Reviewer → Dev)
+**Legacy delegation (fallback):**
 
-When a reviewer returns `VERDICT: FAIL`, the system uses a **tiered shortcut** to avoid unnecessary Leader round-trips:
+If the leader outputs `@AgentName: task` instead of a `[DECOMPOSITION]` block, the system falls back to the original `DelegationRouter` delegation path. Both modes coexist.
 
-1. **First FAIL** — routes directly to the developer with the reviewer's full feedback (`fullOutput`). Developer fixes issues and the reviewer automatically re-reviews. Leader is not involved.
-2. **Second FAIL** — escalates to the Leader, who can decide to try a different approach, reassign, or accept as-is.
+### Reaction Engine
 
-This saves 2 Leader AI calls per successful fix cycle (one for forwarding FAIL, one for forwarding the fix result). The `maxDirectFixes` config controls how many direct fix attempts are allowed before escalation (default: 1).
+Configurable event → action → escalation rules (replaces hardcoded `retry.ts`):
 
-**VERDICT detection**: The `DelegationRouter` matches `VERDICT: FAIL` from the reviewer's `fullOutput` (not the truncated summary), ensuring reliable detection regardless of output format.
+| Trigger | Default Action | After Retries | Configurable |
+|---------|---------------|---------------|-------------|
+| `task:failed` | Retry (2x) | Escalate to leader | retries, escalateAction |
+| `review:fail` | Send to dev (1x) | Escalate to leader | retries, escalateAction |
+| `delegation:budget` | Force-finalize | — | — |
+| `agent:stuck` | Notify user (5 min) | — | thresholdMs |
 
-All existing safety limits still apply: `maxReviewRounds` (3), `budgetRounds` (7), and `hardCeilingRounds` (10) prevent infinite loops.
+Rules are passed via `OrchestratorOptions.reactions`. Default: `DEFAULT_RULES`.
+
+```typescript
+// Custom rules example
+const orc = createOrchestrator({
+  reactions: [
+    { trigger: "task:failed", match: { wasTimeout: false, isDelegated: false },
+      action: "retry", retries: 5, escalateAction: "escalate-to-leader" },
+    { trigger: "agent:stuck", thresholdMs: 120_000, action: "notify" },
+  ],
+});
+```
+
+### Agent Selection
+
+When the scheduler dispatches a decomposed task, agents are auto-selected:
+
+1. **Exact role match** — idle agent whose role matches the task role
+2. **Partial match** — "Senior Developer" matches a "Developer" task
+3. **Any idle non-lead** — fallback
+4. **No agent available** — task marked as failed, reaction engine handles
+
+### Stuck Detection
+
+A polling loop checks all `working` agents every 60 seconds. If an agent's `lastOutputAt` exceeds 5 minutes, the reaction engine triggers `agent:stuck` → notifies the user.
 
 ### Delegation Controls
 
@@ -112,9 +171,9 @@ All existing safety limits still apply: `maxReviewRounds` (3), `budgetRounds` (7
 | `maxDepth` | 5 | Max delegation chain hops |
 | `maxTotal` | 20 | Total delegations per session |
 | `budgetRounds` | 7 | Leader invocations before forced finalize |
-| `hardCeilingRounds` | 10 | Absolute max rounds (synthetic task:done) |
-| `maxReviewRounds` | 3 | Code review iterations before accepting |
-| `maxDirectFixes` | 1 | Direct fix attempts (reviewer→dev) before escalating to leader |
+| `hardCeilingRounds` | 10 | Absolute max rounds (deprecated — now via reaction rule) |
+| `maxReviewRounds` | 3 | Code review iterations (deprecated — now via reaction rule) |
+| `maxDirectFixes` | 1 | Direct fix attempts (deprecated — now via reaction rule) |
 
 ## Agent Memory
 
@@ -167,12 +226,35 @@ clearMemory();
 
 When multiple agents work on the same repo, each agent gets its own **git worktree** — a physical copy of the working tree linked to the same repo, on its own branch. This prevents agents from stepping on each other's changes.
 
+Worktrees are managed through the **Workspace** plugin interface (`workspace/types.ts`). The default implementation is `WorktreeWorkspace`.
+
 ### Design Principles
 
 - **One agent = one worktree = one branch.** Worktree and branch are keyed by `agentId`, not `taskId`. This keeps the directory stable across tasks so Claude Code `--resume` works (same CWD).
 - **Worktrees live outside the repo** at `~/.open-office[-dev]/worktrees/<repo-hash>/<agentId>/`. This prevents Claude Code from traversing up to the main repo root.
 - **Branch naming:** `agent/<agentName>-<shortId>` (e.g. `agent/nova-pTTERq`). Unique per agent, human-readable.
 - **Branches are local only** — never pushed to remote. Visible in SourceTree/git tools via shared `.git`.
+
+### PostCreate Hooks (New)
+
+After a worktree is created, optional hooks run automatically:
+
+```typescript
+const orc = createOrchestrator({
+  worktree: {
+    mergeOnComplete: true,
+    alwaysIsolate: true,
+    postCreate: {
+      symlinks: [".env", ".claude"],                    // symlink from main repo
+      commands: ["pnpm install --frozen-lockfile"],      // run in worktree
+    },
+  },
+});
+```
+
+- **Symlinks**: relative paths only, validated against directory traversal
+- **Commands**: from trusted config only, never from agent output
+- **Error handling**: warnings logged, never fails workspace creation
 
 ### Lifecycle
 
@@ -184,6 +266,7 @@ Agent gets task
   │
   └─ no ──> git worktree add ~/.open-office[-dev]/worktrees/<repo>/<agentId>
             creates branch agent/<name>-<id>
+            runs postCreate hooks (symlinks, pnpm install, etc.)
             session.clearHistory() (can't --resume in new CWD)
   │
   v
