@@ -11,11 +11,11 @@ export const CONFIG = {
     maxTotal: 20,
     /** Maximum leader invocation rounds (after receiving results) */
     budgetRounds: 7,
-    /** Force-complete after this many leader rounds (safety ceiling) */
+    /** @deprecated — will be replaced by ReactionEngine rule (delegation:budget). See reaction/defaults.ts */
     hardCeilingRounds: 10,
-    /** Maximum code review iterations before accepting as-is */
+    /** @deprecated — will be replaced by ReactionEngine rule (review:fail retries). See reaction/defaults.ts */
     maxReviewRounds: 3,
-    /** Maximum direct fix attempts (reviewer → dev) before escalating to leader */
+    /** @deprecated — will be replaced by ReactionEngine rule (review:fail retries). See reaction/defaults.ts */
     maxDirectFixes: 1,
   },
 
@@ -32,8 +32,6 @@ export const CONFIG = {
     idleErrorDelayMs: 3_000,
     /** Delay before dequeuing next task (ms) */
     dequeueDelayMs: 100,
-    /** Delay before retrying a failed task (ms) */
-    retryDelayMs: 500,
   },
 
   limits: {
