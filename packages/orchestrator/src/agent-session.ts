@@ -6,7 +6,7 @@ import { CONFIG } from "./config.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
-import { getClaudePricing, getCodexPricing, calculateCost } from "./pricing.js";
+import { TokenTracker } from "./token-tracker.js";
 import { removeWorktree, getIsolatedGitEnv } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
@@ -207,17 +207,9 @@ export class AgentSession {
   private sandboxMode: "full" | "safe";
   private stdoutBuffer = "";
   private stderrBuffer = "";
-  private taskInputTokens = 0;
-  private taskOutputTokens = 0;
-  private taskCacheReadTokens = 0;
-  private taskCacheWriteTokens = 0;
-  private taskCostUsd = 0;
-  /** Model name detected from stream (for cost calculation) */
-  private detectedModel = "";
+  private tracker: TokenTracker;
   /** Files actually written/edited during the current task (tracked from tool_use events) */
   private taskChangedFiles = new Set<string>();
-  /** Dedup token updates by unique message/request ID instead of signature */
-  private seenTokenMessageIds = new Set<string>();
   private hasHistory: boolean;
   private sessionId: string | null;
   /** Consecutive resume failures (0-output exits). Clear session only after 2+ consecutive failures. */
@@ -302,6 +294,7 @@ export class AgentSession {
     this._model = opts.model;
     this.onEvent = opts.onEvent;
     this._renderPrompt = opts.renderPrompt;
+    this.tracker = new TokenTracker(opts.backend.id);
   }
 
   async runTask(taskId: string, prompt: string, repoPath?: string, teamContext?: string, isUserInitiated = false, phaseOverride?: string) {
@@ -357,14 +350,8 @@ export class AgentSession {
     this.currentCwd = cwd;
     this.stdoutBuffer = "";
     this.stderrBuffer = "";
-    this.taskInputTokens = 0;
-    this.taskOutputTokens = 0;
-    this.taskCacheReadTokens = 0;
-    this.taskCacheWriteTokens = 0;
-    this.taskCostUsd = 0;
-    this.detectedModel = "";
+    this.tracker.reset();
     this.taskChangedFiles.clear();
-    this.seenTokenMessageIds.clear();
     this.currentTaskStartedAt = new Date().toISOString();
     this.currentTaskPrompt = prompt;
     this.lastActivityText = null;
@@ -613,164 +600,61 @@ export class AgentSession {
             try {
               const msg = JSON.parse(line);
               seenFirstJson = true;
-              // Capture session ID for --resume on next run.
-              // Save to disk immediately — if the app crashes mid-task, we need
-              // this ID to resume the conversation on restart.
-              if (msg.type === "system" && msg.session_id) {
-                this.sessionId = msg.session_id;
-                saveSessionId(this.agentId, msg.session_id);
-                console.log(`[Agent ${this.name}] Session ID: ${msg.session_id}`);
-              }
-              // ── Codex JSONL events (--json mode) ──
-              if (msg.type === "session_meta" && msg.payload?.id) {
-                this.sessionId = msg.payload.id;
-                saveSessionId(this.agentId, msg.payload.id);
-                console.log(`[Agent ${this.name}] Codex session ID: ${msg.payload.id}`);
-                continue;
-              }
-              if (msg.type === "turn_context" && msg.payload?.model) {
-                this.detectedModel = msg.payload.model;
-                continue;
-              }
-              if (msg.type === "event_msg" && msg.payload) {
-                const payloadType = msg.payload.type;
-                if (payloadType === "token_count" && msg.payload.info) {
-                  const usage = msg.payload.info.last_token_usage ?? msg.payload.info.total_token_usage;
-                  if (usage) {
-                    const input = usage.input_tokens ?? 0;
-                    const output = usage.output_tokens ?? 0;
-                    const cached = usage.cached_input_tokens ?? 0;
-                    if (input > 0 || output > 0 || cached > 0) {
-                      this.taskInputTokens += input;
-                      this.taskOutputTokens += output;
-                      this.taskCacheReadTokens += cached;
-                      const model = this.detectedModel || "codex";
-                      const pricing = getCodexPricing(model);
-                      this.taskCostUsd += calculateCost(pricing, input, output, cached, 0);
-                      this.emitTokenUpdate();
-                    }
-                  }
-                  continue;
-                }
-                if (payloadType === "agent_message" && msg.payload.message) {
-                  this.stdoutBuffer += msg.payload.message + "\n";
-                  handleTextLine(msg.payload.message, true);
-                  this.persistWorkState("running");
-                  continue;
-                }
-                if (payloadType === "task_complete") {
-                  if (msg.payload.last_agent_message && !this.stdoutBuffer) {
-                    this.stdoutBuffer = msg.payload.last_agent_message;
-                    handleTextLine(msg.payload.last_agent_message, true);
-                  }
-                  continue;
-                }
-                continue;
-              }
-              // Codex response_item: extract assistant text
-              if (msg.type === "response_item" && msg.payload?.role === "assistant" && msg.payload?.content) {
-                for (const block of msg.payload.content) {
-                  if (block.type === "output_text" && block.text) {
-                    this.stdoutBuffer += block.text + "\n";
-                    handleTextLine(block.text, true);
-                    this.persistWorkState("running");
-                  }
-                }
-                continue;
+              const parsed = this.tracker.processMessage(msg);
+
+              if (parsed.sessionId) {
+                this.sessionId = parsed.sessionId;
+                saveSessionId(this.agentId, parsed.sessionId);
+                console.log(`[Agent ${this.name}] Session ID: ${parsed.sessionId}`);
               }
 
-              // ── Claude stream-json events ──
-              if (msg.type === "assistant" && msg.message?.content) {
-                // Capture model for cost calculation
-                if (msg.message.model && !this.detectedModel) {
-                  this.detectedModel = msg.message.model;
+              // Token update → emit event
+              if (this.tracker.consumeUpdate()) {
+                this.emitTokenUpdate();
+              }
+
+              // Text content → stdout buffer + delegation detection
+              for (const text of parsed.textBlocks) {
+                this.stdoutBuffer += text + "\n";
+                handleTextLine(text, true);
+                this.persistWorkState("running");
+              }
+
+              // Thinking blocks → log as activity
+              for (const thinking of parsed.thinkingBlocks) {
+                console.log(`[Agent ${this.name} thinking] ${thinking.slice(0, 120)}...`);
+                const snippet = thinking.slice(0, 80).replace(/\n/g, " ").trim();
+                if (snippet) {
+                  this.onEvent({
+                    type: "log:append",
+                    agentId: this.agentId,
+                    taskId,
+                    stream: "stderr",
+                    chunk: `💭 ${snippet}…`,
+                  });
                 }
-                // Dedup by message ID (unique per API call)
-                const msgId = msg.message.id ?? "";
-                const reqId = msg.requestId ?? "";
-                const dedupKey = msgId ? `${msgId}:${reqId}` : "";
-                if (msg.message.usage && (!dedupKey || !this.seenTokenMessageIds.has(dedupKey))) {
-                  if (dedupKey) this.seenTokenMessageIds.add(dedupKey);
-                  const usage = msg.message.usage;
-                  const input = usage.input_tokens ?? 0;
-                  const output = usage.output_tokens ?? 0;
-                  const cacheRead = usage.cache_read_input_tokens ?? 0;
-                  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
-                  this.taskInputTokens += input;
-                  this.taskOutputTokens += output;
-                  this.taskCacheReadTokens += cacheRead;
-                  this.taskCacheWriteTokens += cacheWrite;
-                  const model = this.detectedModel || msg.message.model || "claude-3-5-sonnet";
-                  const pricing = getClaudePricing(model);
-                  this.taskCostUsd += calculateCost(pricing, input, output, cacheRead, cacheWrite);
-                  this.emitTokenUpdate();
+              }
+
+              // Tool uses → track changed files + activity
+              for (const tool of parsed.toolUses) {
+                if ((tool.name === "Write" || tool.name === "Edit") && tool.input?.file_path) {
+                  this.taskChangedFiles.add(tool.input.file_path as string);
                 }
-                for (const block of msg.message.content) {
-                  if (block.type === "text" && block.text) {
-                    this.stdoutBuffer += block.text + "\n";
-                    handleTextLine(block.text, true);
-                    this.persistWorkState("running");
-                  }
-                  if (block.type === "thinking" && block.thinking) {
-                    console.log(`[Agent ${this.name} thinking] ${block.thinking.slice(0, 120)}...`);
-                    // Surface a one-line summary as lastLogLine so the UI shows thinking activity
-                    const snippet = block.thinking.slice(0, 80).replace(/\n/g, " ").trim();
-                    if (snippet) {
-                      this.onEvent({
-                        type: "log:append",
-                        agentId: this.agentId,
-                        taskId,
-                        stream: "stderr",
-                        chunk: `💭 ${snippet}…`,
-                      });
-                    }
-                  }
-                  if (block.type === "tool_use" && block.name) {
-                    const toolName = block.name as string;
-                    const toolInput = block.input as Record<string, unknown> | undefined;
-                    // Track files actually modified by Write/Edit tools
-                    if ((toolName === "Write" || toolName === "Edit") && toolInput?.file_path) {
-                      this.taskChangedFiles.add(toolInput.file_path as string);
-                    }
-                    const activity = summarizeToolUse(toolName, toolInput);
-                    if (activity) {
-                      this.lastActivityText = activity;
-                      this.onEvent({
-                        type: "log:activity",
-                        agentId: this.agentId,
-                        taskId,
-                        text: activity,
-                      });
-                      this.persistWorkState("running");
-                    }
-                  }
+                const activity = summarizeToolUse(tool.name, tool.input);
+                if (activity) {
+                  this.lastActivityText = activity;
+                  this.onEvent({
+                    type: "log:activity",
+                    agentId: this.agentId,
+                    taskId,
+                    text: activity,
+                  });
+                  this.persistWorkState("running");
                 }
-                // (conversationLog removed — recovery context now uses @bit-office/memory's
-                //  structured SessionSummary instead of raw message fragments)
-              } else if (msg.type === "result") {
-                // Result message: authoritative session total from msg.usage
-                if (msg.usage) {
-                  const usage = msg.usage;
-                  const input = usage.input_tokens ?? 0;
-                  const output = usage.output_tokens ?? 0;
-                  const cacheRead = usage.cache_read_input_tokens ?? 0;
-                  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
-                  this.taskInputTokens = input;
-                  this.taskOutputTokens = output;
-                  this.taskCacheReadTokens = cacheRead;
-                  this.taskCacheWriteTokens = cacheWrite;
-                  const model = this.detectedModel || "claude-3-5-sonnet";
-                  const pricing = getClaudePricing(model);
-                  this.taskCostUsd = calculateCost(pricing, input, output, cacheRead, cacheWrite);
-                  this.emitTokenUpdate();
-                }
-                if (msg.result) {
-                  if (!this.stdoutBuffer) {
-                    this.stdoutBuffer = msg.result;
-                    handleTextLine(msg.result);
-                  }
-                  this._lastResultText = msg.result;
-                }
+              }
+
+              if (msg.type === "result" && msg.result) {
+                this._lastResultText = msg.result as string;
               }
               continue;
             } catch {
@@ -823,19 +707,20 @@ export class AgentSession {
             if (line.startsWith("{")) {
               try {
                 const msg = JSON.parse(line);
-                if (msg.type === "assistant" && msg.message?.content) {
-                  for (const block of msg.message.content) {
-                    if (block.type === "text" && block.text) {
-                      this.stdoutBuffer += block.text + "\n";
-                      handleTextLine(block.text);
-                    }
-                  }
-                } else if (msg.type === "result" && msg.result) {
+                const flushParsed = this.tracker.processMessage(msg);
+                for (const text of flushParsed.textBlocks) {
+                  this.stdoutBuffer += text + "\n";
+                  handleTextLine(text);
+                }
+                if (msg.type === "result" && msg.result) {
                   this._lastResultText = msg.result;
                   if (!this.stdoutBuffer) {
-                    this.stdoutBuffer = msg.result;
-                    handleTextLine(msg.result);
+                    this.stdoutBuffer = msg.result as string;
+                    handleTextLine(msg.result as string);
                   }
+                }
+                if (this.tracker.consumeUpdate()) {
+                  this.emitTokenUpdate();
                 }
               } catch { /* not valid JSON */ }
             } else {
@@ -875,7 +760,7 @@ export class AgentSession {
               stdout: this.stdoutBuffer,
               summary: summary ?? undefined,
               changedFiles: [...this.taskChangedFiles],
-              tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
+              tokens: { input: this.tracker.snapshot.inputTokens, output: this.tracker.snapshot.outputTokens },
             });
             clearAgentWorkState(this.agentId);
 
@@ -892,15 +777,7 @@ export class AgentSession {
             this.lastSummary = summary || null;
             this._lastResult = `done: ${summary.slice(0, 120)}`;
             this.setStatus("done");
-            const tokenUsage = (this.taskInputTokens > 0 || this.taskOutputTokens > 0)
-              ? {
-                  inputTokens: this.taskInputTokens,
-                  outputTokens: this.taskOutputTokens,
-                  cacheReadTokens: this.taskCacheReadTokens || undefined,
-                  cacheWriteTokens: this.taskCacheWriteTokens || undefined,
-                  costUsd: this.taskCostUsd || undefined,
-                }
-              : undefined;
+            const tokenUsage = this.tracker.usage;
             this.onEvent({
               type: "task:done",
               agentId: this.agentId,
@@ -952,7 +829,7 @@ export class AgentSession {
                   stdout: this.stdoutBuffer,
                   summary: undefined,
                   changedFiles: [...this.taskChangedFiles],
-                  tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
+                  tokens: { input: this.tracker.snapshot.inputTokens, output: this.tracker.snapshot.outputTokens },
                 });
               } catch { /* best effort */ }
             }
@@ -1177,7 +1054,7 @@ export class AgentSession {
           stdout: this.stdoutBuffer,
           summary: undefined, // let extractSessionSummary derive from stdout
           changedFiles: [...this.taskChangedFiles],
-          tokens: { input: this.taskInputTokens, output: this.taskOutputTokens },
+          tokens: { input: this.tracker.snapshot.inputTokens, output: this.tracker.snapshot.outputTokens },
         });
         console.log(`[Agent ${this.agentId}] Committed partial session on destroy (${this.stdoutBuffer.length}ch)`);
       } catch (e) {
@@ -1257,14 +1134,15 @@ export class AgentSession {
   }
 
   private emitTokenUpdate() {
+    const s = this.tracker.snapshot;
     this.onEvent({
       type: "token:update",
       agentId: this.agentId,
-      inputTokens: this.taskInputTokens,
-      outputTokens: this.taskOutputTokens,
-      cacheReadTokens: this.taskCacheReadTokens || undefined,
-      cacheWriteTokens: this.taskCacheWriteTokens || undefined,
-      costUsd: this.taskCostUsd || undefined,
+      inputTokens: s.inputTokens,
+      outputTokens: s.outputTokens,
+      cacheReadTokens: s.cacheReadTokens || undefined,
+      cacheWriteTokens: s.cacheWriteTokens || undefined,
+      costUsd: s.costUsd || undefined,
     });
   }
 

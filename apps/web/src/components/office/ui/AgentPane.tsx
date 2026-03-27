@@ -75,7 +75,7 @@ export interface ReviewerOverlayData {
   messages: ChatMessage[];
   visibleMessages: ChatMessage[];
   hasMoreMessages: boolean;
-  tokenUsage: { inputTokens: number; outputTokens: number };
+  tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   lastLogLine: string | null;
   busy: boolean;
   /** Set when review is complete — null means still working */
@@ -97,7 +97,7 @@ export interface AgentPaneProps {
   messages: ChatMessage[];
   visibleMessages: ChatMessage[];
   hasMoreMessages: boolean;
-  tokenUsage: { inputTokens: number; outputTokens: number };
+  tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   isTeamLead?: boolean;
   isTeamMember: boolean;
   isExternal: boolean;
