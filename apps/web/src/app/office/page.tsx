@@ -2053,7 +2053,7 @@ export default function OfficePage() {
                   {mobileIsTeamMember && (
                     <span style={{ fontSize: 9, padding: "1px 4px", backgroundColor: `${TERM_SEM_YELLOW}20`, color: TERM_SEM_YELLOW, border: `1px solid ${TERM_SEM_YELLOW}50`, fontFamily: "monospace" }}>TEAM</span>
                   )}
-                  {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} />}
+                  {agentState.tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={agentState.tokenUsage.inputTokens} outputTokens={agentState.tokenUsage.outputTokens} cacheReadTokens={agentState.tokenUsage.cacheReadTokens} cacheWriteTokens={agentState.tokenUsage.cacheWriteTokens} costUsd={agentState.tokenUsage.costUsd} />}
                 </div>
                 <div style={{ fontSize: 11, color: TERM_DIM }}>{agentState.role}</div>
               </div>

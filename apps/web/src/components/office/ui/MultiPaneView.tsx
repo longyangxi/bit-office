@@ -167,7 +167,7 @@ interface AgentData {
   messages: any[];
   visibleMessages: any[];
   hasMoreMessages: boolean;
-  tokenUsage: { inputTokens: number; outputTokens: number };
+  tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   isTeamLead?: boolean;
   isTeamMember: boolean;
   isExternal: boolean;

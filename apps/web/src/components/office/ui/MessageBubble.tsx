@@ -64,16 +64,26 @@ function ThinkingBubble({ logLine }: { logLine: string | null }) {
   );
 }
 
-function TokenBadge({ inputTokens, outputTokens }: { inputTokens: number; outputTokens: number }) {
+function TokenBadge({ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens, costUsd }: {
+  inputTokens: number; outputTokens: number;
+  cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number;
+}) {
   if (inputTokens === 0 && outputTokens === 0) return null;
+  const titleParts = [`Input: ${inputTokens.toLocaleString()}`, `Output: ${outputTokens.toLocaleString()}`];
+  if (cacheReadTokens) titleParts.push(`Cache read: ${cacheReadTokens.toLocaleString()}`);
+  if (cacheWriteTokens) titleParts.push(`Cache write: ${cacheWriteTokens.toLocaleString()}`);
+  if (costUsd) titleParts.push(`Cost: $${costUsd.toFixed(4)}`);
+  const costStr = costUsd != null && costUsd > 0
+    ? ` $${costUsd >= 1 ? costUsd.toFixed(2) : costUsd.toFixed(4)}`
+    : "";
   return (
     <span style={{
       fontSize: TERM_SIZE, padding: "1px 4px",
       color: TERM_TEXT, fontFamily: TERM_FONT,
       whiteSpace: "nowrap", opacity: 0.55,
       fontVariantNumeric: "tabular-nums",
-    }} title={`Input: ${inputTokens.toLocaleString()} / Output: ${outputTokens.toLocaleString()}`}>
-      {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
+    }} title={titleParts.join(" / ")}>
+      {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}{costStr}
     </span>
   );
 }

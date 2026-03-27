@@ -331,7 +331,15 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
       return null; // already published directly
     }
     case "token:update":
-      return { type: "TOKEN_UPDATE", agentId: e.agentId, inputTokens: e.inputTokens, outputTokens: e.outputTokens };
+      return {
+        type: "TOKEN_UPDATE",
+        agentId: e.agentId,
+        inputTokens: e.inputTokens,
+        outputTokens: e.outputTokens,
+        cacheReadTokens: e.cacheReadTokens,
+        cacheWriteTokens: e.cacheWriteTokens,
+        costUsd: e.costUsd,
+      };
     // Log-only events — no wire protocol equivalent
     case "task:retrying":
       console.log(`[Retry] Agent ${e.agentId} retrying task ${e.taskId} (attempt ${e.attempt}/${e.maxRetries})`);

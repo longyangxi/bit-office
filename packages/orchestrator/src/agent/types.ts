@@ -37,7 +37,7 @@ export interface AgentSessionRef {
 export interface AgentSessionInfo {
   summary: string | null;
   agentSessionId: string | null;
-  cost?: { inputTokens: number; outputTokens: number };
+  cost?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
 }
 
 /** Config for workspace hooks setup */

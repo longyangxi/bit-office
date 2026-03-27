@@ -73,9 +73,9 @@ interface AgentState {
   } | null;
   messages: ChatMessage[];
   lastLogLine: string | null;
-  tokenUsage: { inputTokens: number; outputTokens: number };
+  tokenUsage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   /** Accumulated token baseline from completed tasks (live TOKEN_UPDATE adds on top) */
-  _tokenBaseline?: { inputTokens: number; outputTokens: number };
+  _tokenBaseline?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   autoMerge?: boolean;
   pendingMerge?: boolean;
   lastMergeCommit?: string | null;
@@ -130,7 +130,7 @@ export interface ProjectSummary {
     previewCmd?: string;
     previewPort?: number;
   };
-  tokenUsage?: { inputTokens: number; outputTokens: number };
+  tokenUsage?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
   ratings?: Record<string, number>;
 }
 
@@ -783,11 +783,14 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const liveUpdated = agent.tokenUsage.inputTokens > baseline.inputTokens
             || agent.tokenUsage.outputTokens > baseline.outputTokens;
           const updatedTokenUsage = liveUpdated
-            ? agent.tokenUsage  // TOKEN_UPDATE already set the correct value
+            ? agent.tokenUsage
             : (event.result.tokenUsage
               ? {
                   inputTokens: agent.tokenUsage.inputTokens + event.result.tokenUsage.inputTokens,
                   outputTokens: agent.tokenUsage.outputTokens + event.result.tokenUsage.outputTokens,
+                  cacheReadTokens: ((agent.tokenUsage.cacheReadTokens ?? 0) + (event.result.tokenUsage.cacheReadTokens ?? 0)) || undefined,
+                  cacheWriteTokens: ((agent.tokenUsage.cacheWriteTokens ?? 0) + (event.result.tokenUsage.cacheWriteTokens ?? 0)) || undefined,
+                  costUsd: ((agent.tokenUsage.costUsd ?? 0) + (event.result.tokenUsage.costUsd ?? 0)) || undefined,
                 }
               : agent.tokenUsage);
 
@@ -1040,14 +1043,15 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "TOKEN_UPDATE": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
-          // Live per-task cumulative values — track baseline from completed tasks
-          // so multi-task agents accumulate correctly
           const baseline = agent._tokenBaseline ?? { inputTokens: 0, outputTokens: 0 };
           agents.set(event.agentId, {
             ...agent,
             tokenUsage: {
               inputTokens: baseline.inputTokens + event.inputTokens,
               outputTokens: baseline.outputTokens + event.outputTokens,
+              cacheReadTokens: (baseline.cacheReadTokens ?? 0) + (event.cacheReadTokens ?? 0) || undefined,
+              cacheWriteTokens: (baseline.cacheWriteTokens ?? 0) + (event.cacheWriteTokens ?? 0) || undefined,
+              costUsd: (baseline.costUsd ?? 0) + (event.costUsd ?? 0) || undefined,
             },
           });
           break;

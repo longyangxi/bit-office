@@ -89,6 +89,9 @@ export interface ProjectPreview {
 export interface TokenUsageSummary {
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  costUsd?: number;
 }
 
 export type ProjectRatings = Record<string, number>;
@@ -227,15 +230,27 @@ export function archiveProject(agents: PersistedAgent[], team: PersistedTeam | n
   // Aggregate token usage from all TASK_DONE events
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let totalCacheRead = 0;
+  let totalCacheWrite = 0;
+  let totalCostUsd = 0;
   for (const e of projectEvents) {
     if (e.type === "TASK_DONE" && e.result?.tokenUsage) {
       totalInputTokens += e.result.tokenUsage.inputTokens ?? 0;
       totalOutputTokens += e.result.tokenUsage.outputTokens ?? 0;
+      totalCacheRead += e.result.tokenUsage.cacheReadTokens ?? 0;
+      totalCacheWrite += e.result.tokenUsage.cacheWriteTokens ?? 0;
+      totalCostUsd += e.result.tokenUsage.costUsd ?? 0;
     }
   }
   const tokenUsage: TokenUsageSummary | undefined =
     (totalInputTokens > 0 || totalOutputTokens > 0)
-      ? { inputTokens: totalInputTokens, outputTokens: totalOutputTokens }
+      ? {
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          cacheReadTokens: totalCacheRead || undefined,
+          cacheWriteTokens: totalCacheWrite || undefined,
+          costUsd: totalCostUsd || undefined,
+        }
       : undefined;
 
   const id = `${projectStartedAt}-${projectName || "project"}`;

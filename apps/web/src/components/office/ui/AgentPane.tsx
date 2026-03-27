@@ -579,7 +579,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           </TooltipTrigger>
           <TooltipContent side="bottom">{cfg.label}</TooltipContent>
         </Tooltip>
-        {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} />}
+        {tokenUsage.inputTokens > 0 && <TokenBadge inputTokens={tokenUsage.inputTokens} outputTokens={tokenUsage.outputTokens} cacheReadTokens={tokenUsage.cacheReadTokens} cacheWriteTokens={tokenUsage.cacheWriteTokens} costUsd={tokenUsage.costUsd} />}
         {!teamId && isOwner && (
           <Tooltip>
             <TooltipTrigger asChild>
@@ -636,7 +636,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             )}
             <span style={{ flex: 1 }} />
             {reviewerOverlay.tokenUsage.inputTokens > 0 && (
-              <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} />
+              <TokenBadge inputTokens={reviewerOverlay.tokenUsage.inputTokens} outputTokens={reviewerOverlay.tokenUsage.outputTokens} cacheReadTokens={reviewerOverlay.tokenUsage.cacheReadTokens} cacheWriteTokens={reviewerOverlay.tokenUsage.cacheWriteTokens} costUsd={reviewerOverlay.tokenUsage.costUsd} />
             )}
             {reviewerOverlay.busy && onDismissReview && (
               <button

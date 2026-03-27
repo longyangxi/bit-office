@@ -244,9 +244,14 @@ export default function ProjectHistory({ isOpen, onClose, onPreview }: {
                       {p.tokenUsage && (p.tokenUsage.inputTokens > 0 || p.tokenUsage.outputTokens > 0) && (
                         <span
                           className="text-[10px] font-mono text-sem-green opacity-60"
-                          title={`Input: ${p.tokenUsage.inputTokens.toLocaleString()} / Output: ${p.tokenUsage.outputTokens.toLocaleString()}`}
+                          title={[
+                            `Input: ${p.tokenUsage.inputTokens.toLocaleString()}`,
+                            `Output: ${p.tokenUsage.outputTokens.toLocaleString()}`,
+                            p.tokenUsage.costUsd ? `Cost: $${p.tokenUsage.costUsd.toFixed(4)}` : "",
+                          ].filter(Boolean).join(" / ")}
                         >
                           {"\u2191"}{formatTokens(p.tokenUsage.inputTokens)} {"\u2193"}{formatTokens(p.tokenUsage.outputTokens)}
+                          {p.tokenUsage.costUsd != null && p.tokenUsage.costUsd > 0 && ` $${p.tokenUsage.costUsd >= 1 ? p.tokenUsage.costUsd.toFixed(2) : p.tokenUsage.costUsd.toFixed(4)}`}
                         </span>
                       )}
                     </div>

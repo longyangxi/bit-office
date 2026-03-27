@@ -22,7 +22,7 @@ export interface TaskResultPayload {
   projectDir?: string;
   previewCmd?: string;
   previewPort?: number;
-  tokenUsage?: { inputTokens: number; outputTokens: number };
+  tokenUsage?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number; costUsd?: number };
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +225,9 @@ export interface TokenUpdateEvent {
   agentId: string;
   inputTokens: number;
   outputTokens: number;
+  cacheReadTokens?: number;
+  cacheWriteTokens?: number;
+  costUsd?: number;
 }
 
 export type OrchestratorEvent =

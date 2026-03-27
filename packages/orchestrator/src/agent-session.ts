@@ -6,6 +6,7 @@ import { CONFIG } from "./config.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
+import { getClaudePricing, getCodexPricing, calculateCost } from "./pricing.js";
 import { removeWorktree, getIsolatedGitEnv } from "./worktree.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { AgentStatus, TaskResultPayload, OrchestratorEvent, LogActivityEvent } from "./types.js";
@@ -208,10 +209,15 @@ export class AgentSession {
   private stderrBuffer = "";
   private taskInputTokens = 0;
   private taskOutputTokens = 0;
+  private taskCacheReadTokens = 0;
+  private taskCacheWriteTokens = 0;
+  private taskCostUsd = 0;
+  /** Model name detected from stream (for cost calculation) */
+  private detectedModel = "";
   /** Files actually written/edited during the current task (tracked from tool_use events) */
   private taskChangedFiles = new Set<string>();
-  /** Dedup same-turn repeated usage in assistant messages */
-  private lastUsageSignature = "";
+  /** Dedup token updates by unique message/request ID instead of signature */
+  private seenTokenMessageIds = new Set<string>();
   private hasHistory: boolean;
   private sessionId: string | null;
   /** Consecutive resume failures (0-output exits). Clear session only after 2+ consecutive failures. */
@@ -353,8 +359,12 @@ export class AgentSession {
     this.stderrBuffer = "";
     this.taskInputTokens = 0;
     this.taskOutputTokens = 0;
+    this.taskCacheReadTokens = 0;
+    this.taskCacheWriteTokens = 0;
+    this.taskCostUsd = 0;
+    this.detectedModel = "";
     this.taskChangedFiles.clear();
-    this.lastUsageSignature = "";
+    this.seenTokenMessageIds.clear();
     this.currentTaskStartedAt = new Date().toISOString();
     this.currentTaskPrompt = prompt;
     this.lastActivityText = null;
@@ -611,24 +621,89 @@ export class AgentSession {
                 saveSessionId(this.agentId, msg.session_id);
                 console.log(`[Agent ${this.name}] Session ID: ${msg.session_id}`);
               }
-              if (msg.type === "assistant" && msg.message?.content) {
-                // Live token usage from per-turn usage (dedup same-turn repeats)
-                if (msg.message.usage) {
-                  const usage = msg.message.usage;
-                  const turnIn = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
-                  const turnOut = usage.output_tokens ?? 0;
-                  const sig = `${turnIn}:${turnOut}`;
-                  if (sig !== this.lastUsageSignature) {
-                    this.lastUsageSignature = sig;
-                    this.taskInputTokens += turnIn;
-                    this.taskOutputTokens += turnOut;
-                    this.onEvent({
-                      type: "token:update",
-                      agentId: this.agentId,
-                      inputTokens: this.taskInputTokens,
-                      outputTokens: this.taskOutputTokens,
-                    });
+              // ── Codex JSONL events (--json mode) ──
+              if (msg.type === "session_meta" && msg.payload?.id) {
+                this.sessionId = msg.payload.id;
+                saveSessionId(this.agentId, msg.payload.id);
+                console.log(`[Agent ${this.name}] Codex session ID: ${msg.payload.id}`);
+                continue;
+              }
+              if (msg.type === "turn_context" && msg.payload?.model) {
+                this.detectedModel = msg.payload.model;
+                continue;
+              }
+              if (msg.type === "event_msg" && msg.payload) {
+                const payloadType = msg.payload.type;
+                if (payloadType === "token_count" && msg.payload.info) {
+                  const usage = msg.payload.info.last_token_usage ?? msg.payload.info.total_token_usage;
+                  if (usage) {
+                    const input = usage.input_tokens ?? 0;
+                    const output = usage.output_tokens ?? 0;
+                    const cached = usage.cached_input_tokens ?? 0;
+                    if (input > 0 || output > 0 || cached > 0) {
+                      this.taskInputTokens += input;
+                      this.taskOutputTokens += output;
+                      this.taskCacheReadTokens += cached;
+                      const model = this.detectedModel || "codex";
+                      const pricing = getCodexPricing(model);
+                      this.taskCostUsd += calculateCost(pricing, input, output, cached, 0);
+                      this.emitTokenUpdate();
+                    }
                   }
+                  continue;
+                }
+                if (payloadType === "agent_message" && msg.payload.message) {
+                  this.stdoutBuffer += msg.payload.message + "\n";
+                  handleTextLine(msg.payload.message, true);
+                  this.persistWorkState("running");
+                  continue;
+                }
+                if (payloadType === "task_complete") {
+                  if (msg.payload.last_agent_message && !this.stdoutBuffer) {
+                    this.stdoutBuffer = msg.payload.last_agent_message;
+                    handleTextLine(msg.payload.last_agent_message, true);
+                  }
+                  continue;
+                }
+                continue;
+              }
+              // Codex response_item: extract assistant text
+              if (msg.type === "response_item" && msg.payload?.role === "assistant" && msg.payload?.content) {
+                for (const block of msg.payload.content) {
+                  if (block.type === "output_text" && block.text) {
+                    this.stdoutBuffer += block.text + "\n";
+                    handleTextLine(block.text, true);
+                    this.persistWorkState("running");
+                  }
+                }
+                continue;
+              }
+
+              // ── Claude stream-json events ──
+              if (msg.type === "assistant" && msg.message?.content) {
+                // Capture model for cost calculation
+                if (msg.message.model && !this.detectedModel) {
+                  this.detectedModel = msg.message.model;
+                }
+                // Dedup by message ID (unique per API call)
+                const msgId = msg.message.id ?? "";
+                const reqId = msg.requestId ?? "";
+                const dedupKey = msgId ? `${msgId}:${reqId}` : "";
+                if (msg.message.usage && (!dedupKey || !this.seenTokenMessageIds.has(dedupKey))) {
+                  if (dedupKey) this.seenTokenMessageIds.add(dedupKey);
+                  const usage = msg.message.usage;
+                  const input = usage.input_tokens ?? 0;
+                  const output = usage.output_tokens ?? 0;
+                  const cacheRead = usage.cache_read_input_tokens ?? 0;
+                  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+                  this.taskInputTokens += input;
+                  this.taskOutputTokens += output;
+                  this.taskCacheReadTokens += cacheRead;
+                  this.taskCacheWriteTokens += cacheWrite;
+                  const model = this.detectedModel || msg.message.model || "claude-3-5-sonnet";
+                  const pricing = getClaudePricing(model);
+                  this.taskCostUsd += calculateCost(pricing, input, output, cacheRead, cacheWrite);
+                  this.emitTokenUpdate();
                 }
                 for (const block of msg.message.content) {
                   if (block.type === "text" && block.text) {
@@ -676,17 +751,18 @@ export class AgentSession {
                 // Result message: authoritative session total from msg.usage
                 if (msg.usage) {
                   const usage = msg.usage;
-                  const totalIn = (usage.input_tokens ?? 0) + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
-                  const totalOut = usage.output_tokens ?? 0;
-                  // Replace live accumulation with authoritative total
-                  this.taskInputTokens = totalIn;
-                  this.taskOutputTokens = totalOut;
-                  this.onEvent({
-                    type: "token:update",
-                    agentId: this.agentId,
-                    inputTokens: this.taskInputTokens,
-                    outputTokens: this.taskOutputTokens,
-                  });
+                  const input = usage.input_tokens ?? 0;
+                  const output = usage.output_tokens ?? 0;
+                  const cacheRead = usage.cache_read_input_tokens ?? 0;
+                  const cacheWrite = usage.cache_creation_input_tokens ?? 0;
+                  this.taskInputTokens = input;
+                  this.taskOutputTokens = output;
+                  this.taskCacheReadTokens = cacheRead;
+                  this.taskCacheWriteTokens = cacheWrite;
+                  const model = this.detectedModel || "claude-3-5-sonnet";
+                  const pricing = getClaudePricing(model);
+                  this.taskCostUsd = calculateCost(pricing, input, output, cacheRead, cacheWrite);
+                  this.emitTokenUpdate();
                 }
                 if (msg.result) {
                   if (!this.stdoutBuffer) {
@@ -817,7 +893,13 @@ export class AgentSession {
             this._lastResult = `done: ${summary.slice(0, 120)}`;
             this.setStatus("done");
             const tokenUsage = (this.taskInputTokens > 0 || this.taskOutputTokens > 0)
-              ? { inputTokens: this.taskInputTokens, outputTokens: this.taskOutputTokens }
+              ? {
+                  inputTokens: this.taskInputTokens,
+                  outputTokens: this.taskOutputTokens,
+                  cacheReadTokens: this.taskCacheReadTokens || undefined,
+                  cacheWriteTokens: this.taskCacheWriteTokens || undefined,
+                  costUsd: this.taskCostUsd || undefined,
+                }
               : undefined;
             this.onEvent({
               type: "task:done",
@@ -1171,6 +1253,18 @@ export class AgentSession {
 
     return new Promise((resolve) => {
       this.pendingApprovals.set(approvalId, { approvalId, resolve });
+    });
+  }
+
+  private emitTokenUpdate() {
+    this.onEvent({
+      type: "token:update",
+      agentId: this.agentId,
+      inputTokens: this.taskInputTokens,
+      outputTokens: this.taskOutputTokens,
+      cacheReadTokens: this.taskCacheReadTokens || undefined,
+      cacheWriteTokens: this.taskCacheWriteTokens || undefined,
+      costUsd: this.taskCostUsd || undefined,
     });
   }
 

@@ -12,12 +12,13 @@ export function createCodexAgent(): AIBackend {
     supportsResume: false,
     supportsAgentType: false,
     supportsNativeWorktree: false,
-    supportsStructuredOutput: false,
+    supportsStructuredOutput: true,
     buildArgs(prompt, opts) {
-      if (opts.fullAccess && !isRoot) {
-        return ["exec", prompt, "--dangerously-bypass-approvals-and-sandbox", "--skip-git-repo-check"];
-      }
-      return ["exec", prompt, "--full-auto", "--skip-git-repo-check"];
+      const base = opts.fullAccess && !isRoot
+        ? ["exec", prompt, "--dangerously-bypass-approvals-and-sandbox", "--skip-git-repo-check"]
+        : ["exec", prompt, "--full-auto", "--skip-git-repo-check"];
+      base.push("--json");
+      return base;
     },
   };
 }

@@ -36,6 +36,9 @@ export const ApprovalNeededEvent = z.object({
 export const TokenUsage = z.object({
   inputTokens: z.number(),
   outputTokens: z.number(),
+  cacheReadTokens: z.number().optional(),
+  cacheWriteTokens: z.number().optional(),
+  costUsd: z.number().optional(),
 });
 
 export const TaskResultPayload = z.object({
@@ -136,6 +139,9 @@ export const TokenUpdateEvent = z.object({
   agentId: z.string(),
   inputTokens: z.number(),
   outputTokens: z.number(),
+  cacheReadTokens: z.number().optional(),
+  cacheWriteTokens: z.number().optional(),
+  costUsd: z.number().optional(),
 });
 
 export const ToolActivityEvent = z.object({
@@ -204,7 +210,7 @@ export const ProjectListEvent = z.object({
     agentNames: z.array(z.string()),
     eventCount: z.number(),
     preview: ProjectPreviewSchema,
-    tokenUsage: z.object({ inputTokens: z.number(), outputTokens: z.number() }).optional(),
+    tokenUsage: TokenUsage.optional(),
     ratings: z.record(z.string(), z.number()).optional(),
   })),
 });
