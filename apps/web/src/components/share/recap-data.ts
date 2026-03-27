@@ -97,6 +97,9 @@ export class RecapCollector {
   private testResult: "passed" | "failed" | "unknown" = "unknown";
   private inputTokens = 0;
   private outputTokens = 0;
+  // Token source tracking to prevent double-counting:
+  // "none" = no tokens yet, "stream" = from TOKEN_UPDATE, "task" = from TASK_DONE, "archive" = set externally
+  private tokenSource: "none" | "stream" | "task" | "archive" = "none";
 
   private reviewRounds: RecapReviewRound[] = [];
   private reviewCount = 0;
@@ -131,27 +134,29 @@ export class RecapCollector {
         const result = ev.result as Record<string, unknown> | undefined;
         if (!result) break;
 
-        // Code stats — keep max across deliveries
+        // Code stats — aggregate across all TASK_DONE deliveries
         const cf = (result.changedFiles as string[] | undefined)?.length ?? 0;
-        if (cf > this.filesChanged) this.filesChanged = cf;
+        this.filesChanged += cf;
 
         if (result.diffStat) {
           this.diffStat = result.diffStat as string;
           const addMatch = this.diffStat.match(/(\d+)\s*insertion/);
           const delMatch = this.diffStat.match(/(\d+)\s*deletion/);
-          if (addMatch) this.linesAdded = Math.max(this.linesAdded, parseInt(addMatch[1], 10));
-          if (delMatch) this.linesRemoved = Math.max(this.linesRemoved, parseInt(delMatch[1], 10));
+          if (addMatch) this.linesAdded += parseInt(addMatch[1], 10);
+          if (delMatch) this.linesRemoved += parseInt(delMatch[1], 10);
         }
 
         // Test result
         const tr = result.testResult as string | undefined;
         if (tr === "passed" || tr === "failed") this.testResult = tr;
 
-        // Tokens
+        // Tokens — only use TASK_DONE tokens if we haven't received TOKEN_UPDATE
+        // events (which are more granular) or archive-level totals
         const tu = result.tokenUsage as { inputTokens?: number; outputTokens?: number } | undefined;
-        if (tu) {
+        if (tu && this.tokenSource !== "stream" && this.tokenSource !== "archive") {
           this.inputTokens += tu.inputTokens ?? 0;
           this.outputTokens += tu.outputTokens ?? 0;
+          this.tokenSource = "task";
         }
 
         // Review detection
@@ -187,7 +192,13 @@ export class RecapCollector {
       }
 
       case "TOKEN_UPDATE": {
-        // Incremental token tracking (more accurate than TASK_DONE aggregation)
+        // Streaming token updates are more granular — switch source and reset
+        // any previously accumulated TASK_DONE tokens to avoid double-counting
+        if (this.tokenSource === "task") {
+          this.inputTokens = 0;
+          this.outputTokens = 0;
+        }
+        this.tokenSource = "stream";
         this.inputTokens += (ev.inputTokens as number) ?? 0;
         this.outputTokens += (ev.outputTokens as number) ?? 0;
         break;
@@ -201,6 +212,7 @@ export class RecapCollector {
   setTokenUsage(input: number, output: number) {
     this.inputTokens = input;
     this.outputTokens = output;
+    this.tokenSource = "archive";
   }
 
   /** Produce the final RecapData snapshot. Cheap — just copies accumulated state. */
@@ -243,6 +255,7 @@ export class RecapCollector {
     this.testResult = "unknown";
     this.inputTokens = 0;
     this.outputTokens = 0;
+    this.tokenSource = "none";
     this.reviewRounds = [];
     this.reviewCount = 0;
     this.milestones = [];
