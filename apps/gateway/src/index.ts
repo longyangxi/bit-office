@@ -577,8 +577,14 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const teamId = `team-${nanoid(6)}`;
 
       // Auto-name pool for team members without short names
-      const autoNames = ["Alex", "Mia", "Leo", "Nova", "Luna", "Rex", "Kai", "Zoe", "Jay", "Sam"];
-      const usedNames = new Set<string>();
+      const autoNames = [
+        "Alex", "Mia", "Leo", "Nova", "Luna", "Rex", "Kai", "Zoe", "Jay", "Sam",
+        "Ava", "Max", "Ivy", "Nix", "Eli", "Rio", "Sky", "Ada", "Fin", "Eve",
+        "Ash", "Ren", "Kit", "Juno", "Sage", "Aria", "Cole", "Tess", "Hugo", "Nell",
+      ];
+      const usedNames = new Set<string>(
+        orc.getAllAgents().map(a => a.name.toLowerCase()),
+      );
 
       for (const defId of allIds) {
         const def = agentDefs.find(a => a.id === defId);
