@@ -1004,13 +1004,21 @@ export default function OfficePage() {
     ? agentList.filter(a => activeProject.agentIds.includes(a.agentId) && !a.agentId.startsWith("reviewer-"))
     : agentList.filter(a => !a.teamId && !a.agentId.startsWith("reviewer-"));
   const activeAgentIds = allAgents.map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
-  // Sync open panes whenever agent list changes — preserve custom drag order
+  // Sync open panes whenever agent list changes — preserve custom drag order (persisted)
   useEffect(() => {
     if (!consoleMode) return;
     const ids = activeAgentIds ? activeAgentIds.split(",") : [];
     setOpenPanes(prev => {
+      // On first load (prev empty), restore saved order from localStorage
+      let base = prev;
+      if (base.length === 0) {
+        try {
+          const saved = localStorage.getItem("office-pane-order");
+          if (saved) base = JSON.parse(saved) as string[];
+        } catch {}
+      }
       const activeSet = new Set(ids);
-      const kept = prev.filter(id => activeSet.has(id));
+      const kept = base.filter(id => activeSet.has(id));
       const keptSet = new Set(kept);
       const added = ids.filter(id => !keptSet.has(id));
       const merged = [...kept, ...added];
@@ -1860,7 +1868,10 @@ export default function OfficePage() {
                   }
                 }}
                 scrollFrozen={scrollFrozen}
-                onReorderPanes={setOpenPanes}
+                onReorderPanes={(order: string[]) => {
+                  setOpenPanes(order);
+                  try { localStorage.setItem("office-pane-order", JSON.stringify(order)); } catch {}
+                }}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
                 showHireButton={isOwner}
