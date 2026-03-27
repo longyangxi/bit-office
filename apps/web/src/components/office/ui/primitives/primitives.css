@@ -1198,3 +1198,61 @@
 .mpv-cell .term-info-bar .drag-handle:hover {
   opacity: 0.7;
 }
+
+/* ============================================================
+   AGENT TAB — .agent-tab (desktop sidebar agent bar)
+   Replaces inline onMouseEnter/Leave hover handlers
+   ============================================================ */
+.agent-tab {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border: 1px solid var(--term-border-dim);
+  cursor: pointer;
+  background: transparent;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
+  position: relative;
+  transition: background var(--duration-normal) ease, border-color var(--duration-normal) ease;
+  outline: none;
+}
+.agent-tab:hover {
+  background: color-mix(in srgb, var(--term-accent) 4%, transparent);
+  border-color: var(--term-border);
+}
+.agent-tab[data-active="true"] {
+  background: color-mix(in srgb, var(--term-accent) 7%, transparent);
+  border-color: var(--term-accent);
+}
+.agent-tab[data-active="true"]:hover {
+  background: color-mix(in srgb, var(--term-accent) 10%, transparent);
+}
+
+/* Hire "+" button in agent bar */
+.agent-tab-hire {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  min-height: 52px;
+  flex-shrink: 0;
+  border: 1px solid var(--term-border-dim);
+  cursor: pointer;
+  background: transparent;
+  color: color-mix(in srgb, var(--term-accent) 80%, transparent);
+  font-size: 22px;
+  font-family: var(--font-mono);
+  font-weight: 300;
+  border-radius: var(--radius-md);
+  transition: all var(--duration-normal) ease;
+  outline: none;
+  line-height: 1;
+}
+.agent-tab-hire:hover {
+  background: color-mix(in srgb, var(--term-accent) 4%, transparent);
+  border-color: var(--term-border);
+  color: var(--term-accent);
+}

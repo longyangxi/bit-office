@@ -40,7 +40,7 @@ function TeamActivityToast({ messages, agents, assetsReady }: {
   return (
     <div style={{
       position: "absolute", top: 0, right: 0, zIndex: 20,
-      width: 300, maxWidth: "40vw",
+      width: "clamp(240px, 30vw, 360px)", maxWidth: "40vw",
       transform: sliding ? "translateX(0)" : "translateX(calc(100% + 16px))",
       opacity: sliding ? 1 : 0,
       transition: "transform 0.35s ease, opacity 0.35s ease",

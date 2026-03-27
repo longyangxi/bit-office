@@ -1616,31 +1616,10 @@ export default function OfficePage() {
                 return (
                   <button
                     key={agent.agentId}
+                    className="agent-tab"
+                    data-active={isActive}
                     onClick={() => { setSelectedAgent(agent.agentId); setChatOpen(true); }}
                     title={`${agent.name} - ${cfg.label}`}
-                    style={{
-                      display: "flex", flexDirection: "row", alignItems: "center",
-                      padding: "6px 12px 6px 6px", gap: 10,
-                      border: `1px solid ${isActive ? TERM_GREEN : TERM_BORDER_DIM}`,
-                      cursor: "pointer",
-                      backgroundColor: isActive ? `${TERM_GREEN}12` : "transparent",
-                      borderRadius: 6,
-                      flexShrink: 0, position: "relative",
-                      transition: "all 0.2s ease",
-                      outline: "none",
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`;
-                        e.currentTarget.style.borderColor = TERM_BORDER;
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive) {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.borderColor = TERM_BORDER_DIM;
-                      }
-                    }}
                   >
                     {/* Avatar with status ring */}
                     <div style={{
@@ -1704,21 +1683,9 @@ export default function OfficePage() {
               {/* Hire "+" button — same size as agent cell (routes to New Project when no active project) */}
               {isOwner && (
                 <button
+                  className="agent-tab-hire"
                   onClick={() => activeProjectId ? setShowHireModal(true) : setShowNewProjectModal(true)}
                   title={activeProjectId ? "Hire Agent" : "New Project"}
-                  style={{
-                    display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                    width: 52, minHeight: 52, flexShrink: 0,
-                    border: `1px solid ${TERM_BORDER_DIM}`,
-                    cursor: "pointer",
-                    backgroundColor: "transparent",
-                    color: `${TERM_GREEN}cc`,
-                    fontSize: 22, fontFamily: TERM_FONT, fontWeight: 300,
-                    borderRadius: 6, transition: "all 0.2s ease",
-                    outline: "none", lineHeight: 1,
-                  }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}0a`; e.currentTarget.style.borderColor = TERM_BORDER; e.currentTarget.style.color = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "transparent"; e.currentTarget.style.borderColor = TERM_BORDER_DIM; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
                 >+</button>
               )}
               {/* Team: hire when no team, stop/fire when team exists */}

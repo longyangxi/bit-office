@@ -53,8 +53,8 @@ function LoadingOverlay({ visible }: { visible: boolean }) {
 
   return (
     <div
-      className="absolute inset-0 z-50 bg-[#0e0c1a] flex flex-col items-center justify-center gap-4 transition-opacity duration-[600ms] ease-out"
-      style={{ opacity, pointerEvents: visible ? "auto" : "none" }}
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-4 transition-opacity duration-[600ms] ease-out"
+      style={{ opacity, pointerEvents: visible ? "auto" : "none", backgroundColor: "var(--term-bg)" }}
     >
       <style>{`
         @keyframes loading-walk-sprite {

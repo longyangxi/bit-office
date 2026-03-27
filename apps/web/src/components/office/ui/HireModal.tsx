@@ -67,20 +67,20 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         title={def.skills ? `Skills: ${def.skills}` : def.role}
         style={{
           display: "flex", flexDirection: "column", alignItems: "center",
-          padding: "10px 6px 8px", position: "relative",
+          padding: "var(--space-3) var(--space-2) var(--space-2)", position: "relative",
           border: `1px solid ${isSelected ? TERM_GREEN : isHovered ? TERM_BORDER : TERM_BORDER + "80"}`,
           borderRadius: "var(--radius-md)",
           backgroundColor: isSelected ? `${TERM_GREEN}12` : isHovered ? `${TERM_TEXT}08` : "transparent",
           cursor: "pointer", textAlign: "center",
           transition: "border-color 0.15s, background-color 0.15s",
-          gap: 6,
+          gap: "var(--space-2)",
         }}
       >
         <div style={{ width: 32, height: 48, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
           <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
         </div>
         <div style={{
-          fontSize: 11, fontFamily: "var(--font-sans)", fontWeight: 500,
+          fontSize: "var(--font-size-xs)", fontFamily: "var(--font-sans)", fontWeight: 500,
           color: isSelected ? TERM_GREEN : TERM_TEXT,
           width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{def.role}</div>
@@ -120,12 +120,12 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         {/* Project context badge */}
         {dirLocked && (
           <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            padding: "6px 10px", marginBottom: 10,
+            display: "flex", alignItems: "center", gap: "var(--space-2)",
+            padding: "var(--space-2) var(--space-3)", marginBottom: "var(--space-3)",
             backgroundColor: "color-mix(in srgb, var(--term-accent) 8%, transparent)",
             border: "1px solid color-mix(in srgb, var(--term-accent) 20%, transparent)",
             borderRadius: "var(--radius-sm)",
-            fontSize: 11, fontFamily: "var(--font-mono)", color: TERM_TEXT,
+            fontSize: "var(--font-size-xs)", fontFamily: "var(--font-mono)", color: TERM_TEXT,
           }}>
             <span style={{ color: TERM_DIM }}>DIR</span>
             <span style={{ color: TERM_TEXT_BRIGHT, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{workDir}</span>
@@ -133,9 +133,9 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         )}
 
         {/* Backend selector */}
-        <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>AI BACKEND</div>
-          <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ marginBottom: "var(--space-3)" }}>
+          <div style={{ fontSize: "var(--font-size-xs)", color: TERM_DIM, marginBottom: "var(--space-1)", fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>AI BACKEND</div>
+          <div style={{ display: "flex", gap: "var(--space-1)" }}>
             {BACKEND_OPTIONS.map((b) => {
               const available = !detectedBackends || detectedBackends.length === 0 || detectedBackends.includes(b.id);
               const isSelected = selectedBackend === b.id;
@@ -144,7 +144,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   key={b.id}
                   onClick={() => setSelectedBackend(b.id)}
                   style={{
-                    flex: 1, padding: "6px 4px", fontSize: 12, fontWeight: 500,
+                    flex: 1, padding: "var(--space-2) var(--space-1)", fontSize: "var(--font-size-sm)", fontWeight: 500,
                     border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}80`,
                     borderRadius: "var(--radius-sm)",
                     backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
@@ -169,14 +169,14 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         {/* Scrollable agent list */}
         <div data-scrollbar style={{ maxHeight: "55vh", overflowY: "auto", overflowX: "hidden" }}>
           {/* Built-in agents */}
-          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>BUILT-IN AGENTS</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
+          <div style={{ fontSize: "var(--font-size-xs)", color: TERM_DIM, marginBottom: "var(--space-1)", fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>BUILT-IN AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
             {builtinAgents.map((def) => renderAgentCard(def, false))}
           </div>
 
           {/* Custom agents + Create New card */}
-          <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 5, fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>MY AGENTS</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginBottom: 12 }}>
+          <div style={{ fontSize: "var(--font-size-xs)", color: TERM_DIM, marginBottom: "var(--space-1)", fontFamily: "var(--font-sans)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" as const }}>MY AGENTS</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
             {customAgents.map((def) => renderAgentCard(def, true))}
             {/* "+ Create New" card */}
             <button
@@ -220,16 +220,17 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
             <div
               style={{
                 width: 360, maxWidth: "90vw",
-                padding: "16px",
+                padding: "var(--space-4)",
                 border: `1px solid ${TERM_GREEN}50`,
+                borderRadius: "var(--radius-lg)",
                 backgroundColor: TERM_BG,
-                boxShadow: `0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px ${TERM_GREEN}15`,
-                display: "flex", flexDirection: "column", gap: 10,
+                boxShadow: "var(--shadow-xl)",
+                display: "flex", flexDirection: "column", gap: "var(--space-3)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 <SpriteAvatar palette={selectedDef.palette} zoom={2} ready={assetsReady} />
-                <div style={{ fontSize: 13, color: TERM_GREEN, fontFamily: "var(--font-mono)", fontWeight: 600, flex: 1 }}>
+                <div style={{ fontSize: "var(--font-size-base)", color: TERM_GREEN, fontFamily: "var(--font-mono)", fontWeight: 600, flex: 1 }}>
                   {selectedDef.role}
                 </div>
                 <button
@@ -239,10 +240,10 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               </div>
               {/* Working directory */}
               <div>
-                <div style={{ fontSize: 11, color: TERM_DIM, marginBottom: 3, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
-                  WORKING DIRECTORY{dirLocked && <span style={{ opacity: 0.5, marginLeft: 6 }}>(project)</span>}
+                <div style={{ fontSize: "var(--font-size-xs)", color: TERM_DIM, marginBottom: "var(--space-1)", fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>
+                  WORKING DIRECTORY{dirLocked && <span style={{ opacity: 0.5, marginLeft: "var(--space-2)" }}>(project)</span>}
                 </div>
-                <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <div style={{ display: "flex", gap: "var(--space-1)", alignItems: "center" }}>
                   <TermInput
                     type="text"
                     value={workDir}
@@ -270,8 +271,8 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               </div>
               {/* Name */}
               <div>
-                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                  <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>NAME</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-1)" }}>
+                  <span style={{ fontSize: "var(--font-size-xs)", color: TERM_DIM, fontFamily: "var(--font-mono)", letterSpacing: "0.05em" }}>NAME</span>
                   <button
                     onClick={() => setHireName(generateRandomName())}
                     title="Randomize name"
