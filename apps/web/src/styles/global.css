@@ -45,7 +45,7 @@ html {
   --font-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   --font-size-base: 13px;
-  --font-size-chat: 14px;   /* readable size for chat messages / body text */
+  --font-size-chat: 13px;   /* chat messages / body text — matches terminal aesthetic */
   --font-size-sm: 12px;
   --font-size-xs: 11px;
 
