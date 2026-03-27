@@ -198,7 +198,7 @@ export class TokenTracker {
       return content;
     }
 
-    // ── Codex: event_msg ──
+    // ── Codex: event_msg (legacy format) ──
     if (msg.type === "event_msg") {
       const payload = msg.payload as Record<string, unknown> | undefined;
       if (!payload) return content;
@@ -237,7 +237,7 @@ export class TokenTracker {
       return content;
     }
 
-    // ── Codex: response_item (assistant text) ──
+    // ── Codex: response_item (legacy assistant text) ──
     if (msg.type === "response_item") {
       const payload = msg.payload as Record<string, unknown> | undefined;
       if (payload?.role === "assistant" && Array.isArray(payload.content)) {
@@ -247,6 +247,93 @@ export class TokenTracker {
           }
         }
       }
+      return content;
+    }
+
+    // ── Codex v0.105+: Responses API streaming format ──
+    // thread.started → session ID
+    if (msg.type === "thread.started") {
+      const threadId = msg.thread_id as string | undefined;
+      if (threadId) content.sessionId = threadId;
+      return content;
+    }
+
+    // item.completed → reasoning or message content
+    if (msg.type === "item.completed") {
+      const item = msg.item as Record<string, unknown> | undefined;
+      if (!item) return content;
+      const itemType = item.type as string | undefined;
+
+      if (itemType === "reasoning" && typeof item.text === "string") {
+        // Reasoning text — treat as thinking block (visible in log but not main output)
+        content.thinkingBlocks.push(item.text);
+        return content;
+      }
+
+      if (itemType === "message" && Array.isArray(item.content)) {
+        for (const block of item.content as Record<string, unknown>[]) {
+          if (block.type === "output_text" && typeof block.text === "string") {
+            content.textBlocks.push(block.text);
+          } else if (block.type === "text" && typeof block.text === "string") {
+            content.textBlocks.push(block.text);
+          }
+        }
+        return content;
+      }
+
+      // function_call_output items — track tool results
+      if (itemType === "function_call" && item.name) {
+        content.toolUses.push({
+          name: item.name as string,
+          input: (typeof item.arguments === "string" ? (() => { try { return JSON.parse(item.arguments as string); } catch { return undefined; } })() : undefined),
+        });
+        return content;
+      }
+
+      return content;
+    }
+
+    // response.completed → token usage (authoritative totals for the turn)
+    if (msg.type === "response.completed") {
+      const response = msg.response as Record<string, unknown> | undefined;
+      if (response) {
+        if (response.model && !this.detectedModel) {
+          this.detectedModel = response.model as string;
+          content.model = this.detectedModel;
+        }
+        const usage = response.usage as Record<string, unknown> | undefined;
+        if (usage) {
+          const input = (usage.input_tokens as number) ?? 0;
+          const output = (usage.output_tokens as number) ?? 0;
+          const cached = (usage.input_tokens_details as Record<string, unknown> | undefined)?.cached_tokens as number ?? 0;
+          if (input > 0 || output > 0) {
+            this.inputTokens += input;
+            this.outputTokens += output;
+            this.cacheReadTokens += cached;
+            const pricing = findPricing(this.detectedModel || "codex", CODEX_PRICING, CODEX_DEFAULT);
+            this.costUsd += costFor(pricing, input, output, cached, 0);
+            this._updated = true;
+          }
+        }
+        // Extract final output text from response output array
+        const output = response.output as Record<string, unknown>[] | undefined;
+        if (Array.isArray(output)) {
+          for (const item of output) {
+            if (item.type === "message" && Array.isArray(item.content)) {
+              for (const block of item.content as Record<string, unknown>[]) {
+                if ((block.type === "output_text" || block.type === "text") && typeof block.text === "string") {
+                  content.textBlocks.push(block.text);
+                }
+              }
+            }
+          }
+        }
+      }
+      return content;
+    }
+
+    // turn.completed — may contain usage summary
+    if (msg.type === "turn.completed") {
       return content;
     }
 
