@@ -144,6 +144,7 @@ interface OfficeStore {
   // ── Project-centric state ──
   projects: Map<string, Project>;
   activeProjectId: string | null;
+  pendingTeamProjectId: string | null;
   projectList: ProjectSummary[];
   viewingProjectId: string | null;
   viewingProjectEvents: GatewayEvent[];
@@ -414,6 +415,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   suggestions: [],
   projects: new Map(),
   activeProjectId: null,
+  pendingTeamProjectId: null,
   projectList: [],
   viewingProjectId: null,
   viewingProjectEvents: [],
@@ -668,19 +670,14 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             }
             saveToStorage(agents);
           }
-          // Auto-associate team agents with the active project (only if not already in any project)
-          if (event.teamId && state.activeProjectId) {
-            const alreadyInProject = Array.from(state.projects.values()).some(
-              p => p.status === "active" && p.agentIds.includes(event.agentId),
-            );
-            if (!alreadyInProject) {
-              const proj = state.projects.get(state.activeProjectId);
-              if (proj && !proj.agentIds.includes(event.agentId)) {
-                const projects = new Map(state.projects);
-                projects.set(proj.id, { ...proj, agentIds: [...proj.agentIds, event.agentId] });
-                saveProjects(projects);
-                return { agents, projects };
-              }
+          // Auto-associate team agents with the pending team project (set by handleCreateTeam)
+          if (event.teamId && state.pendingTeamProjectId) {
+            const proj = state.projects.get(state.pendingTeamProjectId);
+            if (proj && !proj.agentIds.includes(event.agentId)) {
+              const projects = new Map(state.projects);
+              projects.set(proj.id, { ...proj, agentIds: [...proj.agentIds, event.agentId] });
+              saveProjects(projects);
+              return { agents, projects };
             }
           }
           break;
@@ -1078,7 +1075,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           const teamPhases = new Map(state.teamPhases);
           teamPhases.set(event.teamId, { phase: event.phase, leadAgentId: event.leadAgentId });
           saveTeamPhases(teamPhases);
-          return { agents, teamPhases };
+          return { agents, teamPhases, pendingTeamProjectId: null };
         }
         case "SUGGESTION": {
           const newSuggestions = [...state.suggestions, { text: event.text, author: event.author, timestamp: event.timestamp }];

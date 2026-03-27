@@ -671,6 +671,10 @@ export default function OfficePage() {
   }, [agents]); // addAgentToProject, getActiveProject are stable refs from getState()
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
+    const proj = getActiveProject();
+    if (proj) {
+      useOfficeStore.setState({ pendingTeamProjectId: proj.id });
+    }
     sendCommand({ type: "CREATE_TEAM", leadId, memberIds, backends, workDir });
     setShowHireTeamModal(false);
     setSelectedAgent(null);
