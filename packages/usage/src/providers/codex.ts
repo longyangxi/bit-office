@@ -20,15 +20,25 @@ interface CodexAuth {
   expires_at?: number;
 }
 
+interface WhamWindowSnapshot {
+  used_percent?: number;
+  reset_at?: number;
+  limit_window_seconds?: number;
+}
+
+interface WhamCredits {
+  has_credits?: boolean;
+  unlimited?: boolean;
+  balance?: number;
+}
+
 interface WhamUsageResponse {
-  quotas?: Array<{
-    quota_type?: string;
-    used_percent?: number;
-    resets_at?: string;
-    reset_description?: string;
-    spent_usd?: number;
-    limit_usd?: number;
-  }>;
+  plan_type?: string;
+  rate_limit?: {
+    primary_window?: WhamWindowSnapshot;
+    secondary_window?: WhamWindowSnapshot;
+  };
+  credits?: WhamCredits;
 }
 
 export class CodexProvider implements UsageProvider {
@@ -87,26 +97,42 @@ export class CodexProvider implements UsageProvider {
     const res = await fetch("https://chatgpt.com/backend-api/wham/usage", {
       headers: {
         Authorization: `Bearer ${auth.access_token}`,
-        "Content-Type": "application/json",
+        Accept: "application/json",
+        "User-Agent": "CodexBar",
       },
     });
 
     if (!res.ok) return [];
 
     const data = (await res.json()) as WhamUsageResponse;
-    if (!data.quotas || !Array.isArray(data.quotas)) return [];
+    const quotas: QuotaInfo[] = [];
 
-    return data.quotas.map((q) => {
-      const info: QuotaInfo = {
-        label: formatQuotaLabel(q.quota_type),
-        usedPercent: q.used_percent ?? 0,
-        resetsAt: q.resets_at,
-        resetDescription: q.reset_description,
-      };
-      if (q.spent_usd != null) info.spentUsd = q.spent_usd;
-      if (q.limit_usd != null) info.limitUsd = q.limit_usd;
-      return info;
-    });
+    if (data.rate_limit?.primary_window) {
+      quotas.push(windowToQuota("Session", data.rate_limit.primary_window));
+    }
+    if (data.rate_limit?.secondary_window) {
+      const q = windowToQuota("Weekly", data.rate_limit.secondary_window);
+      if (q.resetsAt) {
+        const windowDays = (data.rate_limit.secondary_window.limit_window_seconds ?? 604800) / 86400;
+        q.pacePercent = calculatePace(q.usedPercent, q.resetsAt, windowDays);
+        q.paceDescription =
+          q.pacePercent < 0
+            ? `${Math.abs(q.pacePercent).toFixed(0)}% under budget`
+            : `${q.pacePercent.toFixed(0)}% over budget`;
+      }
+      quotas.push(q);
+    }
+    if (data.credits?.has_credits && data.credits.balance != null) {
+      quotas.push({
+        label: "Credits",
+        usedPercent: 0,
+        resetDescription: data.credits.unlimited
+          ? "Unlimited"
+          : `$${data.credits.balance.toFixed(2)} remaining`,
+      });
+    }
+
+    return quotas;
   }
 
   private async scanLogs(
@@ -338,13 +364,39 @@ function processJsonlFile(
   });
 }
 
-function formatQuotaLabel(type?: string): string {
-  if (!type) return "Unknown";
-  const map: Record<string, string> = {
-    primary: "Session",
-    "5h": "Session",
-    secondary: "Weekly",
-    credits: "Credits",
+function windowToQuota(label: string, w: WhamWindowSnapshot): QuotaInfo {
+  const resetEpoch = w.reset_at ? w.reset_at * 1000 : undefined;
+  let resetsAt: string | undefined;
+  let resetDescription: string | undefined;
+
+  if (resetEpoch) {
+    resetsAt = new Date(resetEpoch).toISOString();
+    const diffMs = resetEpoch - Date.now();
+    if (diffMs > 0) {
+      const hours = Math.floor(diffMs / 3_600_000);
+      const mins = Math.floor((diffMs % 3_600_000) / 60_000);
+      resetDescription = hours > 0 ? `Resets in ${hours}h ${mins}m` : `Resets in ${mins}m`;
+    }
+  }
+
+  return {
+    label,
+    usedPercent: w.used_percent ?? 0,
+    resetsAt,
+    resetDescription,
   };
-  return map[type] ?? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function calculatePace(
+  usedPercent: number,
+  resetsAt: string,
+  windowDays: number,
+): number {
+  const now = Date.now();
+  const reset = new Date(resetsAt).getTime();
+  const windowMs = windowDays * 24 * 60 * 60 * 1000;
+  const elapsed = windowMs - (reset - now);
+  if (elapsed <= 0) return 0;
+  const expectedPercent = (elapsed / windowMs) * 100;
+  return usedPercent - expectedPercent;
 }

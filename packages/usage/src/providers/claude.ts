@@ -1,6 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
+import { execFile } from "node:child_process";
 import type {
   UsageProvider,
   ScanOptions,
@@ -9,25 +10,34 @@ import type {
   DailyUsage,
   QuotaInfo,
   LocalUsage,
+  AccountInfo,
 } from "../types.js";
 import { getClaudePricing, calculateCost } from "../pricing.js";
 
 const CLAUDE_DIRS = [".claude/projects", ".config/claude/projects"];
+const KEYCHAIN_SERVICE = "Claude Code-credentials";
 
-interface ClaudeCredentials {
-  accessToken?: string;
-  expiresAt?: string;
+interface OAuthUsageWindow {
+  utilization?: number;
+  resets_at?: string;
 }
 
-interface OAuthQuotaResponse {
-  quotas?: Array<{
-    quota_type?: string;
-    used_percent?: number;
-    resets_at?: string;
-    reset_description?: string;
-    spent_usd?: number;
-    limit_usd?: number;
-  }>;
+interface OAuthExtraUsage {
+  is_enabled?: boolean;
+  monthly_limit?: number;
+  used_credits?: number;
+  utilization?: number;
+  currency?: string;
+}
+
+interface OAuthUsageResponse {
+  five_hour?: OAuthUsageWindow;
+  seven_day?: OAuthUsageWindow;
+  seven_day_oauth_apps?: OAuthUsageWindow;
+  seven_day_opus?: OAuthUsageWindow;
+  seven_day_sonnet?: OAuthUsageWindow;
+  iguana_necktie?: OAuthUsageWindow;
+  extra_usage?: OAuthExtraUsage;
 }
 
 export class ClaudeProvider implements UsageProvider {
@@ -62,68 +72,108 @@ export class ClaudeProvider implements UsageProvider {
       base.lastActivity = logsResult.value.lastActivity;
     }
 
-    if (quotaResult.status === "fulfilled" && quotaResult.value.length > 0) {
-      base.quotas = quotaResult.value;
-      base.quota = quotaResult.value[0];
+    if (quotaResult.status === "fulfilled" && quotaResult.value.quotas.length > 0) {
+      base.quotas = quotaResult.value.quotas;
+      base.quota = quotaResult.value.quotas[0];
+      if (quotaResult.value.account) base.account = quotaResult.value.account;
     }
 
     return base;
   }
 
-  private async fetchQuota(opts: ScanOptions): Promise<QuotaInfo[]> {
+  private async readAccessToken(opts: ScanOptions): Promise<{ accessToken: string; plan?: string; tier?: string } | null> {
     const home = opts.homeDir ?? process.env.HOME ?? "";
+
+    // 1. Try credentials file first
     const credPath = path.join(home, ".claude", ".credentials.json");
-
-    if (!fs.existsSync(credPath)) return [];
-
-    let creds: ClaudeCredentials;
-    try {
-      creds = JSON.parse(fs.readFileSync(credPath, "utf-8"));
-    } catch {
-      return [];
+    if (fs.existsSync(credPath)) {
+      try {
+        const raw = JSON.parse(fs.readFileSync(credPath, "utf-8"));
+        const oauth = raw?.claudeAiOauth;
+        if (oauth?.accessToken) {
+          return {
+            accessToken: oauth.accessToken,
+            plan: oauth.subscriptionType,
+            tier: oauth.rateLimitTier,
+          };
+        }
+      } catch { /* fall through */ }
     }
 
-    if (!creds.accessToken) return [];
+    // 2. Try macOS Keychain via /usr/bin/security
+    if (process.platform === "darwin") {
+      try {
+        const keychainJson = await runSecurityCLI(KEYCHAIN_SERVICE);
+        if (keychainJson) {
+          const raw = JSON.parse(keychainJson);
+          const oauth = raw?.claudeAiOauth;
+          if (oauth?.accessToken) {
+            return {
+              accessToken: oauth.accessToken,
+              plan: oauth.subscriptionType,
+              tier: oauth.rateLimitTier,
+            };
+          }
+        }
+      } catch { /* fall through */ }
+    }
+
+    return null;
+  }
+
+  private async fetchQuota(opts: ScanOptions): Promise<{ quotas: QuotaInfo[]; account?: AccountInfo }> {
+    const creds = await this.readAccessToken(opts);
+    if (!creds) return { quotas: [] };
 
     const res = await fetch("https://api.anthropic.com/api/oauth/usage", {
       headers: {
         Authorization: `Bearer ${creds.accessToken}`,
-        "anthropic-beta": "oauth-usage-2025-06-01",
+        Accept: "application/json",
         "Content-Type": "application/json",
+        "anthropic-beta": "oauth-2025-04-20",
       },
     });
 
-    if (!res.ok) return [];
+    if (!res.ok) return { quotas: [] };
 
-    const data = (await res.json()) as OAuthQuotaResponse;
-    if (!data.quotas || !Array.isArray(data.quotas)) return [];
+    const data = (await res.json()) as OAuthUsageResponse;
+    const quotas: QuotaInfo[] = [];
 
-    const quotas: QuotaInfo[] = data.quotas.map((q) => {
-      const info: QuotaInfo = {
-        label: formatQuotaLabel(q.quota_type),
-        usedPercent: q.used_percent ?? 0,
-        resetsAt: q.resets_at,
-        resetDescription: q.reset_description,
-      };
-
-      if (q.spent_usd != null) info.spentUsd = q.spent_usd;
-      if (q.limit_usd != null) info.limitUsd = q.limit_usd;
-
-      return info;
-    });
-
-    const weekly = quotas.find(
-      (q) => q.label === "Weekly" || q.label.includes("7-day"),
-    );
-    if (weekly?.resetsAt) {
-      weekly.pacePercent = calculatePace(weekly.usedPercent, weekly.resetsAt, 7);
-      weekly.paceDescription =
-        weekly.pacePercent < 0
-          ? `${Math.abs(weekly.pacePercent).toFixed(0)}% under budget`
-          : `${weekly.pacePercent.toFixed(0)}% over budget`;
+    if (data.five_hour) {
+      quotas.push(windowToQuota("Session (5h)", data.five_hour));
+    }
+    if (data.seven_day) {
+      const q = windowToQuota("Weekly", data.seven_day);
+      if (q.resetsAt) {
+        q.pacePercent = calculatePace(q.usedPercent, q.resetsAt, 7);
+        q.paceDescription =
+          q.pacePercent < 0
+            ? `${Math.abs(q.pacePercent).toFixed(0)}% under budget`
+            : `${q.pacePercent.toFixed(0)}% over budget`;
+      }
+      quotas.push(q);
+    }
+    if (data.seven_day_sonnet) {
+      quotas.push(windowToQuota("Sonnet (7d)", data.seven_day_sonnet));
+    }
+    if (data.seven_day_opus) {
+      quotas.push(windowToQuota("Opus (7d)", data.seven_day_opus));
+    }
+    if (data.extra_usage?.is_enabled) {
+      const eu = data.extra_usage;
+      quotas.push({
+        label: "Extra usage",
+        usedPercent: (eu.utilization ?? 0) * 100,
+        spentUsd: eu.used_credits ?? 0,
+        limitUsd: eu.monthly_limit ?? 0,
+      });
     }
 
-    return quotas;
+    const account: AccountInfo | undefined = creds.plan
+      ? { plan: creds.plan, tier: creds.tier }
+      : undefined;
+
+    return { quotas, account };
   }
 
   private async scanLogs(
@@ -310,16 +360,24 @@ function processJsonlFile(
   });
 }
 
-function formatQuotaLabel(type?: string): string {
-  if (!type) return "Unknown";
-  const map: Record<string, string> = {
-    five_hour: "Session",
-    seven_day: "Weekly",
-    sonnet: "Sonnet",
-    opus: "Opus",
-    extra_usage: "Extra usage",
+function windowToQuota(label: string, w: OAuthUsageWindow): QuotaInfo {
+  const resetDate = w.resets_at ? new Date(w.resets_at) : undefined;
+  let resetDescription: string | undefined;
+  if (resetDate && !isNaN(resetDate.getTime())) {
+    const diffMs = resetDate.getTime() - Date.now();
+    if (diffMs > 0) {
+      const hours = Math.floor(diffMs / 3_600_000);
+      const mins = Math.floor((diffMs % 3_600_000) / 60_000);
+      resetDescription = hours > 0 ? `Resets in ${hours}h ${mins}m` : `Resets in ${mins}m`;
+    }
+  }
+
+  return {
+    label,
+    usedPercent: (w.utilization ?? 0) * 100,
+    resetsAt: w.resets_at,
+    resetDescription,
   };
-  return map[type] ?? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function calculatePace(
@@ -334,4 +392,21 @@ function calculatePace(
   if (elapsed <= 0) return 0;
   const expectedPercent = (elapsed / windowMs) * 100;
   return usedPercent - expectedPercent;
+}
+
+function runSecurityCLI(service: string): Promise<string | null> {
+  return new Promise((resolve) => {
+    execFile(
+      "/usr/bin/security",
+      ["find-generic-password", "-s", service, "-w"],
+      { timeout: 5000 },
+      (err, stdout) => {
+        if (err || !stdout?.trim()) {
+          resolve(null);
+        } else {
+          resolve(stdout.trim());
+        }
+      },
+    );
+  });
 }
