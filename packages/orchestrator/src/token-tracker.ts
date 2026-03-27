@@ -315,19 +315,9 @@ export class TokenTracker {
             this._updated = true;
           }
         }
-        // Extract final output text from response output array
-        const output = response.output as Record<string, unknown>[] | undefined;
-        if (Array.isArray(output)) {
-          for (const item of output) {
-            if (item.type === "message" && Array.isArray(item.content)) {
-              for (const block of item.content as Record<string, unknown>[]) {
-                if ((block.type === "output_text" || block.type === "text") && typeof block.text === "string") {
-                  content.textBlocks.push(block.text);
-                }
-              }
-            }
-          }
-        }
+        // NOTE: text extraction skipped here — item.completed events
+        // already surface textBlocks during the turn, so extracting
+        // from response.output[] would duplicate content.
       }
       return content;
     }
