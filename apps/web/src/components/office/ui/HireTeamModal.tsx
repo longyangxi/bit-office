@@ -104,7 +104,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
           >
             <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 15, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
+              <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
                 {def.name} <span style={{ color: TERM_SEM_YELLOW, fontSize: 11, fontFamily: "var(--font-mono)" }}>{label}</span>
               </div>
               <div style={{ fontSize: 13, color: TERM_DIM }}>{def.role}</div>
@@ -146,7 +146,7 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 }}
               >
                 <SpriteAvatar palette={def.palette} zoom={2} ready={assetsReady} />
-                <div style={{ fontSize: 14, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, marginTop: 6, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.name}</div>
                 <div style={{ fontSize: 12, color: TERM_DIM, marginTop: 2, width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{def.role}</div>
                 <select
                   value={backends[def.id] ?? "claude"}

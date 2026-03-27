@@ -1518,7 +1518,7 @@ export default function OfficePage() {
               borderLeft: `1px solid ${TERM_ACCENT}40`,
               borderRight: "none",
               boxShadow: "-2px 0 8px rgba(0,0,0,0.3)",
-              color: TERM_ACCENT, fontSize: 14,
+              color: TERM_ACCENT, fontSize: TERM_SIZE,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_ACCENT; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_ACCENT; }}
@@ -1711,7 +1711,7 @@ export default function OfficePage() {
                   }}
                   onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}25`; e.currentTarget.style.borderColor = `${TERM_ACCENT}90`; e.currentTarget.style.color = TERM_ACCENT; }}
                   onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}12`; e.currentTarget.style.borderColor = `${TERM_ACCENT}50`; e.currentTarget.style.color = `${TERM_ACCENT}cc`; }}
-                ><span style={{ fontSize: 15, lineHeight: 1 }}>+</span> hire team</button>
+                ><span style={{ fontSize: 14, lineHeight: 1 }}>+</span> hire team</button>
               )}
               {isOwner && hasTeam && teamBusy && (
                 <button onClick={handleStopTeam} title="Stop Team Work"
@@ -1988,7 +1988,7 @@ export default function OfficePage() {
               style={{
                 width: 44, height: 44, flexShrink: 0,
                 border: `1px solid ${TERM_ACCENT}60`, backgroundColor: `${TERM_ACCENT}1e`,
-                color: TERM_ACCENT, fontSize: 22, cursor: "pointer",
+                color: TERM_ACCENT, fontSize: 18, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >+</button>
@@ -2061,7 +2061,7 @@ export default function OfficePage() {
                 width: "100%", textAlign: "left",
               }}
             >
-              <span aria-hidden="true" style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
+              <span aria-hidden="true" style={{ fontSize: 14, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
               <SpriteAvatar palette={agentState.palette ?? 0} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
@@ -2213,7 +2213,7 @@ export default function OfficePage() {
                         maxLength={500}
                         style={{
                           flex: 1, padding: "9px 12px", border: "1px solid #7c3aed40",
-                          backgroundColor: TERM_BG, color: "#c084fc", fontSize: 14, outline: "none",
+                          backgroundColor: TERM_BG, color: "#c084fc", fontSize: TERM_SIZE, outline: "none",
                         }}
                       />
                       <button
@@ -2262,7 +2262,7 @@ export default function OfficePage() {
                           placeholder="Send a message..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER_DIM}`,
-                            backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: 14, outline: "none",
+                            backgroundColor: TERM_BG, color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
                           }}
                         />
                         <button
@@ -2305,7 +2305,7 @@ export default function OfficePage() {
                           placeholder="Or give feedback..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
+                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
                           }}
                         />
                         <button
@@ -2332,7 +2332,7 @@ export default function OfficePage() {
                           placeholder="Request changes..."
                           style={{
                             flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
+                            backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
                           }}
                         />
                         <button
@@ -2374,7 +2374,7 @@ export default function OfficePage() {
                         placeholder="Send a message..."
                         style={{
                           flex: 1, padding: "9px 12px", border: `1px solid ${TERM_BORDER}`,
-                          backgroundColor: TERM_BG, color: "#eddcb8", fontSize: 14, outline: "none",
+                          backgroundColor: TERM_BG, color: "#eddcb8", fontSize: TERM_SIZE, outline: "none",
                         }}
                         autoFocus
                       />
@@ -2413,7 +2413,7 @@ export default function OfficePage() {
               backgroundColor: TERM_PANEL, cursor: "pointer",
             }}
           >
-            <span style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
+            <span style={{ fontSize: 14, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
             <div style={{ fontSize: 13, fontWeight: 700, color: "#eddcb8" }}>Team Chat</div>
             <span style={{ fontSize: 11, color: TERM_DIM, fontFamily: "monospace" }}>{teamMessages.length} messages</span>
           </div>
@@ -2545,7 +2545,7 @@ export default function OfficePage() {
             backgroundColor: TERM_PANEL, border: `1px solid ${TERM_BORDER}`,
             padding: 24, maxWidth: 420, width: "90%",
           }} onClick={(e) => e.stopPropagation()}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#eddcb8", marginBottom: 12 }}>Share Link Created</div>
+            <div style={{ fontSize: TERM_SIZE, fontWeight: 700, color: "#eddcb8", marginBottom: 12 }}>Share Link Created</div>
             <div style={{ fontSize: 12, color: TERM_DIM, marginBottom: 8 }}>Link copied to clipboard!</div>
             <input
               readOnly

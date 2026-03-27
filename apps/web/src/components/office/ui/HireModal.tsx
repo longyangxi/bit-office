@@ -88,13 +88,13 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
           <span style={{ position: "absolute", top: 3, right: 3, display: "flex", gap: 2, alignItems: "center" }}>
             <span
               onClick={(e) => { e.stopPropagation(); onEdit(def); }}
-              style={{ fontSize: 14, color: TERM_DIM, cursor: "pointer", padding: "2px 3px", lineHeight: 1 }}
+              style={{ fontSize: 13, color: TERM_DIM, cursor: "pointer", padding: "2px 3px", lineHeight: 1 }}
               title="Edit"
             >&#9998;</span>
             {showDelete && (
               <span
                 onClick={(e) => { e.stopPropagation(); onDelete(def.id); }}
-                style={{ fontSize: 15, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 3px", fontWeight: 700, lineHeight: 1 }}
+                style={{ fontSize: 14, color: TERM_SEM_RED, cursor: "pointer", padding: "2px 3px", fontWeight: 700, lineHeight: 1 }}
                 title="Delete"
               >&times;</span>
             )}
@@ -194,7 +194,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_ACCENT; e.currentTarget.style.color = TERM_ACCENT; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER + "80"; e.currentTarget.style.color = TERM_DIM; }}
             >
-              <span style={{ fontSize: 22, lineHeight: 1, fontWeight: 300 }}>+</span>
+              <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 300 }}>+</span>
               <span style={{ fontSize: 11, fontFamily: "var(--font-sans)", fontWeight: 500 }}>Create New</span>
             </button>
           </div>
@@ -235,7 +235,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 </div>
                 <button
                   onClick={() => setSelectedDef(null)}
-                  style={{ background: "none", border: "none", cursor: "pointer", color: TERM_DIM, fontSize: 18, padding: "2px 4px", lineHeight: 1 }}
+                  style={{ background: "none", border: "none", cursor: "pointer", color: TERM_DIM, fontSize: 16, padding: "2px 4px", lineHeight: 1 }}
                 >&times;</button>
               </div>
               {/* Working directory */}

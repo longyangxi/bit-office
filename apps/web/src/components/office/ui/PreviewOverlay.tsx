@@ -177,7 +177,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
         padding: "0 12px", backgroundColor: TERM_BG, gap: 8,
       }}>
         <span style={{
-          flex: 1, color: "#888", fontSize: 14,
+          flex: 1, color: "#888", fontSize: 13,
           fontFamily: "monospace", overflow: "hidden",
           textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{url}</span>
@@ -203,7 +203,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
           onClick={handleClose}
           style={{
             background: "none", border: "1px solid #444",
-            color: "#aaa", fontSize: 17, cursor: "pointer",
+            color: "#aaa", fontSize: 16, cursor: "pointer",
             borderRadius: 6, width: 28, height: 28,
             display: "flex", alignItems: "center", justifyContent: "center",
           }}
@@ -220,7 +220,7 @@ function PreviewOverlay({ url, onClose, savedRatings, submitted, onRate }: {
               borderTopColor: "#818cf8", borderRadius: "50%",
               animation: "preview-spin 0.8s linear infinite",
             }} />
-            <div style={{ color: "#888", fontSize: 15 }}>Starting server...</div>
+            <div style={{ color: "#888", fontSize: 13 }}>Starting server...</div>
             <style>{`@keyframes preview-spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
