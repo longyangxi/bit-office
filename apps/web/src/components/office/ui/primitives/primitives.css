@@ -440,7 +440,7 @@
   width: 32px;
   height: 32px;
   margin-bottom: 4px;
-  opacity: 0.15;
+  opacity: 0.2;
   background: var(--term-green);
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'%3E%3Cpath d='M8 9h8M8 13h5M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'/%3E%3C/svg%3E");
   mask-size: contain;
@@ -453,6 +453,7 @@
   font-size: 13px;
   color: var(--term-green-dim);
   letter-spacing: 0.02em;
+  opacity: 0.45;
 }
 .te-msg::before {
   content: "> ";

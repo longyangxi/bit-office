@@ -2113,7 +2113,7 @@ export default function OfficePage() {
 
               {agentState.messages.length === 0 && (
                 <div style={{ textAlign: "center", color: TERM_DIM, padding: 20, fontSize: 13, fontFamily: "monospace" }}>
-                  {mobileIsTeamMember ? "This agent is managed by the Team Lead" : "Send a message to get started"}
+                  {mobileIsTeamMember ? "This agent is managed by the Team Lead" : ""}
                 </div>
               )}
 

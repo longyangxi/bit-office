@@ -206,7 +206,6 @@ const ChatMessageList = memo(function ChatMessageList({
       {messages.length === 0 && (
         <TermEmpty
           message={isTeamMember ? "managed by Team Lead" : "no messages yet"}
-          hint={isTeamMember ? undefined : "send a message to get started"}
         />
       )}
 
