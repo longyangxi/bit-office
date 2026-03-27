@@ -324,6 +324,8 @@ export interface OrchestratorOptions {
   sandboxMode?: "full" | "safe";
   /** Optional notifier plugin for the reaction engine's "notify" action */
   notifier?: import("./notifier/types.js").Notifier;
+  /** Auto-review dev work in team mode (default: false, set to true when team has a reviewer) */
+  autoReview?: boolean;
 }
 
 export interface CreateAgentOpts {
@@ -345,6 +347,10 @@ export interface CreateTeamOpts {
   leadPresetIndex: number;
   memberPresets: Array<{ name: string; role: string; personality?: string; palette?: number }>;
   backends?: Record<string, string>;
+  /** Auto-review dev work when complete (default: false — true when user selected a reviewer) */
+  autoReview?: boolean;
+  /** AI backend ID for the reviewer agent */
+  reviewerBackend?: string;
 }
 
 export interface RunTaskOpts {

@@ -60,6 +60,8 @@ export const CreateTeamCommand = z.object({
   memberIds: z.array(z.string()),
   backends: z.record(z.string(), z.string()).optional(),
   workDir: z.string().optional(),
+  autoReview: z.boolean().optional(),
+  reviewerBackend: z.string().optional(),
 });
 
 export const ServePreviewCommand = z.object({
