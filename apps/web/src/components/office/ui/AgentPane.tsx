@@ -497,15 +497,12 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
       {/* ── Info bar (single merged row) ── */}
+      {/* boxShadow handled by .term-info-bar + .ap-status-* CSS classes */}
       <div
         className={cn(
           "term-info-bar flex items-center gap-2 px-3 py-2 bg-term-surface font-mono text-term shrink-0",
           status === "working" ? "ap-status-working" : status === "waiting_approval" ? "ap-status-waiting" : status === "done" ? "ap-status-done" : status === "error" ? "ap-status-error" : "ap-status-idle",
         )}
-        style={{
-          borderBottom: `1px solid ${TERM_BORDER_DIM}`,
-          boxShadow: `0 2px 6px -1px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)`,
-        }}
       >
         {/* Drag handle for pane reorder */}
         <span className="mpv-drag-handle" title="Drag to reorder">⠿</span>

@@ -468,22 +468,49 @@
 
 /* ============================================================
    PANE STATUS ACCENT — .ap-status-* (agent-pane status border)
-   2px top-border accent on info bar indicating agent state
+   2px top-border accent on info bar indicating agent state.
+   Composes with .term-info-bar shadow (global.css) — keeps the
+   panel depth shadow and adds a colored inset top accent.
    ============================================================ */
 .ap-status-idle {
-  box-shadow: inset 0 2px 0 var(--term-border), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 0 var(--term-border),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 .ap-status-working {
-  box-shadow: inset 0 2px 0 var(--term-sem-blue), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 0 var(--term-sem-blue),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 .ap-status-waiting {
-  box-shadow: inset 0 2px 0 var(--term-sem-yellow), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 0 var(--term-sem-yellow),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 .ap-status-done {
-  box-shadow: inset 0 2px 0 var(--term-sem-green), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 0 var(--term-sem-green),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 .ap-status-error {
-  box-shadow: inset 0 2px 0 var(--term-sem-red), 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 2px 0 var(--term-sem-red),
+    0 3px 6px -2px rgba(0, 0, 0, 0.45),
+    0 1px 2px rgba(0, 0, 0, 0.3),
+    inset 0 -1px 0 var(--separator-groove-dark),
+    var(--highlight-top);
 }
 
 /* ============================================================
@@ -1154,4 +1181,20 @@
   outline: 2px solid var(--term-accent);
   outline-offset: -2px;
   background: color-mix(in srgb, var(--term-accent) 6%, transparent);
+  transition: background var(--duration-fast) ease, outline-color var(--duration-fast) ease;
+}
+
+/* ============================================================
+   DRAG HANDLE — visual ⠿ grip icon inside info-bar header
+   ============================================================ */
+.mpv-cell .term-info-bar .drag-handle {
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+.mpv-cell:hover .term-info-bar .drag-handle,
+.mpv-cell .term-info-bar:active .drag-handle {
+  opacity: 0.4;
+}
+.mpv-cell .term-info-bar .drag-handle:hover {
+  opacity: 0.7;
 }

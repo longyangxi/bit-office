@@ -5,7 +5,7 @@ import type { TeamChatMessage } from "@/store/office-store";
 import SpriteAvatar from "./SpriteAvatar";
 import ExpandableText from "./ExpandableText";
 
-import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_RED, TERM_SEM_YELLOW, TERM_SURFACE } from "./termTheme";
+import { TERM_SEM_BLUE, TERM_SEM_GREEN, TERM_SEM_RED, TERM_SEM_YELLOW, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_TEXT, TERM_FONT, TERM_SIZE } from "./termTheme";
 
 function getTeamMsgColors(): Record<string, { bg: string; border: string; label: string }> {
   return {
@@ -70,7 +70,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
 
   if (messages.length === 0) {
     return (
-      <div style={{ textAlign: "center", color: "#5a4838", padding: 30, fontSize: 12, fontFamily: "monospace" }}>
+      <div style={{ textAlign: "center", color: TERM_DIM, padding: 30, fontSize: TERM_SIZE, fontFamily: TERM_FONT }}>
         No team activity yet. Hire a team and send a task to the Team Lead.
       </div>
     );
@@ -94,16 +94,16 @@ function TeamChatView({ messages, agents, assetsReady }: {
               {fromAgent?.palette !== undefined && (
                 <SpriteAvatar palette={fromAgent.palette} zoom={1} ready={assetsReady} />
               )}
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#eddcb8" }}>
+              <span style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
                 {msg.fromAgentName ?? msg.fromAgentId}
               </span>
               {msg.toAgentName && (
                 <>
-                  <span style={{ fontSize: 11, color: "#6a5848" }}>&rarr;</span>
+                  <span aria-hidden="true" style={{ fontSize: 11, color: TERM_DIM }}>&rarr;</span>
                   {toAgent?.palette !== undefined && (
                     <SpriteAvatar palette={toAgent.palette} zoom={1} ready={assetsReady} />
                   )}
-                  <span style={{ fontSize: 12, fontWeight: 700, color: "#eddcb8" }}>
+                  <span style={{ fontSize: TERM_SIZE, fontWeight: 700, color: TERM_TEXT_BRIGHT }}>
                     {msg.toAgentName}
                   </span>
                 </>
@@ -117,7 +117,7 @@ function TeamChatView({ messages, agents, assetsReady }: {
               </span>
             </div>
             <ExpandableText text={msgText} maxChars={300} maxHeight={120} />
-            <div style={{ fontSize: 10, color: "#5a4838", marginTop: 4, fontFamily: "monospace" }}>
+            <div style={{ fontSize: 10, color: TERM_DIM, marginTop: 4, fontFamily: TERM_FONT }}>
               {new Date(msg.timestamp).toLocaleTimeString()}
             </div>
           </div>

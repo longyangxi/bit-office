@@ -577,3 +577,36 @@ textarea:focus-visible {
   from { opacity: 0; transform: scale(0.97) translateY(8px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
 }
+
+/* ── Professional polish ── */
+
+/* Smooth hover transitions for all interactive elements */
+button, [role="button"], a, select {
+  transition:
+    background-color var(--duration-fast) ease,
+    border-color var(--duration-fast) ease,
+    color var(--duration-fast) ease,
+    opacity var(--duration-fast) ease;
+}
+
+/* Consistent disabled state across all interactive elements */
+button:disabled, [aria-disabled="true"] {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* Prevent text selection on UI chrome (buttons, headers, nav) */
+.term-info-bar,
+.btb,
+.csb,
+.pbar,
+.mpv-dots {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Smooth resizing for the console ↔ office transition container */
+.term-dotgrid {
+  will-change: width;
+}
