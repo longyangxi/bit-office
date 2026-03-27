@@ -12,7 +12,9 @@ import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
-import { createWorktree, getManagedWorktreeBranch, mergeWorktree, removeWorktree, revertWorktreeCommit, worktreeHasPendingChanges, syncWorktreeToMain, undoMergeCommit, resetWorktreeToMain, isGitRepo, initGitRepo } from "./worktree.js";
+import { getManagedWorktreeBranch, resetWorktreeToMain, isGitRepo, initGitRepo } from "./worktree.js";
+import { WorktreeWorkspace } from "./workspace/index.js";
+import type { Workspace } from "./workspace/types.js";
 import type { AIBackend } from "./ai-backend.js";
 import type { TeamPreview } from "./result-finalizer.js";
 import type {
@@ -36,6 +38,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private defaultBackendId: string;
   private workspace: string;
   private sandboxMode: "full" | "safe";
+  private workspaceAdapter: Workspace;
   private worktreeEnabled: boolean;
   private worktreeMerge: boolean;
   private worktreeAlwaysIsolate: boolean;
@@ -79,6 +82,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       this.worktreeMerge = opts.worktree?.mergeOnComplete ?? true;
       this.worktreeAlwaysIsolate = opts.worktree?.alwaysIsolate ?? false;
     }
+
+    // Workspace plugin
+    this.workspaceAdapter = new WorktreeWorkspace(
+      opts.worktree && typeof opts.worktree === "object" && opts.worktree.postCreate
+        ? { postCreate: opts.worktree.postCreate }
+        : undefined,
+    );
 
     // Register backends
     for (const b of opts.backends) {
@@ -162,7 +172,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(agentId);
     // Force-clean worktree + branch on fire
     if (session?.worktreePath && session.worktreeBranch) {
-      removeWorktree(session.worktreePath, session.worktreeBranch, session.workspaceDir);
+      this.workspaceAdapter.destroy(session.workspaceDir, session.worktreePath, session.worktreeBranch);
       session.worktreePath = null;
       session.worktreeBranch = null;
     }
@@ -297,7 +307,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Skip sync if agent has pending unmerged changes — rebase could silently lose them
     if (session.worktreePath) {
       if (!session.pendingMerge) {
-        syncWorktreeToMain(session.workspaceDir, session.worktreePath);
+        this.workspaceAdapter.sync(session.workspaceDir, session.worktreePath);
       }
       return;
     }
@@ -327,14 +337,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         startedAt: Number(process.env.BIT_OFFICE_GATEWAY_STARTED_AT) || Date.now(),
       }
       : undefined;
-    const wt = createWorktree(base, agentId, session.name, owner);
-    if (wt) {
-      const branch = getManagedWorktreeBranch(session.name, agentId);
-      session.worktreePath = wt;
-      session.worktreeBranch = branch;
+    const wtInfo = this.workspaceAdapter.create({ repoRoot: base, agentId, agentName: session.name, owner });
+    if (wtInfo) {
+      session.worktreePath = wtInfo.path;
+      session.worktreeBranch = wtInfo.branch;
       // Clear history — can't --resume in a different directory
       session.clearHistory();
-      this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wt, branch });
+      this.emitEvent({ type: "worktree:created", agentId, taskId, worktreePath: wtInfo.path, branch: wtInfo.branch });
     } else {
       console.warn(`[Orchestrator] Worktree creation failed for ${session.name} (${agentId}), falling back to main workspace`);
       this.emitEvent({
@@ -354,7 +363,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
-      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, false, session.lastSummary ?? undefined, session.name, session.agentId);
+      const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
+        keepAlive: false, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
+      });
       this.emitEvent({
         type: "worktree:merged",
         agentId: session.agentId,
@@ -505,7 +516,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       });
       return { success: false };
     }
-    const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
+    const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
+      keepAlive: true, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
+    });
     if (result.success) {
       session.pendingMerge = false;
       if (result.commitHash) session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
@@ -543,7 +556,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (session.status === "working") {
       return { success: false, commitsAhead: -1, message: "Agent is working" };
     }
-    const result = revertWorktreeCommit(session.workspaceDir, session.worktreePath);
+    const result = this.workspaceAdapter.revert(session.workspaceDir, session.worktreePath);
     if (result.success && result.commitsAhead === 0) {
       session.pendingMerge = false;
     }
@@ -554,10 +567,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   detectPendingMerges(): void {
     for (const session of this.agentManager.getAll()) {
       if (session.worktreePath && session.worktreeBranch && !session.teamId) {
-        if (worktreeHasPendingChanges(session.workspaceDir, session.worktreePath)) {
+        if (this.workspaceAdapter.hasPendingChanges(session.workspaceDir, session.worktreePath)) {
           if (this.worktreeMerge && session.autoMerge) {
             // Auto-merge agents: merge immediately instead of showing pending UI
-            const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
+            const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
+              keepAlive: true, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
+            });
             if (result.success && result.commitHash) {
               session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
             }
@@ -618,7 +633,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       return { success: false, message: "No merge to undo" };
     }
     const entry = session.mergeCommitStack[session.mergeCommitStack.length - 1];
-    const result = undoMergeCommit(session.workspaceDir, entry.hash);
+    const result = this.workspaceAdapter.undoMerge(session.workspaceDir, entry.hash);
     if (result.success) {
       session.mergeCommitStack.pop();
       // Sync agent worktree to new main HEAD to eliminate branch fork (only needed for reset)
@@ -644,7 +659,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     if (autoMerge && this.worktreeMerge && session.pendingMerge
       && session.worktreePath && session.worktreeBranch) {
       session.pendingMerge = false;
-      const result = mergeWorktree(session.workspaceDir, session.worktreePath, session.worktreeBranch, true, session.lastSummary ?? undefined, session.name, session.agentId);
+      const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
+        keepAlive: true, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
+      });
       if (result.success && result.commitHash) {
         session.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
       }
@@ -957,7 +974,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           // Auto-merge: merge immediately as before
           doneSession.pendingMerge = false;
           const summary = event.result?.summary;
-          const result = mergeWorktree(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, true, summary, doneSession.name, doneSession.agentId);
+          const result = this.workspaceAdapter.merge(doneSession.workspaceDir, doneSession.worktreePath, doneSession.worktreeBranch, {
+            keepAlive: true, summary, agentName: doneSession.name, agentId: doneSession.agentId,
+          });
           if (result.success && result.commitHash) {
             doneSession.mergeCommitStack.push({ hash: result.commitHash, message: result.commitMessage ?? "merge" });
           }

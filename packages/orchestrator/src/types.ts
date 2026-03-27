@@ -291,6 +291,8 @@ export interface WorktreeOptions {
   mergeOnComplete?: boolean;
   /** Always create worktree for every agent, even without neighbors (default: false) */
   alwaysIsolate?: boolean;
+  /** Post-creation hooks (symlinks, commands) run after workspace is created */
+  postCreate?: import("./workspace/types.js").PostCreateConfig;
 }
 
 export interface RetryOptions {
