@@ -1130,14 +1130,25 @@
 }
 
 /* ============================================================
-   DRAG-AND-DROP REORDER — grab cursor on header, drop indicator
+   DRAG-AND-DROP REORDER — drag handle, ghost, drop indicator
    ============================================================ */
-.mpv-cell[data-agent-id] > .term-info-bar {
+.mpv-drag-handle {
   cursor: grab;
   touch-action: none;
+  user-select: none;
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.3;
+  padding: 0 2px;
+  margin-left: -4px;
+  transition: opacity 0.15s;
 }
-.mpv-cell[data-agent-id] > .term-info-bar:active {
+.mpv-drag-handle:hover {
+  opacity: 0.7;
+}
+.mpv-drag-handle:active {
   cursor: grabbing;
+  opacity: 0.9;
 }
 .mpv-drag-over {
   outline: 2px solid var(--term-accent);

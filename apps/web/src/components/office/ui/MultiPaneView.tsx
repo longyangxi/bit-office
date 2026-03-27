@@ -307,15 +307,16 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const dragStartPos = useRef<{ x: number; y: number } | null>(null);
   const dragActiveRef = useRef(false);
   const dragOverRef = useRef<string | null>(null);
+  const dragGhostRef = useRef<HTMLDivElement | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const DRAG_THRESHOLD = 5;
 
   const handlePointerDownReorder = useCallback((e: React.PointerEvent, agentId: string) => {
     // Touch swipes are handled by page-swipe (onTouchStart/End) — only mouse/pen reorders
     if (e.pointerType === "touch") return;
+    // Only the dedicated drag handle triggers reorder
     const target = e.target as HTMLElement;
-    if (!target.closest(".term-info-bar") || e.button !== 0) return;
-    if (target.closest("button, input, select, a, [role='button']")) return;
+    if (!target.closest(".mpv-drag-handle") || e.button !== 0) return;
     dragSourceRef.current = agentId;
     dragStartPos.current = { x: e.clientX, y: e.clientY };
     dragActiveRef.current = false;
@@ -323,6 +324,12 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
 
   // Global pointermove/pointerup via useEffect (avoids pointer capture issues)
   useEffect(() => {
+    const removeGhost = () => {
+      if (dragGhostRef.current) {
+        dragGhostRef.current.remove();
+        dragGhostRef.current = null;
+      }
+    };
     const onMove = (e: PointerEvent) => {
       if (!dragSourceRef.current || !dragStartPos.current) return;
       if (!dragActiveRef.current) {
@@ -330,6 +337,23 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
         const dy = e.clientY - dragStartPos.current.y;
         if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
         dragActiveRef.current = true;
+        // Create a floating ghost from the source cell's header
+        const srcCell = document.querySelector(`.mpv-cell[data-agent-id="${dragSourceRef.current}"]`);
+        const header = srcCell?.querySelector(".term-info-bar") as HTMLElement | null;
+        if (header) {
+          const rect = header.getBoundingClientRect();
+          const ghost = document.createElement("div");
+          ghost.className = "mpv-drag-ghost";
+          ghost.style.cssText = `position:fixed;pointer-events:none;z-index:9999;opacity:0.85;border-radius:4px;overflow:hidden;width:${rect.width}px;box-shadow:0 4px 16px rgba(0,0,0,0.4);`;
+          ghost.innerHTML = header.outerHTML;
+          document.body.appendChild(ghost);
+          dragGhostRef.current = ghost;
+        }
+      }
+      // Move ghost to cursor position
+      if (dragGhostRef.current) {
+        dragGhostRef.current.style.left = `${e.clientX + 12}px`;
+        dragGhostRef.current.style.top = `${e.clientY - 14}px`;
       }
       const el = document.elementFromPoint(e.clientX, e.clientY);
       const cell = el?.closest?.(".mpv-cell") as HTMLElement | null;
@@ -341,6 +365,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       }
     };
     const onUp = () => {
+      removeGhost();
       const sourceId = dragSourceRef.current;
       const wasActive = dragActiveRef.current;
       const targetId = dragOverRef.current;
@@ -360,6 +385,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     };
     // Clear stale drag state on cancellation / focus loss
     const onCancel = () => {
+      removeGhost();
       dragSourceRef.current = null;
       dragStartPos.current = null;
       dragActiveRef.current = false;
@@ -372,6 +398,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     window.addEventListener("blur", onCancel);
     document.addEventListener("visibilitychange", onCancel);
     return () => {
+      removeGhost();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
       window.removeEventListener("pointercancel", onCancel);

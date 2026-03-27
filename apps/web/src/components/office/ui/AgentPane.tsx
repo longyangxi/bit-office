@@ -507,6 +507,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           boxShadow: `0 2px 6px -1px rgba(0,0,0,0.45), inset 0 -1px 0 rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.03)`,
         }}
       >
+        {/* Drag handle for pane reorder */}
+        <span className="mpv-drag-handle" title="Drag to reorder">⠿</span>
         {/* Inline avatar (console mode) */}
         {inlineAvatar && (() => {
           const AvatarComp = inlineAvatar.AvatarComponent;
