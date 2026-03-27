@@ -236,16 +236,16 @@ select option {
   font-weight: 400 !important; line-height: 1.7 !important;
   letter-spacing: -0.01em;
 }
-/* ── Headings: subtle differentiation ── */
+/* ── Headings: weight-only differentiation, no color jump ── */
 .chat-markdown h1 {
   font-size: var(--font-size-base) !important; font-weight: 500 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 14px 0 6px !important; padding: 0 0 4px !important;
   border-bottom: 1px solid var(--term-border-dim) !important;
 }
 .chat-markdown h2 {
   font-size: var(--font-size-base) !important; font-weight: 500 !important;
-  color: var(--term-text-bright) !important;
+  color: var(--term-text) !important;
   margin: 12px 0 4px !important; padding: 0 !important;
 }
 .chat-markdown h3 {
@@ -258,12 +258,12 @@ select option {
   color: var(--term-text) !important;
   margin: 8px 0 2px !important; padding: 0 !important;
 }
-/* ── Inline emphasis ── */
+/* ── Inline emphasis — weight only, same color ── */
 .chat-markdown strong, .chat-markdown b {
-  font-weight: 500 !important; color: var(--term-text-bright) !important;
+  font-weight: 500 !important; color: inherit !important;
 }
 .chat-markdown em, .chat-markdown i {
-  font-style: italic !important; color: var(--term-text) !important;
+  font-style: italic !important; color: inherit !important;
 }
 /* ── Code: same color as body text — no color jump ── */
 .chat-markdown code {
@@ -293,22 +293,23 @@ select option {
 .chat-markdown ul { margin: 4px 0 8px !important; padding-left: 20px !important; list-style-type: disc !important; }
 .chat-markdown ol { margin: 4px 0 8px !important; padding-left: 20px !important; list-style-type: decimal !important; }
 .chat-markdown li { margin: 2px 0 !important; }
-.chat-markdown li::marker { color: var(--term-dim) !important; }
+.chat-markdown li::marker { color: var(--term-text) !important; }
 .chat-markdown hr { border: none !important; border-top: 1px solid var(--term-border-dim) !important; margin: 10px 0 !important; }
 .chat-markdown blockquote {
   margin: 6px 0 !important; padding: 4px 12px !important;
   border-left: 2px solid var(--term-border) !important;
-  color: var(--term-dim) !important;
+  color: var(--term-text) !important;
 }
-/* ── Links: clean underline on hover ── */
+/* ── Links: subtle underline, same color as body ── */
 .chat-markdown a, .crt-screen a {
-  color: var(--term-accent) !important; text-decoration: none !important;
-  transition: color 0.1s ease;
-}
-.chat-markdown a:hover, .crt-screen a:hover {
-  text-decoration: underline !important;
+  color: var(--term-text) !important; text-decoration: underline !important;
+  text-decoration-color: var(--term-dim) !important;
   text-underline-offset: 2px !important;
   text-decoration-thickness: 1px !important;
+  transition: text-decoration-color 0.1s ease;
+}
+.chat-markdown a:hover, .crt-screen a:hover {
+  text-decoration-color: var(--term-text) !important;
 }
 /* ── Tables ── */
 .chat-markdown table {

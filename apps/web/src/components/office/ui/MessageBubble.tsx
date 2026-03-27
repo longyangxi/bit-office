@@ -45,8 +45,8 @@ function TokenBadge({ inputTokens, outputTokens, cacheReadTokens, cacheWriteToke
   return (
     <span style={{
       fontSize: TERM_SIZE, padding: "1px 4px",
-      color: TERM_TEXT, fontFamily: TERM_FONT,
-      whiteSpace: "nowrap", opacity: 0.55,
+      color: TERM_DIM, fontFamily: TERM_FONT,
+      whiteSpace: "nowrap",
       fontVariantNumeric: "tabular-nums",
     }} title={titleParts.join(" / ")}>
       {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}{costStr}
@@ -168,7 +168,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         padding: "6px 12px",
       }}>
         <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_ACCENT, opacity: 0.7 }}>&gt; </span>
+        <span style={{ color: TERM_DIM }}>&gt; </span>
         <span style={{ color: TERM_TEXT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
     );
@@ -236,7 +236,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         {(projectDir || entryFile) && (
           <div style={{ color: TERM_DIM, marginTop: 4, display: "flex", gap: 8, alignItems: "center" }}>
             {projectDir && <span className="term-path-scroll">{projectDir}</span>}
-            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_ACCENT }}>{entryFile}</span>}
+            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_TEXT, textDecoration: "underline", textDecorationColor: TERM_DIM, textUnderlineOffset: "2px" }}>{entryFile}</span>}
           </div>
         )}
         {changedFiles.length > 0 && <div style={{ color: TERM_DIM, marginTop: 2 }}>{changedFiles.length} files changed</div>}
