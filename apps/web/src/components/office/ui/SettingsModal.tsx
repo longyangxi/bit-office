@@ -13,7 +13,7 @@ import TermInput from './primitives/TermInput'
 interface SettingsModalProps {
   isOpen: boolean
   onClose: () => void
-  layout: OfficeLayout
+  layout: OfficeLayout | null
   onImportLayout: (layout: OfficeLayout) => void
   onImportRoomZip?: (layout: OfficeLayout, backgroundImage: HTMLImageElement | null) => void
   soundEnabled: boolean

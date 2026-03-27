@@ -54,7 +54,7 @@ const HireTeamModal = dynamic(() => import("@/components/office/ui/HireTeamModal
 const AgentPane = dynamic(() => import("@/components/office/ui/AgentPane"), { ssr: false });
 const MultiPaneView = dynamic(() => import("@/components/office/ui/MultiPaneView"), { ssr: false });
 const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalette"), { ssr: false });
-const ProjectBar = dynamic(() => import("@/components/office/ui/ProjectBar"), { ssr: false });
+const ConsoleSidebar = dynamic(() => import("@/components/office/ui/ConsoleSidebar"), { ssr: false });
 const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
@@ -1027,32 +1027,33 @@ export default function OfficePage() {
   // When review is done, store the result text for user confirmation (null = still working or no overlay)
   const [reviewResultText, setReviewResultText] = useState<string | null>(null);
 
-  // Auto-populate openPanes in console mode: show all agents from current tab (exclude temp reviewers)
-  const activeAgentIds = (expandedSection === "agents" ? soloAgents
+  // Auto-populate openPanes in console mode: show all agents (exclude temp reviewers)
+  const allConsoleAgents = [...soloAgents, ...teamAgents, ...externalAgents];
+  const activeAgentIds = (consoleMode
+    ? allConsoleAgents
+    : expandedSection === "agents" ? soloAgents
     : expandedSection === "team" ? teamAgents
-    : externalAgents).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
+    : externalAgents
+  ).map(a => a.agentId).filter(id => !tempReviewerIds.has(id)).join(",");
   // Sync open panes whenever agent list changes — preserve custom drag order
   useEffect(() => {
     if (!consoleMode) return;
     const ids = activeAgentIds ? activeAgentIds.split(",") : [];
     setOpenPanes(prev => {
       const activeSet = new Set(ids);
-      // Keep existing order, remove departed agents
       const kept = prev.filter(id => activeSet.has(id));
-      // Append any new agents not in the current order
       const keptSet = new Set(kept);
       const added = ids.filter(id => !keptSet.has(id));
       const merged = [...kept, ...added];
-      // Only update if actually changed (avoid re-renders)
       if (merged.length === prev.length && merged.every((id, i) => id === prev[i])) return prev;
       return merged;
     });
   }, [consoleMode, activeAgentIds]);
-  // Reset page offset ONLY on tab switch or entering console mode
+  // Reset page offset on entering console mode
   useEffect(() => {
     if (!consoleMode) return;
     setPaneOffset(0);
-  }, [consoleMode, expandedSection]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [consoleMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
@@ -1462,30 +1463,44 @@ export default function OfficePage() {
           zIndex: 10,
         }}>
 
-          {/* ── Bookmark tabs — absolutely positioned to the left of sidebar ── */}
+          {/* ── Console mode: left sidebar ── */}
+          {consoleMode && (
+            <ConsoleSidebar
+              onNewProject={() => setShowNewProjectModal(true)}
+              onOpenHistory={() => setShowHistory(true)}
+              onOpenSettings={() => setShowSettings(true)}
+              onBackToOffice={() => {
+                setScrollFrozen(true);
+                setConsoleMode(false);
+                localStorage.setItem("office-view-mode", "office");
+                setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
+              }}
+            />
+          )}
+
+          {/* ── Office mode: Bookmark tabs — absolutely positioned to the left of sidebar ── */}
+          {!consoleMode && (
           <div style={{
             position: "absolute",
-            left: consoleMode ? 0 : undefined,
-            right: consoleMode ? undefined : "100%",
+            right: "100%",
             top: "50%",
             transform: "translateY(-50%)",
             zIndex: 30,
             display: "flex",
             flexDirection: "column",
-            alignItems: consoleMode ? "flex-start" : "flex-end",
+            alignItems: "flex-end",
             gap: 2,
             transition: "opacity 0.15s ease",
-            opacity: consoleMode || sceneVisible ? 1 : 0,
-            pointerEvents: consoleMode || sceneVisible ? "auto" : "none",
+            opacity: sceneVisible ? 1 : 0,
+            pointerEvents: sceneVisible ? "auto" : "none",
           }}>
-          {/* Bookmark tabs */}
           {[
             { key: "agents" as const, label: "Agents" },
             { key: "team" as const, label: "Team" },
             { key: "external" as const, label: "Ext" },
           ].map((tab) => {
             const active = expandedSection === tab.key;
-            const accentColor = TERM_GREEN; // theme accent
+            const accentColor = TERM_GREEN;
             return (
               <button
                 key={tab.key}
@@ -1501,11 +1516,11 @@ export default function OfficePage() {
                   height: 72,
                   border: "none", cursor: "pointer",
                   background: active ? accentColor + "20" : TERM_PANEL + "80",
-                  borderRadius: consoleMode ? "0 6px 6px 0" : "6px 0 0 6px",
+                  borderRadius: "6px 0 0 6px",
                   borderTop: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
                   borderBottom: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
-                  borderLeft: consoleMode ? "none" : `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
-                  borderRight: consoleMode ? `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}` : "none",
+                  borderLeft: `1px solid ${active ? accentColor + "60" : TERM_BORDER_DIM}`,
+                  borderRight: "none",
                   color: active ? accentColor : TERM_DIM,
                   fontSize: 13, fontFamily: TERM_FONT, fontWeight: 600,
                   letterSpacing: "0.1em",
@@ -1520,45 +1535,39 @@ export default function OfficePage() {
             );
           })}
 
-          {/* Arrow button */}
+          {/* Arrow button — switch to console mode */}
           <button
             onClick={() => {
               setScrollFrozen(true);
-              if (consoleMode) {
-                setConsoleMode(false);
-                localStorage.setItem("office-view-mode", "office");
-                setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
-              } else {
-                setSceneVisible(false);
-                localStorage.setItem("office-view-mode", "console");
-                requestAnimationFrame(() => setConsoleMode(true));
-                setTimeout(() => setScrollFrozen(false), 350);
-              }
+              setSceneVisible(false);
+              localStorage.setItem("office-view-mode", "console");
+              requestAnimationFrame(() => setConsoleMode(true));
+              setTimeout(() => setScrollFrozen(false), 350);
             }}
             style={{
               width: 28, height: 40, border: "none", cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "center",
               padding: 0, marginTop: 4,
               background: TERM_PANEL + "80",
-              borderRadius: consoleMode ? "0 10px 10px 0" : "10px 0 0 10px",
+              borderRadius: "10px 0 0 10px",
               borderTop: `1px solid ${TERM_GREEN}40`,
               borderBottom: `1px solid ${TERM_GREEN}40`,
-              borderLeft: consoleMode ? "none" : `1px solid ${TERM_GREEN}40`,
-              borderRight: consoleMode ? `1px solid ${TERM_GREEN}40` : "none",
+              borderLeft: `1px solid ${TERM_GREEN}40`,
+              borderRight: "none",
               boxShadow: "-2px 0 8px rgba(0,0,0,0.3)",
               color: TERM_GREEN, fontSize: 14,
             }}
             onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_GREEN; }}
             onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_GREEN; }}
-            title={consoleMode ? "Back to Office" : "Console Mode"}
+            title="Console Mode"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ transform: consoleMode ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.3s ease" }}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
           </button>
 
           {/* Theme picker */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 8, alignItems: "center", marginLeft: consoleMode ? 6 : 0 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 3, marginTop: 8, alignItems: "center" }}>
             {Object.entries(TERM_THEMES).filter(([key]) => !["gruvbox", "nord", "dracula", "slate", "black-metal", "owl", "vague", "iceberg-dark", "office", "catppuccin", "everforest"].includes(key)).map(([key, theme]) => (
               <button
                 key={key}
@@ -1579,15 +1588,18 @@ export default function OfficePage() {
             ))}
           </div>
           </div>
+          )}
           {/* ── Main content area ── */}
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0, paddingLeft: consoleMode ? 36 : undefined }}>
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
 
           {(() => {
-            // Get the active agent list based on current tab (exclude temp reviewers)
-            // Sort by openPanes order so drag-reorder in console mode is reflected in sidebar
-            const unsortedAgentList = (expandedSection === "agents" ? soloAgents
+            // In console mode show all agents; in office mode filter by tab
+            const unsortedAgentList = (consoleMode
+              ? allConsoleAgents
+              : expandedSection === "agents" ? soloAgents
               : expandedSection === "team" ? teamAgents
-              : externalAgents).filter(a => !tempReviewerIds.has(a.agentId));
+              : externalAgents
+            ).filter(a => !tempReviewerIds.has(a.agentId));
             const paneOrder = new Map(openPanes.map((id, i) => [id, i]));
             const activeAgentList = [...unsortedAgentList].sort((a, b) => {
               const ai = paneOrder.get(a.agentId) ?? Infinity;
@@ -1595,18 +1607,11 @@ export default function OfficePage() {
               return ai - bi;
             });
 
-            // Auto-select first agent if none selected or selected is not in current tab
             const selectedInTab = activeAgentList.some((a) => a.agentId === selectedAgent);
 
             return (<>
 
-            {/* -- Project Bar (console mode: tab switcher at top) -- */}
-            {consoleMode && (
-              <ProjectBar
-                onNewProject={() => setShowNewProjectModal(true)}
-                onHireAgent={() => setShowHireModal(true)}
-              />
-            )}
+            {/* -- Project Bar (office sidebar mode only, projects are in console sidebar) -- */}
 
             {/* -- Horizontal Agent Bar (hidden in console mode — avatars shown inline on each pane) -- */}
             {!consoleMode && (
@@ -1938,18 +1943,18 @@ export default function OfficePage() {
                 onReorderPanes={setOpenPanes}
                 agentMeta={activeAgentList.map(a => ({ agentId: a.agentId, name: a.name, palette: a.palette ?? 0, isTeamLead: !!agents.get(a.agentId)?.isTeamLead }))}
                 assetsReady={assetsReady}
-                showHireButton={isOwner && (expandedSection === "agents" || (expandedSection === "team" && !hasTeam))}
-                hireLabel={!activeProjectId ? "new project" : expandedSection === "team" ? "hire team" : "hire"}
+                showHireButton={isOwner}
+                hireLabel={!activeProjectId ? "new project" : "hire"}
                 onHire={() => {
                   if (!activeProjectId) { setShowNewProjectModal(true); return; }
-                  expandedSection === "team" ? setShowHireTeamModal(true) : setShowHireModal(true);
+                  setShowHireModal(true);
                 }}
-                showTeamControls={isOwner && expandedSection === "team" && hasTeam}
+                showTeamControls={isOwner && hasTeam}
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
                 onFireTeam={handleFireTeam}
-                cols={expandedSection === "team" ? 3 : autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).cols : consoleCols}
-                rows={expandedSection === "team" ? 1 : autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).rows : consoleRows}
+                cols={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).cols : consoleCols}
+                rows={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).rows : consoleRows}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -2040,7 +2045,7 @@ export default function OfficePage() {
             )}
 
             {/* Team Activity log */}
-            {expandedSection === "team" && teamMessages.length > 0 && (
+            {(consoleMode || expandedSection === "team") && teamMessages.length > 0 && (
               <TeamActivityLog messages={teamMessages} agents={agents} assetsReady={assetsReady} onClear={clearTeamMessages} />
             )}
 
@@ -2537,21 +2542,19 @@ export default function OfficePage() {
         />
       )}
 
-      {officeStateRef.current && (
-        <SettingsModal
-          isOpen={showSettings}
-          onClose={() => setShowSettings(false)}
-          layout={officeStateRef.current.layout}
-          onImportLayout={handleImportLayout}
-          onImportRoomZip={handleImportRoomZip}
-          soundEnabled={soundEnabled}
-          onSoundEnabledChange={setSoundEnabled}
-          consoleCols={consoleCols}
-          consoleRows={consoleRows}
-          onConsoleColsChange={(v) => { setConsoleCols(v); localStorage.setItem('office-console-cols', JSON.stringify(v)); }}
-          onConsoleRowsChange={(v) => { setConsoleRows(v); localStorage.setItem('office-console-rows', JSON.stringify(v)); }}
-        />
-      )}
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        layout={officeStateRef.current?.layout ?? null}
+        onImportLayout={handleImportLayout}
+        onImportRoomZip={handleImportRoomZip}
+        soundEnabled={soundEnabled}
+        onSoundEnabledChange={setSoundEnabled}
+        consoleCols={consoleCols}
+        consoleRows={consoleRows}
+        onConsoleColsChange={(v) => { setConsoleCols(v); localStorage.setItem('office-console-cols', JSON.stringify(v)); }}
+        onConsoleRowsChange={(v) => { setConsoleRows(v); localStorage.setItem('office-console-rows', JSON.stringify(v)); }}
+      />
 
       <OfficeSwitcher
         isOpen={showOfficeSwitcher}

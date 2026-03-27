@@ -547,7 +547,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
             {role?.split("\u2014")[0]?.trim()}
           </span>
         )}
-        {(cwd || workDir) && (() => {
+        {!inlineAvatar && (cwd || workDir) && (() => {
           const raw = cwd ?? workDir ?? "";
           const display = raw.replace(/^\/Users\/[^/]+/, "~");
           return (

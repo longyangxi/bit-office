@@ -6,7 +6,6 @@ import { useCallback, useMemo } from "react";
 
 interface ProjectBarProps {
   onNewProject: () => void;
-  onHireAgent?: () => void;
 }
 
 /**
@@ -15,7 +14,7 @@ interface ProjectBarProps {
  * Empty state shows a prominent "New Project" CTA.
  * Phase 1 of project-centric architecture.
  */
-export default function ProjectBar({ onNewProject, onHireAgent }: ProjectBarProps) {
+export default function ProjectBar({ onNewProject }: ProjectBarProps) {
   const projects = useOfficeStore((s) => s.projects);
   const activeProjectId = useOfficeStore((s) => s.activeProjectId);
   const agents = useOfficeStore((s) => s.agents);
@@ -79,17 +78,6 @@ export default function ProjectBar({ onNewProject, onHireAgent }: ProjectBarProp
           +
         </button>
       </div>
-      {/* Right-aligned: Add Agent button when a project is active */}
-      {activeProjectId && onHireAgent && (
-        <button
-          className="pbar-hire"
-          onClick={onHireAgent}
-          title="Add agent to project"
-        >
-          <span className="pbar-hire-icon">+</span>
-          <span className="pbar-hire-label">Agent</span>
-        </button>
-      )}
     </div>
   );
 }
