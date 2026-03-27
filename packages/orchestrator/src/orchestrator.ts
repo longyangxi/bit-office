@@ -13,6 +13,8 @@ import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./
 import type { Notifier } from "./notifier/types.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
+import { TaskScheduler, tryParseDecomposition } from "./decomposer/index.js";
+import type { DecompositionPlan, TaskNode } from "./decomposer/index.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
 import { getManagedWorktreeBranch, resetWorktreeToMain, isGitRepo, initGitRepo } from "./worktree.js";
 import { WorktreeWorkspace } from "./workspace/index.js";
@@ -69,6 +71,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private teamChangedFiles = new Set<string>();
   /** Guard against emitting isFinalResult more than once per execute cycle. */
   private teamFinalized = false;
+  /** Active decomposition scheduler (null when using legacy delegation) */
+  private activeScheduler: TaskScheduler | null = null;
+  private activePlan: DecompositionPlan | null = null;
   private notifier: Notifier | null = null;
 
   constructor(opts: OrchestratorOptions) {
@@ -297,6 +302,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       this.teamPreview = null;
       this.teamChangedFiles.clear();
       this.teamFinalized = false;
+      this.activeScheduler = null;
+      this.activePlan = null;
     }
 
     const repoPath = opts?.repoPath;
@@ -803,6 +810,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.teamPreview = null;
     this.teamChangedFiles.clear();
     this.teamFinalized = false;
+    this.activeScheduler = null;
+    this.activePlan = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -941,6 +950,27 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   private _handleSessionEventUnsafe(event: OrchestratorEvent, agentId: string): void {
+    // ── Scheduler-managed task completion ──
+    if (this.activeScheduler && this.activePlan) {
+      if (event.type === "task:done") {
+        const taskId = event.taskId;
+        if (this.activePlan.tree.children.some(c => c.id === taskId)) {
+          this.activeScheduler.taskCompleted(taskId, event.result?.summary);
+          this.checkSchedulerCompletion();
+          // Don't return — let the normal task:done processing continue
+          // (worktree merge, memory recording, etc. still needed for workers)
+        }
+      }
+      if (event.type === "task:failed") {
+        const taskId = event.taskId;
+        if (this.activePlan.tree.children.some(c => c.id === taskId)) {
+          this.activeScheduler.taskFailed(taskId, event.error);
+          this.checkSchedulerCompletion();
+          // Don't return — let reaction engine handle the failure
+        }
+      }
+    }
+
     // Handle retry/escalation logic on task failure via ReactionEngine
     if (event.type === "task:failed") {
       const taskId = event.taskId;
@@ -1000,6 +1030,28 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           this.emitEvent({ type: "team:phase", teamId: phaseInfo.teamId, phase: phaseInfo.phase, leadAgentId: phaseInfo.leadAgentId });
         }
       }
+    }
+
+    // ── Decomposition: detect [DECOMPOSITION] in leader output ──
+    if (event.type === "task:done" && this.agentManager.isTeamLead(agentId)) {
+      const output = event.result?.fullOutput ?? event.result?.summary ?? "";
+      const leaderSession = this.agentManager.get(agentId);
+      const rootTask = leaderSession?.originalTask ?? event.result?.summary ?? "";
+      const plan = tryParseDecomposition(output, rootTask);
+
+      if (plan) {
+        console.log(`[Orchestrator] [DECOMPOSITION] detected: ${plan.tree.children.length} tasks in ${plan.groups.length} groups`);
+        this.activePlan = plan;
+        this.activeScheduler = new TaskScheduler(plan, (task, contextPrompt) => {
+          this.dispatchDecomposedTask(task, contextPrompt);
+        });
+        this.activeScheduler.start();
+        // Emit the leader's task:done so UI updates, but don't fall through to
+        // finalization logic — workers take over from here.
+        this.emitEvent(event);
+        return;
+      }
+      // No [DECOMPOSITION] block — fall through to legacy delegation handling
     }
 
     if (event.type === "task:done") {
@@ -1184,6 +1236,134 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     this.emitEvent(event);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Decomposition scheduler helpers
+  // ---------------------------------------------------------------------------
+
+  private dispatchDecomposedTask(task: TaskNode, contextPrompt: string): void {
+    // Find a matching agent by role
+    const agentId = this.selectAgentForTask(task);
+    if (!agentId) {
+      console.warn(`[Orchestrator] No available agent for task ${task.id} (role: ${task.role}), skipping`);
+      // Mark as failed so scheduler can advance
+      this.activeScheduler?.taskFailed(task.id, "No available agent");
+      this.checkSchedulerCompletion();
+      return;
+    }
+
+    task.assignedTo = agentId;
+
+    // Build prompt: task description + decomposition context
+    const fullPrompt = contextPrompt
+      ? `${task.description}\n\n${contextPrompt}`
+      : task.description;
+
+    // Set up worktree
+    const repoPath = this.delegationRouter.getTeamProjectDir() ?? undefined;
+    if (repoPath) {
+      this.setupWorktreeForAgent(agentId, task.id, repoPath);
+    }
+
+    const leadId = this.agentManager.getTeamLead();
+    console.log(`[Orchestrator] Dispatching decomposed task ${task.id} → ${agentId} (${task.role})`);
+
+    this.emitEvent({
+      type: "task:delegated",
+      fromAgentId: leadId ?? "system",
+      toAgentId: agentId,
+      taskId: task.id,
+      prompt: task.description,
+    });
+
+    const session = this.agentManager.get(agentId);
+    if (session) {
+      session.runTask(task.id, fullPrompt, repoPath);
+    }
+  }
+
+  private selectAgentForTask(task: TaskNode): string | null {
+    // Simple role-based selection: find idle non-lead agent matching role
+    const requestedRole = task.role ?? "Developer";
+    const agents = this.agentManager.getAll();
+
+    // Prefer exact role match
+    for (const session of agents) {
+      if (this.agentManager.isTeamLead(session.agentId)) continue;
+      if (session.status !== "idle") continue;
+      if (session.role?.toLowerCase() === requestedRole.toLowerCase()) {
+        return session.agentId;
+      }
+    }
+
+    // Partial match
+    for (const session of agents) {
+      if (this.agentManager.isTeamLead(session.agentId)) continue;
+      if (session.status !== "idle") continue;
+      if (session.role?.toLowerCase().includes(requestedRole.toLowerCase()) ||
+          requestedRole.toLowerCase().includes(session.role?.toLowerCase() ?? "")) {
+        return session.agentId;
+      }
+    }
+
+    // Any idle non-lead
+    for (const session of agents) {
+      if (this.agentManager.isTeamLead(session.agentId)) continue;
+      if (session.status !== "idle") continue;
+      return session.agentId;
+    }
+
+    return null;
+  }
+
+  private checkSchedulerCompletion(): void {
+    if (!this.activeScheduler || !this.activePlan) return;
+    if (!this.activeScheduler.isComplete()) return;
+
+    const plan = this.activePlan;
+    const allDone = plan.tree.children.every(c => c.status === "done");
+    const results = plan.tree.children
+      .filter(c => c.result)
+      .map(c => `[${c.id}] ${c.result}`)
+      .join("\n");
+
+    console.log(`[Orchestrator] Decomposition plan ${allDone ? "completed" : "finished with failures"}: ${plan.tree.children.length} tasks`);
+
+    // Emit as final team result
+    const leadId = this.agentManager.getTeamLead();
+    if (leadId && !this.teamFinalized) {
+      this.teamFinalized = true;
+
+      // execute → complete transition
+      const completeInfo = this.phaseMachine.checkFinalResult(leadId);
+      if (completeInfo) {
+        this.emitEvent({ type: "team:phase", teamId: completeInfo.teamId, phase: completeInfo.phase, leadAgentId: completeInfo.leadAgentId });
+      }
+
+      // Merge all worker worktrees back to main branch
+      if (this.worktreeMerge) {
+        this.mergeAllWorkerWorktrees(leadId);
+      }
+
+      this.emitEvent({
+        type: "task:done",
+        agentId: leadId,
+        taskId: plan.id,
+        result: {
+          summary: allDone
+            ? `All ${plan.tree.children.length} tasks completed.\n${results}`
+            : `Plan completed with failures.\n${results}`,
+          changedFiles: [...this.teamChangedFiles],
+          diffStat: "",
+          testResult: allDone ? "passed" : "failed",
+        },
+        isFinalResult: true,
+      });
+    }
+
+    this.activePlan = null;
+    this.activeScheduler = null;
   }
 
   private emitEvent(event: OrchestratorEvent): void {
