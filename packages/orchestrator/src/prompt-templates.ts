@@ -100,9 +100,14 @@ Team status:
 
 {{originalTask}}
 
-Delegate using: @AgentName: task description
+Delegate using [DECOMPOSITION] format (preferred) or @AgentName: task description (fallback).
 
-CRITICAL: Only ONE delegation per response. Delegate to developer FIRST. Do NOT assign reviewer until dev reports back. Never delegate to dev and reviewer in the same message.
+[DECOMPOSITION] format:
+[DECOMPOSITION]
+{"tasks": [{"id": "dev-1", "role": "Developer", "description": "..."}], "groups": [["dev-1"]]}
+[/DECOMPOSITION]
+
+CRITICAL: Only ONE delegation per response. Delegate to developer FIRST. Do NOT assign reviewer until dev reports back.
 
 {{prompt}}`,
 

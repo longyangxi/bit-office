@@ -936,7 +936,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         });
       },
       emitNotification: (notification) => {
-        this.emitEvent({ type: "notification", ...notification } as any);
+        this.emitEvent({
+          type: "notification",
+          title: notification.title,
+          message: notification.message,
+          priority: notification.priority,
+          agentId: notification.agentId,
+          taskId: notification.taskId,
+        });
       },
       notifier: this.notifier ?? undefined,
     };
