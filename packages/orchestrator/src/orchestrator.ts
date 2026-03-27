@@ -8,6 +8,7 @@ import { AgentManager } from "./agent-manager.js";
 import { DelegationRouter } from "./delegation.js";
 import { PromptEngine } from "./prompt-templates.js";
 import { ReactionEngine, DEFAULT_RULES } from "./reaction/index.js";
+import { StuckDetector } from "./stuck-detector.js";
 import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./reaction/index.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
@@ -33,6 +34,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private delegationRouter: DelegationRouter;
   private promptEngine: PromptEngine;
   private reactionEngine: ReactionEngine;
+  private stuckDetector: StuckDetector;
   private phaseMachine = new PhaseMachine();
   private backends = new Map<string, AIBackend>();
   private defaultBackendId: string;
@@ -112,6 +114,38 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.reactionEngine = new ReactionEngine({
       rules: opts.reactions ?? DEFAULT_RULES,
     });
+
+    // Stuck detector: polls working agents, fires reaction engine on idle > threshold
+    this.stuckDetector = new StuckDetector({
+      thresholdMs: 300_000,
+      pollIntervalMs: 60_000,
+      getWorkingAgents: () => {
+        const result: { agentId: string; lastOutputAt: number; taskId: string }[] = [];
+        for (const session of this.agentManager.getAll()) {
+          if (session.status === "working" && session.lastOutputAt > 0) {
+            result.push({
+              agentId: session.agentId,
+              lastOutputAt: session.lastOutputAt,
+              taskId: session.currentTask ?? "unknown",
+            });
+          }
+        }
+        return result;
+      },
+      onStuck: (agentId, taskId) => {
+        const session = this.agentManager.get(agentId);
+        if (!session) return;
+        this.reactionEngine.handle("agent:stuck", {
+          agentId,
+          taskId,
+          error: `Agent ${session.name} idle for 5+ minutes`,
+          role: session.role,
+          session: this.buildSessionFacade(session),
+          orchestrator: this.buildOrchestratorFacade(),
+        });
+      },
+    });
+    this.stuckDetector.start();
   }
 
   // ---------------------------------------------------------------------------
@@ -844,6 +878,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   // ---------------------------------------------------------------------------
 
   destroy(): void {
+    this.stuckDetector.stop();
     for (const agent of this.agentManager.getAll()) {
       agent.destroy();
     }

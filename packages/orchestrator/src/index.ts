@@ -26,6 +26,8 @@ export type { AgentPlugin, ActivityState, AgentSessionRef, AgentSessionInfo, Wor
 export { createWebSocketNotifier } from "./notifier/index.js";
 export type { Notifier, OrchestratorNotification, OrchestratorNotification as Notification, NotificationPriority } from "./notifier/index.js";
 export { createPluginRegistry } from "./plugin-registry.js";
+export { StuckDetector } from "./stuck-detector.js";
+export type { WorkingAgent, StuckDetectorConfig } from "./stuck-detector.js";
 export type { PluginRegistry, PluginSlot, PluginManifest } from "./plugin-registry.js";
 export { syncAgentDefs } from "./agent-defs.js";
 export { TaskScheduler, tryParseDecomposition, parseDecompositionBlock, formatLineage, formatSiblings, DEFAULT_DECOMPOSER_CONFIG } from "./decomposer/index.js";

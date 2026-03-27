@@ -237,6 +237,8 @@ export class AgentSession {
   get lastResult(): string | null { return this._lastResult; }
   /** Clean task summary without prefix (for merge commit messages) */
   lastSummary: string | null = null;
+  /** Timestamp of the most recent stdout data received (ms since epoch, 0 = never) */
+  lastOutputAt: number = 0;
   private _lastResultText: string | null = null;
   /** Full output from the last completed task (for plan capture). */
   private _lastFullOutput: string | null = null;
@@ -262,6 +264,8 @@ export class AgentSession {
   /** Stack of merge commits on main (for multi-level undo) */
   mergeCommitStack: { hash: string; message: string }[] = [];
 
+  /** Current task ID (null if idle) */
+  get currentTask(): string | null { return this.currentTaskId; }
   /** Current working directory of the running task */
   get currentWorkingDir(): string | null { return this.currentCwd; }
   /** Whether this agent has session history (used --resume before) */
@@ -582,6 +586,7 @@ export class AgentSession {
       let seenFirstJson = false;
       this.process.stdout?.on("data", (data: Buffer) => {
         const raw = data.toString();
+        this.lastOutputAt = Date.now();
         stdoutChunkCount++;
         if (stdoutChunkCount <= 3) {
           console.log(`[Agent ${this.name} raw-stdout #${stdoutChunkCount}] ${raw.slice(0, 150)}`);
