@@ -1,6 +1,6 @@
 import { createInterface } from "readline";
 import { saveConfig } from "./config.js";
-import { detectBackends, getBackend } from "./backends.js";
+import { detectAndCreateAgents, getAllAgents } from "./agents/index.js";
 
 function ask(rl: ReturnType<typeof createInterface>, question: string): Promise<string> {
   return new Promise((resolve) => {
@@ -17,8 +17,9 @@ function ask(rl: ReturnType<typeof createInterface>, question: string): Promise<
 export async function runSetup(): Promise<void> {
   // Detect AI backends regardless of TTY
   console.log("[Setup] Detecting AI backends...");
-  const detected = detectBackends();
-  const detectedNames = detected.map((id) => getBackend(id)?.name ?? id).join(", ");
+  const { agents: detectedAgents, detected } = detectAndCreateAgents();
+  const agentMap = new Map(getAllAgents().map(b => [b.id, b]));
+  const detectedNames = detected.map((id) => agentMap.get(id)?.name ?? id).join(", ");
   console.log(`[Setup] Found: ${detectedNames || "none"}`);
 
   // Non-interactive: save detected backends and move on
@@ -52,7 +53,7 @@ export async function runSetup(): Promise<void> {
   if (detected.length > 1) {
     console.log("\n── AI Backends ───────────────────────");
     console.log(`Detected: ${detectedNames}`);
-    const choices = detected.map((id, i) => `${i + 1}=${getBackend(id)?.name ?? id}`).join(", ");
+    const choices = detected.map((id, i) => `${i + 1}=${agentMap.get(id)?.name ?? id}`).join(", ");
     const pick = await ask(rl, `Default backend (${choices}): `);
     const idx = parseInt(pick, 10) - 1;
     if (idx >= 0 && idx < detected.length) {
@@ -90,7 +91,7 @@ export async function runSetup(): Promise<void> {
 
   console.log("\n✓ Config saved to config.json");
   if (ablyApiKey) console.log("  • Ably: enabled");
-  console.log(`  • Default AI: ${getBackend(defaultBackend)?.name ?? defaultBackend}`);
+  console.log(`  • Default AI: ${agentMap.get(defaultBackend)?.name ?? defaultBackend}`);
   console.log(`  • Permissions: ${sandboxMode === "full" ? "Full access" : "Sandbox"}`);
   if (tunnelToken) console.log(`  • Tunnel: ${tunnelBaseUrl || "(token set, no URL)"}`);
   console.log("  • Run with --setup to reconfigure\n");

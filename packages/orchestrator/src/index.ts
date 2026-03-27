@@ -22,6 +22,7 @@ export { WorktreeWorkspace } from "./workspace/index.js";
 export type { Workspace, WorkspaceInfo, PostCreateConfig } from "./workspace/index.js";
 export type { CleanupWorktreeOptions, MergeResult, RuntimeOwnerInfo, WorktreeOwnerInfo } from "./worktree.js";
 export type { AIBackend, BuildArgsOpts, BackendStability, GuardType } from "./ai-backend.js";
+export type { AgentPlugin, ActivityState, AgentSessionRef, AgentSessionInfo, WorkspaceHooksConfig } from "./agent/index.js";
 export { syncAgentDefs } from "./agent-defs.js";
 export { TaskScheduler, tryParseDecomposition, formatLineage, formatSiblings, DEFAULT_DECOMPOSER_CONFIG } from "./decomposer/index.js";
 export type { TaskNode, DecompositionPlan, DecomposerConfig, TaskKind, TaskStatus } from "./decomposer/index.js";

@@ -4,7 +4,7 @@ import { ablyChannel } from "./ably-client.js";
 import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "./telegram-channel.js";
 import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
-import { detectBackends, getBackend, getAllBackends } from "./backends.js";
+import { detectAndCreateAgents, getAllAgents } from "./agents/index.js";
 import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, syncAgentDefs, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import type { CommandMeta } from "./transport.js";
@@ -1149,7 +1149,7 @@ async function main() {
 
   // Always re-detect AI backends on startup (CLIs may be installed/removed between runs)
   {
-    const detected = detectBackends();
+    const { agents: detectedAgentsList, detected } = detectAndCreateAgents();
     if (detected.length > 0) {
       config.detectedBackends = detected;
       if (!config.defaultBackend || !detected.includes(config.defaultBackend)) {
@@ -1161,7 +1161,7 @@ async function main() {
 
   // Register all known backends so any can be selected from the UI.
   // Detection only determines the default; uninstalled ones will fail at spawn time with a clear error.
-  const backendsToUse = getAllBackends();
+  const backendsToUse = getAllAgents();
 
   // Sync bundled agent definitions to ~/.claude/agents/ for --agent resolution
   syncAgentDefs();
@@ -1332,8 +1332,9 @@ async function main() {
   orc.on("task:result-returned", forwardEvent);
   orc.on("team:phase", forwardEvent);
 
-  const backendNames = config.detectedBackends.map((id) => getBackend(id)?.name ?? id).join(", ");
-  console.log(`[Gateway] AI backends: ${backendNames || "none detected"} (default: ${getBackend(config.defaultBackend)?.name ?? config.defaultBackend})`);
+  const agentMap = new Map(backendsToUse.map(b => [b.id, b]));
+  const backendNames = config.detectedBackends.map((id) => agentMap.get(id)?.name ?? id).join(", ");
+  console.log(`[Gateway] AI backends: ${backendNames || "none detected"} (default: ${agentMap.get(config.defaultBackend)?.name ?? config.defaultBackend})`);
   console.log(`[Gateway] Permissions: ${config.sandboxMode === "full" ? "Full access" : "Sandbox"}`);
   console.log(`[Gateway] Starting for machine: ${config.machineId}`);
 
