@@ -461,7 +461,7 @@ export const TERM_THEMES: Record<string, TermTheme> = {
 
 // Mutable theme variables — reassigned by applyTermTheme()
 // Defaults match "amber-noir" theme
-export let TERM_GREEN = "#e8b040";
+export let TERM_ACCENT = "#e8b040";
 export let TERM_DIM = "#6a5c40";
 export let TERM_TEXT = "#c4b894";
 export let TERM_TEXT_BRIGHT = "#e0d8c4";
@@ -485,7 +485,7 @@ export let TERM_SEM_CYAN = "#5aaa98";
 
 export function applyTermTheme(key: string) {
   const t = TERM_THEMES[key] ?? TERM_THEMES["studio"];
-  TERM_GREEN = t.accent;
+  TERM_ACCENT = t.accent;
   TERM_DIM = t.dim;
   TERM_TEXT = t.text;
   TERM_TEXT_BRIGHT = t.textBright;
@@ -521,7 +521,6 @@ export function applyTermTheme(key: string) {
     s.setProperty("--term-dim", t.dim);
     s.setProperty("--term-accent", t.accent);
     s.setProperty("--term-accent-rgb", t.accentRgb);
-    s.setProperty("--term-green", t.accent);
     s.setProperty("--term-yellow", t.yellow);
     s.setProperty("--term-red", t.red);
     s.setProperty("--term-blue", t.blue);

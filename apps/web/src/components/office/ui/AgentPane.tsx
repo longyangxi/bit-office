@@ -1,7 +1,7 @@
 import { useRef, useEffect, memo, useCallback, useState } from "react";
 import { useScrollAnchor } from "./useScrollAnchor";
 import { getStatusConfig, BACKEND_OPTIONS } from "./office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_CYAN } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_CYAN } from "./termTheme";
 import { isRealEnter } from "./office-utils";
 import { SysMsg, TokenBadge, MdContent } from "./MessageBubble";
 import { TermButton, TermInput, TermEmpty } from "./primitives";
@@ -287,8 +287,8 @@ function ReviewFooter({ onApplyReviewFixes, onDismissReview }: {
 
   return (
     <div className="px-3.5 py-2 font-mono text-term shrink-0" style={{
-      background: `color-mix(in srgb, ${TERM_GREEN} 5%, ${TERM_PANEL})`,
-      boxShadow: `inset 0 1px 0 ${TERM_GREEN}10`,
+      background: `color-mix(in srgb, ${TERM_ACCENT} 5%, ${TERM_PANEL})`,
+      boxShadow: `inset 0 1px 0 ${TERM_ACCENT}10`,
     }}>
       {/* Feedback input — only show when fixes are available */}
       {onApplyReviewFixes && (
@@ -599,7 +599,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
         <div style={{
           position: "absolute", inset: 0, zIndex: 20,
           display: "flex", flexDirection: "column",
-          background: `color-mix(in srgb, ${TERM_GREEN} 4%, ${TERM_BG})`,
+          background: `color-mix(in srgb, ${TERM_ACCENT} 4%, ${TERM_BG})`,
           animation: "review-overlay-in 0.3s ease-out",
           overflow: "hidden",
         }}>
@@ -607,18 +607,18 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
           <div style={{
             display: "flex", alignItems: "center", gap: 8,
             padding: "7px 14px",
-            background: `color-mix(in srgb, ${TERM_GREEN} 6%, ${TERM_PANEL})`,
-            boxShadow: `inset 0 -1px 0 ${TERM_GREEN}15`,
+            background: `color-mix(in srgb, ${TERM_ACCENT} 6%, ${TERM_PANEL})`,
+            boxShadow: `inset 0 -1px 0 ${TERM_ACCENT}15`,
             fontSize: TERM_SIZE, fontFamily: TERM_FONT,
             flexShrink: 0,
           }}>
-            <span style={{ color: TERM_GREEN, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_GREEN}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
+            <span style={{ color: TERM_ACCENT, fontSize: 9, fontWeight: 600, padding: "1px 6px", borderRadius: 3, background: `${TERM_ACCENT}18`, letterSpacing: "0.04em", textTransform: "uppercase" }}>REVIEW</span>
             <span style={{ color: TERM_TEXT_BRIGHT }}>
               {reviewerOverlay.name}
             </span>
             {/* Scanning indicator (busy) */}
             {reviewerOverlay.busy && (
-              <span className="working-dots" style={{ color: TERM_GREEN }}>
+              <span className="working-dots" style={{ color: TERM_ACCENT }}>
                 <span className="working-dots-mid" />
               </span>
             )}
@@ -664,22 +664,22 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               {/* Grid lines background */}
               <div className="review-scan-grid" style={{
                 position: "absolute", inset: 0, opacity: 0.06,
-                backgroundImage: `linear-gradient(${TERM_GREEN} 1px, transparent 1px), linear-gradient(90deg, ${TERM_GREEN} 1px, transparent 1px)`,
+                backgroundImage: `linear-gradient(${TERM_ACCENT} 1px, transparent 1px), linear-gradient(90deg, ${TERM_ACCENT} 1px, transparent 1px)`,
                 backgroundSize: "24px 24px",
               }} />
               {/* Matrix-style falling binary digits — canvas */}
-              <MatrixRainCanvas color={TERM_GREEN} font={TERM_FONT} />
+              <MatrixRainCanvas color={TERM_ACCENT} font={TERM_FONT} />
               {/* Sweep line */}
               <div className="review-scan-sweep" style={{
                 position: "absolute", left: 0, right: 0, height: 2,
-                background: `linear-gradient(90deg, transparent, ${TERM_GREEN}, transparent)`,
-                boxShadow: `0 0 20px 4px ${TERM_GREEN}50, 0 0 60px 8px ${TERM_GREEN}20`,
+                background: `linear-gradient(90deg, transparent, ${TERM_ACCENT}, transparent)`,
+                boxShadow: `0 0 20px 4px ${TERM_ACCENT}50, 0 0 60px 8px ${TERM_ACCENT}20`,
                 animation: "review-scan-sweep 2.4s ease-in-out infinite",
               }} />
               {/* Glow trail behind sweep */}
               <div className="review-scan-trail" style={{
                 position: "absolute", left: 0, right: 0, height: 40,
-                background: `linear-gradient(180deg, ${TERM_GREEN}12, transparent)`,
+                background: `linear-gradient(180deg, ${TERM_ACCENT}12, transparent)`,
                 animation: "review-scan-sweep 2.4s ease-in-out infinite",
               }} />
               {/* Center content */}
@@ -691,24 +691,24 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 <div style={{ position: "relative", width: 40, height: 40 }}>
                   <div className="review-scan-ring" style={{
                     position: "absolute", inset: 0, borderRadius: "50%",
-                    border: `1.5px solid ${TERM_GREEN}60`,
+                    border: `1.5px solid ${TERM_ACCENT}60`,
                     animation: "review-scan-pulse 2s ease-in-out infinite",
                   }} />
                   <div style={{
                     position: "absolute", inset: 8, borderRadius: "50%",
-                    background: `radial-gradient(circle, ${TERM_GREEN}30, transparent 70%)`,
+                    background: `radial-gradient(circle, ${TERM_ACCENT}30, transparent 70%)`,
                     animation: "review-scan-pulse 2s ease-in-out infinite 0.3s",
                   }} />
                   {/* Center dot */}
                   <div style={{
                     position: "absolute", top: "50%", left: "50%", width: 4, height: 4,
                     marginTop: -2, marginLeft: -2, borderRadius: "50%",
-                    backgroundColor: TERM_GREEN,
-                    boxShadow: `0 0 8px ${TERM_GREEN}`,
+                    backgroundColor: TERM_ACCENT,
+                    boxShadow: `0 0 8px ${TERM_ACCENT}`,
                   }} />
                 </div>
                 <span style={{
-                  fontFamily: TERM_FONT, fontSize: TERM_SIZE, color: TERM_GREEN,
+                  fontFamily: TERM_FONT, fontSize: TERM_SIZE, color: TERM_ACCENT,
                   letterSpacing: "0.08em", textTransform: "uppercase", fontWeight: 500,
                   opacity: 0.8,
                 }}>
@@ -717,10 +717,10 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
               </div>
               {/* Corner brackets — decorative */}
               {[
-                { top: 12, left: 12, borderTop: `1px solid ${TERM_GREEN}30`, borderLeft: `1px solid ${TERM_GREEN}30` },
-                { top: 12, right: 12, borderTop: `1px solid ${TERM_GREEN}30`, borderRight: `1px solid ${TERM_GREEN}30` },
-                { bottom: 12, left: 12, borderBottom: `1px solid ${TERM_GREEN}30`, borderLeft: `1px solid ${TERM_GREEN}30` },
-                { bottom: 12, right: 12, borderBottom: `1px solid ${TERM_GREEN}30`, borderRight: `1px solid ${TERM_GREEN}30` },
+                { top: 12, left: 12, borderTop: `1px solid ${TERM_ACCENT}30`, borderLeft: `1px solid ${TERM_ACCENT}30` },
+                { top: 12, right: 12, borderTop: `1px solid ${TERM_ACCENT}30`, borderRight: `1px solid ${TERM_ACCENT}30` },
+                { bottom: 12, left: 12, borderBottom: `1px solid ${TERM_ACCENT}30`, borderLeft: `1px solid ${TERM_ACCENT}30` },
+                { bottom: 12, right: 12, borderBottom: `1px solid ${TERM_ACCENT}30`, borderRight: `1px solid ${TERM_ACCENT}30` },
               ].map((pos, i) => (
                 <div key={i} style={{ position: "absolute", width: 16, height: 16, ...pos } as React.CSSProperties} />
               ))}
@@ -931,7 +931,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                 ) : cardPhase === "execute" ? (
                   <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
                     <div className="term-input-well">
-                      <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
+                      <span style={{ color: busy ? TERM_DIM : TERM_ACCENT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                       <textarea
                         ref={inputRef}
                         rows={1}
@@ -947,7 +947,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         style={{
                           flex: 1, padding: "6px 5px", border: "none",
                           backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                          fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
+                          fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_ACCENT,
                           resize: "none", lineHeight: "20px",
                         }}
                       />
@@ -965,8 +965,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       className="term-btn"
                       onClick={onApprovePlan}
                       style={{
-                        padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                        backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                        padding: "5px 14px", border: `1px solid ${TERM_ACCENT}60`,
+                        backgroundColor: "transparent", color: TERM_ACCENT, fontSize: TERM_SIZE, cursor: "pointer",
                         fontFamily: TERM_FONT, flexShrink: 0,
                       }}
                     >approve</button>
@@ -984,7 +984,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        fontFamily: TERM_FONT, caretColor: TERM_ACCENT,
                         resize: "none", lineHeight: "20px",
                       }}
                     />
@@ -1006,7 +1006,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        fontFamily: TERM_FONT, caretColor: TERM_ACCENT,
                         resize: "none", lineHeight: "20px",
                       }}
                     />
@@ -1028,8 +1028,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                         onClick={onMerge}
                         style={{
                           display: "inline-flex", alignItems: "center", gap: 5,
-                          padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                          backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                          padding: "5px 14px", border: `1px solid ${TERM_ACCENT}60`,
+                          backgroundColor: "transparent", color: TERM_ACCENT, fontSize: TERM_SIZE, cursor: "pointer",
                           fontFamily: TERM_FONT, flexShrink: 0,
                         }}
                       ><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3v6M4 3v10M4 13l4-4 4 0"/></svg>Merge</button>
@@ -1060,7 +1060,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        fontFamily: TERM_FONT, caretColor: TERM_ACCENT,
                         resize: "none", lineHeight: "20px",
                       }}
                     />
@@ -1072,8 +1072,8 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       className="term-btn"
                       onClick={onQuickApprove}
                       style={{
-                        padding: "5px 14px", border: `1px solid ${TERM_GREEN}60`,
-                        backgroundColor: "transparent", color: TERM_GREEN, fontSize: TERM_SIZE, cursor: "pointer",
+                        padding: "5px 14px", border: `1px solid ${TERM_ACCENT}60`,
+                        backgroundColor: "transparent", color: TERM_ACCENT, fontSize: TERM_SIZE, cursor: "pointer",
                         fontFamily: TERM_FONT, flexShrink: 0,
                       }}
                     >approve</button>
@@ -1091,7 +1091,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       style={{
                         flex: 1, padding: "5px 6px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, caretColor: TERM_GREEN,
+                        fontFamily: TERM_FONT, caretColor: TERM_ACCENT,
                         resize: "none", lineHeight: "20px",
                       }}
                     />
@@ -1099,7 +1099,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                   </div>
                 ) : (
                   <div className="term-input-well">
-                    <span style={{ color: busy ? TERM_DIM : TERM_GREEN, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
+                    <span style={{ color: busy ? TERM_DIM : TERM_ACCENT, fontSize: TERM_SIZE, fontFamily: TERM_FONT, padding: "6px 0 6px 8px", flexShrink: 0, textShadow: "none" }}>&gt;</span>
                     <textarea
                       ref={inputRef}
                       rows={1}
@@ -1115,7 +1115,7 @@ const AgentPane = memo(function AgentPane(props: AgentPaneProps) {
                       style={{
                         flex: 1, padding: "6px 5px", border: "none",
                         backgroundColor: "transparent", color: TERM_TEXT_BRIGHT, fontSize: TERM_SIZE, outline: "none",
-                        fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_GREEN,
+                        fontFamily: TERM_FONT, fontWeight: 400, caretColor: TERM_ACCENT,
                         resize: "none", lineHeight: "20px",
                       }}
                       autoFocus

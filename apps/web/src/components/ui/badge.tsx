@@ -12,7 +12,7 @@ const badgeVariants = cva(
         red: "text-sem-red bg-sem-red/8 border-sem-red/25",
         blue: "text-sem-blue bg-sem-blue/8 border-sem-blue/25",
         purple: "text-sem-purple bg-sem-purple/8 border-sem-purple/25",
-        dim: "text-term-green-dim bg-term-green-dim/8 border-term-green-dim/20",
+        dim: "text-term-dim bg-term-dim/8 border-term-dim/20",
       },
     },
     defaultVariants: {

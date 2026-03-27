@@ -6,7 +6,7 @@ import type { AgentDefinition } from "@office/shared";
 import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_SEM_YELLOW } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_DIM, TERM_TEXT_BRIGHT, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_SEM_YELLOW } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
@@ -138,8 +138,8 @@ function HireTeamModal({ agentDefs, onCreateTeam, onClose, assetsReady, detected
                 style={{
                   display: "flex", flexDirection: "column", alignItems: "center",
                   padding: "12px 6px 10px",
-                  border: selected ? `1px solid ${TERM_GREEN}60` : `1px solid ${TERM_BORDER}`,
-                  backgroundColor: selected ? `${TERM_GREEN}0a` : "transparent",
+                  border: selected ? `1px solid ${TERM_ACCENT}60` : `1px solid ${TERM_BORDER}`,
+                  backgroundColor: selected ? `${TERM_ACCENT}0a` : "transparent",
                   cursor: "pointer", textAlign: "center",
                   opacity: selected ? 1 : 0.5,
                   transition: "opacity 0.15s, border-color 0.15s, background-color 0.15s",

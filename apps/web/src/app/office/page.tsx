@@ -21,7 +21,7 @@ import { useSceneBridge } from "@/components/office/scene/useSceneBridge";
 // Extracted constants, theme, and utils
 import { getStatusConfig, STATUS_CONFIG, BACKEND_OPTIONS } from "@/components/office/ui/office-constants";
 import type { Ratings } from "@/components/office/ui/office-constants";
-import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_THEMES, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_GLOW, TERM_BG, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_GLOW_BORDER, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE, TERM_SEM_CYAN, applyTermTheme } from "@/components/office/ui/termTheme";
 import { isRealEnter, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "@/components/office/ui/office-utils";
 import { computeAutoGrid } from "@/components/office/ui/autoGrid";
 import { APP_VERSION, APP_BUILD_TIME } from "@/lib/appMeta";
@@ -1513,15 +1513,15 @@ export default function OfficePage() {
               padding: 0,
               background: TERM_PANEL + "80",
               borderRadius: "10px 0 0 10px",
-              borderTop: `1px solid ${TERM_GREEN}40`,
-              borderBottom: `1px solid ${TERM_GREEN}40`,
-              borderLeft: `1px solid ${TERM_GREEN}40`,
+              borderTop: `1px solid ${TERM_ACCENT}40`,
+              borderBottom: `1px solid ${TERM_ACCENT}40`,
+              borderLeft: `1px solid ${TERM_ACCENT}40`,
               borderRight: "none",
               boxShadow: "-2px 0 8px rgba(0,0,0,0.3)",
-              color: TERM_GREEN, fontSize: 14,
+              color: TERM_ACCENT, fontSize: 14,
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_GREEN; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_GREEN; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = TERM_SURFACE; e.currentTarget.style.color = TERM_ACCENT; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = TERM_PANEL + "80"; e.currentTarget.style.color = TERM_ACCENT; }}
             title="Console Mode"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -1618,7 +1618,7 @@ export default function OfficePage() {
                 const isDone = statusKey === "done";
                 const isLead = !!agentState?.isTeamLead;
                 // Ring color based on status
-                const ringColor = agentBusy ? TERM_GREEN
+                const ringColor = agentBusy ? TERM_ACCENT
                   : isWaiting ? TERM_SEM_YELLOW
                   : isError ? TERM_SEM_RED
                   : isDone ? TERM_SEM_GREEN
@@ -1636,7 +1636,7 @@ export default function OfficePage() {
                       position: "relative", width: 34, height: 40,
                       overflow: "hidden", borderRadius: 4, flexShrink: 0,
                       border: `2px solid ${ringColor}`,
-                      boxShadow: agentBusy ? `0 0 6px ${TERM_GREEN}30` : isWaiting ? `0 0 6px ${TERM_SEM_YELLOW}25` : "none",
+                      boxShadow: agentBusy ? `0 0 6px ${TERM_ACCENT}30` : isWaiting ? `0 0 6px ${TERM_SEM_YELLOW}25` : "none",
                       transition: "border-color 0.3s ease, box-shadow 0.3s ease",
                     }}>
                       <div style={{ marginTop: -1, marginLeft: 1 }}>
@@ -1646,8 +1646,8 @@ export default function OfficePage() {
                         <span style={{
                           position: "absolute", top: 2, right: 2,
                           width: 6, height: 6, borderRadius: "50%",
-                          backgroundColor: TERM_GREEN,
-                          boxShadow: `0 0 4px ${TERM_GREEN}`,
+                          backgroundColor: TERM_ACCENT,
+                          boxShadow: `0 0 4px ${TERM_ACCENT}`,
                           animation: "px-pulse-gold 1.5s ease infinite",
                         }} />
                       )}
@@ -1704,13 +1704,13 @@ export default function OfficePage() {
                   style={{
                     display: "flex", alignItems: "center", justifyContent: "center",
                     gap: 5, padding: "6px 16px", height: 52, flexShrink: 0,
-                    border: `1px solid ${TERM_GREEN}50`, cursor: "pointer",
-                    backgroundColor: `${TERM_GREEN}12`, color: `${TERM_GREEN}cc`,
+                    border: `1px solid ${TERM_ACCENT}50`, cursor: "pointer",
+                    backgroundColor: `${TERM_ACCENT}12`, color: `${TERM_ACCENT}cc`,
                     fontSize: 11, fontFamily: TERM_FONT, fontWeight: 500,
                     borderRadius: 6, transition: "all 0.2s ease",
                   }}
-                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}25`; e.currentTarget.style.borderColor = `${TERM_GREEN}90`; e.currentTarget.style.color = TERM_GREEN; }}
-                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_GREEN}12`; e.currentTarget.style.borderColor = `${TERM_GREEN}50`; e.currentTarget.style.color = `${TERM_GREEN}cc`; }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}25`; e.currentTarget.style.borderColor = `${TERM_ACCENT}90`; e.currentTarget.style.color = TERM_ACCENT; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = `${TERM_ACCENT}12`; e.currentTarget.style.borderColor = `${TERM_ACCENT}50`; e.currentTarget.style.color = `${TERM_ACCENT}cc`; }}
                 ><span style={{ fontSize: 15, lineHeight: 1 }}>+</span> hire team</button>
               )}
               {isOwner && hasTeam && teamBusy && (
@@ -1987,8 +1987,8 @@ export default function OfficePage() {
               onClick={() => setShowHireModal(true)}
               style={{
                 width: 44, height: 44, flexShrink: 0,
-                border: `1px solid ${TERM_GREEN}60`, backgroundColor: `${TERM_GREEN}1e`,
-                color: TERM_GREEN, fontSize: 22, cursor: "pointer",
+                border: `1px solid ${TERM_ACCENT}60`, backgroundColor: `${TERM_ACCENT}1e`,
+                color: TERM_ACCENT, fontSize: 22, cursor: "pointer",
                 display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >+</button>
@@ -2313,7 +2313,7 @@ export default function OfficePage() {
                           disabled={!prompt.trim() && pendingImages.length === 0}
                           style={{
                             padding: "9px 14px", border: "none",
-                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_GREEN : TERM_PANEL,
+                            backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_ACCENT : TERM_PANEL,
                             color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                             fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                             fontWeight: 700, fontFamily: "monospace",
@@ -2383,7 +2383,7 @@ export default function OfficePage() {
                         disabled={!prompt.trim() && pendingImages.length === 0}
                         style={{
                           padding: "9px 14px", border: "none",
-                          backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_GREEN : TERM_PANEL,
+                          backgroundColor: (prompt.trim() || pendingImages.length > 0) ? TERM_ACCENT : TERM_PANEL,
                           color: (prompt.trim() || pendingImages.length > 0) ? TERM_BG : TERM_DIM,
                           fontSize: 13, cursor: (prompt.trim() || pendingImages.length > 0) ? "pointer" : "default",
                           fontWeight: 700, fontFamily: "monospace",
@@ -2561,7 +2561,7 @@ export default function OfficePage() {
               onClick={() => setShareUrl(null)}
               style={{
                 marginTop: 12, padding: "8px 20px", border: "none",
-                backgroundColor: TERM_GREEN, color: TERM_BG, fontSize: 13,
+                backgroundColor: TERM_ACCENT, color: TERM_BG, fontSize: 13,
                 cursor: "pointer", fontWeight: 700, fontFamily: "monospace",
               }}
             >OK</button>
@@ -2590,8 +2590,8 @@ export default function OfficePage() {
           }}
           style={{
             position: "fixed", bottom: 16, left: 16, zIndex: 50,
-            background: `${TERM_GREEN}26`, border: `1px solid ${TERM_GREEN}66`,
-            color: TERM_GREEN, padding: "6px 14px", cursor: "pointer",
+            background: `${TERM_ACCENT}26`, border: `1px solid ${TERM_ACCENT}66`,
+            color: TERM_ACCENT, padding: "6px 14px", cursor: "pointer",
             fontSize: 11, fontFamily: "monospace", fontWeight: 600,
           }}
         >

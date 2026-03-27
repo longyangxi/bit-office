@@ -95,7 +95,7 @@
 /* Dim — subtle, de-emphasized */
 .tb-dim {
   border-color: var(--term-border);
-  color: var(--term-green-dim);
+  color: var(--term-dim);
 }
 .tb-dim:hover {
   color: var(--term-text);
@@ -121,11 +121,11 @@
   transition: border-color var(--duration-fast) ease;
 }
 .ti::placeholder {
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   opacity: 0.5;
 }
 .ti:focus {
-  border-color: var(--term-green-dim);
+  border-color: var(--term-dim);
 }
 
 /* Textarea variant — minimal resize, auto-height friendly */
@@ -139,7 +139,7 @@
   border: none;
   background: transparent;
   color: var(--term-text-bright);
-  caret-color: var(--term-green);
+  caret-color: var(--term-accent);
   padding: 6px 5px;
 }
 .ti-inline:focus {
@@ -224,7 +224,7 @@
   border: 1px solid var(--term-border);
   border-radius: var(--radius-sm);
   background: transparent;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   font-size: var(--font-size-xs);
   font-family: var(--font-sans);
   font-weight: 500;
@@ -282,9 +282,9 @@
   border-color: color-mix(in srgb, var(--term-sem-purple) 25%, transparent);
 }
 .tg-dim {
-  color: var(--term-green-dim);
-  background: color-mix(in srgb, var(--term-green-dim) 8%, transparent);
-  border-color: color-mix(in srgb, var(--term-green-dim) 20%, transparent);
+  color: var(--term-dim);
+  background: color-mix(in srgb, var(--term-dim) 8%, transparent);
+  border-color: color-mix(in srgb, var(--term-dim) 20%, transparent);
 }
 
 /* ============================================================
@@ -304,7 +304,7 @@
   font-size: var(--font-size-xs);
   font-family: var(--font-sans);
   font-weight: 500;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-bottom: var(--space-1);
@@ -332,14 +332,14 @@
     transform var(--duration-fast) ease;
 }
 .tac:hover {
-  border-color: color-mix(in srgb, var(--term-green) 40%, transparent);
-  background: color-mix(in srgb, var(--term-green) 3%, transparent);
+  border-color: color-mix(in srgb, var(--term-accent) 40%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 3%, transparent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transform: translateY(-1px);
 }
 .tac-selected {
-  border-color: color-mix(in srgb, var(--term-green) 50%, transparent);
-  background: color-mix(in srgb, var(--term-green) 5%, transparent);
+  border-color: color-mix(in srgb, var(--term-accent) 50%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 5%, transparent);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
@@ -349,7 +349,7 @@
    ============================================================ */
 .tdx {
   font-size: var(--font-size-base);
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   cursor: pointer;
   padding: 4px;
   line-height: 1;
@@ -392,7 +392,7 @@
   font-size: var(--font-size-sm);
   font-family: var(--font-sans);
   font-weight: 500;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   border-radius: var(--radius-md);
   background: transparent;
   border: 1px solid transparent;
@@ -441,7 +441,7 @@
   height: 32px;
   margin-bottom: 4px;
   opacity: 0.2;
-  background: var(--term-green);
+  background: var(--term-accent);
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5'%3E%3Cpath d='M8 9h8M8 13h5M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z'/%3E%3C/svg%3E");
   mask-size: contain;
   mask-repeat: no-repeat;
@@ -451,7 +451,7 @@
 }
 .te-msg {
   font-size: 13px;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   letter-spacing: 0.02em;
   opacity: 0.45;
 }
@@ -461,7 +461,7 @@
 }
 .te-hint {
   font-size: 11px;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   opacity: 0.4;
   margin-top: 2px;
 }
@@ -594,10 +594,10 @@
   font-size: 14px;
   font-family: var(--font-sans);
   outline: none;
-  caret-color: var(--term-green);
+  caret-color: var(--term-accent);
 }
 .cp-input::placeholder {
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   opacity: 0.5;
 }
 .cp-list {
@@ -623,7 +623,7 @@
 }
 .cp-item:hover,
 .cp-item-active {
-  background: color-mix(in srgb, var(--term-green) 8%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 8%, transparent);
   color: var(--term-text-bright);
 }
 .cp-item-icon {
@@ -641,7 +641,7 @@
 }
 .cp-item-hint {
   font-size: 11px;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   flex-shrink: 0;
 }
 .cp-empty {
@@ -649,14 +649,14 @@
   text-align: center;
   font-size: var(--font-size-base);
   font-family: var(--font-sans);
-  color: var(--term-green-dim);
+  color: var(--term-dim);
 }
 .cp-group-label {
   padding: 8px 16px 4px;
   font-size: 10px;
   font-family: var(--font-sans);
   font-weight: 500;
-  color: var(--term-green-dim);
+  color: var(--term-dim);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -710,7 +710,7 @@
   /* Accessible touch target: visual dot is small but clickable area is 44px via pseudo */
   position: relative;
   cursor: pointer;
-  background: var(--term-green-dim);
+  background: var(--term-dim);
   opacity: 0.35;
   transition: width 0.25s ease, opacity 0.25s ease, background 0.25s ease;
 }
@@ -727,7 +727,7 @@
   width: 22px;
   height: 6px;
   opacity: 1;
-  background: var(--term-green);
+  background: var(--term-accent);
 }
 
 /* ============================================================
@@ -760,13 +760,13 @@
 }
 .pane-resize:hover::after,
 .pane-resize-active::after {
-  background: var(--term-green);
+  background: var(--term-accent);
   box-shadow:
     1px 0 0 rgba(255, 255, 255, 0.06),
     0 0 8px rgba(var(--term-accent-rgb), 0.15);
 }
 .pane-resize:hover {
-  background: color-mix(in srgb, var(--term-green) 4%, transparent);
+  background: color-mix(in srgb, var(--term-accent) 4%, transparent);
 }
 
 /* ============================================================

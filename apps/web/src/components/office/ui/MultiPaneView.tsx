@@ -1,7 +1,7 @@
 import { memo, useCallback, useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import type { ReviewerOverlayData } from "./AgentPane";
-import { TERM_GREEN, TERM_BORDER_DIM, TERM_BORDER } from "./termTheme";
+import { TERM_ACCENT, TERM_BORDER_DIM, TERM_BORDER } from "./termTheme";
 
 import { cn } from "@/lib/utils";
 

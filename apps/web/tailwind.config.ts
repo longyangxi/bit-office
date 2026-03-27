@@ -15,7 +15,7 @@ const config: Config = {
         // shadcn semantic slots — wired to terminal vars
         border: "var(--term-border)",
         input: "var(--term-border)",
-        ring: "var(--term-green)",
+        ring: "var(--term-accent)",
         background: "var(--term-bg)",
         foreground: "var(--term-text)",
         primary: {
@@ -32,7 +32,7 @@ const config: Config = {
         },
         muted: {
           DEFAULT: "var(--term-surface)",
-          foreground: "var(--term-green-dim)",
+          foreground: "var(--term-dim)",
         },
         accent: {
           DEFAULT: "var(--term-accent)",
@@ -65,8 +65,8 @@ const config: Config = {
           surface: "var(--term-surface)",
           border: "var(--term-border)",
           "border-dim": "var(--term-border-dim)",
-          green: "var(--term-green)",
-          "green-dim": "var(--term-green-dim)",
+          accent: "var(--term-accent)",
+          dim: "var(--term-dim)",
           text: "var(--term-text)",
           "text-bright": "var(--term-text-bright)",
         },

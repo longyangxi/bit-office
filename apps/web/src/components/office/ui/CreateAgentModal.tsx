@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
 import { ROLE_CATALOG, ROLE_DESC_MAP, ROLE_PRESETS, PERSONALITY_PRESETS } from "./office-constants";
-import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_GREEN, TERM_DIM, TERM_SEM_BLUE } from "./termTheme";
+import { TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_BG, TERM_TEXT, TERM_ACCENT, TERM_DIM, TERM_SEM_BLUE } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import { isRealEnter } from "./office-utils";
 import TermModal from "./primitives/TermModal";
@@ -66,8 +66,8 @@ function RoleSearchSelect({ value, onSelect }: { value: string; onSelect: (role:
                   onClick={() => { onSelect(a.name); setOpen(false); setSearch(""); }}
                   style={{
                     padding: "5px 10px", fontSize: 13, fontFamily: "var(--font-mono)",
-                    color: a.name === value ? TERM_GREEN : TERM_TEXT,
-                    cursor: "pointer", backgroundColor: a.name === value ? `${TERM_GREEN}18` : "transparent",
+                    color: a.name === value ? TERM_ACCENT : TERM_TEXT,
+                    cursor: "pointer", backgroundColor: a.name === value ? `${TERM_ACCENT}18` : "transparent",
                   }}
                   onMouseEnter={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = TERM_SURFACE; }}
                   onMouseLeave={(e) => { if (a.name !== value) e.currentTarget.style.backgroundColor = "transparent"; }}
@@ -258,8 +258,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
               key={p}
               onClick={() => setPalette(p)}
               style={{
-                padding: 3, border: palette === p ? `2px solid ${TERM_GREEN}` : `2px solid ${TERM_BORDER}`,
-                backgroundColor: palette === p ? `${TERM_GREEN}18` : "transparent",
+                padding: 3, border: palette === p ? `2px solid ${TERM_ACCENT}` : `2px solid ${TERM_BORDER}`,
+                backgroundColor: palette === p ? `${TERM_ACCENT}18` : "transparent",
                 cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
@@ -313,15 +313,15 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                     display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
                     cursor: "pointer", fontSize: 13, fontFamily: "var(--font-mono)",
                     color: active ? TERM_TEXT : TERM_DIM,
-                    backgroundColor: active ? `${TERM_GREEN}0c` : "transparent",
-                    border: `1px solid ${active ? TERM_GREEN + "30" : "transparent"}`,
+                    backgroundColor: active ? `${TERM_ACCENT}0c` : "transparent",
+                    border: `1px solid ${active ? TERM_ACCENT + "30" : "transparent"}`,
                   }}
                 >
                   <input
                     type="checkbox"
                     checked={active}
                     onChange={() => toggleSkillFile(skill.name)}
-                    style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
+                    style={{ accentColor: TERM_ACCENT, cursor: "pointer" }}
                   />
                   <span style={{ flex: 1 }}>{skill.title}</span>
                   {skill.isFolder && (
@@ -396,7 +396,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
                 name="personality"
                 checked={personalityMode === i}
                 onChange={() => setPersonalityMode(i)}
-                style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
+                style={{ accentColor: TERM_ACCENT, cursor: "pointer" }}
               />
               {p.label}
             </label>
@@ -410,7 +410,7 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
               name="personality"
               checked={personalityMode === 3}
               onChange={() => setPersonalityMode(3)}
-              style={{ accentColor: TERM_GREEN, cursor: "pointer" }}
+              style={{ accentColor: TERM_ACCENT, cursor: "pointer" }}
             />
             Custom
           </label>

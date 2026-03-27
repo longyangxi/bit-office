@@ -7,7 +7,7 @@ import { sendCommand } from "@/lib/connection";
 import { folderPickCallbacks } from "@/store/office-store";
 import { BACKEND_OPTIONS } from "./office-constants";
 import { generateRandomName } from "./office-utils";
-import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_GREEN, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
+import { TERM_PANEL, TERM_DIM, TERM_BORDER, TERM_BG, TERM_ACCENT, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED } from "./termTheme";
 import SpriteAvatar from "./SpriteAvatar";
 import TermModal from "./primitives/TermModal";
 import TermButton from "./primitives/TermButton";
@@ -68,9 +68,9 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         style={{
           display: "flex", flexDirection: "column", alignItems: "center",
           padding: "var(--space-3) var(--space-2) var(--space-2)", position: "relative",
-          border: `1px solid ${isSelected ? TERM_GREEN : isHovered ? TERM_BORDER : TERM_BORDER + "80"}`,
+          border: `1px solid ${isSelected ? TERM_ACCENT : isHovered ? TERM_BORDER : TERM_BORDER + "80"}`,
           borderRadius: "var(--radius-md)",
-          backgroundColor: isSelected ? `${TERM_GREEN}12` : isHovered ? `${TERM_TEXT}08` : "transparent",
+          backgroundColor: isSelected ? `${TERM_ACCENT}12` : isHovered ? `${TERM_TEXT}08` : "transparent",
           cursor: "pointer", textAlign: "center",
           transition: "border-color 0.15s, background-color 0.15s",
           gap: "var(--space-2)",
@@ -81,7 +81,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
         </div>
         <div style={{
           fontSize: "var(--font-size-xs)", fontFamily: "var(--font-sans)", fontWeight: 500,
-          color: isSelected ? TERM_GREEN : TERM_TEXT,
+          color: isSelected ? TERM_ACCENT : TERM_TEXT,
           width: "100%", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
         }}>{def.role}</div>
         {isHovered && (
@@ -145,10 +145,10 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                   onClick={() => setSelectedBackend(b.id)}
                   style={{
                     flex: 1, padding: "var(--space-2) var(--space-1)", fontSize: "var(--font-size-sm)", fontWeight: 500,
-                    border: isSelected ? `1px solid ${TERM_GREEN}` : `1px solid ${TERM_BORDER}80`,
+                    border: isSelected ? `1px solid ${TERM_ACCENT}` : `1px solid ${TERM_BORDER}80`,
                     borderRadius: "var(--radius-sm)",
-                    backgroundColor: isSelected ? TERM_GREEN + "20" : "transparent",
-                    color: isSelected ? TERM_GREEN : TERM_DIM,
+                    backgroundColor: isSelected ? TERM_ACCENT + "20" : "transparent",
+                    color: isSelected ? TERM_ACCENT : TERM_DIM,
                     cursor: "pointer", fontFamily: "var(--font-sans)",
                     opacity: available ? 1 : 0.7,
                     transition: "border-color 0.15s, background-color 0.15s",
@@ -191,7 +191,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                 transition: "border-color 0.15s, color 0.15s",
                 color: TERM_DIM, minHeight: 80,
               }}
-              onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_GREEN; e.currentTarget.style.color = TERM_GREEN; }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = TERM_ACCENT; e.currentTarget.style.color = TERM_ACCENT; }}
               onMouseLeave={(e) => { e.currentTarget.style.borderColor = TERM_BORDER + "80"; e.currentTarget.style.color = TERM_DIM; }}
             >
               <span style={{ fontSize: 22, lineHeight: 1, fontWeight: 300 }}>+</span>
@@ -221,7 +221,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
               style={{
                 width: 360, maxWidth: "90vw",
                 padding: "var(--space-4)",
-                border: `1px solid ${TERM_GREEN}50`,
+                border: `1px solid ${TERM_ACCENT}50`,
                 borderRadius: "var(--radius-lg)",
                 backgroundColor: TERM_BG,
                 boxShadow: "var(--shadow-xl)",
@@ -230,7 +230,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
             >
               <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
                 <SpriteAvatar palette={selectedDef.palette} zoom={2} ready={assetsReady} />
-                <div style={{ fontSize: "var(--font-size-base)", color: TERM_GREEN, fontFamily: "var(--font-mono)", fontWeight: 600, flex: 1 }}>
+                <div style={{ fontSize: "var(--font-size-base)", color: TERM_ACCENT, fontFamily: "var(--font-mono)", fontWeight: 600, flex: 1 }}>
                   {selectedDef.role}
                 </div>
                 <button
@@ -281,7 +281,7 @@ function HireModal({ agentDefs, onHire, onCreate, onEdit, onDelete, onClose, ass
                       color: TERM_DIM, fontSize: 13, padding: 0, lineHeight: 1,
                       fontFamily: "var(--font-mono)",
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.color = TERM_GREEN; }}
+                    onMouseEnter={(e) => { e.currentTarget.style.color = TERM_ACCENT; }}
                     onMouseLeave={(e) => { e.currentTarget.style.color = TERM_DIM; }}
                   >&#x21bb;</button>
                 </div>

@@ -25,8 +25,7 @@ html {
   --term-surface: #18181b;
   --term-border: #27272a;
   --term-border-dim: #1c1c1f;
-  --term-green: #3b82f6;
-  --term-green-dim: #64748b;
+  --term-dim: #64748b;
   --term-text: #94a3b8;
   --term-text-bright: #e2e8f0;
   --term-accent: #3b82f6;
@@ -46,6 +45,7 @@ html {
   --font-sans: 'Inter', 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
   --font-size-base: 13px;
+  --font-size-chat: 14px;   /* readable size for chat messages / body text */
   --font-size-sm: 12px;
   --font-size-xs: 11px;
 
@@ -225,14 +225,14 @@ select option {
 .term-cursor {
   display: inline-block;
   animation: cursor-blink 1s step-end infinite;
-  color: var(--term-green);
+  color: var(--term-accent);
 }
 /* ── Typography — Chat content uses mono, UI uses sans ──
    Hierarchy via subtle size/weight differences. */
 .chat-markdown, .chat-markdown *,
 .term-msg, .term-msg *,
 .crt-screen a, .crt-screen code, .crt-screen span {
-  font-size: var(--font-size-base) !important; font-family: var(--font-mono) !important;
+  font-size: var(--font-size-chat) !important; font-family: var(--font-mono) !important;
   font-weight: 400 !important; line-height: 1.7 !important;
   letter-spacing: -0.01em;
 }
@@ -302,7 +302,7 @@ select option {
 }
 /* ── Links: clean underline on hover ── */
 .chat-markdown a, .crt-screen a {
-  color: var(--term-green) !important; text-decoration: none !important;
+  color: var(--term-accent) !important; text-decoration: none !important;
   transition: color 0.1s ease;
 }
 .chat-markdown a:hover, .crt-screen a:hover {
@@ -398,12 +398,12 @@ select option {
   transition: border-color var(--duration-fast) ease;
 }
 .term-input-well:focus-within {
-  border-color: var(--term-green-dim);
+  border-color: var(--term-dim);
 }
 /* ── Input focus — no outline ── */
 .term-input:focus { outline: none; }
-.term-input::placeholder { color: var(--term-green-dim); opacity: 0.5; }
-textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
+.term-input::placeholder { color: var(--term-dim); opacity: 0.5; }
+textarea::placeholder { color: var(--term-dim); opacity: 0.5; }
 /* ── Button — precise, no wobble ── */
 .term-btn { transition: border-color 0.15s ease, color 0.15s ease; }
 .term-btn:active { opacity: 0.85; }
@@ -516,7 +516,7 @@ textarea::placeholder { color: var(--term-green-dim); opacity: 0.5; }
 
 /* ── Global focus-visible — keyboard accessibility ── */
 :focus-visible {
-  outline: 1px solid var(--term-green);
+  outline: 1px solid var(--term-accent);
   outline-offset: 2px;
 }
 /* Suppress focus ring for mouse/touch interactions */

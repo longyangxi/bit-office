@@ -12,8 +12,8 @@ const Textarea = React.forwardRef<
         "border border-border bg-background text-foreground",
         "font-mono text-term leading-4",
         "outline-none focus-visible:outline-none transition-colors duration-fast",
-        "placeholder:text-term-green-dim placeholder:opacity-50",
-        "focus:border-term-green-dim",
+        "placeholder:text-term-dim placeholder:opacity-50",
+        "focus:border-term-dim",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}

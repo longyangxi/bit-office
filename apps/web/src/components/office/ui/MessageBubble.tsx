@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { sendCommand } from "@/lib/connection";
 import type { ChatMessage } from "@/store/office-store";
-import { TERM_FONT, TERM_SIZE, TERM_GREEN, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
+import { TERM_FONT, TERM_SIZE, TERM_ACCENT, TERM_DIM, TERM_TEXT, TERM_TEXT_BRIGHT, TERM_ERROR, TERM_PANEL, TERM_SURFACE, TERM_BORDER, TERM_BORDER_DIM, TERM_SEM_GREEN, TERM_SEM_YELLOW, TERM_SEM_RED, TERM_SEM_BLUE, TERM_SEM_PURPLE } from "./termTheme";
 import { linkifyText, formatDuration, formatTokenCount, computePreviewUrl, hasWebPreview, buildPreviewCommand } from "./office-utils";
 import { BACKEND_OPTIONS } from "./office-constants";
 
@@ -309,7 +309,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         padding: "6px 12px",
       }}>
         <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-        <span style={{ color: TERM_GREEN, opacity: 0.7 }}>&gt; </span>
+        <span style={{ color: TERM_ACCENT, opacity: 0.7 }}>&gt; </span>
         <span style={{ color: TERM_TEXT, wordBreak: "break-word" }}>{linkifyText(msg.text)}</span>
       </div>
     );
@@ -377,7 +377,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
         {(projectDir || entryFile) && (
           <div style={{ color: TERM_DIM, marginTop: 4, display: "flex", gap: 8, alignItems: "center" }}>
             {projectDir && <span className="term-path-scroll">{projectDir}</span>}
-            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_GREEN }}>{entryFile}</span>}
+            {entryFile && <span onClick={() => sendCommand({ type: "OPEN_FILE", path: entryFile })} style={{ cursor: "pointer", color: TERM_ACCENT }}>{entryFile}</span>}
           </div>
         )}
         {changedFiles.length > 0 && <div style={{ color: TERM_DIM, marginTop: 2 }}>{changedFiles.length} files changed</div>}
