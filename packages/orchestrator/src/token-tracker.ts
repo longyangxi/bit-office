@@ -115,8 +115,6 @@ export class TokenTracker {
   private seenIds = new Set<string>();
   private _updated = false;
   private backendType: BackendType;
-  /** Whether item.completed already emitted text blocks in the current turn */
-  private _turnHasItemText = false;
 
   constructor(backendId: string) {
     this.backendType = backendId === "claude" ? "claude"
@@ -134,7 +132,6 @@ export class TokenTracker {
     this.detectedModel = "";
     this.seenIds.clear();
     this._updated = false;
-    this._turnHasItemText = false;
   }
 
   /** Current accumulated token snapshot. */
@@ -277,10 +274,8 @@ export class TokenTracker {
         for (const block of item.content as Record<string, unknown>[]) {
           if (block.type === "output_text" && typeof block.text === "string") {
             content.textBlocks.push(block.text);
-            this._turnHasItemText = true;
           } else if (block.type === "text" && typeof block.text === "string") {
             content.textBlocks.push(block.text);
-            this._turnHasItemText = true;
           }
         }
         return content;
@@ -320,24 +315,10 @@ export class TokenTracker {
             this._updated = true;
           }
         }
-        // Extract text from response.output[] ONLY if item.completed didn't
-        // already provide text blocks (prevents duplicate content in the UI).
-        if (!this._turnHasItemText) {
-          const output = response.output as Record<string, unknown>[] | undefined;
-          if (Array.isArray(output)) {
-            for (const item of output) {
-              if (item.type === "message" && Array.isArray(item.content)) {
-                for (const block of item.content as Record<string, unknown>[]) {
-                  if ((block.type === "output_text" || block.type === "text") && typeof block.text === "string") {
-                    content.textBlocks.push(block.text);
-                  }
-                }
-              }
-            }
-          }
-        }
-        // Reset for next turn
-        this._turnHasItemText = false;
+        // NOTE: text extraction from response.output[] is intentionally skipped here.
+        // item.completed events already surface textBlocks during the turn.
+        // For Codex, the authoritative final text comes via the "result" event,
+        // which agent-session.ts appends to stdoutBuffer directly.
       }
       return content;
     }

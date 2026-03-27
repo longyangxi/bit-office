@@ -655,6 +655,15 @@ export class AgentSession {
 
               if (msg.type === "result" && msg.result) {
                 this._lastResultText = msg.result as string;
+                // Codex emits the final assistant text via "result" event, but
+                // item.completed may not always fire for message items.  Append
+                // to stdoutBuffer so parseAgentOutput (which prefers raw over
+                // fallback) can find VERDICT / SUMMARY fields from reviewers.
+                const resultStr = msg.result as string;
+                if (!this.stdoutBuffer.includes(resultStr)) {
+                  this.stdoutBuffer += resultStr + "\n";
+                  handleTextLine(resultStr, true);
+                }
               }
               continue;
             } catch {
