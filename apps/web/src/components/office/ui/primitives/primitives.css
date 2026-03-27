@@ -1117,10 +1117,11 @@
 /* ============================================================
    DRAG-AND-DROP REORDER — grab cursor on header, drop indicator
    ============================================================ */
-.mpv-cell[draggable="true"] > .term-info-bar {
+.mpv-cell[data-agent-id] > .term-info-bar {
   cursor: grab;
+  touch-action: none;
 }
-.mpv-cell[draggable="true"] > .term-info-bar:active {
+.mpv-cell[data-agent-id] > .term-info-bar:active {
   cursor: grabbing;
 }
 .mpv-drag-over {

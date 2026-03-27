@@ -302,58 +302,67 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const ROWS = propRows ?? DEFAULT_ROWS;
   const SLOTS_PER_PAGE = COLS * ROWS;
 
-  // ── Drag-and-drop reorder state ──
+  // ── Pointer-based drag reorder (works in Tauri where HTML5 DnD is intercepted) ──
   const dragSourceRef = useRef<string | null>(null);
-  const dragFromHeaderRef = useRef(false);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+  const dragActiveRef = useRef(false);
+  const dragOverRef = useRef<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const DRAG_THRESHOLD = 5;
 
-  // Track whether mousedown originated from the info-bar header
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+  const handlePointerDownReorder = useCallback((e: React.PointerEvent, agentId: string) => {
     const target = e.target as HTMLElement;
-    dragFromHeaderRef.current = !!target.closest(".term-info-bar");
-  }, []);
-
-  const handleDragStart = useCallback((e: React.DragEvent, agentId: string) => {
-    // Only allow drag that originated from the info-bar header
-    if (!dragFromHeaderRef.current) { e.preventDefault(); return; }
-    dragFromHeaderRef.current = false;
+    if (!target.closest(".term-info-bar") || e.button !== 0) return;
+    if (target.closest("button, input, select, a, [role='button']")) return;
     dragSourceRef.current = agentId;
-    e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", agentId);
-    // Use the cell as drag image
-    const cell = (e.target as HTMLElement).closest(".mpv-cell") as HTMLElement | null;
-    if (cell) e.dataTransfer.setDragImage(cell, 40, 20);
+    dragStartPos.current = { x: e.clientX, y: e.clientY };
+    dragActiveRef.current = false;
   }, []);
 
-  const handleDragOver = useCallback((e: React.DragEvent, agentId: string) => {
-    if (!dragSourceRef.current || dragSourceRef.current === agentId) {
+  // Global pointermove/pointerup via useEffect (avoids pointer capture issues)
+  useEffect(() => {
+    const onMove = (e: PointerEvent) => {
+      if (!dragSourceRef.current || !dragStartPos.current) return;
+      if (!dragActiveRef.current) {
+        const dx = e.clientX - dragStartPos.current.x;
+        const dy = e.clientY - dragStartPos.current.y;
+        if (dx * dx + dy * dy < DRAG_THRESHOLD * DRAG_THRESHOLD) return;
+        dragActiveRef.current = true;
+      }
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const cell = el?.closest?.(".mpv-cell") as HTMLElement | null;
+      const targetId = cell?.dataset?.agentId ?? null;
+      const newOver = (targetId && targetId !== dragSourceRef.current) ? targetId : null;
+      if (newOver !== dragOverRef.current) {
+        dragOverRef.current = newOver;
+        setDragOverId(newOver);
+      }
+    };
+    const onUp = () => {
+      const sourceId = dragSourceRef.current;
+      const wasActive = dragActiveRef.current;
+      const targetId = dragOverRef.current;
+      dragSourceRef.current = null;
+      dragStartPos.current = null;
+      dragActiveRef.current = false;
+      dragOverRef.current = null;
       setDragOverId(null);
-      return;
-    }
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    setDragOverId(agentId);
-  }, []);
-
-  const handleDrop = useCallback((e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    const sourceId = dragSourceRef.current;
-    setDragOverId(null);
-    dragSourceRef.current = null;
-    if (!sourceId || sourceId === targetId || !onReorderPanes) return;
-    const order = [...openPanes];
-    const srcIdx = order.indexOf(sourceId);
-    const tgtIdx = order.indexOf(targetId);
-    if (srcIdx === -1 || tgtIdx === -1) return;
-    order.splice(srcIdx, 1);
-    order.splice(tgtIdx, 0, sourceId);
-    onReorderPanes(order);
+      if (!wasActive || !sourceId || !targetId || sourceId === targetId || !onReorderPanes) return;
+      const order = [...openPanes];
+      const srcIdx = order.indexOf(sourceId);
+      const tgtIdx = order.indexOf(targetId);
+      if (srcIdx === -1 || tgtIdx === -1) return;
+      order.splice(srcIdx, 1);
+      order.splice(tgtIdx, 0, sourceId);
+      onReorderPanes(order);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
   }, [openPanes, onReorderPanes]);
-
-  const handleDragEnd = useCallback(() => {
-    dragSourceRef.current = null;
-    setDragOverId(null);
-  }, []);
 
   // ── Simple state-driven pagination ──
   const [currentPage, setCurrentPage] = useState(0);
@@ -509,14 +518,9 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
             return (
               <div
                 key={agentId}
+                data-agent-id={agentId}
                 className={cn("mpv-cell", dragOverId === agentId && "mpv-drag-over")}
-                draggable={!!onReorderPanes}
-                onMouseDown={onReorderPanes ? handleMouseDown : undefined}
-                onDragStart={onReorderPanes ? (e) => handleDragStart(e, agentId) : undefined}
-                onDragOver={onReorderPanes ? (e) => handleDragOver(e, agentId) : undefined}
-                onDrop={onReorderPanes ? (e) => handleDrop(e, agentId) : undefined}
-                onDragEnd={onReorderPanes ? handleDragEnd : undefined}
-                onDragLeave={onReorderPanes ? () => setDragOverId(null) : undefined}
+                onPointerDown={onReorderPanes ? (e) => handlePointerDownReorder(e, agentId) : undefined}
                 style={{
                   minWidth: 0,
                   minHeight: 0,
