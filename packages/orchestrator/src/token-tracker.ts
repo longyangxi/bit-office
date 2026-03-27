@@ -322,18 +322,18 @@ export class TokenTracker {
             this._updated = true;
           }
         }
-        // NOTE: text extraction from response.output[] is intentionally skipped here.
-        // item.completed events already surface textBlocks during the turn.
-        // For Codex, the authoritative final text comes via the "result" event,
-        // which agent-session.ts appends to stdoutBuffer directly.
+        // Text extraction from response.output[] is skipped here.
+        // Codex surfaces text via item.completed (type "agent_message"),
+        // and Claude surfaces text via its own "assistant" message handler.
       }
       return content;
     }
 
-    // turn.completed — contains usage summary for Codex
+    // turn.completed — contains usage summary for Codex (only if response.completed
+    // didn't already provide tokens, to prevent double-counting)
     if (msg.type === "turn.completed") {
       const usage = msg.usage as Record<string, unknown> | undefined;
-      if (usage) {
+      if (usage && this.inputTokens === 0 && this.outputTokens === 0) {
         const input = (usage.input_tokens as number) ?? 0;
         const output = (usage.output_tokens as number) ?? 0;
         const cached = (usage.cached_input_tokens as number) ?? 0;
