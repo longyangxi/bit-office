@@ -195,7 +195,7 @@ class GifWriter {
   toBlob(): Blob {
     // Trailer
     this.writeByte(0x3B);
-    return new Blob(this.chunks, { type: "image/gif" });
+    return new Blob(this.chunks as BlobPart[], { type: "image/gif" });
   }
 
   private writeByte(b: number) {
