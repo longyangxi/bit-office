@@ -49,6 +49,7 @@ export class DelegationRouter {
   /** Team-wide project directory — all delegations use this as repoPath when set */
   private teamProjectDir: string | null = null;
   /** Direct fix attempts per dev agent (reviewer → dev shortcut without leader) */
+  // TODO(Phase 1 complete): migrate devFixAttempts tracking to ReactionEngine
   private devFixAttempts = new Map<string, number>();
   /** Tracks which dev agent was last assigned to work (for reviewer → dev routing) */
   private lastDevAgentId: string | null = null;
@@ -438,6 +439,15 @@ export class DelegationRouter {
     // Parse verdict from reviewer output (fullOutput contains VERDICT line)
     const verdictMatch = output.match(/VERDICT[:\s]*(\w+)/i);
     if (!verdictMatch || verdictMatch[1].toUpperCase() !== "FAIL") return false;
+
+    // Emit review:fail event for ReactionEngine tracking
+    this.emitEvent({
+      type: "review:fail",
+      agentId: reviewerAgentId,
+      taskId: this.assignedTask.get(reviewerAgentId) ?? "",
+      reviewerOutput: output,
+      devAgentId: this.lastDevAgentId ?? undefined,
+    });
 
     // Find the dev to send the fix to
     const devAgentId = this.lastDevAgentId;
