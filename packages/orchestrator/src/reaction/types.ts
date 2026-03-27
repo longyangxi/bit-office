@@ -1,14 +1,6 @@
 // packages/orchestrator/src/reaction/types.ts
 
-// Notification defined inline (moved to notifier/types.ts in Phase 5)
-export interface Notification {
-  title: string;
-  message: string;
-  priority: "urgent" | "action" | "warning" | "info";
-  agentId?: string;
-  taskId?: string;
-  data?: Record<string, unknown>;
-}
+export type { Notification } from "../notifier/types.js";
 
 // ── Triggers ──
 export type ReactionTrigger =
