@@ -230,11 +230,6 @@ export const LoadChatHistoryCommand = z.object({
   type: z.literal("LOAD_CHAT_HISTORY"),
 });
 
-export const GetUsageCommand = z.object({
-  type: z.literal("GET_USAGE"),
-  days: z.number().optional(),
-  providers: z.array(z.string()).optional(),
-});
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,

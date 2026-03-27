@@ -313,10 +313,6 @@ export const ChatHistoryLoadedEvent = z.object({
   data: z.string(),
 });
 
-export const UsageReportEvent = z.object({
-  type: z.literal("USAGE_REPORT"),
-  report: z.any(),
-});
 export const GatewayEventSchema = z.discriminatedUnion("type", [
   AgentsSyncEvent,
   AgentStatusEvent,
