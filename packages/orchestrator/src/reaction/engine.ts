@@ -122,6 +122,12 @@ export class ReactionEngine {
           agentId: ctx.agentId,
           taskId: ctx.taskId,
         };
+        // Prefer Notifier plugin if available
+        if (ctx.orchestrator.notifier) {
+          ctx.orchestrator.notifier.send(notification).catch(err =>
+            console.warn("[ReactionEngine] Notifier.send failed:", err));
+        }
+        // Always emit as event too (for UI)
         ctx.orchestrator.emitNotification(notification);
         break;
       }

@@ -322,6 +322,8 @@ export interface OrchestratorOptions {
   promptsDir?: string;
   /** Sandbox mode: "full" gives agent full access, "safe" restricts */
   sandboxMode?: "full" | "safe";
+  /** Optional notifier plugin for the reaction engine's "notify" action */
+  notifier?: import("./notifier/types.js").Notifier;
 }
 
 export interface CreateAgentOpts {

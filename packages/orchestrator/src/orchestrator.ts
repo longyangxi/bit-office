@@ -10,6 +10,7 @@ import { PromptEngine } from "./prompt-templates.js";
 import { ReactionEngine, DEFAULT_RULES } from "./reaction/index.js";
 import { StuckDetector } from "./stuck-detector.js";
 import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./reaction/index.js";
+import type { Notifier } from "./notifier/types.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
@@ -68,6 +69,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private teamChangedFiles = new Set<string>();
   /** Guard against emitting isFinalResult more than once per execute cycle. */
   private teamFinalized = false;
+  private notifier: Notifier | null = null;
 
   constructor(opts: OrchestratorOptions) {
     super();
@@ -114,6 +116,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.reactionEngine = new ReactionEngine({
       rules: opts.reactions ?? DEFAULT_RULES,
     });
+
+    if (opts.notifier) {
+      this.notifier = opts.notifier;
+    }
 
     // Stuck detector: polls working agents, fires reaction engine on idle > threshold
     this.stuckDetector = new StuckDetector({
@@ -922,6 +928,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       emitNotification: (notification) => {
         this.emitEvent({ type: "notification", ...notification } as any);
       },
+      notifier: this.notifier ?? undefined,
     };
   }
 
