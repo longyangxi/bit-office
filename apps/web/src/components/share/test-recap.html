@@ -7,8 +7,9 @@
   body { background: #0d1117; color: #e6edf3; font-family: 'SF Mono', monospace; padding: 40px; }
   h1 { font-size: 18px; color: #58a6ff; }
   .section { margin: 20px 0; padding: 16px; border: 1px solid #30363d; border-radius: 8px; }
-  button { background: transparent; border: 1px solid #58a6ff; color: #58a6ff; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-family: inherit; font-size: 14px; margin: 4px; }
-  button:hover { opacity: 0.8; }
+  button { background: transparent; border: 1px solid #58a6ff; color: #58a6ff; padding: 10px 16px; min-height: 44px; min-width: 44px; border-radius: 6px; cursor: pointer; font-family: inherit; font-size: 14px; margin: 4px; display: inline-flex; align-items: center; justify-content: center; transition: opacity 0.15s, background 0.15s; }
+  button:hover { background: rgba(88,166,255,0.1); }
+  button:focus-visible { outline: 2px solid #58a6ff; outline-offset: 2px; }
   .log { font-size: 12px; color: #8b949e; white-space: pre-wrap; max-height: 200px; overflow-y: auto; }
   img { max-width: 800px; border: 1px solid #30363d; border-radius: 6px; margin-top: 12px; }
   .stats { display: flex; gap: 20px; flex-wrap: wrap; }
