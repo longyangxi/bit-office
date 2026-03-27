@@ -85,6 +85,16 @@ html {
   --separator-groove-light: rgba(255, 255, 255, 0.04);
   --separator-subtle: rgba(255, 255, 255, 0.025);
 
+  /* Z-Index Scale — structured layer system */
+  --z-base: 0;
+  --z-above: 1;
+  --z-sticky: 10;
+  --z-dropdown: 100;
+  --z-overlay: 300;
+  --z-modal-backdrop: 9999;
+  --z-modal: 10000;
+  --z-toast: 10001;
+
   /* Motion */
   --duration-fast: 100ms;
   --duration-normal: 200ms;

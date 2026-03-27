@@ -945,14 +945,18 @@ export default function OfficePage() {
   const agentList = Array.from(agents.values());
   const editor = editorRef.current;
 
-  // Responsive: detect mobile
+  // Responsive: detect mobile + track viewport width for auto-grid
   const [isMobile, setIsMobile] = useState(false);
+  const [viewportWidth, setViewportWidth] = useState(1400); // SSR-safe default
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
     setIsMobile(mq.matches);
+    setViewportWidth(window.innerWidth);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
-    return () => mq.removeEventListener("change", handler);
+    const onResize = () => setViewportWidth(window.innerWidth);
+    window.addEventListener("resize", onResize);
+    return () => { mq.removeEventListener("change", handler); window.removeEventListener("resize", onResize); };
   }, []);
 
   const isOwner = role === "owner";
@@ -1868,8 +1872,8 @@ export default function OfficePage() {
                 showTeamControls={isOwner && hasTeam}
                 teamBusy={teamBusy}
                 onStopTeam={handleStopTeam}
-                cols={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).cols : consoleCols}
-                rows={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length).rows : consoleRows}
+                cols={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length, viewportWidth).cols : consoleCols}
+                rows={autoGridEnabled ? computeAutoGrid(openPanes.filter(id => activeAgentList.some(a => a.agentId === id)).length, viewportWidth).rows : consoleRows}
               />
             ) : selectedAgent && selectedInTab ? (() => {
               const ag = agents.get(selectedAgent);
@@ -2008,6 +2012,7 @@ export default function OfficePage() {
             return (
               <button
                 key={agent.agentId}
+                aria-label={`Chat with ${agent.name} (${cfg.label})`}
                 onClick={() => { setSelectedAgent(agent.agentId); setChatOpen(true); }}
                 style={{
                   position: "relative", flexShrink: 0,
@@ -2020,7 +2025,7 @@ export default function OfficePage() {
                 }}
               >
                 <SpriteAvatar palette={agent.palette ?? 0} zoom={1} ready={assetsReady} />
-                <span style={{
+                <span aria-hidden="true" style={{
                   position: "absolute", bottom: 2, right: 2,
                   width: 6, height: 6,
                   backgroundColor: cfg.color, border: `1px solid ${TERM_PANEL}`,
@@ -2044,19 +2049,22 @@ export default function OfficePage() {
             backgroundColor: TERM_BG,
             display: "flex", flexDirection: "column",
           }}>
-            {/* Header */}
-            <div
+            {/* Header — semantic button for accessibility */}
+            <button
               onClick={() => setChatOpen(false)}
+              aria-label={`Close chat with ${agentState.name}`}
               style={{
                 padding: "12px 14px",
                 borderBottom: `1px solid ${TERM_BORDER_DIM}`,
+                border: "none", borderBottomStyle: "solid", borderBottomWidth: 1, borderBottomColor: TERM_BORDER_DIM,
                 display: "flex", alignItems: "center", gap: 10,
                 flexShrink: 0,
                 backgroundColor: TERM_PANEL,
                 cursor: "pointer",
+                width: "100%", textAlign: "left",
               }}
             >
-              <span style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
+              <span aria-hidden="true" style={{ fontSize: 15, color: TERM_DIM, marginRight: 4 }}>&larr;</span>
               <SpriteAvatar palette={agentState.palette ?? 0} zoom={2} ready={assetsReady} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 700, color: TERM_TEXT_BRIGHT, display: "flex", alignItems: "center", gap: 4 }}>
@@ -2079,7 +2087,7 @@ export default function OfficePage() {
               }}>
                 {cfg.label}
               </span>
-            </div>
+            </button>
 
             {/* Messages */}
             <div data-scrollbar style={{
@@ -2108,7 +2116,7 @@ export default function OfficePage() {
                     display: "flex", alignItems: "center", gap: 6,
                     fontSize: 11, fontFamily: "monospace",
                   }}>
-                    <span>{info.icon}</span>
+                    <span aria-hidden="true">{info.icon}</span>
                     <span style={{ color: info.color, fontWeight: 700, textTransform: "uppercase", fontSize: 9, letterSpacing: "0.05em" }}>{phase}</span>
                     <span style={{ color: TERM_DIM }}>{info.hint}</span>
                   </div>

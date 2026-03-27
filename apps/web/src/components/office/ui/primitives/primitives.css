@@ -660,30 +660,45 @@
   to { transform: translateX(0); opacity: 1; }
 }
 
-/* Page indicator dots */
+/* ── Pane focus indicator — subtle accent border on active pane ── */
+.mpv-cell:focus-within {
+  box-shadow: inset 0 2px 0 var(--term-accent);
+  background: color-mix(in srgb, var(--term-accent) 2%, transparent);
+}
+
+/* Page indicator dots — enlarged for better touch targets */
 .mpv-dots {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 0 8px;
+  gap: 8px;
+  padding: 4px 8px;
 }
 .mpv-dot {
-  width: 6px;
-  height: 4px;
-  border-radius: 2px;
+  width: 8px;
+  height: 6px;
+  border-radius: 3px;
   border: none;
   padding: 0;
+  /* Accessible touch target: visual dot is small but clickable area is 44px via pseudo */
+  position: relative;
   cursor: pointer;
   background: var(--term-green-dim);
   opacity: 0.35;
   transition: width 0.25s ease, opacity 0.25s ease, background 0.25s ease;
 }
+.mpv-dot::before {
+  content: '';
+  position: absolute;
+  inset: -19px -10px;
+  /* Invisible 44×44px touch target around each dot */
+}
 .mpv-dot:hover {
   opacity: 0.6;
 }
 .mpv-dot-active {
-  width: 18px;
+  width: 22px;
+  height: 6px;
   opacity: 1;
   background: var(--term-green);
 }
@@ -919,8 +934,8 @@
    Left sidebar for console mode (Codex-style).
    ============================================================ */
 .csb {
-  width: 200px;
-  min-width: 200px;
+  width: clamp(180px, 14vw, 240px);
+  min-width: 180px;
   height: 100vh;
   display: flex;
   flex-direction: column;
