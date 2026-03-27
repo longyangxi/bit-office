@@ -311,6 +311,8 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
   const DRAG_THRESHOLD = 5;
 
   const handlePointerDownReorder = useCallback((e: React.PointerEvent, agentId: string) => {
+    // Touch swipes are handled by page-swipe (onTouchStart/End) — only mouse/pen reorders
+    if (e.pointerType === "touch") return;
     const target = e.target as HTMLElement;
     if (!target.closest(".term-info-bar") || e.button !== 0) return;
     if (target.closest("button, input, select, a, [role='button']")) return;
@@ -356,11 +358,25 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
       order.splice(tgtIdx, 0, sourceId);
       onReorderPanes(order);
     };
+    // Clear stale drag state on cancellation / focus loss
+    const onCancel = () => {
+      dragSourceRef.current = null;
+      dragStartPos.current = null;
+      dragActiveRef.current = false;
+      dragOverRef.current = null;
+      setDragOverId(null);
+    };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onCancel);
+    window.addEventListener("blur", onCancel);
+    document.addEventListener("visibilitychange", onCancel);
     return () => {
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onCancel);
+      window.removeEventListener("blur", onCancel);
+      document.removeEventListener("visibilitychange", onCancel);
     };
   }, [openPanes, onReorderPanes]);
 
