@@ -171,6 +171,12 @@ export const GetConfigCommand = z.object({
   type: z.literal("GET_CONFIG"),
 });
 
+export const GetUsageCommand = z.object({
+  type: z.literal("GET_USAGE"),
+  days: z.number().optional(),
+  providers: z.array(z.string()).optional(),
+});
+
 export const SaveConfigCommand = z.object({
   type: z.literal("SAVE_CONFIG"),
   telegramBotToken: z.string().optional(),
@@ -229,7 +235,6 @@ export const GetUsageCommand = z.object({
   days: z.number().optional(),
   providers: z.array(z.string()).optional(),
 });
-
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,

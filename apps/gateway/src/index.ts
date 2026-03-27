@@ -7,6 +7,7 @@ import { runSetup } from "./setup.js";
 import { detectAndCreateAgents, getAllAgents } from "./agents/index.js";
 import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, syncAgentDefs, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
+import { scanUsage } from "@bit-office/usage";
 import type { CommandMeta } from "./transport.js";
 import { DEFAULT_AGENT_DEFS, type AgentDefinition } from "@office/shared";
 import { nanoid } from "nanoid";
@@ -369,8 +370,8 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
 
 const ALLOWED: Record<UserRole, Set<string>> = {
   owner: new Set(["*"]),
-  collaborator: new Set(["PING", "SUGGEST", "LIST_PROJECTS", "LOAD_PROJECT"]),
-  spectator: new Set(["PING", "LIST_PROJECTS", "LOAD_PROJECT"]),
+  collaborator: new Set(["PING", "SUGGEST", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE"]),
+  spectator: new Set(["PING", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE"]),
 };
 
 // Per-agent custom working directories (set via CREATE_AGENT or CREATE_TEAM workDir)
@@ -906,6 +907,14 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
           events: project.events,
         });
       }
+      break;
+    }
+    case "GET_USAGE": {
+      const days = (parsed as Record<string, unknown>).days as number | undefined;
+      const providers = (parsed as Record<string, unknown>).providers as string[] | undefined;
+      scanUsage({ days: days ?? 30, providers: providers ?? undefined })
+        .then(report => sendToClient(meta.clientId, { type: "USAGE_REPORT", report } as GatewayEvent))
+        .catch(err => console.error("[gateway] Usage scan failed:", err));
       break;
     }
     case "GET_CONFIG": {

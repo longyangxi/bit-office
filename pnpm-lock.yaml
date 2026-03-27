@@ -52,6 +52,9 @@ importers:
       '@bit-office/orchestrator':
         specifier: workspace:*
         version: link:../../packages/orchestrator
+      '@bit-office/usage':
+        specifier: workspace:*
+        version: link:../../packages/usage
       '@office/shared':
         specifier: workspace:*
         version: link:../../packages/shared
@@ -197,6 +200,9 @@ importers:
       '@bit-office/memory':
         specifier: workspace:*
         version: link:../memory
+      '@bit-office/usage':
+        specifier: workspace:*
+        version: link:../usage
       nanoid:
         specifier: ^5.0.0
         version: 5.1.6
@@ -217,6 +223,15 @@ importers:
         specifier: ^3.24.0
         version: 3.25.76
     devDependencies:
+      typescript:
+        specifier: ^5.7.0
+        version: 5.9.3
+
+  packages/usage:
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.13
       typescript:
         specifier: ^5.7.0
         version: 5.9.3

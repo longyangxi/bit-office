@@ -2413,6 +2413,7 @@ export default function OfficePage() {
             setShowNewProjectModal(false);
             if (mode === "solo") setShowHireModal(true);
             else if (mode === "team") setShowHireTeamModal(true);
+            // "empty" — just switch to the new project, no hire flow
           }}
         />
       )}

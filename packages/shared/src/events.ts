@@ -224,6 +224,11 @@ export const ProjectDataEvent = z.object({
   events: z.array(z.any()),
 });
 
+export const UsageReportEvent = z.object({
+  type: z.literal("USAGE_REPORT"),
+  report: z.any(),
+});
+
 export const PreviewReadyEvent = z.object({
   type: z.literal("PREVIEW_READY"),
   url: z.string(),
@@ -312,7 +317,6 @@ export const UsageReportEvent = z.object({
   type: z.literal("USAGE_REPORT"),
   report: z.any(),
 });
-
 export const GatewayEventSchema = z.discriminatedUnion("type", [
   AgentsSyncEvent,
   AgentStatusEvent,

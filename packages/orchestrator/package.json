@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@bit-office/memory": "workspace:*",
+    "@bit-office/usage": "workspace:*",
     "nanoid": "^5.0.0"
   },
   "devDependencies": {

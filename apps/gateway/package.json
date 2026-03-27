@@ -25,6 +25,7 @@
   "devDependencies": {
     "@office/shared": "workspace:*",
     "@bit-office/orchestrator": "workspace:*",
+    "@bit-office/usage": "workspace:*",
     "@types/node": "^22.0.0",
     "@types/node-telegram-bot-api": "^0.64.13",
     "@types/ws": "^8.5.0",
