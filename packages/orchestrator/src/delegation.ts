@@ -48,6 +48,8 @@ export class DelegationRouter {
   private pendingResults = new Map<string, { results: PendingResult[]; timer: ReturnType<typeof setTimeout> }>();
   /** Team-wide project directory — all delegations use this as repoPath when set */
   private teamProjectDir: string | null = null;
+  /** Map auto-review taskId → dev agentId (for routing FAIL back to dev) */
+  private autoReviewMap = new Map<string, string>();
   /** Direct fix attempts per dev agent (reviewer → dev shortcut without leader) */
   // TODO(Phase 1 complete): migrate devFixAttempts tracking to ReactionEngine
   private devFixAttempts = new Map<string, number>();
@@ -163,6 +165,14 @@ export class DelegationRouter {
     return this.teamProjectDir;
   }
 
+  trackAutoReview(reviewTaskId: string, devAgentId: string): void {
+    this.autoReviewMap.set(reviewTaskId, devAgentId);
+  }
+
+  getAutoReviewDevAgent(reviewTaskId: string): string | null {
+    return this.autoReviewMap.get(reviewTaskId) ?? null;
+  }
+
   /**
    * Reset all delegation state (on new team task).
    */
@@ -175,6 +185,7 @@ export class DelegationRouter {
     this.stopped = false;
     this.teamProjectDir = null;
     this.devFixAttempts.clear();
+    this.autoReviewMap.clear();
     this.lastDevAgentId = null;
     this.lastDevPreview = "";
     for (const pending of this.pendingResults.values()) {

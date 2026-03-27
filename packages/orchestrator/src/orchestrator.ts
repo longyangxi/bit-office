@@ -1,4 +1,5 @@
 import { EventEmitter } from "events";
+import { execFileSync } from "child_process";
 import { existsSync } from "fs";
 import path from "path";
 import { nanoid } from "nanoid";
@@ -13,6 +14,7 @@ import type { ReactionContext, AgentSessionFacade, OrchestratorFacade } from "./
 import type { Notifier } from "./notifier/types.js";
 import { PhaseMachine } from "./phase-machine.js";
 import { finalizeTeamResult } from "./result-finalizer.js";
+import { shouldAutoReview, buildReviewPrompt } from "./auto-reviewer.js";
 import { TaskScheduler, tryParseDecomposition } from "./decomposer/index.js";
 import type { DecompositionPlan, TaskNode } from "./decomposer/index.js";
 import { recordReviewFeedback, recordProjectCompletion, recordTechPreference, getMemoryContext } from "./memory.js";
@@ -29,6 +31,7 @@ import type {
   RunTaskOpts,
   OrchestratorEvent,
   OrchestratorEventMap,
+  TaskResultPayload,
   TeamPhase,
   Decision,
 } from "./types.js";
@@ -76,6 +79,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private activeScheduler: TaskScheduler | null = null;
   private activePlan: DecompositionPlan | null = null;
   private notifier: Notifier | null = null;
+  private autoReview = false;
+  /** Queue of pending review tasks */
+  private reviewQueue: Array<{ devAgentId: string; taskId: string; prompt: string }> = [];
+  private reviewerBusy = false;
 
   constructor(opts: OrchestratorOptions) {
     super();
@@ -122,6 +129,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     this.reactionEngine = new ReactionEngine({
       rules: opts.reactions ?? DEFAULT_RULES,
     });
+    this.autoReview = opts.autoReview ?? false;
 
     if (opts.notifier) {
       this.notifier = opts.notifier;
@@ -233,6 +241,14 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Update the session's isTeamLead flag
     const session = this.agentManager.get(agentId);
     if (session) session.isTeamLead = true;
+  }
+
+  setAutoReview(enabled: boolean): void {
+    this.autoReview = enabled;
+  }
+
+  getAutoReview(): boolean {
+    return this.autoReview;
   }
 
   createTeam(opts: CreateTeamOpts): void {
@@ -1022,6 +1038,37 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
+    // ── Auto-review: queue review for completed dev tasks ──
+    if (event.type === "task:done" && this.autoReview) {
+      const session = this.agentManager.get(agentId);
+      if (session) {
+        const isTeamLead = this.agentManager.isTeamLead(agentId);
+        const hasReviewer = this.agentManager.getAll().some(
+          s => (s.role ?? "").toLowerCase().includes("review") && !this.agentManager.isTeamLead(s.agentId)
+        );
+
+        if (shouldAutoReview({
+          autoReview: this.autoReview,
+          role: session.role ?? "",
+          isTeamLead,
+          hasReviewer,
+        })) {
+          this.queueAutoReview(agentId, event.taskId, event.result);
+        }
+      }
+    }
+
+    // ── Auto-review: advance queue when reviewer finishes ──
+    if (event.type === "task:done" || event.type === "task:failed") {
+      const session = this.agentManager.get(agentId);
+      if (session && (session.role ?? "").toLowerCase().includes("review")) {
+        this.reviewerBusy = false;
+        this.processReviewQueue();
+        // Re-check scheduler completion (may have been waiting for reviews)
+        this.checkSchedulerCompletion();
+      }
+    }
+
     // Detect phase transitions on task completion
     if (event.type === "task:done") {
       // create → design: leader output contains [PLAN]
@@ -1299,6 +1346,66 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       isTeamLead: this.agentManager.isTeamLead(s.agentId),
     }));
     return selectAgent(candidates, task.role ?? "Developer");
+  }
+
+  private queueAutoReview(devAgentId: string, taskId: string, result: TaskResultPayload): void {
+    const session = this.agentManager.get(devAgentId);
+    if (!session) return;
+
+    // Get diff from worktree
+    let diff = "";
+    if (session.worktreePath && result.changedFiles.length > 0) {
+      try {
+        diff = execFileSync("git", ["diff", "HEAD", "--", ...result.changedFiles], {
+          cwd: session.worktreePath,
+          encoding: "utf-8",
+          timeout: 5000,
+          maxBuffer: 200 * 1024,
+        }).trim();
+      } catch { /* no diff available */ }
+    }
+
+    const prompt = buildReviewPrompt({
+      changedFiles: result.changedFiles,
+      summary: result.summary,
+      entryFile: result.entryFile,
+      diff,
+      devName: session.name,
+      devTaskId: taskId,
+    });
+
+    this.reviewQueue.push({ devAgentId, taskId, prompt });
+    console.log(`[AutoReview] Queued review for ${session.name}'s task ${taskId} (queue: ${this.reviewQueue.length})`);
+    this.processReviewQueue();
+  }
+
+  private processReviewQueue(): void {
+    if (this.reviewerBusy || this.reviewQueue.length === 0) return;
+
+    const reviewer = this.agentManager.getAll().find(
+      s => (s.role ?? "").toLowerCase().includes("review") && !this.agentManager.isTeamLead(s.agentId)
+    );
+    if (!reviewer || reviewer.status !== "idle") return;
+
+    const next = this.reviewQueue.shift()!;
+    this.reviewerBusy = true;
+    const reviewTaskId = `auto-review-${next.taskId}`;
+
+    console.log(`[AutoReview] Dispatching review of ${next.devAgentId}'s task to ${reviewer.name}`);
+
+    this.emitEvent({
+      type: "task:delegated",
+      fromAgentId: "system",
+      toAgentId: reviewer.agentId,
+      taskId: reviewTaskId,
+      prompt: `Review ${next.devAgentId}'s work`,
+    });
+
+    // Track mapping for routing FAIL back to the right dev
+    this.delegationRouter.trackAutoReview(reviewTaskId, next.devAgentId);
+
+    const repoPath = this.delegationRouter.getTeamProjectDir() ?? undefined;
+    reviewer.runTask(reviewTaskId, next.prompt, repoPath);
   }
 
   private checkSchedulerCompletion(): void {

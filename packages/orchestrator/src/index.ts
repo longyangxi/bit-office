@@ -1,4 +1,5 @@
 export { Orchestrator } from "./orchestrator.js";
+export { shouldAutoReview, buildReviewPrompt } from "./auto-reviewer.js";
 export { AgentSession, setSessionDir } from "./agent-session.js";
 export { previewServer } from "./preview-server.js";
 export { AgentManager } from "./agent-manager.js";
