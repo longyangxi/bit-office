@@ -496,6 +496,11 @@ export default function OfficePage() {
       return;
     }
 
+    // Cancelled flag — prevents stale async connect after StrictMode unmount.
+    // Without this, React StrictMode's double-mount creates two WS connections
+    // that briefly coexist, causing broadcast events to be received twice.
+    let cancelled = false;
+
     // Re-detect gateway port instead of using stale stored wsUrl
     const detectAndConnect = async () => {
       setRole(conn.role ?? "owner");
@@ -503,6 +508,7 @@ export default function OfficePage() {
 
       // If mode is ably, use stored info as-is
       if (conn.mode === "ably") {
+        if (cancelled) return;
         return connect(conn);
       }
 
@@ -513,6 +519,7 @@ export default function OfficePage() {
       // Use the saved connection directly — port scanning would hit the wrong gateway
       // if a web dev server is also running.
       if (isTauri && !isDev && conn.wsUrl) {
+        if (cancelled) return;
         return connect(conn);
       }
 
@@ -523,6 +530,7 @@ export default function OfficePage() {
       if (!isDev) {
         try {
           const res = await fetch(`${window.location.origin}/connect`, { signal: AbortSignal.timeout(500) });
+          if (cancelled) return;
           if (res.ok) {
             const data = await res.json();
             const freshConn = { ...conn, wsUrl: window.location.origin.replace(/^http/, "ws"), sessionToken: data.sessionToken };
@@ -535,8 +543,10 @@ export default function OfficePage() {
 
       // Scan preferred ports — only accept gateways matching saved gatewayId
       for (const port of ports) {
+        if (cancelled) return;
         try {
           const res = await fetch(`http://localhost:${port}/connect`, { signal: AbortSignal.timeout(1000) });
+          if (cancelled) return;
           if (!res.ok) continue;
           const data = await res.json();
           // Skip gateways with mismatched gatewayId to avoid cross-instance connection
@@ -549,12 +559,13 @@ export default function OfficePage() {
       }
 
       // Fallback to stored wsUrl
+      if (cancelled) return;
       return connect(conn);
     };
 
     let scopedDisconnect: (() => void) | undefined;
     detectAndConnect().then((d) => { scopedDisconnect = d; });
-    return () => { scopedDisconnect?.(); };
+    return () => { cancelled = true; scopedDisconnect?.(); };
   }, [router, setRole]);
 
   const selectedAgentState = selectedAgent ? agents.get(selectedAgent) : null;

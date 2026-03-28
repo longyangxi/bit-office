@@ -8,6 +8,9 @@ export const folderPickCallbacks = new Map<string, (path: string) => void>();
 /** Pending UPLOAD_IMAGE callbacks: requestId → callback */
 export const imageUploadCallbacks = new Map<string, (path: string) => void>();
 
+/** Dedup set for events — prevents duplicate processing from concurrent WS connections */
+const _recentEventIds = new Set<string>();
+
 // ── Tauri desktop notifications ──
 
 const isTauri = typeof window !== "undefined" && !!(window as any).__TAURI_INTERNALS__;
@@ -599,6 +602,20 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   },
 
   handleEvent: (event) => {
+    // Deduplicate events from concurrent WS connections (e.g. React StrictMode double-mount).
+    // Events with a taskId are checked against a small recent-seen set.
+    const taskEvent = event as { type: string; taskId?: string };
+    if (taskEvent.taskId && (taskEvent.type === "TASK_STARTED" || taskEvent.type === "TASK_DONE" || taskEvent.type === "TASK_FAILED")) {
+      const dedupeKey = `${taskEvent.type}:${taskEvent.taskId}`;
+      if (_recentEventIds.has(dedupeKey)) return;
+      _recentEventIds.add(dedupeKey);
+      // Keep set small — purge after 50 entries
+      if (_recentEventIds.size > 50) {
+        const first = _recentEventIds.values().next().value;
+        if (first) _recentEventIds.delete(first);
+      }
+    }
+
     set((state) => {
       const agents = new Map(state.agents);
 
