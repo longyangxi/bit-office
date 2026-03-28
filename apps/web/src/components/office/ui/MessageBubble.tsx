@@ -194,27 +194,18 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   const textWithoutPlan = planContent ? msg.text.replace(/\[PLAN\][\s\S]*?\[\/PLAN\]/i, "").trim() : null;
   const displayText = hasFullOutput ? (msg.result?.fullOutput ?? msg.text) : msg.text;
 
-  // Streaming message
-  if (isStreaming) {
-    if (!msg.text) {
-      return (
-        <div style={{ ...base, padding: "2px 0" }}>
-          <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
-          <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
-          <span style={{ color: TERM_DIM, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
-        </div>
-      );
-    }
+  // Streaming message — empty placeholder with loading dots
+  if (isStreaming && !msg.text) {
     return (
       <div style={{ ...base, padding: "2px 0" }}>
         <span className="term-ts" style={{ color: TERM_DIM, marginRight: 6 }}>{ts}</span>
         <span style={{ color: TERM_DIM }}>{agentName ?? "agent"}</span>
-        <div style={{ marginTop: 2, color: TERM_TEXT, wordBreak: "break-word" }} className="chat-markdown">
-          <MdContent text={msg.text} />
-        </div>
+        <span style={{ color: TERM_DIM, marginLeft: 8 }} className="working-dots"><span className="working-dots-mid" /></span>
       </div>
     );
   }
+  // Streaming with text falls through to regular rendering below — same layout
+  // ensures no visual flash when TASK_DONE finalizes the message.
 
   // Completion (team lead final result)
   if (isTeamLead && msg.isFinalResult && msg.result) {
