@@ -79,12 +79,18 @@ Rules:
 - Developers come before reviewers in groups
 - Each developer gets ONE complete, end-to-end task that produces a RUNNABLE deliverable
 - Split by feature area, not by file
-- Skip review for trivial changes (omit reviewer task)
+- Skip review — it is handled automatically by the system
 - The project directory is managed by the system — do NOT specify paths
+- IMPORTANT: Only put tasks in the same group if there are enough developers to run them in parallel. Check the team roster above — if there is only 1 developer, put all dev tasks in SEPARATE groups (sequential).
 
-For a single-developer task:
+Single developer example (tasks run one after another):
 [DECOMPOSITION]
-{"tasks": [{"id": "dev-1", "role": "Developer", "description": "..."}], "groups": [["dev-1"]]}
+{"tasks": [{"id": "dev-1", "role": "Developer", "description": "Step 1..."}, {"id": "dev-2", "role": "Developer", "description": "Step 2..."}], "groups": [["dev-1"], ["dev-2"]]}
+[/DECOMPOSITION]
+
+Multiple developers example (parallel where possible):
+[DECOMPOSITION]
+{"tasks": [{"id": "dev-1", "role": "Developer", "description": "..."}, {"id": "dev-2", "role": "Developer", "description": "..."}], "groups": [["dev-1", "dev-2"]]}
 [/DECOMPOSITION]
 
 Approved plan:
