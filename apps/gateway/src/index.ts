@@ -648,8 +648,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       // Auto-enable review if team has a reviewer role (don't rely on web UI sending autoReview)
       const hasReviewer = allIds.some(id => {
         const def = agentDefs.find(a => a.id === id);
-        const role = def?.skills ? `${def.role} — ${def.skills}` : def?.role ?? "";
-        return role.toLowerCase().includes("review");
+        return def?.teamRole === "reviewer";
       });
       orc.setAutoReview(parsed.autoReview ?? hasReviewer);
       break;
