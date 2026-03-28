@@ -678,7 +678,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const phaseResult = orc.approvePlan(agentId);
       if (phaseResult) {
         const taskId = nanoid();
-        orc.runTask(agentId, taskId, `The user approved your plan. Execute it now by delegating tasks to your team members. All work must go in the project directory: ${path.basename(projectDir)}/`, { phaseOverride: "execute" });
+        orc.runTask(agentId, taskId, `The user approved your plan. Decompose it into tasks using the [DECOMPOSITION] format. All work must go in the project directory: ${path.basename(projectDir)}/`, { phaseOverride: "execute" });
       }
       break;
     }

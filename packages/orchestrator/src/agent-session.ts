@@ -227,6 +227,8 @@ export class AgentSession {
   /** Original user-facing task prompt (for leader state-summary mode) */
   originalTask: string | null = null;
   onDelegation: DelegationHandler | null = null;
+  /** When true, suppress @Name delegation detection (decomposition path expected) */
+  decompositionMode = false;
   onTaskComplete: TaskCompleteHandler | null = null;
   /** Whether the last failure was a timeout (not retryable) */
   get wasTimeout(): boolean { return this.timedOut; }
@@ -435,6 +437,7 @@ export class AgentSession {
         const useInitial = isFirstExecute || !canResumeLeader;
         fullPrompt = this._renderPrompt(useInitial ? "leader-initial" : "leader-continue", templateVars);
         if (phaseOverride === "execute") this._hasExecuted = true;
+        this.decompositionMode = useInitial; // leader-initial → suppress @Name detection
       } else {
         let workerInitial: TemplateName;
         const isReviewer = this.role.toLowerCase().includes("review");
@@ -553,7 +556,7 @@ export class AgentSession {
         for (const line of lines) {
           const trimmed = line.trim();
           console.log(`[Agent ${this.name}] ${trimmed.slice(0, 200)}`);
-          const match = this._isTeamLead ? trimmed.match(DELEGATION_RE) : null;
+          const match = this._isTeamLead && !this.decompositionMode ? trimmed.match(DELEGATION_RE) : null;
           if (match) {
             // Flush any previous delegation before starting a new one
             flushDelegation();

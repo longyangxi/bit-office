@@ -1174,7 +1174,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         this.emitEvent(event);
         return;
       }
-      // No [DECOMPOSITION] block — fall through to legacy delegation handling
+      // No [DECOMPOSITION] block — clear decompositionMode so leader-continue
+      // can fall back to @Name delegation on next invocation.
+      if (leaderSession) leaderSession.decompositionMode = false;
     }
 
     if (event.type === "task:done") {
