@@ -4,11 +4,10 @@ import type { ProjectTemplate } from "./templates";
 import { TERM_SIZE_2XS, TERM_SIZE_XS } from "@/components/office/ui/termTheme";
 
 const ICON_MAP: Record<string, string> = {
+  gamepad: "\u{1F3AE}",
   globe: "\u{1F310}",
-  terminal: "\u{1F4BB}",
-  server: "\u{1F5A5}\uFE0F",
-  puzzle: "\u{1F9E9}",
   "file-text": "\u{1F4C4}",
+  "bar-chart": "\u{1F4CA}",
 };
 
 interface TemplateCardProps {

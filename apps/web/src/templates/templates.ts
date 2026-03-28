@@ -13,58 +13,47 @@ export interface ProjectTemplate {
 
 export const BUILT_IN_TEMPLATES: ProjectTemplate[] = [
   {
+    id: "funny-game",
+    name: "Funny Game",
+    description: "A fun mini-game with animations and effects",
+    icon: "gamepad",
+    suggestedPrompt:
+      "Build a funny browser game using HTML/CSS/JS and PixiJS. Include sprite animations, particle effects, simple physics, sound effects, and a score counter. Make it colorful, playful, and satisfying to interact with. Single index.html file.",
+    suggestedMode: "solo",
+    suggestedRoles: ["Developer"],
+    tags: ["frontend", "creative"],
+  },
+  {
     id: "landing-page",
     name: "Landing Page",
-    description: "Single-page marketing or portfolio site",
+    description: "Stunning marketing or portfolio site",
     icon: "globe",
     suggestedPrompt:
-      "Build a portfolio landing page with hero section, 3 project cards, and contact form",
-    suggestedMode: "team",
-    suggestedRoles: ["Developer", "Code Reviewer"],
+      "Build a visually stunning single-page portfolio site with smooth scroll animations, a hero section with gradient background, 3 project cards with hover effects, testimonials carousel, and a contact form. Use modern CSS (grid, backdrop-filter, transitions). Single index.html file.",
+    suggestedMode: "solo",
+    suggestedRoles: ["Developer"],
     tags: ["frontend", "beginner"],
-  },
-  {
-    id: "cli-tool",
-    name: "CLI Tool",
-    description: "Command-line utility with argument parsing",
-    icon: "terminal",
-    suggestedPrompt:
-      "Build a CLI tool that converts CSV files to JSON with --input and --output flags",
-    suggestedMode: "team",
-    suggestedRoles: ["Developer", "Code Reviewer"],
-    tags: ["backend", "beginner"],
-  },
-  {
-    id: "rest-api",
-    name: "REST API",
-    description: "Express/Fastify API with CRUD endpoints",
-    icon: "server",
-    suggestedPrompt:
-      "Build a REST API with /users CRUD endpoints, input validation, and error handling",
-    suggestedMode: "team",
-    suggestedRoles: ["Developer", "Code Reviewer"],
-    tags: ["backend", "intermediate"],
-  },
-  {
-    id: "chrome-extension",
-    name: "Chrome Extension",
-    description: "Browser extension with popup UI",
-    icon: "puzzle",
-    suggestedPrompt:
-      "Build a Chrome extension that shows word count and reading time for any webpage",
-    suggestedMode: "team",
-    suggestedRoles: ["Developer", "Code Reviewer"],
-    tags: ["frontend", "intermediate"],
   },
   {
     id: "static-blog",
     name: "Static Blog",
-    description: "Markdown-based static site",
+    description: "Beautiful blog with dark mode and tags",
     icon: "file-text",
     suggestedPrompt:
-      "Build a static blog with 3 sample posts, tag filtering, and dark mode toggle",
+      "Build a beautiful static blog with 3 sample posts, tag filtering, dark/light mode toggle with smooth transition, reading time estimates, and elegant typography. Use CSS custom properties for theming. Single index.html file.",
     suggestedMode: "solo",
     suggestedRoles: ["Developer"],
     tags: ["frontend", "beginner"],
+  },
+  {
+    id: "dashboard",
+    name: "Dashboard",
+    description: "Data dashboard with charts and metrics",
+    icon: "bar-chart",
+    suggestedPrompt:
+      "Build a sleek data dashboard with animated charts (bar, line, donut), live-updating metric cards, a dark theme, and responsive grid layout. Use Chart.js or pure SVG/Canvas for charts. Include mock data that looks realistic. Single index.html file.",
+    suggestedMode: "solo",
+    suggestedRoles: ["Developer"],
+    tags: ["frontend", "intermediate"],
   },
 ];
