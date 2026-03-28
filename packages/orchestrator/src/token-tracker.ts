@@ -415,9 +415,11 @@ export class TokenTracker {
         this.costUsd = costFor(pricing, input, output, cacheRead, cacheWrite);
         this._updated = true;
       }
-      if (typeof msg.result === "string") {
-        content.textBlocks.push(msg.result);
-      }
+      // Don't push result text into textBlocks — agent-session has an explicit
+      // handler for result messages (with dedup against stdoutBuffer) that runs
+      // AFTER the generic textBlocks loop. Pushing here causes the same text to
+      // be emitted via log:append twice: once from textBlocks, once from the
+      // explicit handler, resulting in duplicated chat output.
       return content;
     }
 
