@@ -80,3 +80,17 @@ export const DELEGATOR_ROLES: readonly string[] = [
   "software architect",
   "backend architect",
 ];
+
+/**
+ * Roles that should NOT have coding tools (noCode = true by default).
+ * These agents plan, review, or design — they don't write code themselves.
+ * Team leads are always noCode regardless of this list.
+ */
+export const NO_CODE_ROLES: readonly string[] = [
+  "product manager",
+  "code reviewer",
+  "game designer",
+  "narrative designer",
+  "level designer",
+  "ui designer",
+];

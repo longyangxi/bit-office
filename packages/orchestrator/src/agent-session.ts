@@ -2,7 +2,7 @@ import { spawn, execSync, type ChildProcess } from "child_process";
 import path from "path";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
-import { CONFIG, DELEGATOR_ROLES } from "./config.js";
+import { CONFIG, DELEGATOR_ROLES, NO_CODE_ROLES } from "./config.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
@@ -184,6 +184,8 @@ export interface AgentSessionOpts {
   teamId?: string;
   /** Explicit override for delegation ability (true = can @mention delegate). When omitted, derived from role. */
   canDelegate?: boolean;
+  /** Explicit override for no-code mode (true = no coding tools). When omitted, derived from role. */
+  noCode?: boolean;
   /** Memory context to inject into prompts (from previous projects) */
   memoryContext?: string;
   /** Override model (e.g. "opus", "sonnet") — passed as --model to Claude Code */
@@ -234,6 +236,8 @@ export class AgentSession {
   onTaskComplete: TaskCompleteHandler | null = null;
   /** When true, this agent can @mention other agents to hand off tasks. Set at creation based on role (see DELEGATOR_ROLES). */
   canDelegate = false;
+  /** When true, this agent runs without coding tools. Set at creation based on role (see NO_CODE_ROLES). */
+  noCode = false;
   /** Whether the last failure was a timeout (not retryable) */
   get wasTimeout(): boolean { return this.timedOut; }
   get isTeamLead(): boolean { return this._isTeamLead; }
@@ -303,6 +307,9 @@ export class AgentSession {
     // Delegation ability: explicit override > isTeamLead > role-based default
     this.canDelegate = opts.canDelegate
       ?? (this._isTeamLead || DELEGATOR_ROLES.some(r => opts.role.toLowerCase().startsWith(r)));
+    // No-code mode: explicit override > isTeamLead > role-based default
+    this.noCode = opts.noCode
+      ?? (this._isTeamLead || NO_CODE_ROLES.some(r => opts.role.toLowerCase().startsWith(r)));
     this._memoryContext = opts.memoryContext ?? "";
     this._model = opts.model;
     this.onEvent = opts.onEvent;
@@ -473,7 +480,7 @@ export class AgentSession {
         continue: false,
         resumeSessionId: this.role.toLowerCase().includes("review") ? undefined : (this.sessionId ?? undefined),
         fullAccess,
-        noTools: this._isTeamLead,
+        noTools: this.noCode,
         model: this._model,
         verbose,
         agentType,
