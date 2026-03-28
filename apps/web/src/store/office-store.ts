@@ -779,8 +779,13 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "TASK_DONE": {
           const agent = agents.get(event.agentId) ?? defaultAgent(event.agentId);
+          const streamId = event.taskId + "-stream";
+          const streamMsg = agent.messages.find((m) => m.id === streamId);
+          // Dedupe: if stream message already has result, this TASK_DONE was already processed
+          if (streamMsg?.result) break;
+          // Also dedupe by legacy reply id in case of mixed-version events
           const replyId = event.taskId + "-reply";
-          if (agent.messages.some((m) => m.id === replyId)) break; // dedupe
+          if (agent.messages.some((m) => m.id === replyId)) break;
 
           // Determine if leader is in a conversational phase
           let leaderConversational = false;
@@ -839,9 +844,8 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
             return { agents, agentLogLines: intLogLines };
           }
 
-          // Keep streaming message and append the final result after it
-          const streamId = event.taskId + "-stream";
-          const streamMsg = agent.messages.find((m) => m.id === streamId);
+          // Finalize streaming message in-place — keep the same id so React key
+          // stays stable and there's no unmount/mount flash of two bubbles.
           const durationMs = streamMsg ? Date.now() - streamMsg.timestamp : undefined;
           // Use the longest available text: accumulated stream > fullOutput > summary
           const accumulated = streamMsg?._accumulatedText ?? "";
@@ -853,21 +857,20 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // Detect approval requests: agent blocked by sandbox/hooks, or explicitly asking for permission.
           const hasApprovalAsk = isSoloAgent && !hasPlanAsk && /(?:需要.*(?:批准|审批|确认|允许)|(?:ask|need|request).*(?:approv|permiss|confirm)|before.*(?:proceed|continu)|destructive|请.*(?:手动|批准|确认)|sandbox.*(?:限制|restrict|block))/i.test(bestText);
 
-          // Replace streaming message in-place with the final reply to avoid a
-          // visual flash where both the old stream bubble and the new reply bubble
-          // are briefly visible during a React render cycle.
-          const replyMsg: ChatMessage = {
-            id: replyId,
+          // Keep same id (streamId) so React key is stable — no unmount/mount flash.
+          // MessageBubble uses `!msg.result` to distinguish streaming from finalized.
+          const finalMsg: ChatMessage = {
+            id: streamMsg ? streamId : replyId,
             role: "agent",
             text: bestText,
-            timestamp: Date.now(),
+            timestamp: streamMsg?.timestamp ?? Date.now(),
             result: event.result,
             isFinalResult: event.isFinalResult,
             durationMs,
           };
           const newMessages: ChatMessage[] = streamMsg
-            ? agent.messages.map((m) => m.id === streamId ? replyMsg : m)
-            : [...agent.messages, replyMsg];
+            ? agent.messages.map((m) => m.id === streamId ? finalMsg : m)
+            : [...agent.messages, finalMsg];
           const doneLogLines = new Map(state.agentLogLines);
           doneLogLines.delete(event.agentId);
           agents.set(event.agentId, {
@@ -967,7 +970,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // Update the streaming message — append new lines to build up output
           const streamId = agent.currentTaskId ? agent.currentTaskId + "-stream" : null;
           const lastMsg = agent.messages.length > 0 ? agent.messages[agent.messages.length - 1] : null;
-          if (streamId && lastMsg?.id === streamId) {
+          if (streamId && lastMsg?.id === streamId && !lastMsg.result) {
             // Accumulate all output for full terminal-style display
             const prev = lastMsg._accumulatedText ?? "";
             const accumulated = prev ? prev + "\n" + event.chunk : event.chunk;

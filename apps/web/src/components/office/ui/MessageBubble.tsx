@@ -187,7 +187,7 @@ const MessageBubble = memo(function MessageBubble({ msg, agentName, onPreview, o
   }
 
   // ── Agent ──
-  const isStreaming = msg.id.endsWith("-stream");
+  const isStreaming = msg.id.endsWith("-stream") && !msg.result;
   const hasFullOutput = !!(msg.result?.fullOutput && msg.result.fullOutput !== msg.text && msg.result.fullOutput.length > msg.text.length + 20);
   const planMatch = msg.text.match(/\[PLAN\]([\s\S]*?)\[\/PLAN\]/i);
   const planContent = planMatch?.[1]?.trim();
