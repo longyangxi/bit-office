@@ -1478,9 +1478,10 @@ export default function OfficePage() {
                 localStorage.setItem("office-view-mode", "office");
                 setTimeout(() => { setSceneVisible(true); setScrollFrozen(false); }, 350);
               }}
-              onCloseProject={(projectId: string) => {
+              onCloseProject={async (projectId: string) => {
                 const proj = projects.get(projectId);
                 if (!proj) return;
+                if (!await confirm(`Close project "${proj.name}"?\nThis will fire all agents and archive the project.`)) return;
                 const hasTeamAgents = proj.agentIds.some((id: string) => agents.get(id)?.teamId);
                 if (hasTeamAgents) {
                   sendCommand({ type: "FIRE_TEAM" });
