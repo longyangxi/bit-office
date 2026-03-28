@@ -199,6 +199,7 @@ export class DelegationRouter {
       if (this.stopped) return;
 
       // Block delegation in conversational phases (create, design, complete)
+      // Solo agents (no phase) are always allowed to delegate
       const phaseCheckSession = this.agentManager.get(fromAgentId);
       if (phaseCheckSession?.currentPhase && phaseCheckSession.currentPhase !== "execute") {
         console.log(`[Delegation] BLOCKED: agent ${fromAgentId} is in phase "${phaseCheckSession.currentPhase}", not "execute"`);
@@ -422,6 +423,14 @@ export class DelegationRouter {
         if (cm) lines.push(`PREVIEW_CMD: ${cm[1].trim()}`);
         if (pm) lines.push(`PREVIEW_PORT: ${pm[1]}`);
         if (lines.length > 0) this.lastDevPreview = lines.join("\n");
+      }
+
+      // Solo handoff: the origin agent is not a team lead, so don't batch/flush
+      // results back to it. The events above (team:chat, agent:activity) are enough
+      // for UI visibility. The delegated agent's result stands on its own.
+      if (!originSession.isTeamLead) {
+        console.log(`[ResultForward] Solo handoff complete: ${fromName} → ${originSession.name} (no leader batching)`);
+        return;
       }
 
       // Batch results: accumulate and flush to leader after a short window

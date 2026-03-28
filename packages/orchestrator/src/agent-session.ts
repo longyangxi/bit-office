@@ -230,6 +230,8 @@ export class AgentSession {
   /** When true, suppress @Name delegation detection (decomposition path expected) */
   decompositionMode = false;
   onTaskComplete: TaskCompleteHandler | null = null;
+  /** When true, this agent can @mention other agents to hand off tasks (team leads always can, solo agents opt-in) */
+  canDelegate = false;
   /** Whether the last failure was a timeout (not retryable) */
   get wasTimeout(): boolean { return this.timedOut; }
   get isTeamLead(): boolean { return this._isTeamLead; }
