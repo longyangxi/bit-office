@@ -10,12 +10,13 @@ interface ConsoleSidebarProps {
   onOpenSettings: () => void;
   onOpenUsage: () => void;
   onOpenMemory: () => void;
+  onOpenDashboard: () => void;
   onBackToOffice: () => void;
   onCloseProject: (projectId: string) => void;
   onHireToProject: (projectId: string) => void;
 }
 
-export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onOpenUsage, onOpenMemory, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
+export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onOpenUsage, onOpenMemory, onOpenDashboard, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
   const projects = useOfficeStore((s) => s.projects);
   const activeProjectId = useOfficeStore((s) => s.activeProjectId);
   const agents = useOfficeStore((s) => s.agents);
@@ -103,6 +104,17 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
           <polyline points="12 6 12 12 16 14" />
         </svg>
         <span>History</span>
+      </button>
+
+      {/* Dashboard */}
+      <button className="csb-nav-btn" onClick={onOpenDashboard}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1" />
+          <rect x="14" y="3" width="7" height="4" rx="1" />
+          <rect x="14" y="11" width="7" height="10" rx="1" />
+          <rect x="3" y="14" width="7" height="7" rx="1" />
+        </svg>
+        <span>Dashboard</span>
       </button>
 
       {/* Usage */}

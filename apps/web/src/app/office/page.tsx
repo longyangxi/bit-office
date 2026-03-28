@@ -57,6 +57,7 @@ const CommandPalette = dynamic(() => import("@/components/office/ui/CommandPalet
 const ConsoleSidebar = dynamic(() => import("@/components/office/ui/ConsoleSidebar"), { ssr: false });
 const UsagePanel = dynamic(() => import("@/components/office/ui/UsagePanel"), { ssr: false });
 const MemoryPanel = dynamic(() => import("@/components/office/ui/MemoryPanel"), { ssr: false });
+const DashboardPanel = dynamic(() => import("@/components/office/ui/DashboardPanel"), { ssr: false });
 const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
@@ -216,6 +217,7 @@ export default function OfficePage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showUsage, setShowUsage] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   const [memoryAgentId, setMemoryAgentId] = useState<string | null>(null);
   const [showOfficeSwitcher, setShowOfficeSwitcher] = useState(false);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
@@ -1482,6 +1484,7 @@ export default function OfficePage() {
               onOpenSettings={() => setShowSettings(true)}
               onOpenUsage={() => setShowUsage(true)}
               onOpenMemory={() => setShowMemory(true)}
+              onOpenDashboard={() => setShowDashboard(true)}
               onBackToOffice={() => {
                 setScrollFrozen(true);
                 setConsoleMode(false);
@@ -2537,6 +2540,11 @@ export default function OfficePage() {
       <UsagePanel
         isOpen={showUsage}
         onClose={() => setShowUsage(false)}
+      />
+
+      <DashboardPanel
+        isOpen={showDashboard}
+        onClose={() => setShowDashboard(false)}
       />
 
       <MemoryPanel
