@@ -689,8 +689,9 @@ export function mergeWorktree(
       } catch {
         try { gitExec("git rebase --abort", worktreePath); } catch { /* ignore */ }
         // Clean rebase failed — retry with agent-wins strategy
+        // In rebase context: -X theirs = prefer the commits being replayed (agent's changes)
         try {
-          gitExec(`git rebase -X ours ${shellQuote(mainHead)}`, worktreePath);
+          gitExec(`git rebase -X theirs ${shellQuote(mainHead)}`, worktreePath);
           rebased = true;
           console.log(`[Worktree] Rebased ${branch} onto main (agent changes preserved for conflicts)`);
         } catch {

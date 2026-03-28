@@ -433,9 +433,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
    * Merge all worker worktrees back to the main branch (called on team finalization).
    */
   private mergeAllWorkerWorktrees(leaderAgentId: string): void {
+    const leader = this.agentManager.get(leaderAgentId);
+    const teamId = leader?.teamId;
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
+      // Only merge workers from the same team — skip solo agents or other teams
+      if (teamId && session.teamId !== teamId) continue;
       const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
         keepAlive: false, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
       });
@@ -995,16 +999,17 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         const taskId = event.taskId;
         if (this.activePlan.tree.children.some(c => c.id === taskId)) {
           this.activeScheduler.taskCompleted(taskId, event.result?.summary);
-          this.checkSchedulerCompletion();
+          // Don't check completion here — defer until after auto-review queueing
+          // so that reviews are queued before we decide if the plan is fully done.
           // Don't return — let the normal task:done processing continue
-          // (worktree merge, memory recording, etc. still needed for workers)
+          // (worktree merge, memory recording, auto-review, etc. still needed for workers)
         }
       }
       if (event.type === "task:failed") {
         const taskId = event.taskId;
         if (this.activePlan.tree.children.some(c => c.id === taskId)) {
           this.activeScheduler.taskFailed(taskId, event.error);
-          this.checkSchedulerCompletion();
+          // Don't check completion here — defer until after auto-review queueing
           // Don't return — let reaction engine handle the failure
         }
       }
@@ -1101,6 +1106,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
           this.queueAutoReview(agentId, event.taskId, event.result);
         }
       }
+    }
+
+    // ── Scheduler completion check (deferred from task completion above) ──
+    // Must run AFTER auto-review queueing so pending reviews block premature finalization.
+    if ((event.type === "task:done" || event.type === "task:failed") && this.activeScheduler && this.activePlan) {
+      this.checkSchedulerCompletion();
     }
 
     // ── Auto-review: handle reviewer completion ──
