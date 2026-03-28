@@ -39,7 +39,10 @@ function toIntensity(count: number): 0 | 1 | 2 | 3 | 4 {
 
 function toDateStr(ts: number): string {
   const d = new Date(ts);
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function useDashboardData(): DashboardData {
@@ -102,30 +105,35 @@ export function useDashboardData(): DashboardData {
     }
     agentStats.sort((a, b) => b.tasksCompleted - a.tasksCompleted);
 
-    // ── Heatmap (last 12 weeks) ──
+    // ── Heatmap (exactly 12 weeks ending on today's week) ──
     const now = new Date();
-    const weekMs = 7 * 24 * 60 * 60 * 1000;
-    const start = new Date(now.getTime() - 12 * weekMs);
-    start.setHours(0, 0, 0, 0);
+    now.setHours(0, 0, 0, 0);
+
+    // Find the Monday of the current week
+    const todayDow = now.getDay(); // 0=Sun
+    const daysToMonday = todayDow === 0 ? 6 : todayDow - 1;
+    const thisMonday = new Date(now);
+    thisMonday.setDate(now.getDate() - daysToMonday);
+
+    // Start = 11 weeks before this Monday (12 weeks total including current)
+    const startMonday = new Date(thisMonday);
+    startMonday.setDate(thisMonday.getDate() - 11 * 7);
 
     // Count tasks per day from projectList endedAt
     const dayCounts = new Map<string, number>();
+    const startTs = startMonday.getTime();
     for (const p of projectList) {
-      if (p.endedAt < start.getTime()) continue;
+      if (p.endedAt < startTs) continue;
       const key = toDateStr(p.endedAt);
       dayCounts.set(key, (dayCounts.get(key) ?? 0) + 1);
     }
 
-    // Build 12 weeks × 7 days grid
+    // Build exactly 12 weeks × 7 days grid (84 cells)
     const heatmapData: HeatmapCell[] = [];
-    const cursor = new Date(start);
-    // Align to Monday
-    const dayOfWeek = cursor.getDay();
-    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    cursor.setDate(cursor.getDate() + mondayOffset);
-
+    const cursor = new Date(startMonday);
     const endTs = now.getTime();
-    while (cursor.getTime() <= endTs) {
+    for (let i = 0; i < 12 * 7; i++) {
+      if (cursor.getTime() > endTs) break;
       const dateStr = toDateStr(cursor.getTime());
       const count = dayCounts.get(dateStr) ?? 0;
       heatmapData.push({ date: dateStr, count, intensity: toIntensity(count) });
