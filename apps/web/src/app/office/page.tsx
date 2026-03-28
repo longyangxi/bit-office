@@ -676,8 +676,6 @@ export default function OfficePage() {
     }
   }, [agents, selectedAgent]);
 
-  // (Inline template selector replaces auto-show modal — see empty state in main content area)
-
   const handleAgentClick = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
     setChatOpen(true);
@@ -725,6 +723,34 @@ export default function OfficePage() {
     const tpl = consumeTemplatePrompt();
     if (tpl) pendingTemplateRunRef.current = { agentId: "", prompt: tpl };
   }, []);
+
+  // Shared handler for project creation (used by both inline empty-state and modal)
+  const handleProjectCreated = useCallback((projectId: string, mode: string, template?: ProjectTemplate) => {
+    setShowNewProjectModal(false);
+    if (template?.suggestedPrompt) {
+      const seniorDev = agentDefs.find(d => d.id === "senior-dev")
+        ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
+      if (seniorDev) {
+        const backend = detectedBackends.length > 0 ? detectedBackends[0] : "claude";
+        setPendingTemplatePrompt(template.suggestedPrompt);
+        handleHire(seniorDev, backend);
+        return;
+      }
+    }
+    if (mode === "solo") setShowHireModal(true);
+    else if (mode === "team") setShowHireTeamModal(true);
+  }, [agentDefs, detectedBackends, setPendingTemplatePrompt, handleHire]);
+
+  // Inline template click: create project + dispatch through shared handler
+  const handleInlineTemplateSelect = useCallback((t: ProjectTemplate | null) => {
+    if (t) {
+      const { createProject } = useOfficeStore.getState();
+      const projectId = createProject(t.name, "");
+      handleProjectCreated(projectId, "solo", t);
+    } else {
+      setShowNewProjectModal(true);
+    }
+  }, [handleProjectCreated]);
 
   const handleSaveAgentDef = useCallback((def: AgentDefinition) => {
     sendCommand({ type: "SAVE_AGENT_DEF", agent: def });
@@ -2059,26 +2085,7 @@ export default function OfficePage() {
                       <div style={{ marginBottom: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_SM, color: "var(--term-text)", textAlign: "center" }}>
                         Pick a template to start instantly
                       </div>
-                      <TemplateSelector
-                        selected={null}
-                        onSelect={(t: ProjectTemplate | null) => {
-                          if (t) {
-                            // Template one-click: create project, auto-hire, auto-submit
-                            const { createProject } = useOfficeStore.getState();
-                            const projectId = createProject(t.name, "");
-                            const seniorDev = agentDefs.find(d => d.id === "senior-dev")
-                              ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
-                            if (seniorDev) {
-                              const backend = detectedBackends.length > 0 ? detectedBackends[0] : "claude";
-                              setPendingTemplatePrompt(t.suggestedPrompt);
-                              handleHire(seniorDev, backend);
-                            }
-                          } else {
-                            // Blank project: open modal in blank form mode
-                            setShowNewProjectModal(true);
-                          }
-                        }}
-                      />
+                      <TemplateSelector selected={null} onSelect={handleInlineTemplateSelect} />
                     </div>
                   );
                 })()}
@@ -2550,24 +2557,7 @@ export default function OfficePage() {
         <NewProjectModal
           open={showNewProjectModal}
           onClose={() => setShowNewProjectModal(false)}
-          onCreated={(projectId: string, mode: string, template?: any) => {
-            setShowNewProjectModal(false);
-            if (template?.suggestedPrompt) {
-              // Template one-click: auto-hire Senior Developer, skip HireModal
-              const seniorDev = agentDefs.find(d => d.id === "senior-dev")
-                ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
-              if (seniorDev) {
-                const backend = (detectedBackends.length > 0 ? detectedBackends[0] : "claude");
-                // Set prompt only right before hire — prevents leak if hire path is skipped
-                setPendingTemplatePrompt(template.suggestedPrompt);
-                handleHire(seniorDev, backend);
-                return;
-              }
-            }
-            if (mode === "solo") setShowHireModal(true);
-            else if (mode === "team") setShowHireTeamModal(true);
-            // "empty" — just switch to the new project, no hire flow
-          }}
+          onCreated={handleProjectCreated}
         />
       )}
 
