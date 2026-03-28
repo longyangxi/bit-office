@@ -12,7 +12,6 @@ export interface BuildArgsOpts {
   /** Resume a specific session by ID (preferred over --continue for multi-agent) */
   resumeSessionId?: string;
   fullAccess?: boolean;
-  noTools?: boolean;
   /** Override model for this invocation (e.g. "sonnet" for faster leader) */
   model?: string;
   /** Enable verbose output (default: false, enable via DEBUG env) */

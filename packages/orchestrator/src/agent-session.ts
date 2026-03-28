@@ -484,7 +484,6 @@ export class AgentSession {
         continue: false,
         resumeSessionId: this.role.toLowerCase().includes("review") ? undefined : (this.sessionId ?? undefined),
         fullAccess,
-        noTools: false,
         model: this._model,
         verbose,
         agentType,

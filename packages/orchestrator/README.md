@@ -175,6 +175,28 @@ A polling loop checks all `working` agents every 60 seconds. If an agent's `last
 | `maxReviewRounds` | 3 | Code review iterations (deprecated — now via reaction rule) |
 | `maxDirectFixes` | 1 | Direct fix attempts (deprecated — now via reaction rule) |
 
+### Role Defaults
+
+Each agent gets two capability flags at creation time, derived from its role. Both can be explicitly overridden via `canDelegate` / `noCode` in the agent session options.
+
+| Role | `canDelegate` | `noCode` | Description |
+|------|:---:|:---:|-------------|
+| **Team Lead** | yes | yes | Pure coordinator — delegates only, no code |
+| **Product Manager** | yes | yes | Plans, writes PRDs, delegates to devs |
+| **Game Designer** | yes | yes | Designs gameplay, delegates implementation |
+| **Narrative Designer** | yes | yes | Story/dialogue design, delegates scripting |
+| **Level Designer** | yes | yes | Layout/pacing design, delegates building |
+| **UI Designer** | yes | yes | Design systems, delegates code changes |
+| **Software Architect** | yes | no | Designs + writes code (hybrid) |
+| **Backend Architect** | yes | no | Designs + writes code (hybrid) |
+| **Senior Developer** | no | no | Pure execution — writes code |
+| **Frontend Developer** | no | no | Pure execution — writes code |
+| **Rapid Prototyper** | no | no | Pure execution — writes code |
+| **Code Reviewer** | no | yes | Reviews code, cannot write or delegate |
+
+- **`canDelegate`**: Agent can detect `@AgentName: task` in its output and trigger delegation. Configured in `DELEGATOR_ROLES` (`config.ts`).
+- **`noCode`**: Agent is instructed via prompt not to create/edit code files. It retains full tool access (read, search, run commands). Configured in `NO_CODE_ROLES` (`config.ts`).
+
 ## Agent Memory
 
 Persistent cross-project learning system. Agents improve over time by remembering patterns from previous projects.
