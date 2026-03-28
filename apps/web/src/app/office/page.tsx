@@ -674,12 +674,14 @@ export default function OfficePage() {
     }
   }, [agents, selectedAgent]);
 
-  // Auto-show NewProjectModal when connected with no projects and no agents
+  // Auto-show NewProjectModal when connected with no active project and no agents
   useEffect(() => {
-    if (connected && projects.size === 0 && agents.size === 0) {
+    if (!connected) return;
+    const hasActiveProject = Array.from(projects.values()).some(p => p.status === "active");
+    if (!hasActiveProject && agents.size === 0) {
       setShowNewProjectModal(true);
     }
-  }, [connected, projects.size, agents.size]);
+  }, [connected, projects, agents.size]);
 
   const handleAgentClick = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
