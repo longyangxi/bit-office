@@ -13,7 +13,9 @@ demo1.mp4
 apps/web/out
 apps/web/public/sw.js
 apps/web/tsconfig.tsbuildinfo
-docs
+docs/*
+!docs/specs/
+!docs/specs/**
 .env
 settings.local.json
 apps/desktop/src-tauri/target
