@@ -23,14 +23,16 @@ export default function TemplateSelector({ selected, onSelect }: TemplateSelecto
           justifyContent: "center",
           alignItems: "center",
           gap: "var(--space-2)",
+          borderColor: "color-mix(in srgb, var(--term-accent) 50%, transparent)",
+          background: "color-mix(in srgb, var(--term-accent) 6%, transparent)",
         }}
       >
-        <span style={{ fontSize: 16 }}>{"\u{2795}"}</span>
+        <span style={{ fontSize: 16, filter: "brightness(1.5)" }}>{"\u{2795}"}</span>
         <span
           style={{
             fontSize: "var(--font-size-base)",
             fontFamily: "var(--font-mono)",
-            color: "var(--term-text-bright)",
+            color: "var(--term-accent)",
             fontWeight: 600,
           }}
         >
