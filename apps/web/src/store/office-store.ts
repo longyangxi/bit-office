@@ -853,20 +853,21 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // Detect approval requests: agent blocked by sandbox/hooks, or explicitly asking for permission.
           const hasApprovalAsk = isSoloAgent && !hasPlanAsk && /(?:需要.*(?:批准|审批|确认|允许)|(?:ask|need|request).*(?:approv|permiss|confirm)|before.*(?:proceed|continu)|destructive|请.*(?:手动|批准|确认)|sandbox.*(?:限制|restrict|block))/i.test(bestText);
 
-          // Remove streaming message — final result (bestText) already contains the complete content
-          const finalizedMessages = agent.messages.filter((m) => m.id !== streamId);
-          const newMessages: ChatMessage[] = [
-            ...finalizedMessages,
-            {
-              id: replyId,
-              role: "agent",
-              text: bestText,
-              timestamp: Date.now(),
-              result: event.result,
-              isFinalResult: event.isFinalResult,
-              durationMs,
-            },
-          ];
+          // Replace streaming message in-place with the final reply to avoid a
+          // visual flash where both the old stream bubble and the new reply bubble
+          // are briefly visible during a React render cycle.
+          const replyMsg: ChatMessage = {
+            id: replyId,
+            role: "agent",
+            text: bestText,
+            timestamp: Date.now(),
+            result: event.result,
+            isFinalResult: event.isFinalResult,
+            durationMs,
+          };
+          const newMessages: ChatMessage[] = streamMsg
+            ? agent.messages.map((m) => m.id === streamId ? replyMsg : m)
+            : [...agent.messages, replyMsg];
           const doneLogLines = new Map(state.agentLogLines);
           doneLogLines.delete(event.agentId);
           agents.set(event.agentId, {
