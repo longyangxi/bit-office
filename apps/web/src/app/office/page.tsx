@@ -1030,11 +1030,10 @@ export default function OfficePage() {
     }
   }, []);
 
-  // Review overlay: reviewer floats on top of source agent's pane
-  const [reviewOverlay, setReviewOverlay] = useState<{ reviewerAgentId: string; sourceAgentId: string } | null>(null);
-  const reviewInProgress = useRef(false);
-  // When review is done, store the result text for user confirmation (null = still working or no overlay)
-  const [reviewResultText, setReviewResultText] = useState<string | null>(null);
+  // Review overlays: keyed by sourceAgentId — multiple solo agents can have concurrent reviews
+  const [reviewOverlays, setReviewOverlays] = useState<Map<string, { reviewerAgentId: string; sourceAgentId: string }>>(new Map());
+  // When review is done, store the result text per source agent for user confirmation
+  const [reviewResultTexts, setReviewResultTexts] = useState<Map<string, string>>(new Map());
 
   // Show agents belonging to the active project, or all solo agents if no project
   const activeProject = activeProjectId ? projects.get(activeProjectId) : undefined;
@@ -1071,14 +1070,15 @@ export default function OfficePage() {
   }, [consoleMode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
+  // Supports concurrent reviews — each source agent can have one active review
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
-    if (reviewInProgress.current || reviewOverlay) return;
-    reviewInProgress.current = true;
+    // Skip if this source agent already has an active review
+    if (reviewOverlays.has(sourceAgentId)) return;
     const sourceAgent = agents.get(sourceAgentId);
     const reviewerAgentId = `reviewer-${nanoid(6)}`;
     tempReviewerIds.add(reviewerAgentId);
     // Set overlay immediately — reviewer pane appears on top of source agent
-    setReviewOverlay({ reviewerAgentId, sourceAgentId });
+    setReviewOverlays(prev => new Map(prev).set(sourceAgentId, { reviewerAgentId, sourceAgentId }));
     // Gateway handles everything: git diff, reviewer creation, prompt construction, task run
     sendCommand({
       type: "REQUEST_REVIEW",
@@ -1090,59 +1090,55 @@ export default function OfficePage() {
       summary: result.summary,
       backend: backend ?? sourceAgent?.backend ?? "claude",
     });
-  }, [agents, reviewOverlay]);
+  }, [agents, reviewOverlays]);
 
-  // When reviewer finishes, extract review text and wait for user confirmation
+  // When any reviewer finishes, extract review text and wait for user confirmation
   useEffect(() => {
-    if (!reviewOverlay || reviewResultText !== null) return;
-    const { reviewerAgentId } = reviewOverlay;
-    const reviewer = agents.get(reviewerAgentId);
-    if (!reviewer) return;
-    const isTerminal = reviewer.status === "done" || reviewer.status === "idle" || reviewer.status === "error";
-    if (!isTerminal) return;
-    // Guard: reviewer must have produced at least 1 agent message to be considered done.
-    // Without this, a race (status→done arrives before agent message) sets empty result
-    // that never updates (reviewResultText !== null blocks re-entry).
-    const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
-    if (reviewer.status === "error" && reviewMessages.length === 0) {
-      // Error with no output — extract the actual error from system messages
-      const sysError = reviewer.messages.filter(m => m.role === "system" && m.text).map(m => m.text).join("\n");
-      setReviewResultText(sysError || "(Review failed — reviewer encountered an error)");
-    } else if (reviewMessages.length > 0) {
-      // Normal completion — use last agent message
-      setReviewResultText(reviewMessages[reviewMessages.length - 1].text || "(No issues found)");
+    if (reviewOverlays.size === 0) return;
+    let updated = false;
+    const nextTexts = new Map(reviewResultTexts);
+    for (const [sourceId, overlay] of reviewOverlays) {
+      if (nextTexts.has(sourceId)) continue; // already captured
+      const reviewer = agents.get(overlay.reviewerAgentId);
+      if (!reviewer) continue;
+      const isTerminal = reviewer.status === "done" || reviewer.status === "idle" || reviewer.status === "error";
+      if (!isTerminal) continue;
+      const reviewMessages = reviewer.messages.filter(m => m.role === "agent" && m.text);
+      if (reviewer.status === "error" && reviewMessages.length === 0) {
+        const sysError = reviewer.messages.filter(m => m.role === "system" && m.text).map(m => m.text).join("\n");
+        nextTexts.set(sourceId, sysError || "(Review failed — reviewer encountered an error)");
+        updated = true;
+      } else if (reviewMessages.length > 0) {
+        nextTexts.set(sourceId, reviewMessages[reviewMessages.length - 1].text || "(No issues found)");
+        updated = true;
+      }
     }
-    // else: terminal status but no agent messages yet — wait for message to arrive
-  }, [agents, reviewOverlay, reviewResultText]);
+    if (updated) setReviewResultTexts(nextTexts);
+  }, [agents, reviewOverlays, reviewResultTexts]);
 
-  // User actions on review completion
-  const handleApplyReviewFixes = useCallback((userFeedback?: string) => {
-    if (!reviewOverlay) return;
-    const { reviewerAgentId, sourceAgentId } = reviewOverlay;
+  // User actions on review completion — per source agent
+  const handleApplyReviewFixes = useCallback((sourceAgentId: string, userFeedback?: string) => {
+    const overlay = reviewOverlays.get(sourceAgentId);
+    if (!overlay) return;
+    const { reviewerAgentId } = overlay;
     const reviewer = agents.get(reviewerAgentId);
-    // Combine all reviewer agent messages (reviewer may split findings across multiple messages)
-    const resolvedText = reviewResultText
+    const resolvedText = reviewResultTexts.get(sourceAgentId)
       ?? (reviewer?.messages.filter(m => m.role === "agent" && m.text).map(m => m.text).join("\n\n") || null);
     if (!resolvedText) return;
     const sourceAgent = agents.get(sourceAgentId);
     const cwd = sourceAgent?.cwd ?? sourceAgent?.workDir ?? "";
     const fixTaskId = `fix-${nanoid(6)}`;
-    // Extract structured section (VERDICT...ISSUES...SUMMARY) from reviewer output
-    // to avoid sending the reviewer's full analysis/reasoning as fix context
     const extractStructured = (text: string): string => {
-      // Try to extract from VERDICT onwards (supports **VERDICT:** markdown bold)
       const verdictMatch = text.match(/\*{0,2}VERDICT[\s:].*/i);
       if (verdictMatch) {
         const startIdx = text.indexOf(verdictMatch[0]);
         return text.slice(startIdx).trim();
       }
-      // Try ISSUES section
       const issuesMatch = text.match(/\*{0,2}ISSUES[\s:].*/i);
       if (issuesMatch) {
         const startIdx = text.indexOf(issuesMatch[0]);
         return text.slice(startIdx).trim();
       }
-      // Fallback: use last 1000 chars (likely the conclusion)
       return text.length > 1000 ? text.slice(-1000).trim() : text;
     };
     const structuredFeedback = extractStructured(resolvedText);
@@ -1157,29 +1153,29 @@ export default function OfficePage() {
     const fixPrompt = fixPromptParts.join("\n");
     addUserMessage(sourceAgentId, fixTaskId, userFeedback ? `[Review] ${userFeedback}` : `[Review] Apply critical fixes`);
     sendCommand({ type: "RUN_TASK", agentId: sourceAgentId, taskId: fixTaskId, prompt: fixPrompt, repoPath: cwd || undefined });
-    // Cleanup
+    // Cleanup this review
     sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
     tempReviewerIds.delete(reviewerAgentId);
-    setReviewOverlay(null);
-    setReviewResultText(null);
-    reviewInProgress.current = false;
-  }, [reviewOverlay, reviewResultText, agents, addUserMessage]);
+    setReviewOverlays(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
+    setReviewResultTexts(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
+  }, [reviewOverlays, reviewResultTexts, agents, addUserMessage]);
 
-  const handleDismissReview = useCallback(() => {
-    if (!reviewOverlay) return;
-    const { reviewerAgentId } = reviewOverlay;
+  const handleDismissReview = useCallback((sourceAgentId: string) => {
+    const overlay = reviewOverlays.get(sourceAgentId);
+    if (!overlay) return;
+    const { reviewerAgentId } = overlay;
     sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
     tempReviewerIds.delete(reviewerAgentId);
-    setReviewOverlay(null);
-    setReviewResultText(null);
-    reviewInProgress.current = false;
-  }, [reviewOverlay]);
+    setReviewOverlays(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
+    setReviewResultTexts(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
+  }, [reviewOverlays]);
 
   // Fallback: auto-fire orphaned temp reviewers (non-overlay, e.g. if overlay was cleared manually)
   useEffect(() => {
     if (tempReviewerIds.size === 0) return;
+    const activeReviewerIds = new Set([...reviewOverlays.values()].map(o => o.reviewerAgentId));
     for (const rid of tempReviewerIds) {
-      if (reviewOverlay?.reviewerAgentId === rid) continue; // handled by overlay effect above
+      if (activeReviewerIds.has(rid)) continue; // handled by overlay effect above
       const ag = agents.get(rid);
       if (ag && (ag.status === "done" || ag.status === "idle" || ag.status === "error") && ag.messages.length > 1) {
         const timer = setTimeout(() => {
@@ -1189,15 +1185,18 @@ export default function OfficePage() {
         return () => clearTimeout(timer);
       }
     }
-  }, [agents, reviewOverlay]);
+  }, [agents, reviewOverlays]);
 
-  // Helper to get reviewer overlay data for rendering
-  const getReviewerData = useCallback((reviewerAgentId: string) => {
-    const ag = agents.get(reviewerAgentId);
+  // Helper to get reviewer overlay data for rendering — looks up result text per source agent
+  const getReviewerData = useCallback((sourceAgentId: string) => {
+    const overlay = reviewOverlays.get(sourceAgentId);
+    if (!overlay) return null;
+    const ag = agents.get(overlay.reviewerAgentId);
     if (!ag) return null;
-    const visible = getVisibleMessages(reviewerAgentId);
+    const visible = getVisibleMessages(overlay.reviewerAgentId);
+    const resultText = reviewResultTexts.get(sourceAgentId) ?? null;
     return {
-      agentId: reviewerAgentId,
+      agentId: overlay.reviewerAgentId,
       name: ag.name,
       role: ag.role,
       backend: ag.backend,
@@ -1207,12 +1206,12 @@ export default function OfficePage() {
       hasMoreMessages: visible.length < ag.messages.length,
       tokenUsage: ag.tokenUsage,
       lastLogLine: agentLogLines.get(ag.agentId) ?? ag.lastLogLine ?? null,
-      busy: reviewResultText === null,
-      reviewDone: reviewResultText !== null,
-      reviewResultText: reviewResultText ?? undefined,
-      verdict: reviewResultText ? (reviewResultText.match(/\*{0,2}VERDICT:?\*{0,2}\s*(PASS|FAIL)/i)?.[1]?.toUpperCase() as "PASS" | "FAIL" ?? "UNKNOWN") : undefined,
+      busy: resultText === null,
+      reviewDone: resultText !== null,
+      reviewResultText: resultText ?? undefined,
+      verdict: resultText ? (resultText.match(/\*{0,2}VERDICT:?\*{0,2}\s*(PASS|FAIL)/i)?.[1]?.toUpperCase() as "PASS" | "FAIL" ?? "UNKNOWN") : undefined,
     };
-  }, [agents, getVisibleMessages, reviewResultText]);
+  }, [agents, getVisibleMessages, reviewOverlays, reviewResultTexts]);
 
   // Reset pagination and scroll when console mode toggles
   const prevConsoleModeRef = useRef(consoleMode);
@@ -1870,7 +1869,7 @@ export default function OfficePage() {
                 onPasteImage={handlePanePasteImage}
                 onPasteText={handlePanePasteText}
                 onDropImage={handlePaneDropImage}
-                reviewOverlay={reviewOverlay}
+                reviewOverlays={reviewOverlays}
                 getReviewerData={getReviewerData}
                 onReviewerLoadMore={(agentId) => loadMoreMessages(agentId)}
                 onApplyReviewFixes={handleApplyReviewFixes}
@@ -1979,10 +1978,10 @@ export default function OfficePage() {
                   onPasteImage={handlePasteImage}
                   onPasteText={handlePasteText}
                   onDropImage={handleDropImage}
-                  reviewerOverlay={reviewOverlay?.sourceAgentId === selectedAgent ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
-                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === selectedAgent ? () => loadMoreMessages(reviewOverlay.reviewerAgentId) : undefined}
-                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === selectedAgent ? handleApplyReviewFixes : undefined}
-                  onDismissReview={reviewOverlay?.sourceAgentId === selectedAgent ? handleDismissReview : undefined}
+                  reviewerOverlay={reviewOverlays.has(selectedAgent) ? getReviewerData(selectedAgent) : null}
+                  onReviewerLoadMore={reviewOverlays.has(selectedAgent) ? () => loadMoreMessages(reviewOverlays.get(selectedAgent)!.reviewerAgentId) : undefined}
+                  onApplyReviewFixes={reviewOverlays.has(selectedAgent) ? (feedback) => handleApplyReviewFixes(selectedAgent, feedback) : undefined}
+                  onDismissReview={reviewOverlays.has(selectedAgent) ? () => handleDismissReview(selectedAgent) : undefined}
                   scrollFrozen={scrollFrozen}
                 />
               );

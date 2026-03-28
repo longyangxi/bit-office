@@ -217,12 +217,12 @@ export interface MultiPaneViewProps {
   onPasteImage: (agentId: string, e: React.ClipboardEvent) => void;
   onPasteText: (agentId: string, e: React.ClipboardEvent<HTMLElement>) => void;
   onDropImage: (agentId: string, e: React.DragEvent) => void;
-  // Review overlay support
-  reviewOverlay?: { reviewerAgentId: string; sourceAgentId: string } | null;
-  getReviewerData?: (reviewerAgentId: string) => ReviewerOverlayData | null;
+  // Review overlay support — multiple concurrent reviews keyed by sourceAgentId
+  reviewOverlays?: Map<string, { reviewerAgentId: string; sourceAgentId: string }>;
+  getReviewerData?: (sourceAgentId: string) => ReviewerOverlayData | null;
   onReviewerLoadMore?: (agentId: string) => void;
-  onApplyReviewFixes?: (userFeedback?: string) => void;
-  onDismissReview?: () => void;
+  onApplyReviewFixes?: (sourceAgentId: string, userFeedback?: string) => void;
+  onDismissReview?: (sourceAgentId: string) => void;
   // Merge controls
   onMerge?: (agentId: string) => void;
   onRevert?: (agentId: string) => void;
@@ -275,7 +275,7 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
     onPasteImage,
     onPasteText,
     onDropImage,
-    reviewOverlay,
+    reviewOverlays,
     getReviewerData,
     onReviewerLoadMore,
     onApplyReviewFixes,
@@ -605,10 +605,10 @@ const MultiPaneView = memo(function MultiPaneView(props: MultiPaneViewProps) {
                   onPasteImage={onPasteImage}
                   onPasteText={onPasteText}
                   onDropImage={onDropImage}
-                  reviewerOverlay={reviewOverlay?.sourceAgentId === agentId && getReviewerData ? getReviewerData(reviewOverlay.reviewerAgentId) : null}
-                  onReviewerLoadMore={reviewOverlay?.sourceAgentId === agentId && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlay.reviewerAgentId) : undefined}
-                  onApplyReviewFixes={reviewOverlay?.sourceAgentId === agentId ? onApplyReviewFixes : undefined}
-                  onDismissReview={reviewOverlay?.sourceAgentId === agentId ? onDismissReview : undefined}
+                  reviewerOverlay={reviewOverlays?.has(agentId) && getReviewerData ? getReviewerData(agentId) : null}
+                  onReviewerLoadMore={reviewOverlays?.has(agentId) && onReviewerLoadMore ? () => onReviewerLoadMore(reviewOverlays.get(agentId)!.reviewerAgentId) : undefined}
+                  onApplyReviewFixes={reviewOverlays?.has(agentId) && onApplyReviewFixes ? (feedback?: string) => onApplyReviewFixes(agentId, feedback) : undefined}
+                  onDismissReview={reviewOverlays?.has(agentId) && onDismissReview ? () => onDismissReview(agentId) : undefined}
                   autoMerge={data.autoMerge}
                   pendingMerge={data.pendingMerge}
                   lastMergeCommit={data.lastMergeCommit}
