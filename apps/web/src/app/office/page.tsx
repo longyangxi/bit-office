@@ -190,7 +190,6 @@ export default function OfficePage() {
   const activeProjectId = useOfficeStore(s => s.activeProjectId);
   // Subscribe so component re-renders when loadMoreMessages() updates the count
   const visibleMessageCount = useOfficeStore(s => s.visibleMessageCount); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const pendingTemplatePrompt = useOfficeStore(s => s.pendingTemplatePrompt);
 
   // Stable refs — these functions never change identity, no need to trigger re-renders
   const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages, addAgentToProject, getActiveProject, setPendingTemplatePrompt, consumeTemplatePrompt } = useOfficeStore.getState();
@@ -211,6 +210,8 @@ export default function OfficePage() {
   const [prompt, setPrompt] = useState("");
   const [pendingImages, setPendingImages] = useState<{ name: string; dataUrl: string; base64: string }[]>([]);
   const pasteMapRef = useRef(new Map<string, string>()); // label → full text (shared: single-pane mode)
+  /** Pending template auto-submit: { agentId, prompt } — set after hire, consumed when agent appears idle */
+  const pendingTemplateRunRef = useRef<{ agentId: string; prompt: string } | null>(null);
   const panePasteMapRef = useRef(new Map<string, Map<string, string>>()); // agentId → (label → full text)
   const pasteCountRef = useRef(0);
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -701,6 +702,9 @@ export default function OfficePage() {
     setSelectedAgent(agentId);
     setChatOpen(true);
     setShowHireModal(false);
+    // If a template was selected, queue auto-submit for when this agent becomes idle
+    const tpl = consumeTemplatePrompt();
+    if (tpl) pendingTemplateRunRef.current = { agentId, prompt: tpl };
   }, [agents]); // addAgentToProject, getActiveProject are stable refs from getState()
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
@@ -713,6 +717,9 @@ export default function OfficePage() {
     setSelectedAgent(null);
     setChatOpen(false);
     setMobileTeamOpen(true);
+    // If a template was selected, queue auto-submit for team lead (agentId "" = find lead)
+    const tpl = consumeTemplatePrompt();
+    if (tpl) pendingTemplateRunRef.current = { agentId: "", prompt: tpl };
   }, []);
 
   const handleSaveAgentDef = useCallback((def: AgentDefinition) => {
@@ -935,28 +942,38 @@ export default function OfficePage() {
     sendCommand({ type: "CANCEL_TASK", agentId: selectedAgent, taskId: "" });
   }, [selectedAgent]);
 
-  // ── Auto-submit template prompt when agent is ready ──
-  // After a template-based project is created and an agent is hired, auto-send the suggested prompt.
+  // ── Auto-submit template prompt when agent becomes idle ──
+  // pendingTemplateRunRef is set by handleHire/handleCreateTeam. This effect watches
+  // the agents map for the target agent to appear as idle, then auto-sends the task.
+  // For teams, agentId="" means "find the team lead".
   useEffect(() => {
-    if (!pendingTemplatePrompt || !selectedAgent) return;
-    const agent = agents.get(selectedAgent);
+    const pending = pendingTemplateRunRef.current;
+    if (!pending) return;
+    // Resolve target agent
+    let targetId = pending.agentId;
+    if (!targetId) {
+      // Team mode — find the team lead
+      const lead = Array.from(agents.values()).find(a => a.isTeamLead);
+      if (!lead) return; // lead not created yet
+      targetId = lead.agentId;
+    }
+    const agent = agents.get(targetId);
     if (!agent || agent.status !== "idle") return;
-    // Agent is idle and we have a pending template prompt — auto-submit
+    // Agent is ready — fire the template prompt
+    pendingTemplateRunRef.current = null;
     const taskId = nanoid();
-    const tplPrompt = pendingTemplatePrompt;
-    consumeTemplatePrompt(); // clear from store
-    addUserMessage(selectedAgent, taskId, tplPrompt);
+    addUserMessage(targetId, taskId, pending.prompt);
     sendCommand({
       type: "RUN_TASK",
-      agentId: selectedAgent,
+      agentId: targetId,
       taskId,
-      prompt: tplPrompt,
-      repoPath: agentWorkDirMap.get(selectedAgent),
+      prompt: pending.prompt,
+      repoPath: agentWorkDirMap.get(targetId),
       name: agent.name,
       role: agent.role,
       personality: agent.personality,
     });
-  }, [pendingTemplatePrompt, selectedAgent, agents]);
+  }, [agents]);
 
   // Get the current team phase for the selected agent (if it's a team lead)
   const getAgentPhase = useCallback((agentId: string): string | null => {
