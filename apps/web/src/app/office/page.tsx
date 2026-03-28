@@ -3,7 +3,7 @@
 import { useEffect, useLayoutEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useOfficeStore, imageUploadCallbacks } from "@/store/office-store";
-import { connect, sendCommand } from "@/lib/connection";
+import { connect, disconnect, sendCommand } from "@/lib/connection";
 import { getConnection } from "@/lib/storage";
 import { nanoid } from "nanoid";
 import type { AgentDefinition } from "@office/shared";
@@ -533,8 +533,10 @@ export default function OfficePage() {
           if (cancelled) return;
           if (res.ok) {
             const data = await res.json();
+            if (cancelled) return;
             const freshConn = { ...conn, wsUrl: window.location.origin.replace(/^http/, "ws"), sessionToken: data.sessionToken };
             const { saveConnection } = await import("@/lib/storage");
+            if (cancelled) return;
             saveConnection(freshConn);
             return connect(freshConn);
           }
@@ -549,10 +551,12 @@ export default function OfficePage() {
           if (cancelled) return;
           if (!res.ok) continue;
           const data = await res.json();
+          if (cancelled) return;
           // Skip gateways with mismatched gatewayId to avoid cross-instance connection
           if (conn.gatewayId && data.gatewayId && data.gatewayId !== conn.gatewayId) continue;
           const freshConn = { ...conn, wsUrl: `ws://localhost:${port}`, sessionToken: data.sessionToken, gatewayId: data.gatewayId };
           const { saveConnection } = await import("@/lib/storage");
+          if (cancelled) return;
           saveConnection(freshConn);
           return connect(freshConn);
         } catch { /* try next */ }
@@ -565,7 +569,10 @@ export default function OfficePage() {
 
     let scopedDisconnect: (() => void) | undefined;
     detectAndConnect().then((d) => { scopedDisconnect = d; });
-    return () => { cancelled = true; scopedDisconnect?.(); };
+    // On cleanup: mark cancelled so in-flight async aborts, then tear down
+    // any connection that was already established (covers sync Ably/Tauri paths
+    // where scopedDisconnect may not be captured yet by the .then()).
+    return () => { cancelled = true; scopedDisconnect?.(); disconnect(); };
   }, [router, setRole]);
 
   const selectedAgentState = selectedAgent ? agents.get(selectedAgent) : null;
