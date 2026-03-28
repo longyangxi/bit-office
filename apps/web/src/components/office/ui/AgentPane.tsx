@@ -192,9 +192,15 @@ const ChatMessageList = memo(function ChatMessageList({
         </div>
       )}
 
-      {busy && !pendingApproval && messages.length > 0 && messages[messages.length - 1]?.text && (() => {
+      {busy && !pendingApproval && messages.length > 0 && (() => {
+        const lastMsg = messages[messages.length - 1];
+        // Don't show busy hint when the stream message already displays the same text —
+        // it causes a visual duplicate (same text in message + status line).
+        const streamHasText = lastMsg?.id?.endsWith("-stream") && !!lastMsg.text;
+        if (streamHasText) return null;
+        if (!lastMsg?.text) return null;
         const hint = lastLogLine
-          || messages[messages.length - 1]?.text?.split("\n").filter(Boolean).pop()?.slice(0, 60)
+          || lastMsg.text.split("\n").filter(Boolean).pop()?.slice(0, 60)
           || null;
         return (
           <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
