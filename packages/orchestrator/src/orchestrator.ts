@@ -278,6 +278,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
+    // Auto-enable review if team has a reviewer role
+    if (!this.autoReview) {
+      const hasReviewer = presets.some(p => p.role?.toLowerCase().includes("review"));
+      if (hasReviewer) {
+        this.autoReview = true;
+        console.log("[Orchestrator] Auto-enabled review: team has a reviewer member");
+      }
+    }
+
     if (leadAgentId) {
       this.emitEvent({
         type: "team:chat",
@@ -1520,18 +1529,37 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         this.mergeAllWorkerWorktrees(leadId);
       }
 
+      const result: TaskResultPayload = {
+        summary: allDone
+          ? `All ${plan.tree.children.length} tasks completed.\n${results}`
+          : `Plan completed with failures.\n${results}`,
+        changedFiles: [...this.teamChangedFiles],
+        diffStat: "",
+        testResult: allDone ? "passed" : "failed",
+      };
+
+      // Finalize: merge team data, validate entry file, resolve preview URL
+      finalizeTeamResult({
+        result,
+        teamPreview: this.teamPreview,
+        teamChangedFiles: this.teamChangedFiles,
+        projectDir: this.delegationRouter.getTeamProjectDir(),
+        workspace: this.workspace,
+        detectWorkerPreview: () => {
+          for (const worker of this.agentManager.getAll()) {
+            if (worker.agentId === leadId) continue;
+            const { previewUrl, previewPath } = worker.detectPreview();
+            if (previewUrl) return { previewUrl, previewPath };
+          }
+          return null;
+        },
+      });
+
       this.emitEvent({
         type: "task:done",
         agentId: leadId,
         taskId: plan.id,
-        result: {
-          summary: allDone
-            ? `All ${plan.tree.children.length} tasks completed.\n${results}`
-            : `Plan completed with failures.\n${results}`,
-          changedFiles: [...this.teamChangedFiles],
-          diffStat: "",
-          testResult: allDone ? "passed" : "failed",
-        },
+        result,
         isFinalResult: true,
       });
     }
