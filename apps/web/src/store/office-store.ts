@@ -449,9 +449,15 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
     const savedTeamMessages = loadTeamMessages();
     const savedTeamPhases = loadTeamPhases();
     const savedProjects = loadProjects();
-    const savedActiveProject = isBrowser()
+    let savedActiveProject = isBrowser()
       ? (localStorage.getItem(scopedKey("office-active-project")) || null)
       : null;
+    // Auto-select first active project if none saved
+    if (!savedActiveProject || !savedProjects.get(savedActiveProject) || savedProjects.get(savedActiveProject)?.status !== "active") {
+      const firstActive = Array.from(savedProjects.values()).find(p => p.status === "active");
+      if (firstActive) savedActiveProject = firstActive.id;
+      else savedActiveProject = null;
+    }
     if (saved.size === 0 && savedTeamMessages.length === 0 && savedTeamPhases.size === 0 && savedProjects.size === 0) { set({ hydrated: true, teamMessages: savedTeamMessages, teamPhases: savedTeamPhases, projects: savedProjects, activeProjectId: savedActiveProject }); return; }
     set((state) => {
       const agents = new Map(state.agents);
