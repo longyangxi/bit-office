@@ -437,12 +437,15 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private mergeAllWorkerWorktrees(leaderAgentId: string): void {
     const leader = this.agentManager.get(leaderAgentId);
     const teamId = leader?.teamId;
+    // Use team project dir as workspace — worktrees were created from it, not session.workspaceDir
+    const teamProjectDir = this.delegationRouter.getTeamProjectDir();
     for (const session of this.agentManager.getAll()) {
       if (session.agentId === leaderAgentId) continue;
       if (!session.worktreePath || !session.worktreeBranch) continue;
       // Only merge workers from the same team — skip solo agents or other teams
       if (teamId && session.teamId !== teamId) continue;
-      const result = this.workspaceAdapter.merge(session.workspaceDir, session.worktreePath, session.worktreeBranch, {
+      const workspace = teamProjectDir ?? session.workspaceDir;
+      const result = this.workspaceAdapter.merge(workspace, session.worktreePath, session.worktreeBranch, {
         keepAlive: false, summary: session.lastSummary ?? undefined, agentName: session.name, agentId: session.agentId,
       });
       this.emitEvent({
@@ -1066,6 +1069,33 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
+    // ── Accumulate changedFiles + preview from workers (before scheduler completion check) ──
+    if (event.type === "task:done") {
+      // Accumulate changedFiles from all workers (not leader, not QA/reviewer)
+      if (!this.agentManager.isTeamLead(agentId) && event.result?.changedFiles) {
+        for (const f of event.result.changedFiles) {
+          this.teamChangedFiles.add(f);
+        }
+      }
+
+      // Capture preview fields from dev workers (not reviewer, not leader).
+      if (!this.agentManager.isTeamLead(agentId)) {
+        const previewSession = this.agentManager.get(agentId);
+        const previewRole = previewSession?.role?.toLowerCase() ?? "";
+        const isDevWorker = !previewRole.includes("review");
+        if (isDevWorker && event.result && (event.result.previewUrl || event.result.entryFile || event.result.previewCmd)) {
+          this.teamPreview = {
+            previewUrl: event.result.previewUrl,
+            previewPath: event.result.previewPath,
+            entryFile: event.result.entryFile,
+            previewCmd: event.result.previewCmd,
+            previewPort: event.result.previewPort,
+          };
+          console.log(`[Orchestrator] Preview captured from ${previewSession?.name}: url=${this.teamPreview.previewUrl}, entry=${this.teamPreview.entryFile}, cmd=${this.teamPreview.previewCmd}`);
+        }
+      }
+    }
+
     // ── Auto-review: queue review for completed dev tasks ──
     if (event.type === "task:done" && this.autoReview) {
       const session = this.agentManager.get(agentId);
@@ -1243,29 +1273,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         // Keep worktreePath/worktreeBranch set — next task reuses the same worktree
       }
 
-      // Accumulate changedFiles from all workers (not leader, not QA/reviewer)
-      if (!this.agentManager.isTeamLead(agentId) && event.result?.changedFiles) {
-        for (const f of event.result.changedFiles) {
-          this.teamChangedFiles.add(f);
-        }
-      }
-
-      // Capture preview fields from dev workers (not reviewer, not leader).
-      if (!this.agentManager.isTeamLead(agentId)) {
-        const session = this.agentManager.get(agentId);
-        const role = session?.role?.toLowerCase() ?? "";
-        const isDevWorker = !role.includes("review");
-        if (isDevWorker && event.result && (event.result.previewUrl || event.result.entryFile || event.result.previewCmd)) {
-          this.teamPreview = {
-            previewUrl: event.result.previewUrl,
-            previewPath: event.result.previewPath,
-            entryFile: event.result.entryFile,
-            previewCmd: event.result.previewCmd,
-            previewPort: event.result.previewPort,
-          };
-          console.log(`[Orchestrator] Preview captured from ${session?.name}: url=${this.teamPreview.previewUrl}, entry=${this.teamPreview.entryFile}, cmd=${this.teamPreview.previewCmd}`);
-        }
-      }
+      // (changedFiles + preview accumulation moved earlier — before checkSchedulerCompletion)
 
       // For team leaders: determine if this is the final result.
       if (this.agentManager.isTeamLead(agentId)) {
