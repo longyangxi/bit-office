@@ -206,6 +206,7 @@ export default function OfficePage() {
   const [showHireTeamModal, setShowHireTeamModal] = useState(false);
   const [showCreateAgent, setShowCreateAgent] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
+  const [newProjectBlank, setNewProjectBlank] = useState(false);
   const [editingAgent, setEditingAgent] = useState<AgentDefinition | null>(null);
   const [chatOpen, setChatOpen] = useState(false);
   const [mobileTeamOpen, setMobileTeamOpen] = useState(false);
@@ -748,6 +749,8 @@ export default function OfficePage() {
       const projectId = createProject(t.name, "");
       handleProjectCreated(projectId, "solo", t);
     } else {
+      // Open modal directly in blank form mode
+      setNewProjectBlank(true);
       setShowNewProjectModal(true);
     }
   }, [handleProjectCreated]);
@@ -1691,8 +1694,13 @@ export default function OfficePage() {
             const inlineTemplateSelector = !activeProjectId && activeAgentList.length === 0 && connected ? (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                 <div style={{ maxWidth: 480, width: "100%", padding: "var(--space-4)" }}>
-                  <div style={{ marginBottom: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_SM, color: "var(--term-text)", textAlign: "center" }}>
-                    Pick a template to start instantly
+                  <div style={{ marginBottom: "var(--space-4)", textAlign: "center" }}>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_XL, fontWeight: 700, color: "var(--term-accent)", letterSpacing: "0.04em" }}>
+                      Start a Project
+                    </div>
+                    <div style={{ fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_2XS, color: "var(--term-dim)", marginTop: "var(--space-1)" }}>
+                      pick a template or start blank
+                    </div>
                   </div>
                   <TemplateSelector selected={null} onSelect={handleInlineTemplateSelect} />
                 </div>
@@ -2559,8 +2567,9 @@ export default function OfficePage() {
       {showNewProjectModal && (
         <NewProjectModal
           open={showNewProjectModal}
-          onClose={() => setShowNewProjectModal(false)}
+          onClose={() => { setShowNewProjectModal(false); setNewProjectBlank(false); }}
           onCreated={handleProjectCreated}
+          initialBlank={newProjectBlank}
         />
       )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { nanoid } from "nanoid";
 import { useOfficeStore, folderPickCallbacks } from "@/store/office-store";
 import { sendCommand } from "@/lib/connection";
@@ -15,6 +15,8 @@ interface NewProjectModalProps {
   onClose: () => void;
   /** After project created, caller may open HireModal/HireTeamModal scoped to this project */
   onCreated: (projectId: string, mode: InitialMode, template?: ProjectTemplate) => void;
+  /** Open directly in blank form mode (skip template selection) */
+  initialBlank?: boolean;
 }
 
 /**
@@ -26,8 +28,11 @@ export default function NewProjectModal({
   open,
   onClose,
   onCreated,
+  initialBlank = false,
 }: NewProjectModalProps) {
-  const [showBlankForm, setShowBlankForm] = useState(false);
+  const [showBlankForm, setShowBlankForm] = useState(initialBlank);
+  // Sync blank form state when modal opens with initialBlank
+  useEffect(() => { if (open) setShowBlankForm(initialBlank); }, [open, initialBlank]);
   const [name, setName] = useState("");
   const [directory, setDirectory] = useState("");
   const [mode, setMode] = useState<InitialMode>("solo");
