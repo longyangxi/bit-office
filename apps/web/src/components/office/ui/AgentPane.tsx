@@ -194,6 +194,9 @@ const ChatMessageList = memo(function ChatMessageList({
 
       {busy && !pendingApproval && messages.length > 0 && (() => {
         const lastMsg = messages[messages.length - 1];
+        const isEmptyStream = lastMsg?.id?.endsWith("-stream") && !lastMsg.text;
+        // Empty stream messages already render their own dots in MessageBubble — skip here
+        if (isEmptyStream) return null;
         // When the stream message already shows text, skip the hint text to avoid
         // visual duplicate — but still show the animated dots so the user sees activity.
         const streamHasText = lastMsg?.id?.endsWith("-stream") && !!lastMsg.text;
