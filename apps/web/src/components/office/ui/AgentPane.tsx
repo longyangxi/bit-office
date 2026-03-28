@@ -194,14 +194,11 @@ const ChatMessageList = memo(function ChatMessageList({
 
       {busy && !pendingApproval && messages.length > 0 && (() => {
         const lastMsg = messages[messages.length - 1];
-        // Don't show busy hint when the stream message already displays the same text —
-        // it causes a visual duplicate (same text in message + status line).
+        // When the stream message already shows text, skip the hint text to avoid
+        // visual duplicate — but still show the animated dots so the user sees activity.
         const streamHasText = lastMsg?.id?.endsWith("-stream") && !!lastMsg.text;
-        if (streamHasText) return null;
-        if (!lastMsg?.text) return null;
-        const hint = lastLogLine
-          || lastMsg.text.split("\n").filter(Boolean).pop()?.slice(0, 60)
-          || null;
+        const hint = streamHasText ? null
+          : (lastLogLine || lastMsg?.text?.split("\n").filter(Boolean).pop()?.slice(0, 60) || null);
         return (
           <div style={{ padding: "4px 0", display: "flex", alignItems: "center", gap: 6 }}>
             <span style={{ color: TERM_DIM }} className="working-dots"><span className="working-dots-mid" /></span>
