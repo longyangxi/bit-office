@@ -238,9 +238,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   setTeamLead(agentId: string): void {
     this.agentManager.setTeamLead(agentId);
-    // Update the session's isTeamLead flag
+    // Update the session's isTeamLead + canDelegate flags
     const session = this.agentManager.get(agentId);
-    if (session) session.isTeamLead = true;
+    if (session) {
+      session.isTeamLead = true;
+      session.canDelegate = true;
+    }
   }
 
   setAutoReview(enabled: boolean): void {
@@ -494,9 +497,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       lines.push(`- ${other.name} (${other.role}) [${status}]${brief}`);
     }
     if (lines.length === 0) return undefined;
-    // Enable @mention delegation for solo agents that have peers
-    session.canDelegate = true;
-    const delegationHint = this.promptEngine.render("delegation-hint", {});
+    const delegationHint = session.canDelegate ? this.promptEngine.render("delegation-hint", {}) : "";
     return `===== WORKSPACE PEERS =====\nOther agents working in the same project (for awareness — coordinate to avoid file conflicts):\n${lines.join("\n")}\n\n${delegationHint}`;
   }
 

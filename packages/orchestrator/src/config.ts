@@ -64,3 +64,18 @@ export const CONFIG = {
     } as Record<string, string>,
   },
 } as const;
+
+/**
+ * Roles whose agents can delegate tasks via @mention by default.
+ * Planning/design roles delegate; execution roles (developers, reviewers) do not.
+ * Matched case-insensitively against the start of the agent's role string.
+ */
+export const DELEGATOR_ROLES: readonly string[] = [
+  "team lead",
+  "product manager",
+  "game designer",
+  "narrative designer",
+  "level designer",
+  "ui designer",
+  "software architect",
+];

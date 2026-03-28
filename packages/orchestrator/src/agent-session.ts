@@ -2,7 +2,7 @@ import { spawn, execSync, type ChildProcess } from "child_process";
 import path from "path";
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
 import { homedir } from "os";
-import { CONFIG } from "./config.js";
+import { CONFIG, DELEGATOR_ROLES } from "./config.js";
 import { resolvePreview } from "./preview-resolver.js";
 import { parseAgentOutput } from "./output-parser.js";
 import { nanoid } from "nanoid";
@@ -182,6 +182,8 @@ export interface AgentSessionOpts {
   /** Whether this agent is the team lead (uses leader template, no tools) */
   isTeamLead?: boolean;
   teamId?: string;
+  /** Explicit override for delegation ability (true = can @mention delegate). When omitted, derived from role. */
+  canDelegate?: boolean;
   /** Memory context to inject into prompts (from previous projects) */
   memoryContext?: string;
   /** Override model (e.g. "opus", "sonnet") — passed as --model to Claude Code */
@@ -230,7 +232,7 @@ export class AgentSession {
   /** When true, suppress @Name delegation detection (decomposition path expected) */
   decompositionMode = false;
   onTaskComplete: TaskCompleteHandler | null = null;
-  /** When true, this agent can @mention other agents to hand off tasks (team leads always can, solo agents opt-in) */
+  /** When true, this agent can @mention other agents to hand off tasks. Set at creation based on role (see DELEGATOR_ROLES). */
   canDelegate = false;
   /** Whether the last failure was a timeout (not retryable) */
   get wasTimeout(): boolean { return this.timedOut; }
@@ -298,6 +300,9 @@ export class AgentSession {
     this.sandboxMode = opts.sandboxMode ?? "full";
     this._isTeamLead = opts.isTeamLead ?? false;
     this.teamId = opts.teamId;
+    // Delegation ability: explicit override > isTeamLead > role-based default
+    this.canDelegate = opts.canDelegate
+      ?? (this._isTeamLead || DELEGATOR_ROLES.some(r => opts.role.toLowerCase().startsWith(r)));
     this._memoryContext = opts.memoryContext ?? "";
     this._model = opts.model;
     this.onEvent = opts.onEvent;
@@ -558,7 +563,7 @@ export class AgentSession {
         for (const line of lines) {
           const trimmed = line.trim();
           console.log(`[Agent ${this.name}] ${trimmed.slice(0, 200)}`);
-          const match = (this._isTeamLead || this.canDelegate) && !this.decompositionMode ? trimmed.match(DELEGATION_RE) : null;
+          const match = this.canDelegate && !this.decompositionMode ? trimmed.match(DELEGATION_RE) : null;
           if (match) {
             // Flush any previous delegation before starting a new one
             flushDelegation();
