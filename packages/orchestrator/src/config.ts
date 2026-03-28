@@ -82,8 +82,9 @@ export const DELEGATOR_ROLES: readonly string[] = [
 ];
 
 /**
- * Roles that should NOT have coding tools (noCode = true by default).
- * These agents plan, review, or design — they don't write code themselves.
+ * Roles that should NOT write code (noCode = true by default).
+ * These agents plan, review, or design — code changes are delegated to developers.
+ * They still have full tool access (read files, run commands, search code).
  * Team leads are always noCode regardless of this list.
  */
 export const NO_CODE_ROLES: readonly string[] = [
