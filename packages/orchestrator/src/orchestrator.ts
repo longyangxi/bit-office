@@ -1047,8 +1047,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const session = this.agentManager.get(agentId);
       if (session) {
         const isTeamLead = this.agentManager.isTeamLead(agentId);
+        // Only check for reviewer within the same team
+        const devTeamId = session.teamId;
         const hasReviewer = this.agentManager.getAll().some(
-          s => (s.role ?? "").toLowerCase().includes("review") && !this.agentManager.isTeamLead(s.agentId)
+          s => (s.role ?? "").toLowerCase().includes("review")
+            && !this.agentManager.isTeamLead(s.agentId)
+            && (devTeamId ? s.teamId === devTeamId : true)
         );
 
         if (shouldAutoReview({
@@ -1359,12 +1363,19 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   }
 
   private selectAgentForTask(task: TaskNode): string | null {
-    const candidates = this.agentManager.getAll().map(s => ({
-      agentId: s.agentId,
-      role: s.role ?? "",
-      status: s.status,
-      isTeamLead: this.agentManager.isTeamLead(s.agentId),
-    }));
+    // Only select from team members (filter by teamId matching the leader's team)
+    const leadId = this.agentManager.getTeamLead();
+    const leadSession = leadId ? this.agentManager.get(leadId) : null;
+    const teamId = leadSession?.teamId;
+
+    const candidates = this.agentManager.getAll()
+      .filter(s => teamId ? s.teamId === teamId : true)  // restrict to same team
+      .map(s => ({
+        agentId: s.agentId,
+        role: s.role ?? "",
+        status: s.status,
+        isTeamLead: this.agentManager.isTeamLead(s.agentId),
+      }));
     return selectAgent(candidates, task.role ?? "Developer");
   }
 
@@ -1413,8 +1424,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private processReviewQueue(): void {
     if (this.reviewerBusy || this.reviewQueue.length === 0) return;
 
+    // Only select reviewer from the same team
+    const leadId = this.agentManager.getTeamLead();
+    const teamId = leadId ? this.agentManager.get(leadId)?.teamId : undefined;
     const reviewer = this.agentManager.getAll().find(
-      s => (s.role ?? "").toLowerCase().includes("review") && !this.agentManager.isTeamLead(s.agentId)
+      s => (s.role ?? "").toLowerCase().includes("review")
+        && !this.agentManager.isTeamLead(s.agentId)
+        && (teamId ? s.teamId === teamId : true)
     );
     if (!reviewer || reviewer.status !== "idle") return;
 
