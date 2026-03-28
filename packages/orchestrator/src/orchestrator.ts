@@ -1111,12 +1111,12 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       const session = this.agentManager.get(agentId);
       if (session) {
         const isTeamLead = this.agentManager.isTeamLead(agentId);
-        // Only check for reviewer within the same team
+        // Only check for reviewer within the same team (solo agents: teamId undefined must match)
         const devTeamId = session.teamId;
         const hasReviewer = this.agentManager.getAll().some(
           s => (s.role ?? "").toLowerCase().includes("review")
             && !this.agentManager.isTeamLead(s.agentId)
-            && (devTeamId ? s.teamId === devTeamId : true)
+            && s.teamId === devTeamId
         );
 
         if (shouldAutoReview({
@@ -1514,13 +1514,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   private processReviewQueue(): void {
     if (this.reviewerBusy || this.reviewQueue.length === 0) return;
 
-    // Only select reviewer from the same team
-    const leadId = this.agentManager.getTeamLead();
-    const teamId = leadId ? this.agentManager.get(leadId)?.teamId : undefined;
+    // Only select reviewer from the same team as the dev being reviewed
+    const pendingDev = this.agentManager.get(this.reviewQueue[0].devAgentId);
+    const devTeamId = pendingDev?.teamId;
     const reviewer = this.agentManager.getAll().find(
       s => (s.role ?? "").toLowerCase().includes("review")
         && !this.agentManager.isTeamLead(s.agentId)
-        && (teamId ? s.teamId === teamId : true)
+        && s.teamId === devTeamId
     );
     if (!reviewer || reviewer.status !== "idle") return;
 
