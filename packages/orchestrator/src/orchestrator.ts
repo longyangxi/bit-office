@@ -1132,6 +1132,19 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
                 reviewerOutput: event.result.fullOutput,
                 devAgentId,
               });
+              // Actually invoke the reaction engine to dispatch fix to dev
+              const devSession = this.agentManager.get(devAgentId);
+              if (devSession) {
+                this.reactionEngine.handle("review:fail", {
+                  agentId,
+                  taskId: event.taskId,
+                  role: session.role,
+                  reviewerOutput: event.result.fullOutput,
+                  devAgentId,
+                  session: this.buildSessionFacade(session),
+                  orchestrator: this.buildOrchestratorFacade(),
+                });
+              }
             }
           }
         }
@@ -1501,7 +1514,11 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Track mapping for routing FAIL back to the right dev
     this.delegationRouter.trackAutoReview(reviewTaskId, next.devAgentId);
 
-    const repoPath = this.delegationRouter.getTeamProjectDir() ?? undefined;
+    // Give reviewer the dev's worktree so they can read actual changed files
+    const devSession = this.agentManager.get(next.devAgentId);
+    const repoPath = devSession?.worktreePath
+      ?? this.delegationRouter.getTeamProjectDir()
+      ?? undefined;
     reviewer.runTask(reviewTaskId, next.prompt, repoPath);
   }
 
