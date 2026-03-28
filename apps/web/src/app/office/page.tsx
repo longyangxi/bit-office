@@ -1687,6 +1687,18 @@ export default function OfficePage() {
 
             const selectedInTab = activeAgentList.some((a) => a.agentId === selectedAgent);
 
+            // Shared inline template selector for empty state (no active project, no agents)
+            const inlineTemplateSelector = !activeProjectId && activeAgentList.length === 0 && connected ? (
+              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ maxWidth: 480, width: "100%", padding: "var(--space-4)" }}>
+                  <div style={{ marginBottom: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_SM, color: "var(--term-text)", textAlign: "center" }}>
+                    Pick a template to start instantly
+                  </div>
+                  <TemplateSelector selected={null} onSelect={handleInlineTemplateSelect} />
+                </div>
+              </div>
+            ) : null;
+
             return (<>
 
             {/* -- Project Bar (office sidebar mode only, projects are in console sidebar) -- */}
@@ -1859,7 +1871,7 @@ export default function OfficePage() {
               return null;
             })()}
             {consoleMode ? (
-              <MultiPaneView
+              inlineTemplateSelector || <MultiPaneView
                 openPanes={openPanes.filter(id => activeAgentList.some(a => a.agentId === id))}
                 getAgentData={(agentId) => {
                   const ag = agents.get(agentId);
@@ -2076,20 +2088,11 @@ export default function OfficePage() {
                 />
               );
             })() : (
-              <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#3a3a3a", fontFamily: TERM_FONT, fontSize: TERM_SIZE }}>
-                {activeAgentList.length > 0 ? "Select an agent" : (() => {
-                  const hasActiveProject = Array.from(projects.values()).some(p => p.status === "active");
-                  if (hasActiveProject || !connected) return null;
-                  return (
-                    <div style={{ maxWidth: 480, width: "100%", padding: "var(--space-4)" }}>
-                      <div style={{ marginBottom: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_SM, color: "var(--term-text)", textAlign: "center" }}>
-                        Pick a template to start instantly
-                      </div>
-                      <TemplateSelector selected={null} onSelect={handleInlineTemplateSelect} />
-                    </div>
-                  );
-                })()}
-              </div>
+              inlineTemplateSelector || (
+                <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#3a3a3a", fontFamily: TERM_FONT, fontSize: TERM_SIZE }}>
+                  {activeAgentList.length > 0 ? "Select an agent" : ""}
+                </div>
+              )
             )}
 
             {/* Team Activity log */}
