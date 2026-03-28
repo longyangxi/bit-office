@@ -470,9 +470,8 @@ export class AgentSession {
         const canResume = !isReviewer && this.hasHistory && !!this.sessionId;
         fullPrompt = this._renderPrompt(canResume ? "worker-continue" : workerInitial, templateVars);
       }
-      // Inject no-code constraint for non-coding roles (PM, Designer, Reviewer, Leader)
       if (this.noCode) {
-        fullPrompt += "\n\n**IMPORTANT: You are a non-coding role. Do NOT create, edit, or write any code files. You may read files, run commands, and search the codebase for context, but all code changes must be delegated to developer agents. Focus on planning, analysis, review, and coordination.**";
+        fullPrompt += "\n\n**NO CODE: Do NOT create, edit, or write any files. Delegate all code changes to developers.**";
       }
       const fullAccess = this.sandboxMode === "full";
       const verbose = !!process.env.DEBUG;
