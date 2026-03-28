@@ -16,7 +16,7 @@ export type { ReactionTrigger, ReactionAction, ReactionRule, ReactionMatch, Reac
 export { parseAgentOutput } from "./output-parser.js";
 export type { ParsedResult } from "./output-parser.js";
 export { CONFIG } from "./config.js";
-export { getMemoryContext, getMemoryStore, clearMemory, recordReviewFeedback, recordProjectCompletion, recordProjectRatings, recordTechPreference, commitSession, buildRecoveryContext, getRecoveryString, getAgentL0, getWorkState, updateWorkState, clearAgentWorkState, setStorageRoot } from "./memory.js";
+export { getMemoryContext, getMemoryStore, clearMemory, recordReviewFeedback, recordProjectCompletion, recordProjectRatings, recordTechPreference, commitSession, buildRecoveryContext, getRecoveryString, getAgentL0, getWorkState, updateWorkState, clearAgentWorkState, setStorageRoot, loadSessionHistory, loadAgentFacts, saveAgentFacts, loadSharedKnowledge, saveSharedKnowledge } from "./memory.js";
 export type { ReviewPattern, ProjectRecord } from "./memory.js";
 export { createWorktree, getManagedWorktreeBranch, getMergeHistory, mergeWorktree, removeWorktree, removeWorktreeOnly, checkConflicts, cleanupStaleWorktrees, getIsolatedGitEnv, getWorktreeBaseDir, resolveGitWorkspaceRoot } from "./worktree.js";
 export { WorktreeWorkspace } from "./workspace/index.js";

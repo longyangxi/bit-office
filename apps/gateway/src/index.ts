@@ -5,7 +5,7 @@ import { telegramChannel, setTelegramAgentDefs, syncTelegramHiredAgents } from "
 import { config, CONFIG_DIR, hasSetupRun, reloadConfig, saveConfig } from "./config.js";
 import { runSetup } from "./setup.js";
 import { detectAndCreateAgents, getAllAgents } from "./agents/index.js";
-import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, syncAgentDefs, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
+import { createOrchestrator, getMergeHistory, previewServer, recordProjectRatings, parseAgentOutput, setSessionDir, setStorageRoot, syncAgentDefs, loadSessionHistory, loadAgentFacts, saveAgentFacts, loadSharedKnowledge, saveSharedKnowledge, type Orchestrator, type OrchestratorEvent, type RuntimeOwnerInfo, type TeamPhaseChangedEvent } from "@bit-office/orchestrator";
 import type { Command, GatewayEvent, UserRole } from "@office/shared";
 import { scanUsage } from "@bit-office/usage";
 import type { CommandMeta } from "./transport.js";
@@ -370,8 +370,8 @@ function mapOrchestratorEvent(e: OrchestratorEvent): GatewayEvent | null {
 
 const ALLOWED: Record<UserRole, Set<string>> = {
   owner: new Set(["*"]),
-  collaborator: new Set(["PING", "SUGGEST", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE"]),
-  spectator: new Set(["PING", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE"]),
+  collaborator: new Set(["PING", "SUGGEST", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE", "GET_MEMORY_L1", "GET_MEMORY_L2", "GET_MEMORY_L3"]),
+  spectator: new Set(["PING", "LIST_PROJECTS", "LOAD_PROJECT", "GET_USAGE", "GET_MEMORY_L1", "GET_MEMORY_L2", "GET_MEMORY_L3"]),
 };
 
 // Per-agent custom working directories (set via CREATE_AGENT or CREATE_TEAM workDir)
@@ -925,6 +925,40 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       scanUsage({ days: days ?? 30, providers: providers ?? undefined })
         .then(report => sendToClient(meta.clientId, { type: "USAGE_REPORT", report } as GatewayEvent))
         .catch(err => console.error("[gateway] Usage scan failed:", err));
+      break;
+    }
+    case "GET_MEMORY_L1": {
+      const agentId = (parsed as Record<string, unknown>).agentId as string;
+      const store = loadSessionHistory(agentId);
+      sendToClient(meta.clientId, { type: "MEMORY_L1_LOADED", agentId, sessions: store.history } as GatewayEvent);
+      break;
+    }
+    case "GET_MEMORY_L2": {
+      const agentId = (parsed as Record<string, unknown>).agentId as string;
+      const store = loadAgentFacts(agentId);
+      sendToClient(meta.clientId, { type: "MEMORY_L2_LOADED", agentId, facts: store.facts } as GatewayEvent);
+      break;
+    }
+    case "GET_MEMORY_L3": {
+      const store = loadSharedKnowledge();
+      sendToClient(meta.clientId, { type: "MEMORY_L3_LOADED", items: store.items } as GatewayEvent);
+      break;
+    }
+    case "DELETE_FACT_L2": {
+      const agentId = (parsed as Record<string, unknown>).agentId as string;
+      const factId = (parsed as Record<string, unknown>).factId as string;
+      const store = loadAgentFacts(agentId);
+      store.facts = store.facts.filter(f => f.id !== factId);
+      saveAgentFacts(agentId, store);
+      sendToClient(meta.clientId, { type: "FACT_DELETED", layer: "L2", factId, ok: true } as GatewayEvent);
+      break;
+    }
+    case "DELETE_FACT_L3": {
+      const factId = (parsed as Record<string, unknown>).factId as string;
+      const store = loadSharedKnowledge();
+      store.items = store.items.filter(i => i.id !== factId);
+      saveSharedKnowledge(store);
+      sendToClient(meta.clientId, { type: "FACT_DELETED", layer: "L3", factId, ok: true } as GatewayEvent);
       break;
     }
     case "GET_CONFIG": {

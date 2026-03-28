@@ -46,7 +46,7 @@ export {
 } from "./memory.js";
 
 // Storage configuration
-export { setStorageRoot, getStorageRoot, saveSessionHistory, loadWorkState, saveWorkState, clearWorkState } from "./storage.js";
+export { setStorageRoot, getStorageRoot, saveSessionHistory, loadWorkState, saveWorkState, clearWorkState, loadAgentFacts, saveAgentFacts, loadSharedKnowledge, saveSharedKnowledge } from "./storage.js";
 
 // Types (for consumers who need to type-check)
 export type {

@@ -28,6 +28,11 @@ export {
   clearAgentWorkState,
   setStorageRoot,
   saveSessionHistory,
+  getSessionHistory as loadSessionHistory,
+  getAgentFacts as loadAgentFacts,
+  saveAgentFacts,
+  getSharedKnowledge as loadSharedKnowledge,
+  saveSharedKnowledge,
 } from "@bit-office/memory";
 
 export type { ReviewPattern, ProjectRecord } from "@bit-office/memory";

@@ -232,6 +232,31 @@ export const LoadChatHistoryCommand = z.object({
   type: z.literal("LOAD_CHAT_HISTORY"),
 });
 
+export const GetMemoryL1Command = z.object({
+  type: z.literal("GET_MEMORY_L1"),
+  agentId: z.string(),
+});
+
+export const GetMemoryL2Command = z.object({
+  type: z.literal("GET_MEMORY_L2"),
+  agentId: z.string(),
+});
+
+export const GetMemoryL3Command = z.object({
+  type: z.literal("GET_MEMORY_L3"),
+});
+
+export const DeleteFactL2Command = z.object({
+  type: z.literal("DELETE_FACT_L2"),
+  agentId: z.string(),
+  factId: z.string(),
+});
+
+export const DeleteFactL3Command = z.object({
+  type: z.literal("DELETE_FACT_L3"),
+  factId: z.string(),
+});
+
 export const CommandSchema = z.discriminatedUnion("type", [
   RunTaskCommand,
   ApprovalDecisionCommand,
@@ -268,6 +293,11 @@ export const CommandSchema = z.discriminatedUnion("type", [
   SyncChatHistoryCommand,
   LoadChatHistoryCommand,
   GetUsageCommand,
+  GetMemoryL1Command,
+  GetMemoryL2Command,
+  GetMemoryL3Command,
+  DeleteFactL2Command,
+  DeleteFactL3Command,
 ]);
 
 export type RunTaskCommand = z.infer<typeof RunTaskCommand>;
@@ -303,4 +333,9 @@ export type ListSkillsCommand = z.infer<typeof ListSkillsCommand>;
 export type SaveSkillCommand = z.infer<typeof SaveSkillCommand>;
 export type DeleteSkillCommand = z.infer<typeof DeleteSkillCommand>;
 export type GetUsageCommand = z.infer<typeof GetUsageCommand>;
+export type GetMemoryL1Command = z.infer<typeof GetMemoryL1Command>;
+export type GetMemoryL2Command = z.infer<typeof GetMemoryL2Command>;
+export type GetMemoryL3Command = z.infer<typeof GetMemoryL3Command>;
+export type DeleteFactL2Command = z.infer<typeof DeleteFactL2Command>;
+export type DeleteFactL3Command = z.infer<typeof DeleteFactL3Command>;
 export type Command = z.infer<typeof CommandSchema>;

@@ -313,6 +313,30 @@ export const ChatHistoryLoadedEvent = z.object({
   data: z.string(),
 });
 
+export const MemoryL1LoadedEvent = z.object({
+  type: z.literal("MEMORY_L1_LOADED"),
+  agentId: z.string(),
+  sessions: z.array(z.any()),
+});
+
+export const MemoryL2LoadedEvent = z.object({
+  type: z.literal("MEMORY_L2_LOADED"),
+  agentId: z.string(),
+  facts: z.array(z.any()),
+});
+
+export const MemoryL3LoadedEvent = z.object({
+  type: z.literal("MEMORY_L3_LOADED"),
+  items: z.array(z.any()),
+});
+
+export const FactDeletedEvent = z.object({
+  type: z.literal("FACT_DELETED"),
+  layer: z.enum(["L2", "L3"]),
+  factId: z.string(),
+  ok: z.boolean(),
+});
+
 export const GatewayEventSchema = z.discriminatedUnion("type", [
   AgentsSyncEvent,
   AgentStatusEvent,
@@ -347,6 +371,10 @@ export const GatewayEventSchema = z.discriminatedUnion("type", [
   SkillListEvent,
   ChatHistoryLoadedEvent,
   UsageReportEvent,
+  MemoryL1LoadedEvent,
+  MemoryL2LoadedEvent,
+  MemoryL3LoadedEvent,
+  FactDeletedEvent,
 ]);
 
 export type TokenUsage = z.infer<typeof TokenUsage>;
@@ -383,4 +411,8 @@ export type WorktreeRevertedEvent = z.infer<typeof WorktreeRevertedEvent>;
 export type AutoMergeUpdatedEvent = z.infer<typeof AutoMergeUpdatedEvent>;
 export type SkillListEvent = z.infer<typeof SkillListEvent>;
 export type UsageReportEvent = z.infer<typeof UsageReportEvent>;
+export type MemoryL1LoadedEvent = z.infer<typeof MemoryL1LoadedEvent>;
+export type MemoryL2LoadedEvent = z.infer<typeof MemoryL2LoadedEvent>;
+export type MemoryL3LoadedEvent = z.infer<typeof MemoryL3LoadedEvent>;
+export type FactDeletedEvent = z.infer<typeof FactDeletedEvent>;
 export type GatewayEvent = z.infer<typeof GatewayEventSchema>;

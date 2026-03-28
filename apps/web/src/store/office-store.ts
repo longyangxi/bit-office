@@ -158,6 +158,10 @@ interface OfficeStore {
   detectedBackends: string[];
   availableSkills: Array<{ name: string; title: string; isFolder: boolean }>;
   usageReport: Record<string, unknown> | null;
+  memoryL1: { agentId: string; sessions: unknown[] } | null;
+  memoryL2: { agentId: string; facts: unknown[] } | null;
+  memoryL3: { items: unknown[] } | null;
+  factDeleted: { layer: string; factId: string; ok: boolean } | null;
   connected: boolean;
   hydrated: boolean;
   /** Separated from agents to avoid full Map clone on every LOG_APPEND */
@@ -430,6 +434,10 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   detectedBackends: [],
   availableSkills: [],
   usageReport: null,
+  memoryL1: null,
+  memoryL2: null,
+  memoryL3: null,
+  factDeleted: null,
   connected: false,
   hydrated: false,
   agentLogLines: new Map(),
@@ -1193,6 +1201,18 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
         }
         case "USAGE_REPORT": {
           return { agents, usageReport: event.report as Record<string, unknown> };
+        }
+        case "MEMORY_L1_LOADED": {
+          return { agents, memoryL1: { agentId: event.agentId, sessions: event.sessions } };
+        }
+        case "MEMORY_L2_LOADED": {
+          return { agents, memoryL2: { agentId: event.agentId, facts: event.facts } };
+        }
+        case "MEMORY_L3_LOADED": {
+          return { agents, memoryL3: { items: event.items } };
+        }
+        case "FACT_DELETED": {
+          return { agents, factDeleted: { layer: event.layer, factId: event.factId, ok: event.ok } };
         }
       }
 

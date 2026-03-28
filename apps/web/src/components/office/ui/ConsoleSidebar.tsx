@@ -9,12 +9,13 @@ interface ConsoleSidebarProps {
   onOpenHistory: () => void;
   onOpenSettings: () => void;
   onOpenUsage: () => void;
+  onOpenMemory: () => void;
   onBackToOffice: () => void;
   onCloseProject: (projectId: string) => void;
   onHireToProject: (projectId: string) => void;
 }
 
-export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onOpenUsage, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
+export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSettings, onOpenUsage, onOpenMemory, onBackToOffice, onCloseProject, onHireToProject }: ConsoleSidebarProps) {
   const projects = useOfficeStore((s) => s.projects);
   const activeProjectId = useOfficeStore((s) => s.activeProjectId);
   const agents = useOfficeStore((s) => s.agents);
@@ -112,6 +113,17 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
           <rect x="17" y="3" width="4" height="18" rx="1" />
         </svg>
         <span>Usage</span>
+      </button>
+
+      {/* Memory */}
+      <button className="csb-nav-btn" onClick={onOpenMemory}>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 2a4 4 0 0 1 4 4v2a4 4 0 0 1-8 0V6a4 4 0 0 1 4-4z" />
+          <path d="M6 10v1a6 6 0 0 0 12 0v-1" />
+          <path d="M12 17v5" />
+          <path d="M8 22h8" />
+        </svg>
+        <span>Memory</span>
       </button>
 
       {/* Settings — bottom */}
