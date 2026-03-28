@@ -57,13 +57,16 @@ export default function ConsoleSidebar({ onNewProject, onOpenHistory, onOpenSett
         <div className="csb-list">
           {activeProjects.map((p) => {
             const isActive = p.id === activeProjectId;
-            const agentCount = p.agentIds.filter((id: string) => agents.has(id)).length;
+            const projectAgents = p.agentIds.map((id: string) => agents.get(id)).filter(Boolean);
+            const agentCount = projectAgents.length;
+            // Resolve tooltip: use project directory, or fall back to first agent's workDir/cwd
+            const tooltip = p.directory || projectAgents.find(a => a!.workDir || a!.cwd)?.workDir || projectAgents.find(a => a!.cwd)?.cwd || "";
             return (
               <div
                 key={p.id}
                 className={`csb-item${isActive ? " csb-item-active" : ""}`}
                 onClick={() => setActiveProject(p.id)}
-                title={p.directory}
+                title={tooltip}
               >
                 <span className="csb-item-icon">📁</span>
                 <span className="csb-item-name">{p.name}</span>
