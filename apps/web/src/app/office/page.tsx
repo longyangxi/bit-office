@@ -168,6 +168,8 @@ function runDemoScript(onDone: () => void) {
 
 // Temporary reviewer agents — auto-fired when they finish
 const tempReviewerIds = new Set<string>();
+// Synchronous guard: source agents with an active review (prevents stale-closure double-clicks)
+const activeReviewSources = new Set<string>();
 
 // Per-agent working directory map (persists across renders, not in state to avoid re-renders)
 const agentWorkDirMap = new Map<string, string>();
@@ -1090,8 +1092,9 @@ export default function OfficePage() {
   // One-click review: spin up a temporary Code Reviewer as overlay on source agent
   // Supports concurrent reviews — each source agent can have one active review
   const handleReview = useCallback((sourceAgentId: string, result: { changedFiles: string[]; projectDir?: string; entryFile?: string; summary: string }, backend?: string) => {
-    // Skip if this source agent already has an active review
-    if (reviewOverlays.has(sourceAgentId)) return;
+    // Synchronous dedup guard (immune to stale React closures on rapid clicks)
+    if (activeReviewSources.has(sourceAgentId)) return;
+    activeReviewSources.add(sourceAgentId);
     const sourceAgent = agents.get(sourceAgentId);
     const reviewerAgentId = `reviewer-${nanoid(6)}`;
     tempReviewerIds.add(reviewerAgentId);
@@ -1108,7 +1111,7 @@ export default function OfficePage() {
       summary: result.summary,
       backend: backend ?? sourceAgent?.backend ?? "claude",
     });
-  }, [agents, reviewOverlays]);
+  }, [agents]);
 
   // When any reviewer finishes, extract review text and wait for user confirmation
   useEffect(() => {
@@ -1174,6 +1177,7 @@ export default function OfficePage() {
     // Cleanup this review
     sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
     tempReviewerIds.delete(reviewerAgentId);
+    activeReviewSources.delete(sourceAgentId);
     setReviewOverlays(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
     setReviewResultTexts(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
   }, [reviewOverlays, reviewResultTexts, agents, addUserMessage]);
@@ -1184,25 +1188,46 @@ export default function OfficePage() {
     const { reviewerAgentId } = overlay;
     sendCommand({ type: "FIRE_AGENT", agentId: reviewerAgentId });
     tempReviewerIds.delete(reviewerAgentId);
+    activeReviewSources.delete(sourceAgentId);
     setReviewOverlays(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
     setReviewResultTexts(prev => { const next = new Map(prev); next.delete(sourceAgentId); return next; });
   }, [reviewOverlays]);
+
+  // Auto-dismiss stuck reviews: if reviewer agent never appears within 30s, clear overlay
+  useEffect(() => {
+    if (reviewOverlays.size === 0) return;
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const [sourceId, overlay] of reviewOverlays) {
+      const reviewer = agents.get(overlay.reviewerAgentId);
+      if (reviewer) continue; // reviewer exists, not stuck
+      timers.push(setTimeout(() => {
+        // Re-check: if reviewer still doesn't exist, clean up
+        sendCommand({ type: "FIRE_AGENT", agentId: overlay.reviewerAgentId });
+        tempReviewerIds.delete(overlay.reviewerAgentId);
+        activeReviewSources.delete(sourceId);
+        setReviewOverlays(prev => { const next = new Map(prev); next.delete(sourceId); return next; });
+      }, 30_000));
+    }
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [agents, reviewOverlays]);
 
   // Fallback: auto-fire orphaned temp reviewers (non-overlay, e.g. if overlay was cleared manually)
   useEffect(() => {
     if (tempReviewerIds.size === 0) return;
     const activeReviewerIds = new Set([...reviewOverlays.values()].map(o => o.reviewerAgentId));
+    const timers: ReturnType<typeof setTimeout>[] = [];
     for (const rid of tempReviewerIds) {
       if (activeReviewerIds.has(rid)) continue; // handled by overlay effect above
       const ag = agents.get(rid);
       if (ag && (ag.status === "done" || ag.status === "idle" || ag.status === "error") && ag.messages.length > 1) {
-        const timer = setTimeout(() => {
+        timers.push(setTimeout(() => {
           sendCommand({ type: "FIRE_AGENT", agentId: rid });
           tempReviewerIds.delete(rid);
-        }, 120_000);
-        return () => clearTimeout(timer);
+        }, 120_000));
       }
     }
+    if (timers.length === 0) return;
+    return () => timers.forEach(t => clearTimeout(t));
   }, [agents, reviewOverlays]);
 
   // Helper to get reviewer overlay data for rendering — looks up result text per source agent
