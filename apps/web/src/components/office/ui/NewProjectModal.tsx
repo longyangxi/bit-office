@@ -19,61 +19,65 @@ interface NewProjectModalProps {
 
 /**
  * NewProjectModal — Create a new project with directory + initial agent mode.
- * Directory is chosen ONCE here, never again for this project.
- * Phase 1 of project-centric architecture.
+ * Templates: one-click instant start (default directory, solo Senior Dev).
+ * Blank: shows full form for name/directory/mode.
  */
 export default function NewProjectModal({
   open,
   onClose,
   onCreated,
 }: NewProjectModalProps) {
+  const [showBlankForm, setShowBlankForm] = useState(false);
   const [name, setName] = useState("");
   const [directory, setDirectory] = useState("");
   const [mode, setMode] = useState<InitialMode>("solo");
-  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
 
   const createProject = useOfficeStore((s) => s.createProject);
 
-  const handleTemplateSelect = useCallback((t: ProjectTemplate | null) => {
-    setSelectedTemplate(t);
-    if (t) {
-      setName(t.name);
-      // Map template suggestedMode to InitialMode
-      setMode(t.suggestedMode === "team" ? "team" : "solo");
-    }
-  }, []);
+  // Template one-click: create project with template name, empty directory (gateway uses default)
+  const handleTemplateClick = useCallback((t: ProjectTemplate) => {
+    const projectId = createProject(t.name, "");
+    onCreated(projectId, "solo", t);
+    // Reset
+    setShowBlankForm(false);
+    setName("");
+    setDirectory("");
+    setMode("solo");
+  }, [createProject, onCreated]);
 
   const handleBrowse = useCallback(() => {
     const rid = nanoid(6);
     folderPickCallbacks.set(rid, (path: string) => {
       setDirectory(path);
-      // Auto-fill name from folder name if empty and no template selected
-      if (!name && !selectedTemplate) {
+      if (!name) {
         const folderName = path.split("/").filter(Boolean).pop() || "";
         setName(folderName);
       }
     });
     sendCommand({ type: "PICK_FOLDER", requestId: rid });
-  }, [name, selectedTemplate]);
+  }, [name]);
 
   const handleCreate = useCallback(() => {
     if (!directory.trim()) return;
     const projectName = name.trim() || directory.split("/").filter(Boolean).pop() || "untitled";
     const projectId = createProject(projectName, directory.trim());
-    onCreated(projectId, mode, selectedTemplate ?? undefined);
-    // Reset form
+    onCreated(projectId, mode);
+    // Reset
+    setShowBlankForm(false);
     setName("");
     setDirectory("");
     setMode("solo");
-    setSelectedTemplate(null);
-  }, [name, directory, mode, selectedTemplate, createProject, onCreated]);
+  }, [name, directory, mode, createProject, onCreated]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-      if (e.key === "Enter" && directory.trim()) handleCreate();
+      if (e.key === "Escape") {
+        if (showBlankForm) setShowBlankForm(false);
+        else onClose();
+      }
+      if (e.key === "Enter" && showBlankForm && directory.trim()) handleCreate();
     },
-    [onClose, handleCreate, directory]
+    [onClose, handleCreate, directory, showBlankForm]
   );
 
   if (!open) return null;
@@ -82,108 +86,115 @@ export default function NewProjectModal({
     <div className="tm-backdrop" onClick={onClose} onKeyDown={handleKeyDown}>
       <div
         className="tm-container"
-        style={{ maxWidth: 560 }}
+        style={{ maxWidth: showBlankForm ? 520 : 560 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div className="tm-header">
-          <span>NEW PROJECT</span>
-          <button className="tm-close" onClick={onClose}>
-            ESC
+          <span>{showBlankForm ? "BLANK PROJECT" : "NEW PROJECT"}</span>
+          <button className="tm-close" onClick={showBlankForm ? () => setShowBlankForm(false) : onClose}>
+            {showBlankForm ? "BACK" : "ESC"}
           </button>
         </div>
 
         {/* Body */}
         <div className="tm-body" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-          {/* Template Selector */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-            <label className="tsl">Choose a template</label>
-            <TemplateSelector selected={selectedTemplate} onSelect={handleTemplateSelect} />
-          </div>
-
-          {/* Project Name */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-            <label className="tsl">Name</label>
-            <input
-              className="ti"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="auto from folder name"
-              autoFocus
-            />
-          </div>
-
-          {/* Directory */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
-            <label className="tsl">Directory</label>
-            <div style={{ display: "flex", gap: "var(--space-2)" }}>
-              <input
-                className="ti"
-                style={{ flex: 1 }}
-                value={directory}
-                onChange={(e) => setDirectory(e.target.value)}
-                placeholder="/path/to/project"
-              />
-              <button className="tb tb-ghost" onClick={handleBrowse}>
-                Browse
-              </button>
+          {!showBlankForm ? (
+            /* ── Template selection (one-click) ── */
+            <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+              <label className="tsl">Pick a template to start instantly</label>
+              <TemplateSelector selected={null} onSelect={(t) => { if (t) handleTemplateClick(t); else setShowBlankForm(true); }} />
             </div>
-          </div>
+          ) : (
+            /* ── Blank project form ── */
+            <>
+              {/* Project Name */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                <label className="tsl">Name</label>
+                <input
+                  className="ti"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="auto from folder name"
+                  autoFocus
+                />
+              </div>
 
-          {/* Initial Agents Mode */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-            <label className="tsl">Initial Agents</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
-              {(
-                [
-                  { key: "solo", label: "Solo Agent", desc: "Single agent" },
-                  { key: "team", label: "Team", desc: "Lead + Dev + Review" },
-                  { key: "empty", label: "Empty", desc: "Add agents later" },
-                ] as const
-              ).map((opt) => (
-                <button
-                  key={opt.key}
-                  className={`tac${mode === opt.key ? " tac-selected" : ""}`}
-                  onClick={() => setMode(opt.key)}
-                  style={{ padding: "var(--space-3) var(--space-2)" }}
-                >
-                  <span
-                    style={{
-                      fontSize: "var(--font-size-base)",
-                      fontFamily: "var(--font-mono)",
-                      color: mode === opt.key ? "var(--term-accent)" : "var(--term-text-bright)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    {opt.label}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: TERM_SIZE_2XS,
-                      fontFamily: "var(--font-mono)",
-                      color: "var(--term-text)",
-                      opacity: 0.6,
-                      marginTop: "var(--space-1)",
-                    }}
-                  >
-                    {opt.desc}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
+              {/* Directory */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+                <label className="tsl">Directory</label>
+                <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                  <input
+                    className="ti"
+                    style={{ flex: 1 }}
+                    value={directory}
+                    onChange={(e) => setDirectory(e.target.value)}
+                    placeholder="/path/to/project"
+                  />
+                  <button className="tb tb-ghost" onClick={handleBrowse}>
+                    Browse
+                  </button>
+                </div>
+              </div>
+
+              {/* Initial Agents Mode */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                <label className="tsl">Initial Agents</label>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-2)" }}>
+                  {(
+                    [
+                      { key: "solo", label: "Solo Agent", desc: "Single agent" },
+                      { key: "team", label: "Team", desc: "Lead + Dev + Review" },
+                      { key: "empty", label: "Empty", desc: "Add agents later" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.key}
+                      className={`tac${mode === opt.key ? " tac-selected" : ""}`}
+                      onClick={() => setMode(opt.key)}
+                      style={{ padding: "var(--space-3) var(--space-2)" }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "var(--font-size-base)",
+                          fontFamily: "var(--font-mono)",
+                          color: mode === opt.key ? "var(--term-accent)" : "var(--term-text-bright)",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {opt.label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: TERM_SIZE_2XS,
+                          fontFamily: "var(--font-mono)",
+                          color: "var(--term-text)",
+                          opacity: 0.6,
+                          marginTop: "var(--space-1)",
+                        }}
+                      >
+                        {opt.desc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="tm-footer">
-          <button
-            className="tb tb-primary"
-            onClick={handleCreate}
-            disabled={!directory.trim()}
-          >
-            CREATE PROJECT
-          </button>
-        </div>
+        {/* Footer — only for blank form */}
+        {showBlankForm && (
+          <div className="tm-footer">
+            <button
+              className="tb tb-primary"
+              onClick={handleCreate}
+              disabled={!directory.trim()}
+            >
+              CREATE PROJECT
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -2520,6 +2520,15 @@ export default function OfficePage() {
             setShowNewProjectModal(false);
             if (template?.suggestedPrompt) {
               setPendingTemplatePrompt(template.suggestedPrompt);
+              // Template one-click: auto-hire Senior Developer, skip HireModal
+              const seniorDev = agentDefs.find(d => d.id === "senior-dev")
+                ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
+              if (seniorDev) {
+                // Pick first detected backend, default to "claude"
+                const backend = (detectedBackends.length > 0 ? detectedBackends[0] : "claude");
+                handleHire(seniorDev, backend);
+                return;
+              }
             }
             if (mode === "solo") setShowHireModal(true);
             else if (mode === "team") setShowHireTeamModal(true);
