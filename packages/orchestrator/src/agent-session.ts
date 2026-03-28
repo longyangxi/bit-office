@@ -236,6 +236,9 @@ export class AgentSession {
   onTaskComplete: TaskCompleteHandler | null = null;
   /** When true, this agent can @mention other agents to hand off tasks. Set at creation based on role (see DELEGATOR_ROLES). */
   canDelegate = false;
+  /** True when canDelegate was explicitly set via opts (not derived from role). */
+  private _canDelegateExplicit = false;
+  get canDelegateExplicit(): boolean { return this._canDelegateExplicit; }
   /** When true, this agent runs without coding tools. Set at creation based on role (see NO_CODE_ROLES). */
   noCode = false;
   /** Whether the last failure was a timeout (not retryable) */
@@ -305,6 +308,7 @@ export class AgentSession {
     this._isTeamLead = opts.isTeamLead ?? false;
     this.teamId = opts.teamId;
     // Delegation ability: explicit override > isTeamLead > role-based default
+    this._canDelegateExplicit = opts.canDelegate !== undefined;
     this.canDelegate = opts.canDelegate
       ?? (this._isTeamLead || DELEGATOR_ROLES.some(r => opts.role.toLowerCase().startsWith(r)));
     // No-code mode: explicit override > isTeamLead > role-based default

@@ -240,11 +240,13 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
 
   setTeamLead(agentId: string): void {
     this.agentManager.setTeamLead(agentId);
-    // Update the session's isTeamLead + canDelegate flags
+    // Update the session's isTeamLead flag; only upgrade canDelegate if not explicitly overridden
     const session = this.agentManager.get(agentId);
     if (session) {
       session.isTeamLead = true;
-      session.canDelegate = true;
+      if (!session.canDelegateExplicit) {
+        session.canDelegate = true;
+      }
     }
   }
 
