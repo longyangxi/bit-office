@@ -2519,13 +2519,13 @@ export default function OfficePage() {
           onCreated={(projectId: string, mode: string, template?: any) => {
             setShowNewProjectModal(false);
             if (template?.suggestedPrompt) {
-              setPendingTemplatePrompt(template.suggestedPrompt);
               // Template one-click: auto-hire Senior Developer, skip HireModal
               const seniorDev = agentDefs.find(d => d.id === "senior-dev")
                 ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
               if (seniorDev) {
-                // Pick first detected backend, default to "claude"
                 const backend = (detectedBackends.length > 0 ? detectedBackends[0] : "claude");
+                // Set prompt only right before hire — prevents leak if hire path is skipped
+                setPendingTemplatePrompt(template.suggestedPrompt);
                 handleHire(seniorDev, backend);
                 return;
               }
