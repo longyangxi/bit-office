@@ -195,6 +195,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       isTeamLead: this.agentManager.isTeamLead(opts.agentId),
       teamId: opts.teamId,
       memoryContext,
+      canDelegate: opts.canDelegate,
+      noCode: opts.noCode,
       onEvent: (e) => this.handleSessionEvent(e, opts.agentId),
       renderPrompt: (name, vars) => this.promptEngine.render(name, vars),
     });

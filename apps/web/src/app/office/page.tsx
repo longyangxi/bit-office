@@ -685,7 +685,7 @@ export default function OfficePage() {
       return available ?? `Agent${usedNames.size + 1}`;
     })();
     const agentId = `agent-${nanoid(6)}`;
-    sendCommand({ type: "CREATE_AGENT", agentId, name, role: def.skills ? `${def.role} — ${def.skills}` : def.role, palette: def.palette, personality: def.personality, backend, workDir, skillFiles: def.skillFiles });
+    sendCommand({ type: "CREATE_AGENT", agentId, name, role: def.skills ? `${def.role} — ${def.skills}` : def.role, palette: def.palette, personality: def.personality, backend, workDir, skillFiles: def.skillFiles, canDelegate: def.canDelegate, noCode: def.noCode });
     // Store workDir locally so RUN_TASK can pass it as repoPath
     if (workDir) {
       agentWorkDirMap.set(agentId, workDir);

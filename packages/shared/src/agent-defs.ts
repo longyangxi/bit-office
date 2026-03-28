@@ -8,6 +8,8 @@ export interface AgentDefinition {
   isBuiltin: boolean;     // true = shipped with app, editable but not deletable
   teamRole: "dev" | "reviewer" | "leader";  // What team slot this agent can fill
   skillFiles?: string[];  // Skill file names in ~/.open-office/skills/ (e.g. ["tdd", "react-patterns"])
+  canDelegate?: boolean;  // Override: allow this agent to delegate tasks via @Name (default: derived from role)
+  noCode?: boolean;       // Override: prevent this agent from writing code (default: derived from role)
 }
 
 /** Metadata for a skill stored in ~/.open-office[-dev]/skills/ */

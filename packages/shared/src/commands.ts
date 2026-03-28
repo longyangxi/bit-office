@@ -42,6 +42,8 @@ export const CreateAgentCommand = z.object({
   teamId: z.string().optional(),
   workDir: z.string().optional(),
   skillFiles: z.array(z.string()).optional(),
+  canDelegate: z.boolean().optional(),
+  noCode: z.boolean().optional(),
 });
 
 export const FireAgentCommand = z.object({

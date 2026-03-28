@@ -146,6 +146,19 @@ function CreateSkillInline({ onSave, onCancel }: {
   );
 }
 
+// Role-based defaults (mirrors orchestrator DELEGATOR_ROLES / NO_CODE_ROLES)
+const DELEGATOR_ROLES = ["team lead", "product manager", "game designer", "narrative designer", "level designer", "ui designer", "software architect", "backend architect"];
+const NO_CODE_ROLES = ["product manager", "code reviewer", "game designer", "narrative designer", "level designer", "ui designer"];
+
+function roleDefaultCanDelegate(role: string): boolean {
+  const r = role.toLowerCase();
+  return DELEGATOR_ROLES.some(dr => r.startsWith(dr));
+}
+function roleDefaultNoCode(role: string): boolean {
+  const r = role.toLowerCase();
+  return NO_CODE_ROLES.some(nr => r.startsWith(nr));
+}
+
 function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand }: {
   onSave: (agent: AgentDefinition) => void;
   onClose: () => void;
@@ -178,7 +191,13 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
     sendCommand?.({ type: "LIST_SKILLS" });
   }, [sendCommand]);
 
+  // canDelegate / noCode: undefined = use role default, true/false = explicit override
+  const [canDelegateOverride, setCanDelegateOverride] = useState<boolean | undefined>(editAgent?.canDelegate);
+  const [noCodeOverride, setNoCodeOverride] = useState<boolean | undefined>(editAgent?.noCode);
+
   const currentRole = rolePresetIndex >= 0 ? ROLE_PRESETS[rolePresetIndex] : customRole.trim();
+  const effectiveCanDelegate = canDelegateOverride ?? roleDefaultCanDelegate(currentRole);
+  const effectiveNoCode = noCodeOverride ?? roleDefaultNoCode(currentRole);
 
   const handleRoleChange = (idx: number) => {
     setRolePresetIndex(idx);
@@ -229,6 +248,8 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
       isBuiltin: editAgent?.isBuiltin ?? false,
       teamRole: editAgent?.teamRole ?? "dev",
       ...(skillFilesArr.length > 0 ? { skillFiles: skillFilesArr } : {}),
+      ...(canDelegateOverride !== undefined ? { canDelegate: canDelegateOverride } : {}),
+      ...(noCodeOverride !== undefined ? { noCode: noCodeOverride } : {}),
     });
   };
 
@@ -379,6 +400,56 @@ function CreateAgentModal({ onSave, onClose, assetsReady, editAgent, sendCommand
             onCancel={() => setShowCreateSkill(false)}
           />
         )}
+      </div>
+
+      {/* Capabilities */}
+      <div style={{ marginBottom: 8 }}>
+        <div className="text-term text-muted-foreground font-mono tracking-wide mb-1">CAPABILITIES</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+          <label
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
+              cursor: "pointer", fontSize: TERM_SIZE, fontFamily: "var(--font-mono)",
+              color: effectiveCanDelegate ? TERM_TEXT : TERM_DIM,
+              backgroundColor: effectiveCanDelegate ? `${TERM_ACCENT}0c` : "transparent",
+              border: `1px solid ${effectiveCanDelegate ? TERM_ACCENT + "30" : "transparent"}`,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={effectiveCanDelegate}
+              onChange={(e) => setCanDelegateOverride(e.target.checked)}
+              style={{ accentColor: TERM_ACCENT, cursor: "pointer" }}
+            />
+            <span style={{ flex: 1 }}>Can Delegate</span>
+            {canDelegateOverride === undefined && (
+              <span style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, opacity: 0.6 }}>auto</span>
+            )}
+          </label>
+          <label
+            style={{
+              display: "flex", alignItems: "center", gap: 6, padding: "4px 8px",
+              cursor: "pointer", fontSize: TERM_SIZE, fontFamily: "var(--font-mono)",
+              color: effectiveNoCode ? TERM_TEXT : TERM_DIM,
+              backgroundColor: effectiveNoCode ? `${TERM_ACCENT}0c` : "transparent",
+              border: `1px solid ${effectiveNoCode ? TERM_ACCENT + "30" : "transparent"}`,
+            }}
+          >
+            <input
+              type="checkbox"
+              checked={effectiveNoCode}
+              onChange={(e) => setNoCodeOverride(e.target.checked)}
+              style={{ accentColor: TERM_ACCENT, cursor: "pointer" }}
+            />
+            <span style={{ flex: 1 }}>No Code</span>
+            {noCodeOverride === undefined && (
+              <span style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, opacity: 0.6 }}>auto</span>
+            )}
+          </label>
+        </div>
+        <div style={{ fontSize: TERM_SIZE_2XS, color: TERM_DIM, marginTop: 4, fontFamily: "var(--font-mono)", lineHeight: 1.4 }}>
+          Delegate: assign tasks via @Name. No Code: plan/review only, no file edits.
+        </div>
       </div>
 
       {/* Personality — 2-column grid */}

@@ -445,6 +445,8 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         palette: parsed.palette,
         teamId: parsed.teamId,
         workDir,
+        canDelegate: parsed.canDelegate,
+        noCode: parsed.noCode,
       });
       // Apply global auto-merge setting to new agent
       orc.setAgentAutoMerge(parsed.agentId, config.autoMergeEnabled ?? true);

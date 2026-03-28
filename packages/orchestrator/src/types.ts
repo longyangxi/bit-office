@@ -341,6 +341,10 @@ export interface CreateAgentOpts {
   teamId?: string;
   /** Agent-specific working directory (overrides orchestrator-level workspace) */
   workDir?: string;
+  /** Override delegation ability (default: derived from role) */
+  canDelegate?: boolean;
+  /** Override no-code mode (default: derived from role) */
+  noCode?: boolean;
 }
 
 export interface CreateTeamOpts {
