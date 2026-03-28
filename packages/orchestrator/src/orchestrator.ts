@@ -501,6 +501,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
    */
   stopTeam(): void {
     this.delegationRouter.stop();
+    this.reviewQueue.length = 0;
+    this.reviewerBusy = false;
     const teamAgents = this.agentManager.getAll().filter(a => !!a.teamId);
     for (const agent of teamAgents) {
       this.cancelTask(agent.agentId);
@@ -519,6 +521,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
    */
   fireTeam(): void {
     this.delegationRouter.stop();
+    this.reviewQueue.length = 0;
+    this.reviewerBusy = false;
     const teamAgents = this.agentManager.getAll().filter(a => !!a.teamId);
     for (const agent of teamAgents) {
       this.removeAgent(agent.agentId);
@@ -1058,13 +1062,29 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       }
     }
 
-    // ── Auto-review: advance queue when reviewer finishes ──
+    // ── Auto-review: handle reviewer completion ──
     if (event.type === "task:done" || event.type === "task:failed") {
       const session = this.agentManager.get(agentId);
       if (session && (session.role ?? "").toLowerCase().includes("review")) {
+        // Route VERDICT:FAIL back to the dev who wrote the code
+        if (event.type === "task:done") {
+          const devAgentId = this.delegationRouter.getAutoReviewDevAgent(event.taskId);
+          if (devAgentId && event.result?.fullOutput) {
+            const verdictMatch = event.result.fullOutput.match(/VERDICT[:\s]*(\w+)/i);
+            if (verdictMatch && verdictMatch[1].toUpperCase() === "FAIL") {
+              console.log(`[AutoReview] FAIL verdict for ${devAgentId}, routing fix via reaction engine`);
+              this.emitEvent({
+                type: "review:fail",
+                agentId,
+                taskId: event.taskId,
+                reviewerOutput: event.result.fullOutput,
+                devAgentId,
+              });
+            }
+          }
+        }
         this.reviewerBusy = false;
         this.processReviewQueue();
-        // Re-check scheduler completion (may have been waiting for reviews)
         this.checkSchedulerCompletion();
       }
     }
@@ -1352,17 +1372,28 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     const session = this.agentManager.get(devAgentId);
     if (!session) return;
 
-    // Get diff from worktree
+    // Get diff from worktree — compare agent branch against main (not HEAD, which is empty for committed changes)
     let diff = "";
     if (session.worktreePath && result.changedFiles.length > 0) {
       try {
-        diff = execFileSync("git", ["diff", "HEAD", "--", ...result.changedFiles], {
+        // Try merge-base diff first (shows what the agent actually changed vs main)
+        diff = execFileSync("git", ["diff", "main...HEAD", "--", ...result.changedFiles], {
           cwd: session.worktreePath,
           encoding: "utf-8",
           timeout: 5000,
           maxBuffer: 200 * 1024,
         }).trim();
-      } catch { /* no diff available */ }
+      } catch {
+        // Fallback: try HEAD diff (works for uncommitted changes)
+        try {
+          diff = execFileSync("git", ["diff", "HEAD", "--", ...result.changedFiles], {
+            cwd: session.worktreePath,
+            encoding: "utf-8",
+            timeout: 5000,
+            maxBuffer: 200 * 1024,
+          }).trim();
+        } catch { /* no diff available */ }
+      }
     }
 
     const prompt = buildReviewPrompt({
