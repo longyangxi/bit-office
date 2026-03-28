@@ -397,7 +397,11 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
     return;
   }
 
-  console.log("[Gateway] Received command:", parsed.type, JSON.stringify(parsed));
+  if (parsed.type === "SYNC_CHAT_HISTORY" || parsed.type === "LOAD_CHAT_HISTORY") {
+    console.log(`[Gateway] Received command: ${parsed.type} (${(parsed.data?.length ?? 0)} bytes)`);
+  } else {
+    console.log("[Gateway] Received command:", parsed.type, JSON.stringify(parsed).slice(0, 200));
+  }
 
   switch (parsed.type) {
     case "CREATE_AGENT": {

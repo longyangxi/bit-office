@@ -848,9 +848,10 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // stays stable and there's no unmount/mount flash of two bubbles.
           const durationMs = streamMsg ? Date.now() - streamMsg.timestamp : undefined;
           // Use the longest available text: accumulated stream > fullOutput > summary
-          const accumulated = streamMsg?._accumulatedText ?? "";
-          const serverFull = event.result.fullOutput || event.result.summary;
-          const bestText = accumulated.length > serverFull.length ? accumulated : serverFull;
+          // Trim to avoid leading \n\n from Claude output that causes a visual text jump
+          const accumulated = (streamMsg?._accumulatedText ?? "").trim();
+          const serverFull = (event.result.fullOutput || event.result.summary).trim();
+          const bestText = accumulated.length >= serverFull.length ? accumulated : serverFull;
           // Detect solo agent presenting a [PLAN] or asking for user approval.
           const isSoloAgent = !agent.isTeamLead && !agent.teamId;
           const hasPlanAsk = isSoloAgent && /\[PLAN\]/i.test(bestText);

@@ -593,8 +593,8 @@ export class AgentSession {
         const raw = data.toString();
         this.lastOutputAt = Date.now();
         stdoutChunkCount++;
-        if (stdoutChunkCount <= 3) {
-          console.log(`[Agent ${this.name} raw-stdout #${stdoutChunkCount}] ${raw.slice(0, 150)}`);
+        if (stdoutChunkCount === 1) {
+          console.log(`[Agent ${this.name} raw-stdout #1] ${raw.slice(0, 150)}`);
         }
         jsonLineBuf += raw;
 
@@ -612,7 +612,7 @@ export class AgentSession {
               seenFirstJson = true;
               const parsed = this.tracker.processMessage(msg);
 
-              if (parsed.sessionId) {
+              if (parsed.sessionId && parsed.sessionId !== this.sessionId) {
                 this.sessionId = parsed.sessionId;
                 saveSessionId(this.agentId, parsed.sessionId);
                 console.log(`[Agent ${this.name}] Session ID: ${parsed.sessionId}`);
