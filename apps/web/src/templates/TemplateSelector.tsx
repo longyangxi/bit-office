@@ -3,7 +3,7 @@
 import type { ProjectTemplate } from "./templates";
 import { BUILT_IN_TEMPLATES } from "./templates";
 import TemplateCard from "./TemplateCard";
-import { TERM_SIZE_XS } from "@/components/office/ui/termTheme";
+import { TERM_SIZE_2XS } from "@/components/office/ui/termTheme";
 
 interface TemplateSelectorProps {
   selected: ProjectTemplate | null;
@@ -12,39 +12,57 @@ interface TemplateSelectorProps {
 
 export default function TemplateSelector({ selected, onSelect }: TemplateSelectorProps) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-      <div
+    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+      {/* Blank Project — prominent button at top */}
+      <button
+        className="tac"
+        onClick={() => onSelect(null)}
         style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
+          padding: "var(--space-3) var(--space-4)",
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
           gap: "var(--space-2)",
         }}
       >
-        {BUILT_IN_TEMPLATES.map((t) => (
-          <TemplateCard
-            key={t.id}
-            template={t}
-            selected={selected?.id === t.id}
-            onClick={() => onSelect(selected?.id === t.id ? null : t)}
-          />
-        ))}
-      </div>
-      <button
-        onClick={() => onSelect(null)}
-        style={{
-          background: "none",
-          border: "none",
-          cursor: "pointer",
-          fontFamily: "var(--font-mono)",
-          fontSize: TERM_SIZE_XS,
-          color: "var(--term-dim)",
-          textDecoration: "underline",
-          padding: "var(--space-1) 0",
-          textAlign: "center",
-        }}
-      >
-        or start blank
+        <span style={{ fontSize: 16 }}>{"\u{2795}"}</span>
+        <span
+          style={{
+            fontSize: "var(--font-size-base)",
+            fontFamily: "var(--font-mono)",
+            color: "var(--term-text-bright)",
+            fontWeight: 600,
+          }}
+        >
+          Blank Project
+        </span>
       </button>
+
+      {/* Template grid */}
+      <div>
+        <label
+          className="tsl"
+          style={{ display: "block", marginBottom: "var(--space-2)", fontSize: TERM_SIZE_2XS }}
+        >
+          or start from a template
+        </label>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "var(--space-2)",
+          }}
+        >
+          {BUILT_IN_TEMPLATES.map((t) => (
+            <TemplateCard
+              key={t.id}
+              template={t}
+              selected={selected?.id === t.id}
+              onClick={() => onSelect(selected?.id === t.id ? null : t)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
