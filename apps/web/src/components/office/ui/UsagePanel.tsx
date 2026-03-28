@@ -81,12 +81,6 @@ function fmtTokens(n: number): string {
   return String(n);
 }
 
-function fmtCost(n: number): string {
-  if (n >= 1) return "$" + n.toFixed(2);
-  if (n >= 0.01) return "$" + n.toFixed(3);
-  return "$" + n.toFixed(4);
-}
-
 function fmtDate(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -101,8 +95,6 @@ const S = {
 function QuotaBar({ quota }: { quota: QuotaInfo }) {
   const pct = Math.min(quota.usedPercent, 100);
   const color = pct > 90 ? TERM_SEM_RED : pct > 70 ? TERM_SEM_YELLOW : TERM_SEM_GREEN;
-  const isExtraUsage = quota.spentUsd !== undefined;
-
   return (
     <div style={{ marginTop: 8 }}>
       <div style={{ fontWeight: 600, fontSize: TERM_SIZE_SM, marginBottom: 4 }}>{quota.label}</div>
@@ -118,17 +110,8 @@ function QuotaBar({ quota }: { quota: QuotaInfo }) {
         </div>
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", fontSize: TERM_SIZE_2XS, marginTop: 3, opacity: 0.7 }}>
-        {isExtraUsage ? (
-          <>
-            <span>This month: {fmtCost(quota.spentUsd!)} / {fmtCost(quota.limitUsd ?? 0)}</span>
-            <span>{pct.toFixed(0)}% used</span>
-          </>
-        ) : (
-          <>
-            <span>{pct.toFixed(0)}% used</span>
-            {quota.resetDescription && <span>{quota.resetDescription}</span>}
-          </>
-        )}
+        <span>{pct.toFixed(0)}% used</span>
+        {quota.resetDescription && <span>{quota.resetDescription}</span>}
       </div>
       {quota.paceDescription && (
         <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginTop: 2 }}>{quota.paceDescription}</div>
@@ -157,7 +140,7 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
         </div>
         {provider.localUsage && (
           <span style={{ ...S.mono, fontSize: TERM_SIZE_XS, opacity: 0.8 }}>
-            {fmtCost(provider.localUsage.costUsd)}
+            {fmtTokens(provider.localUsage.inputTokens + provider.localUsage.outputTokens)}
           </span>
         )}
         <span style={{ fontSize: TERM_SIZE_2XS, opacity: 0.4, transition: "transform 0.2s", transform: expanded ? "rotate(90deg)" : "none" }}>▶</span>
@@ -187,8 +170,6 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
             {provider.localUsage.cacheWriteTokens > 0 && (
               <><span>Cache write</span><span style={{ textAlign: "right", ...S.mono }}>{fmtTokens(provider.localUsage.cacheWriteTokens)}</span></>
             )}
-            <span style={{ fontWeight: 600 }}>Estimated cost</span>
-            <span style={{ textAlign: "right", ...S.mono, fontWeight: 600 }}>{fmtCost(provider.localUsage.costUsd)}</span>
           </div>
 
           {provider.models.length > 0 && (
@@ -197,7 +178,7 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
               {provider.models.map(m => (
                 <div key={m.model} style={{ display: "flex", justifyContent: "space-between", fontSize: TERM_SIZE_2XS, opacity: 0.7, padding: "1px 0" }}>
                   <span style={S.mono}>{m.model}</span>
-                  <span style={S.mono}>{fmtCost(m.costUsd)} ({m.requestCount})</span>
+                  <span style={S.mono}>{fmtTokens(m.inputTokens + m.outputTokens)} ({m.requestCount})</span>
                 </div>
               ))}
             </div>
@@ -220,29 +201,29 @@ function ProviderCard({ provider, expanded, onToggle }: { provider: ProviderUsag
   );
 }
 
-function CostChart({ providers }: { providers: ProviderUsage[] }) {
+function TokenChart({ providers }: { providers: ProviderUsage[] }) {
   const allDays = new Map<string, number>();
   for (const p of providers) {
     for (const d of p.daily) {
-      allDays.set(d.date, (allDays.get(d.date) ?? 0) + d.costUsd);
+      allDays.set(d.date, (allDays.get(d.date) ?? 0) + d.sessionCount);
     }
   }
   if (allDays.size < 2) return null;
 
   const entries = [...allDays.entries()].sort((a, b) => a[0].localeCompare(b[0])).slice(-14);
-  const max = Math.max(...entries.map(e => e[1]), 0.01);
+  const max = Math.max(...entries.map(e => e[1]), 1);
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginBottom: 6 }}>Daily cost (14d)</div>
+      <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5, marginBottom: 6 }}>Daily sessions (14d)</div>
       <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 40 }}>
-        {entries.map(([date, cost]) => (
+        {entries.map(([date, count]) => (
           <div
             key={date}
-            title={`${date}: ${fmtCost(cost)}`}
+            title={`${date}: ${count} sessions`}
             style={{
               flex: 1,
-              height: `${Math.max((cost / max) * 100, 2)}%`,
+              height: `${Math.max((count / max) * 100, 2)}%`,
               background: "linear-gradient(to top, #3b82f6, #60a5fa)",
               borderRadius: "2px 2px 0 0",
               minWidth: 4,
@@ -336,7 +317,7 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
 
         {report && (
           <>
-            {report.totals.costUsd > 0 && (
+            {(report.totals.inputTokens > 0 || report.totals.outputTokens > 0) && (
               <div style={{
                 background: TERM_PANEL,
                 border: `1px solid ${TERM_BORDER}`,
@@ -348,9 +329,9 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
                 alignItems: "center",
               }}>
                 <div>
-                  <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5 }}>Estimated total ({days}d)</div>
+                  <div style={{ fontSize: TERM_SIZE_2XS, opacity: 0.5 }}>Total tokens ({days}d)</div>
                   <div style={{ fontSize: TERM_SIZE_2XL, fontWeight: 700, fontFamily: "monospace" }}>
-                    {fmtCost(report.totals.costUsd)}
+                    {fmtTokens(report.totals.inputTokens + report.totals.outputTokens)}
                   </div>
                 </div>
                 <div style={{ textAlign: "right", fontSize: TERM_SIZE_2XS, opacity: 0.6, lineHeight: "1.6" }}>
@@ -360,7 +341,7 @@ export default function UsagePanel({ isOpen, onClose }: { isOpen: boolean; onClo
               </div>
             )}
 
-            <CostChart providers={report.providers} />
+            <TokenChart providers={report.providers} />
 
             {availableProviders.map(p => (
               <ProviderCard

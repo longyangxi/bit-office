@@ -19,12 +19,6 @@ function fmtTokens(n: number): string {
   return String(n);
 }
 
-function fmtCost(n: number): string {
-  if (n >= 1) return "$" + n.toFixed(2);
-  if (n >= 0.01) return "$" + n.toFixed(3);
-  return "$" + n.toFixed(4);
-}
-
 interface StatCardProps {
   label: string;
   value: string;
@@ -80,15 +74,13 @@ export default function DashboardStats({
   totalProjects,
   totalFilesChanged,
   totalTokens,
-  totalCostUsd,
 }: DashboardStatsProps) {
-  const totalTok = totalTokens.input + totalTokens.output;
   return (
     <div style={{ display: "flex", gap: 8 }}>
       <StatCard label="Projects" value={String(totalProjects)} color={TERM_SEM_GREEN} />
       <StatCard label="Events" value={fmtTokens(totalFilesChanged)} color={TERM_SEM_BLUE} />
-      <StatCard label="Tokens" value={fmtTokens(totalTok)} color={TERM_SEM_PURPLE} />
-      <StatCard label="Cost" value={fmtCost(totalCostUsd)} color={TERM_SEM_YELLOW} />
+      <StatCard label="Tokens In" value={fmtTokens(totalTokens.input)} color={TERM_SEM_PURPLE} />
+      <StatCard label="Tokens Out" value={fmtTokens(totalTokens.output)} color={TERM_SEM_YELLOW} />
     </div>
   );
 }

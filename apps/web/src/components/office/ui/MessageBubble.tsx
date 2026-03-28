@@ -39,9 +39,6 @@ function TokenBadge({ inputTokens, outputTokens, cacheReadTokens, cacheWriteToke
   if (cacheReadTokens) titleParts.push(`Cache read: ${cacheReadTokens.toLocaleString()}`);
   if (cacheWriteTokens) titleParts.push(`Cache write: ${cacheWriteTokens.toLocaleString()}`);
   if (costUsd) titleParts.push(`Cost: $${costUsd.toFixed(4)}`);
-  const costStr = costUsd != null && costUsd > 0
-    ? ` $${costUsd >= 1 ? costUsd.toFixed(2) : costUsd.toFixed(4)}`
-    : "";
   return (
     <span style={{
       fontSize: TERM_SIZE, padding: "1px 4px",
@@ -49,7 +46,7 @@ function TokenBadge({ inputTokens, outputTokens, cacheReadTokens, cacheWriteToke
       whiteSpace: "nowrap",
       fontVariantNumeric: "tabular-nums",
     }} title={titleParts.join(" / ")}>
-      {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}{costStr}
+      {"\u2191"}{formatTokenCount(inputTokens)} {"\u2193"}{formatTokenCount(outputTokens)}
     </span>
   );
 }
