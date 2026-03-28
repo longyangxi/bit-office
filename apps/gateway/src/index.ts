@@ -645,7 +645,13 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
         const greetTaskId = nanoid();
         orc.runTask(leadAgentId, greetTaskId, "Greet the user and ask what they would like to build.", { phaseOverride: "create" });
       }
-      orc.setAutoReview(parsed.autoReview ?? false);
+      // Auto-enable review if team has a reviewer role (don't rely on web UI sending autoReview)
+      const hasReviewer = allIds.some(id => {
+        const def = agentDefs.find(a => a.id === id);
+        const role = def?.skills ? `${def.role} — ${def.skills}` : def?.role ?? "";
+        return role.toLowerCase().includes("review");
+      });
+      orc.setAutoReview(parsed.autoReview ?? hasReviewer);
       break;
     }
     case "STOP_TEAM": {
