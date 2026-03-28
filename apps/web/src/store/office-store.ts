@@ -876,7 +876,12 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
           // Trim to avoid leading \n\n from Claude output that causes a visual text jump
           const accumulated = (streamMsg?._accumulatedText ?? "").trim();
           const serverFull = (event.result.fullOutput || event.result.summary).trim();
-          const bestText = accumulated.length >= serverFull.length ? accumulated : serverFull;
+          let bestText = accumulated.length >= serverFull.length ? accumulated : serverFull;
+          // For reviewers, trim verbose preamble — show only VERDICT/ISSUES/SUMMARY
+          if (agent.role.toLowerCase().includes("review") && /VERDICT[:\s]*(?:PASS|FAIL)/i.test(bestText)) {
+            const vIdx = bestText.search(/\*{0,2}VERDICT/i);
+            if (vIdx > 0) bestText = bestText.slice(vIdx).trim();
+          }
           // Detect solo agent presenting a [PLAN] or asking for user approval.
           const isSoloAgent = !agent.isTeamLead && !agent.teamId;
           const hasPlanAsk = isSoloAgent && /\[PLAN\]/i.test(bestText);
