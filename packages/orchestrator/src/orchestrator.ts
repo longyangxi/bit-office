@@ -257,6 +257,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       ...opts.memberPresets.filter((_, i) => i !== opts.leadPresetIndex).map(p => ({ ...p, isLead: false })),
     ];
 
+    const teamId = `team-${nanoid(6)}`;
     let leadAgentId: string | null = null;
 
     for (const preset of presets) {
@@ -270,6 +271,7 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
         personality: preset.personality,
         palette: preset.palette,
         backend: backendId,
+        teamId,
       });
 
       if ((preset as { isLead: boolean }).isLead) {
@@ -1050,29 +1052,9 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     }
 
     // ── Dispatch queued tasks when an agent becomes available ──
-    if (event.type === "task:done" && this.pendingDispatch.length > 0) {
-      // Try to dispatch queued tasks now that an agent may be free
-      const stillPending: typeof this.pendingDispatch = [];
-      for (const item of this.pendingDispatch) {
-        const agentForTask = this.selectAgentForTask(item.task);
-        if (agentForTask) {
-          // Agent found — dispatch now (call the inner logic directly to avoid re-queuing)
-          item.task.assignedTo = agentForTask;
-          const fullPrompt = item.contextPrompt
-            ? `${item.task.description}\n\n${item.contextPrompt}`
-            : item.task.description;
-          const repoPath = this.delegationRouter.getTeamProjectDir() ?? undefined;
-          if (repoPath) this.setupWorktreeForAgent(agentForTask, item.task.id, repoPath);
-          const leadId = this.agentManager.getTeamLead();
-          this.emitEvent({ type: "task:delegated", fromAgentId: leadId ?? "system", toAgentId: agentForTask, taskId: item.task.id, prompt: item.task.description });
-          const targetSession = this.agentManager.get(agentForTask);
-          if (targetSession) targetSession.runTask(item.task.id, fullPrompt, repoPath);
-          console.log(`[Orchestrator] Dispatched queued task ${item.task.id} → ${agentForTask}`);
-        } else {
-          stillPending.push(item);
-        }
-      }
-      this.pendingDispatch = stillPending;
+    if ((event.type === "task:done" || event.type === "task:failed") && this.pendingDispatch.length > 0) {
+      // The finishing agent may still be in "done" status; defer so it transitions to "idle" first
+      setTimeout(() => this.drainPendingDispatch(), 100);
     }
 
     // ── Memory: record reviewer feedback for learning ──
@@ -1135,9 +1117,10 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
               // Actually invoke the reaction engine to dispatch fix to dev
               const devSession = this.agentManager.get(devAgentId);
               if (devSession) {
+                const fixTaskId = `fix-${nanoid(6)}`;
                 this.reactionEngine.handle("review:fail", {
                   agentId,
-                  taskId: event.taskId,
+                  taskId: fixTaskId,
                   role: session.role,
                   reviewerOutput: event.result.fullOutput,
                   devAgentId,
@@ -1385,6 +1368,30 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
   /** Tasks waiting for an agent to become available */
   private pendingDispatch: Array<{ task: TaskNode; contextPrompt: string }> = [];
 
+  private drainPendingDispatch(): void {
+    if (this.pendingDispatch.length === 0) return;
+    const stillPending: typeof this.pendingDispatch = [];
+    for (const item of this.pendingDispatch) {
+      const agentForTask = this.selectAgentForTask(item.task);
+      if (agentForTask) {
+        item.task.assignedTo = agentForTask;
+        const fullPrompt = item.contextPrompt
+          ? `${item.task.description}\n\n${item.contextPrompt}`
+          : item.task.description;
+        const repoPath = this.delegationRouter.getTeamProjectDir() ?? undefined;
+        if (repoPath) this.setupWorktreeForAgent(agentForTask, item.task.id, repoPath);
+        const leadId = this.agentManager.getTeamLead();
+        this.emitEvent({ type: "task:delegated", fromAgentId: leadId ?? "system", toAgentId: agentForTask, taskId: item.task.id, prompt: item.task.description });
+        const targetSession = this.agentManager.get(agentForTask);
+        if (targetSession) targetSession.runTask(item.task.id, fullPrompt, repoPath);
+        console.log(`[Orchestrator] Dispatched queued task ${item.task.id} → ${agentForTask}`);
+      } else {
+        stillPending.push(item);
+      }
+    }
+    this.pendingDispatch = stillPending;
+  }
+
   private dispatchDecomposedTask(task: TaskNode, contextPrompt: string): void {
     // Find a matching agent by role
     const agentId = this.selectAgentForTask(task);
@@ -1529,6 +1536,16 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
     // Wait for auto-review queue to drain before finalizing
     if (this.autoReview && (this.reviewQueue.length > 0 || this.reviewerBusy)) {
       console.log(`[Orchestrator] Scheduler done but reviews pending (queue: ${this.reviewQueue.length}, busy: ${this.reviewerBusy})`);
+      return;
+    }
+
+    // Wait for any worker still running (e.g., dev fixing after VERDICT:FAIL)
+    const leadId_ = this.agentManager.getTeamLead();
+    const hasWorkingWorkers = this.agentManager.getAll().some(w =>
+      w.agentId !== leadId_ && w.status === "working"
+    );
+    if (hasWorkingWorkers) {
+      console.log(`[Orchestrator] Scheduler done but workers still running, deferring finalization`);
       return;
     }
 
