@@ -950,7 +950,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const store = loadAgentFacts(agentId);
       store.facts = store.facts.filter(f => f.id !== factId);
       saveAgentFacts(agentId, store);
-      sendToClient(meta.clientId, { type: "FACT_DELETED", layer: "L2", factId, ok: true } as GatewayEvent);
+      publishEvent({ type: "FACT_DELETED", layer: "L2", factId, ok: true } as GatewayEvent);
       break;
     }
     case "DELETE_FACT_L3": {
@@ -958,7 +958,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       const store = loadSharedKnowledge();
       store.items = store.items.filter(i => i.id !== factId);
       saveSharedKnowledge(store);
-      sendToClient(meta.clientId, { type: "FACT_DELETED", layer: "L3", factId, ok: true } as GatewayEvent);
+      publishEvent({ type: "FACT_DELETED", layer: "L3", factId, ok: true } as GatewayEvent);
       break;
     }
     case "GET_CONFIG": {

@@ -184,11 +184,12 @@ function SessionTimeline({ sessions, filter }: { sessions: SessionSummary[]; fil
 }
 
 function AgentFactsList({
-  facts, filter, onDelete,
+  facts, filter, onDelete, canDelete,
 }: {
   facts: AgentFact[];
   filter: string;
   onDelete: (factId: string) => void;
+  canDelete: boolean;
 }) {
   const [sortBy, setSortBy] = useState<"reinforceCount" | "lastSeen">("reinforceCount");
   const [confirmId, setConfirmId] = useState<string | null>(null);
@@ -247,7 +248,7 @@ function AgentFactsList({
               <span>Last: {fmtDate(f.lastSeen)}</span>
             </div>
           </div>
-          {confirmId === f.id ? (
+          {canDelete && (confirmId === f.id ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end" }}>
               <span style={{ fontSize: TERM_SIZE_3XS, color: TERM_SEM_RED }}>Delete?</span>
               <div style={{ display: "flex", gap: 4 }}>
@@ -275,7 +276,7 @@ function AgentFactsList({
             >
               {"\u2715"}
             </button>
-          )}
+          ))}
         </div>
       ))}
     </div>
@@ -283,12 +284,13 @@ function AgentFactsList({
 }
 
 function SharedKnowledgeList({
-  items, filter, agentNames, onDelete,
+  items, filter, agentNames, onDelete, canDelete,
 }: {
   items: SharedKnowledge[];
   filter: string;
   agentNames: Record<string, string>;
   onDelete: (factId: string) => void;
+  canDelete: boolean;
 }) {
   const [confirmId, setConfirmId] = useState<string | null>(null);
 
@@ -328,7 +330,7 @@ function SharedKnowledgeList({
               <span>{fmtDate(item.createdAt)}</span>
             </div>
           </div>
-          {confirmId === item.id ? (
+          {canDelete && (confirmId === item.id ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 2, alignItems: "flex-end" }}>
               <span style={{ fontSize: TERM_SIZE_3XS, color: TERM_SEM_RED }}>Delete?</span>
               <div style={{ display: "flex", gap: 4 }}>
@@ -356,7 +358,7 @@ function SharedKnowledgeList({
             >
               {"\u2715"}
             </button>
-          )}
+          ))}
         </div>
       ))}
     </div>
@@ -378,6 +380,8 @@ export default function MemoryPanel({
   const [loading, setLoading] = useState(false);
 
   const agents = useOfficeStore(s => s.agents);
+  const role = useOfficeStore(s => s.role);
+  const isOwner = role === "owner";
   const memoryL1 = useOfficeStore(s => s.memoryL1);
   const memoryL2 = useOfficeStore(s => s.memoryL2);
   const memoryL3 = useOfficeStore(s => s.memoryL3);
@@ -413,15 +417,16 @@ export default function MemoryPanel({
 
   // Fetch data when agent or panel opens
   const fetchData = useCallback(() => {
-    if (!selectedAgentId) return;
     setLoading(true);
-    sendCommand({ type: "GET_MEMORY_L1", agentId: selectedAgentId });
-    sendCommand({ type: "GET_MEMORY_L2", agentId: selectedAgentId });
+    if (selectedAgentId) {
+      sendCommand({ type: "GET_MEMORY_L1", agentId: selectedAgentId });
+      sendCommand({ type: "GET_MEMORY_L2", agentId: selectedAgentId });
+    }
     sendCommand({ type: "GET_MEMORY_L3" });
   }, [selectedAgentId]);
 
   useEffect(() => {
-    if (!isOpen || !selectedAgentId) return;
+    if (!isOpen) return;
     fetchData();
   }, [isOpen, selectedAgentId, fetchData]);
 
@@ -545,10 +550,10 @@ export default function MemoryPanel({
               <SessionTimeline sessions={sessions} filter={filter} />
             )}
             {tab === "facts" && (
-              <AgentFactsList facts={facts} filter={filter} onDelete={handleDeleteL2} />
+              <AgentFactsList facts={facts} filter={filter} onDelete={handleDeleteL2} canDelete={isOwner} />
             )}
             {tab === "shared" && (
-              <SharedKnowledgeList items={shared} filter={filter} agentNames={agentNames} onDelete={handleDeleteL3} />
+              <SharedKnowledgeList items={shared} filter={filter} agentNames={agentNames} onDelete={handleDeleteL3} canDelete={isOwner} />
             )}
           </div>
         )}
