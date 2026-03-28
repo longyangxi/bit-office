@@ -189,7 +189,7 @@ export default function OfficePage() {
   const visibleMessageCount = useOfficeStore(s => s.visibleMessageCount); // eslint-disable-line @typescript-eslint/no-unused-vars
 
   // Stable refs — these functions never change identity, no need to trigger re-renders
-  const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages, addAgentToProject, getActiveProject } = useOfficeStore.getState();
+  const { addUserMessage, clearTeamMessages, setRole, getVisibleMessages, loadMoreMessages, addAgentToProject, getActiveProject, setPendingTemplatePrompt, consumeTemplatePrompt } = useOfficeStore.getState();
   const [selectedAgent, setSelectedAgent] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewRatings, setPreviewRatings] = useState<Ratings>({});
@@ -696,6 +696,9 @@ export default function OfficePage() {
     setSelectedAgent(agentId);
     setChatOpen(true);
     setShowHireModal(false);
+    // Pre-fill prompt from template if one was selected
+    const tpl = consumeTemplatePrompt();
+    if (tpl) setPrompt(tpl);
   }, [agents]); // addAgentToProject, getActiveProject are stable refs from getState()
 
   const handleCreateTeam = useCallback((leadId: string, memberIds: string[], backends: Record<string, string>, workDir?: string) => {
@@ -708,6 +711,9 @@ export default function OfficePage() {
     setSelectedAgent(null);
     setChatOpen(false);
     setMobileTeamOpen(true);
+    // Pre-fill prompt from template for team lead input
+    const tpl = consumeTemplatePrompt();
+    if (tpl) setPrompt(tpl);
   }, []);
 
   const handleSaveAgentDef = useCallback((def: AgentDefinition) => {
@@ -2448,8 +2454,11 @@ export default function OfficePage() {
         <NewProjectModal
           open={showNewProjectModal}
           onClose={() => setShowNewProjectModal(false)}
-          onCreated={(projectId: string, mode: string) => {
+          onCreated={(projectId: string, mode: string, template?: any) => {
             setShowNewProjectModal(false);
+            if (template?.suggestedPrompt) {
+              setPendingTemplatePrompt(template.suggestedPrompt);
+            }
             if (mode === "solo") setShowHireModal(true);
             else if (mode === "team") setShowHireTeamModal(true);
             // "empty" — just switch to the new project, no hire flow

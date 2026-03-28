@@ -5,6 +5,8 @@ import { nanoid } from "nanoid";
 import { useOfficeStore, folderPickCallbacks } from "@/store/office-store";
 import { sendCommand } from "@/lib/connection";
 import { TERM_SIZE_2XS } from "./termTheme";
+import TemplateSelector from "@/templates/TemplateSelector";
+import type { ProjectTemplate } from "@/templates/templates";
 
 type InitialMode = "solo" | "team" | "empty";
 
@@ -12,7 +14,7 @@ interface NewProjectModalProps {
   open: boolean;
   onClose: () => void;
   /** After project created, caller may open HireModal/HireTeamModal scoped to this project */
-  onCreated: (projectId: string, mode: InitialMode) => void;
+  onCreated: (projectId: string, mode: InitialMode, template?: ProjectTemplate) => void;
 }
 
 /**
@@ -28,32 +30,43 @@ export default function NewProjectModal({
   const [name, setName] = useState("");
   const [directory, setDirectory] = useState("");
   const [mode, setMode] = useState<InitialMode>("solo");
+  const [selectedTemplate, setSelectedTemplate] = useState<ProjectTemplate | null>(null);
 
   const createProject = useOfficeStore((s) => s.createProject);
+
+  const handleTemplateSelect = useCallback((t: ProjectTemplate | null) => {
+    setSelectedTemplate(t);
+    if (t) {
+      setName(t.name);
+      // Map template suggestedMode to InitialMode
+      setMode(t.suggestedMode === "team" ? "team" : "solo");
+    }
+  }, []);
 
   const handleBrowse = useCallback(() => {
     const rid = nanoid(6);
     folderPickCallbacks.set(rid, (path: string) => {
       setDirectory(path);
-      // Auto-fill name from folder name if empty
-      if (!name) {
+      // Auto-fill name from folder name if empty and no template selected
+      if (!name && !selectedTemplate) {
         const folderName = path.split("/").filter(Boolean).pop() || "";
         setName(folderName);
       }
     });
     sendCommand({ type: "PICK_FOLDER", requestId: rid });
-  }, [name]);
+  }, [name, selectedTemplate]);
 
   const handleCreate = useCallback(() => {
     if (!directory.trim()) return;
     const projectName = name.trim() || directory.split("/").filter(Boolean).pop() || "untitled";
     const projectId = createProject(projectName, directory.trim());
-    onCreated(projectId, mode);
+    onCreated(projectId, mode, selectedTemplate ?? undefined);
     // Reset form
     setName("");
     setDirectory("");
     setMode("solo");
-  }, [name, directory, mode, createProject, onCreated]);
+    setSelectedTemplate(null);
+  }, [name, directory, mode, selectedTemplate, createProject, onCreated]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -69,7 +82,7 @@ export default function NewProjectModal({
     <div className="tm-backdrop" onClick={onClose} onKeyDown={handleKeyDown}>
       <div
         className="tm-container"
-        style={{ maxWidth: 520 }}
+        style={{ maxWidth: 560 }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -82,6 +95,12 @@ export default function NewProjectModal({
 
         {/* Body */}
         <div className="tm-body" style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          {/* Template Selector */}
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
+            <label className="tsl">Choose a template</label>
+            <TemplateSelector selected={selectedTemplate} onSelect={handleTemplateSelect} />
+          </div>
+
           {/* Project Name */}
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-1)" }}>
             <label className="tsl">Name</label>

@@ -153,6 +153,10 @@ interface OfficeStore {
   viewingProjectEvents: GatewayEvent[];
   viewingProjectName: string | null;
   pendingPreviewUrl: string | null;
+  /** Template prompt to pre-fill in AgentPane after project creation — consumed once */
+  pendingTemplatePrompt: string | null;
+  setPendingTemplatePrompt: (prompt: string | null) => void;
+  consumeTemplatePrompt: () => string | null;
   configResult: { success: boolean; message: string; telegramConnected?: boolean; tunnelRunning?: boolean } | null;
   configData: { telegramBotToken?: string; telegramAllowedUsers?: string[]; telegramConnected?: boolean; worktreeEnabled?: boolean; autoMergeEnabled?: boolean; tunnelBaseUrl?: string; tunnelToken?: string; tunnelRunning?: boolean } | null;
   detectedBackends: string[];
@@ -429,6 +433,7 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
   viewingProjectEvents: [],
   viewingProjectName: null,
   pendingPreviewUrl: null,
+  pendingTemplatePrompt: null,
   configResult: null,
   configData: null,
   detectedBackends: [],
@@ -447,6 +452,12 @@ export const useOfficeStore = create<OfficeStore>((set, get) => ({
     const url = get().pendingPreviewUrl;
     if (url) set({ pendingPreviewUrl: null });
     return url;
+  },
+  setPendingTemplatePrompt: (prompt) => set({ pendingTemplatePrompt: prompt }),
+  consumeTemplatePrompt: () => {
+    const p = get().pendingTemplatePrompt;
+    if (p) set({ pendingTemplatePrompt: null });
+    return p;
   },
   setConnected: (c) => set({ connected: c }),
   setRole: (role) => set({ role }),
