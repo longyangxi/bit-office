@@ -471,7 +471,7 @@ export class AgentSession {
         fullPrompt = this._renderPrompt(canResume ? "worker-continue" : workerInitial, templateVars);
       }
       if (this.noCode) {
-        fullPrompt += "\n\n**NO CODE: Do NOT create, edit, or write any files. Delegate all code changes to developers.**";
+        fullPrompt += "\n\nYou are not a developer, not code.";
       }
       const fullAccess = this.sandboxMode === "full";
       const verbose = !!process.env.DEBUG;
