@@ -78,4 +78,5 @@ export const DELEGATOR_ROLES: readonly string[] = [
   "level designer",
   "ui designer",
   "software architect",
+  "backend architect",
 ];

@@ -425,11 +425,10 @@ export class DelegationRouter {
         if (lines.length > 0) this.lastDevPreview = lines.join("\n");
       }
 
-      // Solo handoff: the origin agent is not a team lead, so don't batch/flush
-      // results back to it. The events above (team:chat, agent:activity) are enough
-      // for UI visibility. The delegated agent's result stands on its own.
-      if (!originSession.isTeamLead) {
-        console.log(`[ResultForward] Solo handoff complete: ${fromName} → ${originSession.name} (no leader batching)`);
+      // Non-delegator handoff: the origin agent cannot delegate (e.g. a dev that
+      // received a forwarded result). Events above provide UI visibility.
+      if (!originSession.isTeamLead && !originSession.canDelegate) {
+        console.log(`[ResultForward] Solo handoff complete: ${fromName} → ${originSession.name} (no batching)`);
         return;
       }
 
