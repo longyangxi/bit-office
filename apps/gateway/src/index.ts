@@ -1135,7 +1135,7 @@ function handleCommand(parsed: Command, meta: CommandMeta) {
       // Create reviewer agent
       orc.createAgent({
         agentId: reviewerAgentId,
-        name: "Sophie",
+        name: "Reviewer",
         role: "Code Reviewer — Code review, bugs, security, quality",
         personality: "Constructive and thorough. Reviews like a mentor — explains the why, not just the what.",
         backend: reviewerBackendId,

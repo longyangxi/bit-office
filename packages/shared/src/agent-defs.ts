@@ -21,13 +21,14 @@ export interface SkillMeta {
 
 export const DEFAULT_AGENT_DEFS: AgentDefinition[] = [
   // ── Hire list (6 presets) ──
-  { id: "rex",    name: "Rex",    role: "Senior Developer",    skills: "General-purpose dev, any language/framework",               personality: "", palette: 3, isBuiltin: true, teamRole: "dev" },
-  { id: "alex",   name: "Alex",   role: "Frontend Developer",  skills: "UI, React/Vue/Next.js, CSS, accessibility",                personality: "", palette: 0, isBuiltin: true, teamRole: "dev" },
-  { id: "mia",    name: "Mia",    role: "Backend Architect",   skills: "APIs, databases, system design, cloud",                    personality: "", palette: 1, isBuiltin: true, teamRole: "dev" },
-  { id: "leo",    name: "Leo",    role: "Rapid Prototyper",    skills: "MVP, proof-of-concept, fast iteration",                    personality: "", palette: 2, isBuiltin: true, teamRole: "dev" },
-  { id: "nova",   name: "Nova",   role: "UI Designer",         skills: "Design systems, spacing, color, accessibility",            personality: "", palette: 4, isBuiltin: true, teamRole: "dev" },
-  { id: "luna",   name: "Luna",   role: "Product Manager",     skills: "PRD, prioritization, user stories, outcomes",              personality: "", palette: 6, isBuiltin: true, teamRole: "dev" },
+  // Note: `name` = role label (display only). Actual agent names are randomly assigned at hire time.
+  { id: "senior-dev",      name: "Senior Developer",    role: "Senior Developer",    skills: "General-purpose dev, any language/framework",               personality: "", palette: 3, isBuiltin: true, teamRole: "dev" },
+  { id: "frontend-dev",    name: "Frontend Developer",  role: "Frontend Developer",  skills: "UI, React/Vue/Next.js, CSS, accessibility",                personality: "", palette: 0, isBuiltin: true, teamRole: "dev" },
+  { id: "backend-arch",    name: "Backend Architect",   role: "Backend Architect",   skills: "APIs, databases, system design, cloud",                    personality: "", palette: 1, isBuiltin: true, teamRole: "dev" },
+  { id: "rapid-proto",     name: "Rapid Prototyper",    role: "Rapid Prototyper",    skills: "MVP, proof-of-concept, fast iteration",                    personality: "", palette: 2, isBuiltin: true, teamRole: "dev" },
+  { id: "ui-designer",     name: "UI Designer",         role: "UI Designer",         skills: "Design systems, spacing, color, accessibility",            personality: "", palette: 4, isBuiltin: true, teamRole: "dev" },
+  { id: "product-manager", name: "Product Manager",     role: "Product Manager",     skills: "PRD, prioritization, user stories, outcomes",              personality: "", palette: 6, isBuiltin: true, teamRole: "dev" },
   // ── Hidden (auto-assigned, not in hire list) ──
-  { id: "marcus", name: "Marcus", role: "Team Lead",           skills: "Creative direction, planning, delegation",                 personality: "", palette: 5, isBuiltin: true, teamRole: "leader" },
-  { id: "sophie", name: "Sophie", role: "Code Reviewer",       skills: "Code review, bugs, security, quality",                    personality: "", palette: 7, isBuiltin: true, teamRole: "reviewer" },
+  { id: "team-lead",       name: "Team Lead",           role: "Team Lead",           skills: "Creative direction, planning, delegation",                 personality: "", palette: 5, isBuiltin: true, teamRole: "leader" },
+  { id: "code-reviewer",   name: "Code Reviewer",       role: "Code Reviewer",       skills: "Code review, bugs, security, quality",                    personality: "", palette: 7, isBuiltin: true, teamRole: "reviewer" },
 ];
