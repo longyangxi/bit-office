@@ -585,6 +585,8 @@ export class Orchestrator extends EventEmitter<OrchestratorEventMap> {
       teamId: s.teamId,
       worktreePath: s.worktreePath,
       worktreeBranch: s.worktreeBranch,
+      canDelegate: s.canDelegate,
+      noCode: s.noCode,
       autoMerge: s.autoMerge,
       pendingMerge: s.pendingMerge,
       lastMergeCommit: s.mergeCommitStack.length > 0 ? s.mergeCommitStack[s.mergeCommitStack.length - 1].hash : null,

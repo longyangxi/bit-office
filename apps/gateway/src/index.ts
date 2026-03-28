@@ -46,6 +46,8 @@ function persistTeamState() {
       worktreePath: a.worktreePath,
       worktreeBranch: a.worktreeBranch,
       autoMerge: a.autoMerge,
+      canDelegate: a.canDelegate,
+      noCode: a.noCode,
     }));
 
   let team: TeamState["team"] = null;
@@ -1272,6 +1274,8 @@ async function main() {
         teamId: agent.teamId,
         resumeHistory: true,
         workDir: agent.workDir,
+        canDelegate: agent.canDelegate,
+        noCode: agent.noCode,
       });
       if (agent.isTeamLead) {
         orc.setTeamLead(agent.agentId);
