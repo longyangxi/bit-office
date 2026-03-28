@@ -558,7 +558,7 @@ export class AgentSession {
         for (const line of lines) {
           const trimmed = line.trim();
           console.log(`[Agent ${this.name}] ${trimmed.slice(0, 200)}`);
-          const match = this._isTeamLead && !this.decompositionMode ? trimmed.match(DELEGATION_RE) : null;
+          const match = (this._isTeamLead || this.canDelegate) && !this.decompositionMode ? trimmed.match(DELEGATION_RE) : null;
           if (match) {
             // Flush any previous delegation before starting a new one
             flushDelegation();
