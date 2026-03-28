@@ -59,6 +59,8 @@ const UsagePanel = dynamic(() => import("@/components/office/ui/UsagePanel"), { 
 const MemoryPanel = dynamic(() => import("@/components/office/ui/MemoryPanel"), { ssr: false });
 const DashboardPanel = dynamic(() => import("@/components/office/ui/DashboardPanel"), { ssr: false });
 const NewProjectModal = dynamic(() => import("@/components/office/ui/NewProjectModal"), { ssr: false });
+import TemplateSelector from "@/templates/TemplateSelector";
+import type { ProjectTemplate } from "@/templates/templates";
 const AblyLoader = dynamic(() => import("@/hooks/useAblyLoader"), { ssr: false });
 
 /** Sentinel that triggers loadMore when scrolled into view */
@@ -674,14 +676,7 @@ export default function OfficePage() {
     }
   }, [agents, selectedAgent]);
 
-  // Auto-show NewProjectModal when connected with no active project and no agents
-  useEffect(() => {
-    if (!connected) return;
-    const hasActiveProject = Array.from(projects.values()).some(p => p.status === "active");
-    if (!hasActiveProject && agents.size === 0) {
-      setShowNewProjectModal(true);
-    }
-  }, [connected, projects, agents.size]);
+  // (Inline template selector replaces auto-show modal — see empty state in main content area)
 
   const handleAgentClick = useCallback((agentId: string) => {
     setSelectedAgent(agentId);
@@ -2056,7 +2051,37 @@ export default function OfficePage() {
               );
             })() : (
               <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#3a3a3a", fontFamily: TERM_FONT, fontSize: TERM_SIZE }}>
-                {activeAgentList.length > 0 ? "Select an agent" : ""}
+                {activeAgentList.length > 0 ? "Select an agent" : (() => {
+                  const hasActiveProject = Array.from(projects.values()).some(p => p.status === "active");
+                  if (hasActiveProject || !connected) return null;
+                  return (
+                    <div style={{ maxWidth: 480, width: "100%", padding: "var(--space-4)" }}>
+                      <div style={{ marginBottom: "var(--space-3)", fontFamily: "var(--font-mono)", fontSize: TERM_SIZE_SM, color: "var(--term-text)", textAlign: "center" }}>
+                        Pick a template to start instantly
+                      </div>
+                      <TemplateSelector
+                        selected={null}
+                        onSelect={(t: ProjectTemplate | null) => {
+                          if (t) {
+                            // Template one-click: create project, auto-hire, auto-submit
+                            const { createProject } = useOfficeStore.getState();
+                            const projectId = createProject(t.name, "");
+                            const seniorDev = agentDefs.find(d => d.id === "senior-dev")
+                              ?? agentDefs.find(d => d.isBuiltin && d.teamRole === "dev");
+                            if (seniorDev) {
+                              const backend = detectedBackends.length > 0 ? detectedBackends[0] : "claude";
+                              setPendingTemplatePrompt(t.suggestedPrompt);
+                              handleHire(seniorDev, backend);
+                            }
+                          } else {
+                            // Blank project: open modal in blank form mode
+                            setShowNewProjectModal(true);
+                          }
+                        }}
+                      />
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
